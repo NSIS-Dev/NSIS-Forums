@@ -1,0 +1,121 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Microsoft Visual C++ 2008 Redistributable Package, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Microsoft Visual C++ 2008 Redistributable Package NSIS Discussion" />
+	
+	<title> Microsoft Visual C++ 2008 Redistributable Package [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Microsoft Visual C++ 2008 Redistributable Package</div>
+<hr />
+<div class="pda"><a href="t-304198.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=304198">Microsoft Visual C++ 2008 Redistributable Package</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Haplo</div><div class="date">15th March 2009, 05:59</div></div><div class="posttext">Hi<br />
+<br />
+Is there a way to verify if Microsoft Visual C++ 2008 Redistributable Package (http://www.microsoft.com/downloads/details.aspx?FamilyID=9b2da534-3e03-4391-8a4d-074b9f2bc1bf&amp;displaylang=en) is installed on user's machine so I can show a warning if it is not? Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th March 2009, 09:41</div></div><div class="posttext">http://nsis.sourceforge.net/WinSxS_QueryAssemblyInfo_to_check_if_assembly_is_installed might be of help</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">TobbeSweden</div><div class="date">15th March 2009, 19:18</div></div><div class="posttext">Please do note that the user can have the required runtimes even if the redist isn't installed though...<br />
+<br />
+One example would be if the user has Visual Studio 2008 installed.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">thek</div><div class="date">16th March 2009, 16:59</div></div><div class="posttext">We solved this by installing the VS2008 redistributable always!<br />
+<br />
+If its already installed this will do nothing<br />
+if its an old version it will upgrade.<br />
+<br />
+And as far as I understand the MS license contract you are allowed to do this.<br />
+<br />
+${Unless} ${FileExists}   <br />
+    $TEMP\VS2008_SP1_vcredist_x86.exe         <br />
+    DetailPrint &quot;Installing VC++ 9 runtime&quot;         <br />
+    File ..\common\binaries\VS2008_SP1_vcredist_x86.exe  <br />
+    ExecWait &quot;$TEMP\VS2008_SP1_vcredist_x86.exe /q&quot;         <br />
+    DetailPrint &quot;Cleaning up&quot;         <br />
+    Delete $TEMP\VS2008_SP1_vcredist_x86.exe     <br />
+${EndUnless}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">16th March 2009, 17:53</div></div><div class="posttext">It's a redistributable - yes, you can always call the installer even if it's already installed.<br />
+<br />
+Myself, I just check the installation registry keys.  Even IF the package -is- in fact already installed (which you might be able to determine via the WinSxS stuff).. if the registry keys are missing, it means it was installed via non-standard means (e.g. as part of a Visual Studio install), and (re-)installing is a good idea anyway.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Haplo</div><div class="date">18th March 2009, 06:19</div></div><div class="posttext">Thanks a lot everyone for your answers.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">m1st0</div><div class="date">27th May 2011, 18:41</div></div><div class="posttext">Here is my effort at installing the redistributables (no guarantees or safety checks provided). There may be some cases of failure hereafter, but for my installer it has been a great benefit--only needing an install if it does not exist on the system.  The codes I needed for the registry were obtained from http://blogs.msdn.com/b/astebner/archive/2007/01/24/updated-vc-8-0-runtime-redistributable-packages-are-included-in-visual-studio-2005-sp1.aspx.<br />
+<br />
+<br />
+# 64-bit Installs<br />
+# Make sure the variable is clear<br />
+        StrCpy $1 &quot;&quot;<br />
+        SetRegview 64<br />
+        # Detect if it is installed already<br />
+        ReadRegStr $1 HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\{071c9b48-7c32-4621-a0ac-3f809523288f}&quot; DisplayName<br />
+        StrCmp $1 &quot;&quot; sp164_not_exists sp164_exists<br />
+        sp164_not_exists:<br />
+            # From http://blogs.msdn.com/astebner/archive/2007/02/07/update-regarding-silent-install-of-the-vc-8-0-runtime-vcredist-packages.aspx<br />
+            # &quot;qb!&quot; for progress with no cancel, &quot;qb&quot; for progress and cancel, &quot;qn&quot; for no interaction<br />
+            DetailPrint &quot;Please wait for the next step to finish.&quot;<br />
+            ExecWait '$INSTDIR\bin64\MicrosoftRedistributable64\vcredist_x64SP1.exe /q:a /c:&quot;VCREDI~2.EXE /q:a /c:&quot;&quot;msiexec /i vcredist.msi /qn&quot;&quot; &quot;' $0 # Only progress bar<br />
+            DetailPrint &quot;vcredist_x64 SP1 Update returned $0&quot;<br />
+        sp164_exists:<br />
+            # Nothing to do<br />
+        # Make sure the variable is clear<br />
+        StrCpy $1 &quot;&quot;<br />
+        SetRegview 64<br />
+        ReadRegStr $1 HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\{6CE5BAE9-D3CA-4B99-891A-1DC6C118A5FC}&quot; DisplayName<br />
+        StrCmp $1 &quot;&quot; atl64_not_exists atl64_exists<br />
+        atl64_not_exists:<br />
+            # From http://blogs.msdn.com/astebner/archive/2007/02/07/update-regarding-silent-install-of-the-vc-8-0-runtime-vcredist-packages.aspx<br />
+            # &quot;qb!&quot; for progress with no cancel, &quot;qb&quot; for progress and cancel, &quot;qn&quot; for no interaction<br />
+            DetailPrint &quot;Please wait for the next step to finish.&quot;<br />
+            ExecWait '$INSTDIR\bin64\MicrosoftRedistributable64\vcredist_x64SP1ATL.exe /q:a /c:&quot;VCREDI~2.EXE /q:a /c:&quot;&quot;msiexec /i vcredist.msi /qn&quot;&quot; &quot;' $0 # Only progress bar<br />
+            DetailPrint &quot;vcredist_x64 SP1 ATL Update returned $0&quot;<br />
+        atl64_exists:<br />
+            # Nothing to do  <br />
+<br />
+# 32-bit Installs<br />
+# Make sure the variable is clear<br />
+        StrCpy $1 &quot;&quot;<br />
+        SetRegview 32<br />
+        ReadRegStr $1 HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\{7299052B-02A4-4627-81F2-1818DA5D550D}&quot; DisplayName<br />
+        StrCmp $1 &quot;&quot; sp1_not_exists sp1_exists<br />
+        sp1_not_exists:<br />
+            # From http://blogs.msdn.com/astebner/archive/2007/02/07/update-regarding-silent-install-of-the-vc-8-0-runtime-vcredist-packages.aspx<br />
+            # &quot;qb!&quot; for progress with no cancel, &quot;qb&quot; for progress and cancel, &quot;qn&quot; for no interaction<br />
+            DetailPrint &quot;Please wait for the next step to finish.&quot;<br />
+            ExecWait '$INSTDIR\bin\MicrosoftRedistributables\vcredist_x86SP1.exe /q:a /c:&quot;VCREDI~3.EXE /q:a /c:&quot;&quot;msiexec /i vcredist.msi /qn&quot;&quot; &quot;' $0 # Only progress bar<br />
+            DetailPrint &quot;vcredist_x86 SP1 Update returned $0&quot;<br />
+        sp1_exists:<br />
+            # Nothing to do<br />
+        # Make sure the variable is clear<br />
+        StrCpy $1 &quot;&quot;<br />
+        SetRegview 32<br />
+        ReadRegStr $1 HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\{837B34E3-7C30-493C-8F6A-2B0F04E2912C}&quot; DisplayName<br />
+        StrCmp $1 &quot;&quot; atl_not_exists atl_exists<br />
+        atl_not_exists:        <br />
+            # From http://blogs.msdn.com/astebner/archive/2007/02/07/update-regarding-silent-install-of-the-vc-8-0-runtime-vcredist-packages.aspx<br />
+            # &quot;qb!&quot; for progress with no cancel, &quot;qb&quot; for progress and cancel, &quot;qn&quot; for no interaction<br />
+            DetailPrint &quot;Please wait for the next step to finish.&quot;<br />
+            ExecWait '$INSTDIR\bin\MicrosoftRedistributables\vcredist_x86SP1ATL.exe /q:a /c:&quot;VCREDI~3.EXE /q:a /c:&quot;&quot;msiexec /i vcredist.msi /qn&quot;&quot; &quot;' $0 # Only progress bar<br />
+            DetailPrint &quot;vcredist_x86 SP1 ATL Update returned $0&quot;<br />
+        atl_exists:<br />
+            # Nothing to do</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

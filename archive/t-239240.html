@@ -1,0 +1,169 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" silent install and InstallOptions, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  silent install and InstallOptions NSIS Discussion" />
+	
+	<title> silent install and InstallOptions [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  silent install and InstallOptions</div>
+<hr />
+<div class="pda"><a href="t-239240.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=239240">silent install and InstallOptions</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">o_owd</div><div class="date">26th February 2006, 20:04</div></div><div class="posttext">hello,<br />
+<br />
+i have an installer. it containes a custom page, besides the standard pages.<br />
+i want to add silent support to it. when i install it with the /S parameter, the installer jumps over the custom page.<br />
+is this normal in silent installs ?<br />
+i tried with InstallOptions.nsi from the Examples\Modern UI and i get the same result.<br />
+i am using NSIS 2.14.<br />
+<br />
+thanks,<br />
+OJi.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dienjd</div><div class="date">26th February 2006, 20:37</div></div><div class="posttext">This sounds like expected behavior. If you have functionality in your custom page function, you can move it to another function or section that will still get executed when your installer is run silently. Otherwise, isn't not displaying pages what you want with /S?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">o_owd</div><div class="date">27th February 2006, 05:21</div></div><div class="posttext">Otherwise, isn't not displaying pages what you want with /S? <br />
+i do not want the page to be displayed. this is why i use silent. but i want the code inside the custom page to be executed.<br />
+i have a custom page where the user selects aditional options.<br />
+if i use silent, the installer does not enter the custom page function.<br />
+<br />
+thanks,<br />
+OJi.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dienjd</div><div class="date">27th February 2006, 16:46</div></div><div class="posttext">I'd suggest creating a function for your additional options. You can have your custom page function call this function, so it will work when run non-silently.<br />
+<br />
+Then add IfSilent (docs sec 4.9.4.12) and call your additional options function if the silent flag is set, so this code will also be executed when you run silently.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">o_owd</div><div class="date">27th February 2006, 19:37</div></div><div class="posttext">Originally posted by dienjd <br />
+I'd suggest creating a function for your additional options. You can have your custom page function call this function, so it will work when run non-silently.<br />
+<br />
+Then add IfSilent (docs sec 4.9.4.12) and call your additional options function if the silent flag is set, so this code will also be executed when you run silently.  <br />
+<br />
+i already did everything you said.<br />
+i use a function in a custom page, i use IfSilent. but the custom page is totaly skipped in silent mode !<br />
+try with the InstallOptions.nsi example in the Examples\ModernUI folder.<br />
+put a MessageBox in any custom page. without the /SD parameter!<br />
+run it normaly. the message box is displayed.<br />
+now run it in silent mode. the message box is not displayed. the only message box displayed is from the &quot;Dummy section&quot;.<br />
+<br />
+Please try this. i cannot explain this more, my english is limited.<br />
+<br />
+thanks,<br />
+OJi.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dienjd</div><div class="date">27th February 2006, 19:56</div></div><div class="posttext">Here's what I meant. Not pretty, but it seems like it would work:<br />
+<br />
+Function IWillAlwaysBeCalled<br />
+ IfSilent 0 nonsilent<br />
+  #explicitly set additional options to selected<br />
+  Goto done<br />
+ nonsilent:<br />
+  #conditionally set additional options based on user's input<br />
+ done:<br />
+FunctionEnd<br />
+<br />
+<br />
+#somewhere that always gets run, like .onInit<br />
+IfSilent<br />
+ Call IWillAlwaysBeCalled<br />
+<br />
+<br />
+Function MyCustomPage<br />
+ #your custom page UI code, if any<br />
+ IfSilent +2<br />
+  Call IWillAlwaysBeCalled<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">o_owd</div><div class="date">27th February 2006, 20:03</div></div><div class="posttext">from your example:<br />
+<br />
+in silent mode the &quot;Function MyCustomPage&quot; it is skipped (it is not parsed).<br />
+just try with the InstallOptions example.<br />
+<br />
+thanks,<br />
+OJi.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dienjd</div><div class="date">27th February 2006, 20:27</div></div><div class="posttext">Try compiling this and running with and without a '/S'<br />
+<br />
+Name &quot;silenttest&quot;<br />
+OutFile &quot;silenttest.exe&quot;<br />
+<br />
+Var custompageviewed<br />
+<br />
+Page instfiles<br />
+Page custom MyCustomPage<br />
+<br />
+Section &quot;&quot;<br />
+SectionEnd<br />
+<br />
+Function .onInit<br />
+IfSilent 0<br />
+ Call SetAdditionalOptions<br />
+FunctionEnd<br />
+<br />
+Function SetAdditionalOptions<br />
+ IfSilent 0 nonsilent<br />
+  #explicitly set additional options to selected<br />
+  MessageBox MB_OK &quot;silent, but working&quot;<br />
+  Goto done<br />
+ nonsilent:<br />
+   StrCmp $custompageviewed &quot;1&quot; 0 done<br />
+	#conditionally set additional options based on user's input<br />
+	MessageBox MB_OK &quot;non-silent&quot;<br />
+ done:<br />
+FunctionEnd<br />
+<br />
+Function MyCustomPage<br />
+ StrCpy $custompageviewed &quot;1&quot;<br />
+ MessageBox MB_OK &quot;this is my custom page code&quot;<br />
+ IfSilent +3<br />
+  Call SetAdditionalOptions<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">o_owd</div><div class="date">28th February 2006, 17:06</div></div><div class="posttext">i understand now what you mean.<br />
+but still, why if you delete the Call line from .onInit, nothing from Function MyCustomPage gets executed ?<br />
+is this a bug ? this is how it should be ? please explain<br />
+<br />
+thanks again,<br />
+OJi</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dienjd</div><div class="date">28th February 2006, 18:27</div></div><div class="posttext">This is how things should work. This line calls the MyCustomPage function:<br />
+<br />
+Page custom MyCustomPage<br />
+<br />
+Since it's a page command, it _should_ get skipped when running silently.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">o_owd</div><div class="date">28th February 2006, 20:26</div></div><div class="posttext">thanks for replying<br />
+<br />
+ok. i get it. the custom page is skipped when doing a silent install.<br />
+i do not agree with you. it should not be skipped. (my opinion)<br />
+<br />
+i have options that depend on what sections were selected. if a section was not selected, the option (checkbox, radio button) is disabled... it's a complicated script... :)<br />
+i use a text file for the user to select the sections for install.<br />
+this is not good. i have to rewrite a lot of code. i did not knew custom pages were skipped.<br />
+well, it's gonna be a long week...<br />
+<br />
+again, many many thanks !<br />
+OJi.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Difference between Exec and nsExec, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Difference between Exec and nsExec NSIS Discussion" />
+	
+	<title> Difference between Exec and nsExec [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Difference between Exec and nsExec</div>
+<hr />
+<div class="pda"><a href="t-198820.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=198820">Difference between Exec and nsExec</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">mwiseman</div><div class="date">9th November 2004, 19:44</div></div><div class="posttext">Hello,<br />
+<br />
+I'm trying to run an executable using nsExec. The run  always ends in an error that indicates an executable-related error. <br />
+<br />
+nsExec::ExecToLog '&quot;myapp.exe&quot;'<br />
+<br />
+I can run the same executable using Exec without a problem.<br />
+<br />
+Exec '&quot;myapp.exe&quot;'<br />
+<br />
+Thinking that the environment may be the issue, I've tried:<br />
+<br />
+nsExec::ExecToLog '&lt;path_to_cmd.exe&gt; /C &quot;myapp.exe&quot;'<br />
+<br />
+to no avail. This problem seems to point to differences in how nsExec and Exec work but I don't know what they are. Any ideas?<br />
+<br />
+Thanks,<br />
+<br />
+Mike</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">flizebogen</div><div class="date">9th November 2004, 20:15</div></div><div class="posttext">nsexec was written for command line apps. With nsexec::ExecToLog you can capture the outpu of the app and display it in the result window.<br />
+As far as i know it doesn't support live output as used by programs like rar.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mwiseman</div><div class="date">9th November 2004, 20:40</div></div><div class="posttext">myapp.exe is a command line app:<br />
+<br />
+c:\&gt;myapp.exe<br />
+<br />
+Writes to cmd.exe window and terminates.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th November 2004, 21:51</div></div><div class="posttext">Something like this should work:<br />
+<br />
+<br />
+!define LogFile &quot;$INSTDIR\myapp_dump.txt&quot;<br />
+Push $R0<br />
+ ReadEnvStr $R0 COMSPEC<br />
+ nsExec::Exec '$R0 /C &quot;$INSTDIR\myapp.exe&quot; &gt; &quot;${LogFile}&quot;'<br />
+ FileOpen $R0 &quot;${LogFile}&quot; r<br />
+  LoopRead:<br />
+   ClearErrors<br />
+   FileRead $R0 $R1<br />
+    IfErrors LoopDone<br />
+    Push $R1<br />
+     Call TrimNewLines<br />
+    Pop $R1<br />
+   DetailPrint $R1<br />
+   Goto LoopRead<br />
+  LoopDone:<br />
+ FileClose $R0<br />
+Pop $R0<br />
+SetDetailsPrint none<br />
+ Delete &quot;${LogFile}&quot;<br />
+SetDetailsPrint both<br />
+<br />
+<br />
+That would be another method of capturing the output.<br />
+Note that nsExec::Exec will run your application and hide it completely from the user (so the user will not see a command-prompt window.)<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mwiseman</div><div class="date">10th November 2004, 16:18</div></div><div class="posttext">Thanks for the script but this doesn't really answer my question. I'm not looking for more error output from the nsExec run. The 'nsExec::ExecToLog' does write the errors to the result window. My question is: why would *any* command line program run to completion using:<br />
+<br />
+Exec '&quot;myapp.exe&quot;'<br />
+<br />
+but fail using:<br />
+<br />
+nsExec::ExecToLog '&quot;myapp.exe&quot;'<br />
+<br />
+<br />
+I'll be more specific now: the app I'm trying to run is Microsoft's Baseline Security Analyzer utility: mbsacli.exe. The error I get seem to be network-related - 'no computer were found'.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th November 2004, 17:48</div></div><div class="posttext">Well, as nsExec doesn't execute your program through COMSPEC then perhaps that's why it is failing. Maybe you have to run it through COMSPEC for it to work?<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">10th November 2004, 18:10</div></div><div class="posttext">Windows MS DOS (console) window is a bit more complex then a process with stdin and stdout only. Simple console applications work fine with nsExec, but some apps require more - terminal emulation or something else (like telnet does). This may be a reason, Exec creates full MS DOS console window, but nsExec simply redirects IO to pipes. You can also try ExecWait with SW_HIDE.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">12th January 2005, 14:51</div></div><div class="posttext">You can also try ExecWait with SW_HIDE.<br />
+does execwait support window state parameters like SW_HIDE ?<br />
+<br />
+from the nsis docs:<br />
+command [user_var(exit code)]<br />
+<br />
+as i need to run a cmd-program in a loop, i need to get the installer wait until it has finished, but also to execute it in the backround without popping up the shell window everytime.<br />
+<br />
+does nsExec::Exec do this, or is it possible to use SW_HIDE with ExecWait?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">12th January 2005, 16:51</div></div><div class="posttext">Yes, you are right, I probably had in mind ExecShell. IMHO one of DOS-exec plug-ins is a good decision in your situation.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th January 2005, 20:23</div></div><div class="posttext">It always complains about being unable to create a scan object for me. Can you attach a complete example for which you get the error you're talking about?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

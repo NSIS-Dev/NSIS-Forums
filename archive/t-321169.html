@@ -1,0 +1,134 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" DeleteKey Not Working, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  DeleteKey Not Working NSIS Discussion" />
+	
+	<title> DeleteKey Not Working [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  DeleteKey Not Working</div>
+<hr />
+<div class="pda"><a href="t-321169.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=321169">DeleteKey Not Working</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Squirre1</div><div class="date">26th July 2010, 17:19</div></div><div class="posttext">Hey everyone, I just have a real simple bit of code listed below, but for some reason the DeleteKey function that is part of the registry plugin is not workin... I am not sure what is causing it... <br />
+<br />
+I could use the DeleteRegKey, but just getting a handle on the output that is why I am using the deletekey... If someone else can try this and let me know if I am crazy or what...<br />
+<br />
+Thanks,<br />
+<br />
+Squirre1<br />
+<br />
+<br />
+Name &quot;BackupExt&quot;<br />
+OutFile &quot;BackupExt.exe&quot;<br />
+Caption &quot;$(^Name)&quot;<br />
+XPStyle on<br />
+RequestExecutionLevel admin<br />
+<br />
+  !include &quot;Registry.nsh&quot;<br />
+  !include &quot;Sections.nsh&quot;<br />
+<br />
+var REG_BACKUP<br />
+<br />
+  Section &quot;Empty&quot;<br />
+<br />
+    ReadRegStr $R9 HKCR &quot;.pdf&quot; &quot;&quot;<br />
+    ${If} $R9 != &quot;&quot;<br />
+      !insertmacro logme $INSTLOG &quot;Backing up .pdf file association&quot; s<br />
+      ${registry::CopyKey} &quot;HKEY_CLASSES_ROOT\.pdf&quot; &quot;HKEY_CLASSES_ROOT\.pdfbkup&quot; $0<br />
+      ${If} $0 == &quot;0&quot;<br />
+        StrCpy $0 &quot;Successful&quot;<br />
+      ${Else}<br />
+        StrCpy $0 &quot;Failed&quot;<br />
+      ${EndIf}<br />
+      !insertmacro logme $INSTLOG &quot;- .pdf association backup result: $0&quot; s<br />
+      StrCpy $REG_BACKUP &quot;1&quot;<br />
+    ${EndIf}<br />
+<br />
+      MessageBox MB_OK|MB_ICONINFORMATION &quot;Installation Here&quot;  /SD IDOK<br />
+<br />
+    ${If} $REG_BACKUP == &quot;1&quot;<br />
+      !insertmacro logme $INSTLOG &quot;Restoring .pdf file association&quot; s<br />
+      ${registry::CopyKey} &quot;HKEY_CLASSES_ROOT\.pdfbkup&quot; &quot;HKEY_CLASSES_ROOT\.pdf&quot; $0<br />
+      ${If} $0 == &quot;0&quot;<br />
+        StrCpy $0 &quot;Successful&quot;<br />
+        ${registry::DeleteKey} &quot;HKEY_CLASSES_ROOT\.pdfbkup&quot; $1<br />
+        ${If} $1 == &quot;0&quot;<br />
+          StrCpy $1 &quot;Successful&quot;<br />
+        ${Else}<br />
+          StrCpy $1 &quot;Failed&quot;<br />
+        ${EndIf}<br />
+      ${Else}<br />
+        StrCpy $0 &quot;Failed&quot;<br />
+      ${EndIf}<br />
+      !insertmacro logme $INSTLOG &quot;- .pdf association restore result: $0&quot; s<br />
+      !insertmacro logme $INSTLOG &quot;- .pdfbkup cleanup result: $1&quot; s<br />
+    ${EndIf}<br />
+<br />
+  SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">26th July 2010, 18:08</div></div><div class="posttext">what about using DeleteRegKey from NSIS, instead of the Registry plug-in ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">26th July 2010, 18:14</div></div><div class="posttext">additionnally, if you plan to backup .pdf extension association.. instead of creating a .pdfbkup extension entry (WTF?!), it would be better to backup the value in a sub-key of .pdf<br />
+<br />
+like .pdf\MyApp-Backup<br />
+<br />
+or maybe even just save only the (default) value to another name and then change it, instead of replacing the whole .pdf key</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Squirre1</div><div class="date">26th July 2010, 21:00</div></div><div class="posttext">I want to make sure the entire contents of the .pdf class are maintained, not just one value, so the easiest thing to do is just copy the key...<br />
+<br />
+Additionally, I can do the DeleteRegKey, BUT my installer is just a wrapper for another msi installation so I am trying to avoid it altering the ErrorLevel which is returned to our management system for successfail validation...<br />
+<br />
+I mean I guess I could do something along the following<br />
+GetErrorlevel $2<br />
+DeleteRegKey &quot;Path to key&quot;<br />
+GetErrorlevel $1<br />
+&lt;Handle $1 error result&gt;<br />
+SetErrorlevel $2<br />
+<br />
+and go on my marry way... As long as DeleteRegKey will return a valid error result on failure...<br />
+<br />
+But that does not answer why registry::deletekey is not working, even though I can do a DeleteRegKey and it DOES work...<br />
+<br />
+Thanks....</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">gringoloco023</div><div class="date">27th July 2010, 06:46</div></div><div class="posttext">Some how ${registry::DeleteKey} can not deal with HKCR,<br />
+ if you use HKLM\SOFTWARE\Classes instead and it works as expected</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">27th July 2010, 09:45</div></div><div class="posttext">Additionally, I can do the DeleteRegKey, BUT my installer is just a wrapper for another msi installation so I am trying to avoid it altering the ErrorLevel which is returned to our management system for successfail validation...<br />
+<br />
+You're mixing up the ErrorLevel returned by the installer, and the error flag which is a simple internal flag that can be tested by your script after some NSIS instructions.<br />
+<br />
+Unless specified in the documentation, most NSIS instructions don't alter the ErrorLevel, just the error flag.<br />
+See also NSIS documentation D.1</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Squirre1</div><div class="date">27th July 2010, 15:12</div></div><div class="posttext">@gringoloco023 - Blah, I thought about that, just never tried it. Kept diggin on why it just didnt work in HKCR... HKCR is basically a shortcut to the actual location of HKLM\Software\Classes...<br />
+<br />
+@Wizou - Thanks for that piece... So if an function in NSIS sets the errorflag, it does not actually modify the ErrorLevel, for ex. SetErrorLevel and GetErrorLevel... That was one of my concerns...<br />
+<br />
+I have not had a LOT of time to dig on this because I have been working on other things as well, but you guys helped save me some time..<br />
+<br />
+Thanks,<br />
+<br />
+Squirre1</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">27th July 2010, 15:23</div></div><div class="posttext">Only SetErrorLevel, Abort, and a the user clicking Cancel can modify the installer exit code (error level). The errorflag set by NSIS has no effect on the error level.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

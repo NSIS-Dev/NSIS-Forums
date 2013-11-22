@@ -1,0 +1,220 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Installer fails with system.dll error- win XP, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Installer fails with system.dll error- win XP NSIS Discussion" />
+	
+	<title> Installer fails with system.dll error- win XP [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Installer fails with system.dll error- win XP</div>
+<hr />
+<div class="pda"><a href="t-306590.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=306590">Installer fails with system.dll error- win XP</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">archaeogeek</div><div class="date">21st May 2009, 09:29</div></div><div class="posttext">Hi,<br />
+<br />
+I am using the example here: <br />
+http://nsis.sourceforge.net/Adding_DropList_with_available_drives_instead_of_directory_page<br />
+as my basis, and have adapted it to use the modern interface rather than classis. I am using Windows XP SP2 on my development machine, with NSIS 2.44. My code is as follows:<br />
+<br />
+;--------------------------------<br />
+;Include Modern UI<br />
+<br />
+  !include &quot;MUI2.nsh&quot;<br />
+<br />
+;--------------------------------<br />
+; Other required files<br />
+<br />
+!include WinMessages.nsh<br />
+!include FileFunc.nsh<br />
+!insertmacro GetDrives<br />
+!insertmacro DriveSpace<br />
+<br />
+;--------------------------------<br />
+; App-specific definitions<br />
+<br />
+!define SIZE &quot;1700&quot; ;add here total uncompressed data size in Mb of your application<br />
+!define APPNAME &quot;Portable GIS 1.2&quot;<br />
+Name '${APPNAME}'<br />
+OutFile 'portablegis_setup_v1_2.exe'<br />
+AllowRootDirInstall true<br />
+<br />
+;--------------------------------<br />
+;Interface Configuration<br />
+<br />
+  !define MUI_HEADERIMAGE<br />
+  !define MUI_HEADERIMAGE_BITMAP &quot;C:\JO\PROGS-CODE\USBGIS_SETUP\oadigi_logo_150.bmp&quot; ; optional<br />
+  !define MUI_ABORTWARNING<br />
+  <br />
+;--------------------------------<br />
+; Pages (generic ones prefixed with insertmacro)<br />
+ <br />
+!insertmacro MUI_PAGE_WELCOME<br />
+!insertmacro MUI_PAGE_LICENSE &quot;C:\JO\PROGS-CODE\USBGIS_SETUP\license.txt&quot;<br />
+Page Custom CustomCreate CustomLeave<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+# These indented statements modify settings for MUI_PAGE_FINISH<br />
+    !define MUI_FINISHPAGE_NOAUTOCLOSE<br />
+    !define MUI_FINISHPAGE_RUN<br />
+    !define MUI_FINISHPAGE_RUN_CHECKED<br />
+    !define MUI_FINISHPAGE_RUN_TEXT &quot;Start the Control Panel&quot;<br />
+    !define MUI_FINISHPAGE_RUN_FUNCTION &quot;LaunchLink&quot;<br />
+    !define MUI_FINISHPAGE_SHOWREADME_CHECKED<br />
+    !define MUI_FINISHPAGE_SHOWREADME $INSTDIR\portablegis_readme.txt<br />
+!insertmacro MUI_PAGE_FINISH<br />
+<br />
+;--------------------------------<br />
+;Languages<br />
+<br />
+  !insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+;-------------------------------- <br />
+; Installer Sections<br />
+<br />
+Section &quot;primary&quot; SecPrimary<br />
+        setOutPath $INSTDIR<br />
+		file /r usbgis<br />
+		file Autorun.inf<br />
+		file PortableGIS_Menu.exe<br />
+		file portablegis_readme.txt<br />
+SectionEnd<br />
+<br />
+;-------------------------------- <br />
+;Descriptions<br />
+<br />
+  ;Language strings<br />
+  LangString DESC_SecPrimary ${LANG_ENGLISH} &quot;Primary section.&quot;<br />
+<br />
+  ;Assign language strings to sections<br />
+  !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN<br />
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecPrimary} $(DESC_SecPrimary)<br />
+  !insertmacro MUI_FUNCTION_DESCRIPTION_END<br />
+<br />
+;--------------------------------<br />
+;Custom Functions to replace standard directory chooser with a drive-letter chooser instead<br />
+<br />
+Function CustomCreate<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Settings' 'NumFields' '6'<br />
+ <br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 1' 'Type' 'Label'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 1' 'Left' '5'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 1' 'Top' '5'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 1' 'Right' '-6'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 1' 'Bottom' '17'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 1' 'Text' \<br />
+         'Select Installation drive:'<br />
+ <br />
+         StrCpy $R2 0<br />
+         StrCpy $R0 ''<br />
+         ${GetDrives} &quot;FDD+HDD&quot; GetDrivesCallBack<br />
+ <br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 2' 'Type' 'DropList'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 2' 'Left' '30'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 2' 'Top' '26'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 2' 'Right' '-31'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 2' 'Bottom' '100'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 2' 'Flags' 'Notify'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 2' 'State' '$R1'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 2' 'ListItems' '$R0'<br />
+ <br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 3' 'Type' 'Label'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 3' 'Left' '5'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 3' 'Top' '109'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 3' 'Right' '59'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 3' 'Bottom' '119'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 3' 'Text' \<br />
+         'Space required:'<br />
+ <br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 4' 'Type' 'Label'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 4' 'Left' '60'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 4' 'Top' '109'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 4' 'Right' '-5'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 4' 'Bottom' '119'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 4' 'Text' \<br />
+         '${SIZE} Mb'<br />
+ <br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 5' 'Type' 'Label'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 5' 'Left' '5'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 5' 'Top' '120'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 5' 'Right' '59'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 5' 'Bottom' '130'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 5' 'Text' \<br />
+         'Space available:'<br />
+ <br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 6' 'Type' 'Label'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 6' 'Left' '60'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 6' 'Top' '120'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 6' 'Right' '-5'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 6' 'Bottom' '130'<br />
+         WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 6' 'Text' \<br />
+         '$R3 Mb'<br />
+ <br />
+         push $0<br />
+         InstallOptions::Dialog '$PLUGINSDIR\custom.ini'<br />
+         pop $0<br />
+         pop $0<br />
+FunctionEnd<br />
+ <br />
+Function CustomLeave<br />
+        ReadIniStr $0 '$PLUGINSDIR\custom.ini' 'Settings' 'State'<br />
+        StrCmp $0 '2' 0 next<br />
+        ReadIniStr $0 '$PLUGINSDIR\custom.ini' 'Field 2' 'State'<br />
+        StrCpy $0 $0 3<br />
+        ${DriveSpace} &quot;$0&quot; &quot;/D=F /S=M&quot; $R3<br />
+        WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 6' 'Text' \<br />
+        '$R3 Mb'<br />
+        ReadIniStr $0 '$PLUGINSDIR\custom.ini' 'Field 6' 'HWND'<br />
+        SendMessage $0 ${WM_SETTEXT} 0 'STR:$R3 Mb'<br />
+        Abort<br />
+ <br />
+     next:<br />
+        ReadIniStr $0 '$PLUGINSDIR\custom.ini' 'Field 2' 'State'<br />
+        StrCpy '$INSTDIR' '$0'<br />
+FunctionEnd<br />
+ <br />
+Function GetDrivesCallBack<br />
+         ${DriveSpace} &quot;$9&quot; &quot;/D=F /S=M&quot; $R4<br />
+         IntCmp $R4 '${SIZE}' end end def<br />
+      def:<br />
+         StrCmp $R2 '0' 0 next<br />
+         StrCpy $R3 '$R4'<br />
+         StrCpy $R1 '$9'<br />
+         IntOp $R2 $R2 + 1<br />
+      next:<br />
+         StrCpy $R0 '$R0$9|'<br />
+      end:<br />
+	 Push $0<br />
+FunctionEnd<br />
+ <br />
+Function .onInit<br />
+         InitPluginsDir<br />
+         GetTempFileName $0<br />
+         Rename $0 '$PLUGINSDIR\custom.ini'<br />
+FunctionEnd<br />
+<br />
+Function LaunchLink<br />
+    ExecShell &quot;&quot; &quot;$INSTDIR\PortableGIS_menu.exe&quot;<br />
+FunctionEnd<br />
+<br />
+On my development machine this compiles and tests just fine, but on a different machine, running Windows XP SP3 the installer crashes at the point where the user would choose the drive, with a generic &quot;blah.exe has encountered a problem and needs to close&quot; error. When I look in the system event logs I get the following error:<br />
+<br />
+Faulting application blah.exe, version 0.0.0.0 faulting module system.dll, version 0.0.0.0, fault address 0x000186d<br />
+<br />
+However, if I run the exe in Windows 2000 compatibility mode then the installer runs just fine.<br />
+<br />
+I'm very new to nsis, and I have seen lots of stuff about system.dll, and I can see that this is being called in Filefunc.nsh, but other than that I'm not very sure what I need to do here. I am assuming that my development machine is using one version of system.dll, and the test machine another, is this correct? If so, could someone show me how, in my code, I ensure that the same dll is used both times? Or is this a different problem?<br />
+<br />
+Many thanks for your help<br />
+<br />
+Archaeogeek</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

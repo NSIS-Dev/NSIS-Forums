@@ -1,0 +1,166 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" makensis: Stop on error, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  makensis: Stop on error NSIS Discussion" />
+	
+	<title> makensis: Stop on error [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  makensis: Stop on error</div>
+<hr />
+<div class="pda"><a href="t-223624.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=223624">makensis: Stop on error</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Well</div><div class="date">9th August 2005, 09:51</div></div><div class="posttext">Hi everyone,<br />
+<br />
+Have a simple request and will be very happy if it can be done. I'm batch-building a lot of installs, the result files are compilled with another ones, then all this stuff gets archived, time-stamped and uploaded - a completely automated double-click solution. The nasty part comes when I miss some file in some of the installs - the install surely gives some error but it gets lost in the tons of messages, then the archive gets compilled with some install missing, then uploaded and I got a problem later.<br />
+The obvious answer is: &quot;Do it more carefully&quot;, but I'm just a human and making mistakes.<br />
+<br />
+Can there be an option added in makensis to just hang there upon error so it can attract my attention?<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">9th August 2005, 09:54</div></div><div class="posttext">AFAIK: NSIS sets errorlevel on exit.<br />
+<br />
+<br />
+makensis.exe my.nsi<br />
+@IF ERRORLEVEL==1 GOTO error<br />
+goto finish<br />
+:error<br />
+pause<br />
+:finish</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Well</div><div class="date">9th August 2005, 09:58</div></div><div class="posttext">OMG completely forgot about the errorlevel... will try that now... thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Well</div><div class="date">9th August 2005, 16:39</div></div><div class="posttext">Nope, it don't work :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">9th August 2005, 17:11</div></div><div class="posttext">It DOES work, here's a full example.<br />
+<br />
+c:\test.bat<br />
+<br />
+@echo off<br />
+c:\programme\nsis\makensis.exe c:\test.nsi<br />
+@IF ERRORLEVEL ==1 GOTO error<br />
+echo &quot;Ready&quot;<br />
+goto end<br />
+:error<br />
+echo &quot;ERROR!&quot;<br />
+pause<br />
+:end<br />
+<br />
+<br />
+c:\test.nsi<br />
+<br />
+OutFile &quot;c:\test.exe&quot;<br />
+<br />
+Section Test<br />
+	File &quot;c:\test2.bat&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+Run &quot;test.bat&quot; and see an error. If you change the File command int c:\test.nsi to the correct path &quot;c:\test.bat&quot; all runs fine (and the batch script skips &quot;pause&quot;).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Well</div><div class="date">10th August 2005, 12:18</div></div><div class="posttext">Uh... thanks... I have changed the code to your way and it worked indeed... however reverted back to mine and it does not work agai... just curious why:<br />
+<br />
+&quot;C:\Program Files\NSIS\makensis.exe&quot; /V2 tmpinst.nsi<br />
+@IF ERRORLEVEL==0 GOTO END<br />
+echo FAILURE BUIDLDING INSTALLATION FOR: %shortname% - %which%<br />
+pause<br />
+:END<br />
+<br />
+however that way works:<br />
+<br />
+&quot;C:\Program Files\NSIS\makensis.exe&quot; /V2 tmpinst.nsi<br />
+<br />
+@IF ERRORLEVEL==1 GOTO ERROR<br />
+goto END<br />
+<br />
+:ERROR<br />
+echo FAILURE BUIDLDING INSTALLATION FOR: %shortname% - %which%<br />
+pause<br />
+:END<br />
+<br />
+Strange...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">10th August 2005, 13:47</div></div><div class="posttext">however reverted back to mine and it does not work agai... just curious whyThe answer is quite simple. Although the ERRORLEVEL tests appear to test for equality, they actually test for &quot;greater than or equal to&quot;.<br />
+<br />
+So if you want to test for several ERRORLEVEL values you need to do so in descending order, like this:<br />
+<br />
+IF ERRORLEVEL 3 GOTO ERROR_3<br />
+IF ERRORLEVEL 2 GOTO ERROR_2<br />
+IF ERRORLEVEL 1 GOTO ERROR_1<br />
+<br />
+(note that label ERROR_3 will be jumped to if the ERRORLEVEL is 3 or higher)<br />
+<br />
+If you used this order,<br />
+<br />
+IF ERRORLEVEL 1 GOTO ERROR_1<br />
+IF ERRORLEVEL 2 GOTO ERROR_2<br />
+IF ERRORLEVEL 3 GOTO ERROR_3<br />
+<br />
+then the batch file would always jump to label ERROR_1 when ERRORLEVEL was 1, 2, 3, or any higher value.<br />
+<br />
+So when you used &quot;IF ERRORLEVEL==0 GOTO END&quot; your batch file would also jump to END when the ERRORLEVEL was 1</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Well</div><div class="date">10th August 2005, 16:38</div></div><div class="posttext">lol<br />
+Okay I got it... the mistery is solved, thanks guys :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">l_d_allan</div><div class="date">16th May 2006, 21:13</div></div><div class="posttext">I'm doing something similar to the original post, and was wondering if makensisw.exe has a return-code that <br />
+IF ERRORLEVEL<br />
+can handle.<br />
+<br />
+It seems to invariably return 0.<br />
+<br />
+<br />
+rem RebuildInstallers.bat 2006-May-16 LDA<br />
+<br />
+X:\DevTools\nsis\makensisw HasError.nsi<br />
+<br />
+IF ERRORLEVEL 3 goto ReportLevel3Error<br />
+<br />
+IF ERRORLEVEL 2 goto ReportLevel2Error<br />
+<br />
+IF ERRORLEVEL 1 goto ReportLevel1Error<br />
+<br />
+IF ERRORLEVEL 0 goto ReportLevel0Error<br />
+<br />
+:ReportLevel0Error<br />
+echo Reached ERRORLEVEL 0<br />
+goto Finished<br />
+<br />
+:ReportLevel1Error<br />
+echo Reached ERRORLEVEL 1<br />
+goto Finished<br />
+<br />
+:ReportLevel2Error<br />
+echo Reached ERRORLEVEL 2<br />
+goto Finished<br />
+<br />
+:ReportLevel3Error<br />
+echo Reached ERRORLEVEL 3<br />
+goto Finished<br />
+<br />
+:Finished<br />
+pause</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th May 2006, 11:38</div></div><div class="posttext">makensisw has no return code, only makensis.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

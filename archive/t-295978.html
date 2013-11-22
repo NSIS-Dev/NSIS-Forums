@@ -1,0 +1,223 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Rollback, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Rollback NSIS Discussion" />
+	
+	<title> Rollback [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Rollback</div>
+<hr />
+<div class="pda"><a href="t-295978.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=295978">Rollback</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">urugan</div><div class="date">15th August 2008, 12:05</div></div><div class="posttext">Hello everybody, it's my first post.<br />
+I'm doing evaluation on nsis and inno to choose the one that suits me more.<br />
+ I've read and seen enough, just need one last question answered.<br />
+Does NSIS supports rollback functionality?<br />
+I mean, if I have a scenario of upgrade, which contains copying a lot of files over existing installation and after that calling some sophisticated sql scripts, which can fail, will it be possible to (depending on sql actions outcome) rollback the whole installation to the point before upgrade?<br />
+I am pretty sure Inno has it.<br />
+p.s.<br />
+I don't want no flamewar, just a simple answer, perhaps with some links.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">urugan</div><div class="date">15th August 2008, 17:30</div></div><div class="posttext">oh come on!<br />
+Nobody?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th August 2008, 18:27</div></div><div class="posttext">no, there is no rollback, you could copy the original files to a backupdir and &quot;restore&quot; from that if needed</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">urugan</div><div class="date">15th August 2008, 19:29</div></div><div class="posttext">thx man.<br />
+I was already trying this route.<br />
+In my case it also means copying a db. But it should be do-able...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">15th August 2008, 19:39</div></div><div class="posttext">This might help you:<br />
+http://nsis.sourceforge.net/Backup_files_on_install,_restore_on_uninstall<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Andrew Wallo</div><div class="date">20th August 2008, 21:50</div></div><div class="posttext">I'm working on a nice rollback include.  ( Aptly titled rollback.nsh ) Just a set of macros really, but it sets up a log that can be saved to a provided path.... builds the log...as you install or edit files and registry entries... and when you're done you close the &quot;session&quot;.  Then later you could come back and execute the rollback.<br />
+<br />
+Works well for my application which can't really depend on having a clean folder for its files.  So 'rollback' means recopying whatever files I detect that I've stepped on, back into the working folder on a rollback.  ( Essentially parsing the log file... for FILE entries, and putting it back where the PATH attribute says to go. )  <br />
+<br />
+Maybe we should include a log for SQL calls to?  Or better a log to execute SQL files against a database... that might abstract your issue better.<br />
+<br />
+It'd be ready for a demo as a general include, except that I'd like to include the ability to tie in a CallBack on a failed copy.... i.e. If you tried to restore a file it was tied up or something.  Currently I have a string that gets read from the log file and passed to ExecWait but that's just a bit limiting and somewhat impractical. I'd rather be able to read a string from the log file and call back a function in the NSIS script... like so:<br />
+<br />
+Function handleErrorWithCustomCallback<br />
+  MessageBox MB_OK &quot;Handled Error.&quot;<br />
+FunctionEnd<br />
+<br />
+## SNIP ##<br />
+## In some Section or function...<br />
+ReadFile $myFile $myCallBackString  ; blah blah blah <br />
+## myCallBackString now has &quot;handleErrorWithCustomCallback&quot;<br />
+<br />
+Call $myCallBackString   ; but this isn't resolving....<br />
+; macros seem to do something like this with ${_label} but not quite.... <br />
+<br />
+The lack of runtime binding/resolution seems to not resolve this.... or maybe I'm not resolving the var's contents like I should be.... any comments Stu?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">20th August 2008, 23:03</div></div><div class="posttext">Try using GetFunctionAddress.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Andrew Wallo</div><div class="date">21st August 2008, 02:21</div></div><div class="posttext">Sadly, that doesn't seem to work.... for example....<br />
+<br />
+Function testCallback<br />
+  MessageBox MB_OK &quot;Called it&quot;<br />
+FunctionEnd<br />
+<br />
+<br />
+;--------------------------------<br />
+; There are no sections or pages in this installer.  It just executes the .onInit and closes.<br />
+;<br />
+Function .onInit<br />
+  var /GLOBAL testTheCallback<br />
+  StrCmp &quot;1&quot; &quot;0&quot; 0 +2<br />
+    call testCallback ; this so it doesn't zero the code.<br />
+  <br />
+  MessageBox MB_OK &quot;Testing callback:&quot;<br />
+  StrCpy $testTheCallback &quot;testCallback&quot;<br />
+  GetFunctionAddress $R1 $testTheCallback   ;Doesnt' work.<br />
+<br />
+  ###<br />
+  ## WORKS: GetFunctionAddress $R1 &quot;testCallback&quot; <br />
+  ## BUT SINCE ITS READING IT FROM A FILE ITS NOT USEFUL.<br />
+  #######################################################<br />
+  Call $R1<br />
+FunctionEnd<br />
+<br />
+<br />
+GetFunctionAddress seems to want the literal function name entered, not some variable.....</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">21st August 2008, 13:53</div></div><div class="posttext">The actual names of function and variables are not included in the compiled installer.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Andrew Wallo</div><div class="date">21st August 2008, 17:16</div></div><div class="posttext">Considering that we're sort of operating in an Assembly like stack mentality... I understand that the nice readable names get stored merely as a memory location.<br />
+<br />
+Are you saying that there is no runtime-linking to functions based on an evaluated string? i.e...... something like this in a javascript mentality might look like.... ( during runtime... obviously ) <br />
+<br />
+myVar = eval(&quot;customFunctionName&quot;); <br />
+<br />
+Thus, we could use a line like to this to interpret text files into operating instructions at runtime... such as a call back function for some condition.<br />
+<br />
+What you are saying is that there is no way to reference that function abstractly in code during runtime?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mgillespie</div><div class="date">16th April 2010, 08:47</div></div><div class="posttext">Sorry to bump an old thread, but I did have something to contribute.<br />
+<br />
+We are using quite an old version of NSIS, (2.14), with some custom modifications to the NSIS code to provide a primitive (but works for us) automated rollback system.<br />
+<br />
+Deep down in the NSIS core, where the file is actually written to disk, before the write is actually done, we check to see if it already exists, if it does, we append the existing filename with the .previous extension and then write the new file.  On uninstall, it's simply a process of recursively scanning the installation folder, if we find a .previous, delete the original file and restore the .previous version.<br />
+<br />
+The whole .previous creation process can be enabled or disabled during the script execution by setting $R9  (this clearly could be improved to make it a keyword)<br />
+<br />
+Anyone want the patch? (the reason we are still using NSIS 2.14 is because of the source changes we made, we don't see any issues with this old NSIS version, and don't want to constantly merge our NSIS, so there is a benefit for us if we can get this patch, or equivalent functionality into NSIS, so we can use standard NSIS)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">16th April 2010, 08:54</div></div><div class="posttext">There is no need to edit the NSIS sourcecode to get this behaviour. It's extremely simple to do this in script alone. I therefore very much doubt that your patch will be merged into the trunk.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">16th April 2010, 12:27</div></div><div class="posttext">It's extremely simple to do this in script alone.<br />
+Since when? :x<br />
+<br />
+Not that I'm advocating this patch per se - but unless I missed something, you're going to need quite a bit of code to actually get this sort of behavior out of NSIS.  There's probably examples in the wiki that make it easier because you don't have to come up with something from scratch*, but...<br />
+<br />
+For single files, you'd have to define a macro that replaces the File command you'd normally use which...<br />
+1. Checks if the file exists<br />
+2. If it does, creates a backup*<br />
+3. Tries to overwrite the file<br />
+3a. If it succeeds - great, done<br />
+3b.1 If not, delete the backup<br />
+3b.2 Catch the error with custom handling if desired (see some other thread on this)<br />
+* and in the backup section check if you can actually back up to the location you want to back up to.<br />
+<br />
+And that's single files.  As soon as you use the File command to include multiple files or files recursively, you have to either... A. Drop that construction entirely and make a pre-installer build installer that generates a file inclusion list for the actual installer, or B. First extract the files to a temporary location and instead of using the File command to place the files directly, find the files that were created in the temporary location and use CopyFiles and CreateDirectory instead (further handling is similar to the above).<br />
+<br />
+You'd need these as separate macros as well - or as a single macro but for 'single file' calls you'd have to explicitly indicate that it is such. e.g.<br />
+!macro macroname source dest recursive<br />
+For a single file would always have to specify the 'recursive' bit as being 'false', '0', or whatever one chooses.<br />
+This applies for every parameter in the File command that you'd want to support.  Adding support for /x (exclude files) means adding another parameter... now a single file call might end up looking like:<br />
+${macroname} &quot;somefile.ext&quot; &quot;$InstDir\somefile.ext&quot; 0 0<br />
+Alternatively you'd have to define them before your call.. or callS in which case you have to make sure you don't forget to undefine them afterward.. etc.<br />
+<br />
+It's not impossible, but 'extremely simple' is not how I would choose to describe it in general ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">16th April 2010, 15:00</div></div><div class="posttext">It's not impossible, but 'extremely simple' is not how I would choose to describe it in general ;)<br />
+I was referring to the fact that it mostly requires just a bunch of ${If} statements, which are trivial to code if you're clearheaded enough. But sure, I stand corrected, it takes some effort to get it exactly right. :-)<br />
+<br />
+(You could of course make two macros, one single and one recursive/wildcard...)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">16th April 2010, 16:04</div></div><div class="posttext">(You could of course make two macros, one single and one recursive/wildcard...)<br />
+Well that's something I addressed toward the end... now you want to support /x as well.<br />
+So now you need macros:<br />
+File<br />
+FileR<br />
+FileX<br />
+FileRX<br />
+<br />
+Now add /a and /nonfatal ;)  Granted, those are a little more obscure, but you can see how things quickly tend to explode into a number of macros.  Hence why instead one might have something like a context switch...<br />
+${NonFatal} true<br />
+${FileSomething} a x ...<br />
+${FileSomething} b x ...<br />
+${FileSomething} c x ...<br />
+${NonFatal} False<br />
+<br />
+But you phrased it well when you said it takes some effort to get it exactly right. :-) :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mgillespie</div><div class="date">27th April 2010, 15:40</div></div><div class="posttext">And this was precisely the reason we decided on a change deep down at file writing level, as it works regardless of how the file is added to the installer :-)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">27th April 2010, 16:46</div></div><div class="posttext">And this was precisely the reason we decided on a change deep down at file writing level, as it works regardless of how the file is added to the installer :-)<br />
+<br />
+Only to an extent, though, if I read your original post right:<br />
+We check to see if it already exists, if it does, we append the existing filename with the .previous extension and then write the new file.<br />
+So what if filename.previous already exists?<br />
+<br />
+On uninstall, it's simply a process of recursively scanning the installation folder, if we find a .previous, delete the original file and restore the .previous version.<br />
+And what if 'the original' is not actually -your- original?<br />
+<br />
+Doing it 'right' will never be easy - if even possible at all - but there's certainly room for improvement.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mathrick</div><div class="date">27th April 2011, 17:09</div></div><div class="posttext">I'm working on a nice rollback include.  ( Aptly titled rollback.nsh ) Just a set of macros really, but it sets up a log that can be saved to a provided path.... builds the log...as you install or edit files and registry entries... and when you're done you close the &quot;session&quot;.  Then later you could come back and execute the rollback.<br />
+<br />
+<br />
+It'd be ready for a demo as a general include, except that I'd like to include the ability to tie in a CallBack on a failed copy.... i.e. If you tried to restore a file it was tied up or something.  Currently I have a string that gets read from the log file and passed to ExecWait but that's just a bit limiting and somewhat impractical. I'd rather be able to read a string from the log file and call back a function in the NSIS script... like so:<br />
+<br />
+Function handleErrorWithCustomCallback<br />
+  MessageBox MB_OK &quot;Handled Error.&quot;<br />
+FunctionEnd<br />
+<br />
+## SNIP ##<br />
+## In some Section or function...<br />
+ReadFile $myFile $myCallBackString  ; blah blah blah <br />
+## myCallBackString now has &quot;handleErrorWithCustomCallback&quot;<br />
+<br />
+Call $myCallBackString   ; but this isn't resolving....<br />
+; macros seem to do something like this with ${_label} but not quite.... <br />
+<br />
+The lack of runtime binding/resolution seems to not resolve this.... or maybe I'm not resolving the var's contents like I should be.... any comments Stu?<br />
+<br />
+Any progress on that? I've coded a macro-based semi-solution which allows registering &quot;callback groups&quot;, each containing up to 16 callbacks. See callback.nsh for code, and testcallback.nsi for an example of usage. In exchange I'd really like to see your rollback code :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" how to get Add/Remove to not wait on ExecShell?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  how to get Add/Remove to not wait on ExecShell? NSIS Discussion" />
+	
+	<title> how to get Add/Remove to not wait on ExecShell? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  how to get Add/Remove to not wait on ExecShell?</div>
+<hr />
+<div class="pda"><a href="t-272793.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=272793">how to get Add/Remove to not wait on ExecShell?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">bobics</div><div class="date">13th June 2007, 22:14</div></div><div class="posttext">I have the following code to open an web page when uninstall has finished:<br />
+<br />
+Function un.onUninstSuccess<br />
+  ExecShell &quot;open&quot; &quot;http://www.google.com/&quot;<br />
+FunctionEnd<br />
+<br />
+When running from the Add/Remove applet, I'll see the default browser open as expected.  I cannot, however, close the Add/Remove applet until the browser (either IE and Firefox) has also been closed.  I think this is because the browser is launched as a child process which causes the applet to wait.  When I look in the Task Manager the uninstaller process (Au_.exe) is no longer running.<br />
+<br />
+Does anyone know how to have the Add/Remove applet not wait?<br />
+<br />
+Thanks,<br />
+bobics</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">13th June 2007, 22:49</div></div><div class="posttext">!include 'WinMessages.nsh'<br />
+<br />
+Function un.onUninstSuccess<br />
+  FindWindow $0 '' 'Add or Remove Programs'<br />
+  SendMessage $0 ${WM_CLOSE} 0 0<br />
+  ExecShell &quot;open&quot; &quot;http://www.google.com/&quot;<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bobics</div><div class="date">13th June 2007, 23:06</div></div><div class="posttext">Thanks a bunch, it works for me.<br />
+<br />
+That's definitely much better than having the Add/Remove applet hang, although the most ideal behavior would be to leave the applet alone.  Looks like a problem with the Exec/ExecShell implementation.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">14th June 2007, 01:52</div></div><div class="posttext">Looking for &quot;Add or Remove Programs&quot; window title is a bad solution unless your software only runs on english versions of windows.<br />
+<br />
+There is nothing wrong with the Exec/ExecShell implementation in nsis. The ARP applet works like this by design, on windows 2000 it will only wait for the initial process, on xp it creates a job object and waits for every process created.<br />
+<br />
+Doing Exec '&quot;explorer.exe&quot; http://example.com' might work but will probably not use the default browser but IE</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bobics</div><div class="date">14th June 2007, 02:37</div></div><div class="posttext">Thanks for the info, previously I did try:<br />
+<br />
+http://nsis.sourceforge.net/Open_link_in_new_browser_window<br />
+<br />
+which comes out to the equivalent Exec '&quot;C:\Program Files\Internet Explorer&quot; http://example.com' but that also hung.<br />
+<br />
+How do I work around this &quot;problem&quot;?  I tried a similar test with InstallShield (LaunchApp(&quot;C:\\Program Files\\Internet Explorer\\iexplore.exe&quot;, &quot;http://www.google.com&quot;)) and it does *not* hang the Add/Remove applet.<br />
+<br />
+I can surmise a few reasons for waiting on the job on XP (e.g. a possible separate child uninstall process, setups that spawn a temporary cloned instance so the uninstall exe can be deleted, etc.).  I do not believe, however, that this fits the most commmon *expected behavior* for Exec... since if I did want it to wait, I would have used ExecWait.  It seems InstallShield figured this out...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bobics</div><div class="date">14th June 2007, 02:45</div></div><div class="posttext">Actually, my apologies, it looks like InstallShield has the same behavior as NSIS. (I was dumb and launched it from the wrong location in my test.)<br />
+<br />
+Might not be any way around this.<br />
+<br />
+Also I think using the close window signal still leaves an instance of rundll32 even though there's no UI, which is pretty bad.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">14th June 2007, 03:21</div></div><div class="posttext">The reason I used explorer.exe (Not IE) in my example is that explorer is already running so it will not start a new process (Well it will start and then end right away)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bobics</div><div class="date">14th June 2007, 19:36</div></div><div class="posttext">Thanks, you're a genius!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jdt2oo7</div><div class="date">18th January 2010, 18:43</div></div><div class="posttext">I tried Exec '&quot;explorer.exe&quot; http://example.com', it works on XP and Windows 7, but not Vista. Any idea?<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th January 2010, 19:31</div></div><div class="posttext">Originally posted by jdt2oo7 <br />
+I tried Exec '&quot;explorer.exe&quot; http://example.com', it works on XP and Windows 7, but not Vista. Any idea?<br />
+ <br />
+<br />
+Well, it is a hack...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">18th January 2010, 22:11</div></div><div class="posttext">You might try creating a scheduled task to open the url. Set the delay very short - it only needs to be a couple of seconds ahead of the current clock. The ARP process will not see it as a child or part of the job, so they should close (or be closeable) when your uninstaller ends.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">18th January 2010, 22:16</div></div><div class="posttext">Why not just execute as a new process?<br />
+<br />
+http://nsis.sourceforge.net/Escape_ARP_Job_With_New_Process</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th January 2010, 23:00</div></div><div class="posttext">Originally posted by Zinthose <br />
+Why not just execute as a new process?<br />
+<br />
+http://nsis.sourceforge.net/Escape_ARP_Job_With_New_Process  <br />
+<br />
+I have not updated that code for Vista/7, so I'm not sure if it still works<br />
+<br />
+The ONLY way to launch a URL in a non hacky way is to use a out of process custom COM object (parent process of the COM host .exe would not be in the same process tree as the uninstaller) (You would register the COM dll, use it, unregister, so, it is also a ugly workaround)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

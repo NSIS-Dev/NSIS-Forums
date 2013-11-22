@@ -1,0 +1,240 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to RMDir empty directories recursively?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to RMDir empty directories recursively? NSIS Discussion" />
+	
+	<title> How to RMDir empty directories recursively? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to RMDir empty directories recursively?</div>
+<hr />
+<div class="pda"><a href="t-323222.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=323222">How to RMDir empty directories recursively?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">18th October 2010, 19:07</div></div><div class="posttext">I tried already everything I can think of but none method works as expected.<br />
+<br />
+I am searching (RecFind) the whole start menu folders for links to my application on uninstall. If a link is found it is being deleted - so far, so good.<br />
+Now I want to delete its folder/directory too if it is empty and so on (recursion).<br />
+<br />
+But no matter what I try I only get the first parent deleted. The upper directory on the next loop won't be deleted because it is detected as non-empty (e.g. by ${DirState}) though it is empty.<br />
+<br />
+I read about problems using Locate or Recfind because they might not close their last handle correctly. So I use ${WordFind} to get the parent directory but the directory is not removed nonetheless.<br />
+<br />
+Any ideas or hints?<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">19th October 2010, 00:55</div></div><div class="posttext">your problem might be that you're checking from the trunk down to the leaves.. when it needs to work from the leaves up.  Might something like this be what you need?<br />
+http://nsis.sourceforge.net/Recursively_remove_empty_parent_directories<br />
+( that code looks odd, but might give you some ideas )</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">19th October 2010, 06:43</div></div><div class="posttext">Animaether,<br />
+<br />
+your problem might be that you're checking from the trunk down to the leaves.. when it needs to work from the leaves up.<br />
+No, I do not.<br />
+As I wrote Now I want to delete its folder/directory too if it is empty and so on (recursion).<br />
+...<br />
+But no matter what I try I only get the first parent deleted. The upper directory on the next loop ...<br />
+<br />
+I am already going from the leaves up to the trunk. ;)<br />
+And I am quite familiar with recursion (from other programming and script languages).<br />
+<br />
+Might something like this be what you need?<br />
+http://nsis.sourceforge.net/Recursively_remove_empty_parent_directories<br />
+( that code looks odd, but might give you some ideas )<br />
+I agree - very odd code ... :rolleyes:<br />
+<br />
+Please have a look at the small test script below<br />
+<br />
+Name &quot;Recursively RMDir test&quot;<br />
+<br />
+OutFile &quot;RMDir_rec.exe&quot;<br />
+<br />
+RequestExecutionLevel admin<br />
+<br />
+!include WordFunc.nsh<br />
+<br />
+ShowInstDetails show<br />
+<br />
+Function .onInit<br />
+	SetShellVarContext all<br />
+	StrCpy $0 &quot;$SMPROGRAMS\Test_root\Test_sub_1\Test_sub_2\Test_sub_3&quot;<br />
+	CreateDirectory &quot;$0&quot;<br />
+	Sleep 5000<br />
+FunctionEnd<br />
+<br />
+Section<br />
+loop:<br />
+	ClearErrors<br />
+	RMDir &quot;$0&quot;<br />
+	Sleep 100<br />
+	IfErrors end<br />
+	${WordFind} &quot;$0&quot; &quot;\&quot; &quot;E-2{*&quot; $0<br />
+	IfErrors 0 loop<br />
+end:<br />
+SectionEnd<br />
+<br />
+This shows the basic concept I am actually using and it works as expected. But it won't (always) do so if comment out the Sleep command in the section!<br />
+<br />
+Therefor my conclusion is that the script is faster (too fast) than the file system.<br />
+<br />
+But how to determine/ detect if the file system is ready before trying to remove the next dir?<br />
+Always use an ugly Sleep command (and with which value)?<br />
+<br />
+And the other problem (already described in several threads here in the forum) with unclosed handles (e.g. from Locate or RecFind) also (still) exists.<br />
+<br />
+I achieved to get my function to work with a tremendous effort (writing the paths to a temp file, using sleep commands etc.) instead of using a simple loop like in the above script.<br />
+<br />
+BTW: Would be a nice to have function if you could use &quot;RMDIR /r /ifempty&quot; which will do a recursive removal of empty dirs.<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">19th October 2010, 12:55</div></div><div class="posttext">You can always change the (arbitrary) sleep to a....<br />
+<br />
+${DoWhile} ${FileExists} &quot;&lt;folder&gt;&quot;<br />
+  Sleep 10<br />
+${Loop}<br />
+<br />
+And something in there to bail after 10 seconds or so to prevent getting stuck if the folder was simply not deleteable despite no error being set out of RMDir.  But I'm sure you knew this already.<br />
+<br />
+I'm not familiar with any issues of the Locate macro except where the size specification may be used (as that's what opens a file handle, in order to seek to the end, get the new position, and thus determine the file's size).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">19th October 2010, 13:32</div></div><div class="posttext">You can always change the (arbitrary) sleep to a....<br />
+<br />
+${DoWhile} ${FileExists} &quot;&lt;folder&gt;&quot;<br />
+  Sleep 10<br />
+${Loop}<br />
+<br />
+And something in there to bail after 10 seconds or so to prevent getting stuck if the folder was simply not deleteable despite no error being set out of RMDir.  But I'm sure you knew this already.<br />
+Yes, but always good to read some other/ additional concepts. :up:<br />
+Or maybe I can do another &quot;useless/ needless&quot; operation instead of the loop just to asure that the directory is recognized as empty (of course only if it is) after the file deletion?<br />
+Any ideas? Maybe opening and closing a file in $TEMP?<br />
+<br />
+I'm not familiar with any issues of the Locate macro except where the size specification may be used (as that's what opens a file handle, in order to seek to the end, get the new position, and thus determine the file's size).<br />
+To be honest, I did not investigate this any further, so my first statement could be wrong.<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">19th October 2010, 13:42</div></div><div class="posttext">Well, my guess is that if the directory is not actually removed at the time RMDir returns successfully and NSIS moves on to the next command, that you're dealing with either some manner of caching or queueing (perhaps from the drive itself).  Performing some other IO -might- force the directory removal to be committed, but then again it might not.. seems to me the safest way is to actually check whether the folder has been deleted, and only then carry on.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">19th October 2010, 13:56</div></div><div class="posttext">Well, my guess is that if the directory is not actually removed at the time RMDir returns successfully and NSIS moves on to the next command, <br />
+Ah wait please ...,<br />
+RMDir does not return successfully. It raises an error though the directory is empty! Same with ${DirState} (returns 1 = not empty).<br />
+So to me it seems that there has to be a &quot;certain&quot; time between the deletion of the last dir/file in a directory before this directory is being recognized as empty<br />
+<br />
+that you're dealing with either some manner of caching or queueing (perhaps from the drive itself).  Performing some other IO -might- force the directory removal to be committed, but then again it might not.. <br />
+There is at least a chance of &quot;might not ...&quot;. :D<br />
+And in general I prefer code that works 100% as expected ...! :p<br />
+<br />
+seems to me the safest way is to actually check whether the folder has been deleted, and only then carry on.<br />
+I agree. Still the question of how long to wait before one can be sure that the folder is either empty and can be deleted or it is not?<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">19th October 2010, 14:48</div></div><div class="posttext">well, that's why I suggested the loop.. it's a bit more cpu and i/o intensive (checking the dir's state every-sleep-interval, but at least you won't have to put a blanket '1 second' on there and waste time on most ops, or have it be too short if whatever's causing the discrepancy actually takes longer than 1 second to resolve</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">19th October 2010, 14:51</div></div><div class="posttext">OK, I'll give it a try and report back.<br />
+<br />
+Thanks,<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">20th October 2010, 15:42</div></div><div class="posttext">Here is another (test) version. In about one hundred runs it never failed.<br />
+<br />
+Name &quot;Recursively RMDir test&quot;<br />
+<br />
+OutFile &quot;RMDir_rec.exe&quot;<br />
+<br />
+RequestExecutionLevel admin<br />
+<br />
+!include LogicLib.nsh<br />
+!include WordFunc.nsh<br />
+<br />
+ShowInstDetails show<br />
+<br />
+Function .onInit<br />
+	SetShellVarContext all<br />
+	StrCpy $0 &quot;$SMPROGRAMS\Test_root\Test_sub_1.1&quot;<br />
+	CreateDirectory &quot;$0&quot;<br />
+	StrCpy $0 &quot;$SMPROGRAMS\Test_root\Test_sub_1\Test_sub_2\Test_sub_3&quot;<br />
+	CreateDirectory &quot;$0&quot;<br />
+	Sleep 5000<br />
+FunctionEnd<br />
+<br />
+Function isEmptyDir<br />
+  # Stack -&gt;                    # Stack: &lt;directory&gt;<br />
+  Exch $0                       # Stack: $0<br />
+  Push $1                       # Stack: $1, $0<br />
+  FindFirst $0 $1 &quot;$0\*.*&quot;<br />
+  strcmp $1 &quot;.&quot; 0 _notempty<br />
+    FindNext $0 $1<br />
+    strcmp $1 &quot;..&quot; 0 _notempty<br />
+      ClearErrors<br />
+      FindNext $0 $1<br />
+      IfErrors 0 _notempty<br />
+        FindClose $0<br />
+        Pop $1                  # Stack: $0<br />
+        StrCpy $0 1<br />
+        Exch $0                 # Stack: 1 (true)<br />
+        goto _end<br />
+     _notempty:<br />
+       FindClose $0<br />
+       Pop $1                   # Stack: $0<br />
+       StrCpy $0 0<br />
+       Exch $0                  # Stack: 0 (false)<br />
+  _end:<br />
+FunctionEnd<br />
+<br />
+Section<br />
+Push $0<br />
+Push $1<br />
+Push $2<br />
+loop:<br />
+	StrCpy $2 0<br />
+	ClearErrors<br />
+	RMDir &quot;$0&quot;<br />
+	IfErrors end<br />
+	DetailPrint &quot;before Sleep command&quot;<br />
+	Sleep 100<br />
+	${DoWhile} ${FileExists} &quot;$0&quot; <br />
+		IntOp $2 $2 + 1<br />
+		Push $0<br />
+		Call isEmptyDir<br />
+		Pop $1<br />
+		DetailPrint $2<br />
+		IntCmp $2 100 end<br />
+	${Loop}<br />
+	DetailPrint &quot;before StrCmp command&quot;<br />
+	StrCmp $1 0 end<br />
+	${WordFind} &quot;$0&quot; &quot;\&quot; &quot;E-2{*&quot; $0<br />
+	IfErrors 0 loop<br />
+end:<br />
+Pop $2<br />
+Pop $1<br />
+Pop $0<br />
+SectionEnd<br />
+<br />
+For the archive: The most important command is the 'Sleep 100' command. Without a sleep command the function fails at various points. The value for Sleep might be less but 100 seemed to me being a good compromise.<br />
+<br />
+I now try to imbed it in my real script and see if it works, too. ;)<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

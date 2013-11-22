@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Disable custom pages based on section selected, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Disable custom pages based on section selected NSIS Discussion" />
+	
+	<title> Disable custom pages based on section selected [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Disable custom pages based on section selected</div>
+<hr />
+<div class="pda"><a href="t-171927.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=171927">Disable custom pages based on section selected</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">frenchbenj</div><div class="date">3rd March 2004, 20:39</div></div><div class="posttext">I have built a MUI installer and it does the job well, but I have one last thing to take care of before i can truly be happy with it.<br />
+<br />
+Basically, i can do two installs. The FULL install installs all the files, plus has two custom pages that ask the user to modify some code variables (IP address, etc).<br />
+<br />
+The PATCH install only installs the class files, so that the configuration settings are not overridden.<br />
+<br />
+  !insertmacro MUI_PAGE_WELCOME<br />
+  !insertmacro MUI_PAGE_COMPONENTS<br />
+  Page custom customerConfig<br />
+  Page custom systemConfig<br />
+  !insertmacro MUI_PAGE_DIRECTORY<br />
+  !insertmacro MUI_PAGE_INSTFILES<br />
+  !insertmacro MUI_PAGE_FINISH<br />
+<br />
+I have found a function to force the user to choose either PATCH or FULL, but when they choose PATCH, i'd like to not have them go through the two custom pages (because they are not relevant for a FULL install).<br />
+<br />
+So my question is: based on the choices a users makes on the MUI_PAGE_COMPONENTS, can i not show customerConfig and systemConfig?<br />
+<br />
+I found some stuff online about .onInit and SHOW, but I couldn't understand it. If someone has an example, i'd be really happy!<br />
+<br />
+Thanks in advance!!!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">3rd March 2004, 21:24</div></div><div class="posttext">Call Abort in the custom page pre-function to skip the page.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">frenchbenj</div><div class="date">3rd March 2004, 21:36</div></div><div class="posttext">You mean in the .onInit function?<br />
+<br />
+Function .onInit<br />
+    !insertmacro MUI_INSTALLOPTIONS_EXTRACT &quot;customerConfig.ini&quot;<br />
+    !insertmacro MUI_INSTALLOPTIONS_EXTRACT &quot;systemConfig.ini&quot;<br />
+    <br />
+    ;==============================================================<br />
+    ; Mutually exclusive functions<br />
+    Push $0<br />
+<br />
+    StrCpy $R9 ${installPatchSection}<br />
+    SectionGetFlags ${installPatchSection} $0<br />
+    IntOp $0 $0 | ${SF_SELECTED}<br />
+    SectionSetFlags ${installPatchSection} $0<br />
+<br />
+    SectionGetFlags ${fullInstallSection} $0<br />
+    IntOp $0 $0 &amp; ${SECTION_OFF}<br />
+    SectionSetFlags ${fullInstallSection} $0<br />
+<br />
+    Pop $0<br />
+    ; END<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+<br />
+In the Help documentation, there is an example of using Abort in the pre function, shown below:<br />
+ Page license skipLicense &quot;&quot; stayInLicense<br />
+ Page custom customPage &quot;&quot; &quot;: custom page&quot;<br />
+ Page instfiles<br />
+<br />
+ Function skipLicense<br />
+   MessageBox MB_YESNO &quot;Do you want to skip the license page?&quot; IDNO no<br />
+     Abort<br />
+   no:<br />
+ FunctionEnd<br />
+<br />
+BUT this requires users to actually say yes or no. I want to be able to skip them automatically based on the components the user has chosen.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">3rd March 2004, 22:10</div></div><div class="posttext">Just replace MessageBox with StrCmp to compare the information you want, without showing anything to the user.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">frenchbenj</div><div class="date">3rd March 2004, 22:30</div></div><div class="posttext">But how can i assign a variable to the choice of which component the user wants to install?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">4th March 2004, 03:16</div></div><div class="posttext">Complete function (not tested, but may work):<br />
+<br />
+Function skipLicense<br />
+  SectionGetFlags ${InstallPatchSection} $0<br />
+  StrCmp $0 ${SF_SELECTED} 0 +2<br />
+    Abort<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">frenchbenj</div><div class="date">4th March 2004, 17:00</div></div><div class="posttext">Thanks for the reply. Im still getting trouble though.<br />
+<br />
+I changed my page declarations:<br />
+  Page custom customerConfig skipConfig<br />
+  Page custom systemConfig skipConfig<br />
+<br />
+And added the function:<br />
+Function skipConfig<br />
+  Push $0<br />
+  SectionGetFlags ${installPatchSection} $0<br />
+  StrCmp $0 ${SF_SELECTED} 0 +2<br />
+    Abort<br />
+  Pop $0<br />
+FunctionEnd<br />
+<br />
+When i select FULL install, it still goes to the custom screens. However, when i select PATCH, it moves you to the first custom page, and then you're stuck there (clicking Next does nothing)..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">4th March 2004, 17:25</div></div><div class="posttext">i would do it this way - its very simple cause i dont know better ;)<br />
+<br />
+Function Config ; page itself<br />
+; read out section flag<br />
+SectionGetFlags ${installPatchSection} $0<br />
+<br />
+; skip complete function if not selected<br />
+StrCmp $0 ${SF_SELECTED} 0 configdone<br />
+<br />
+; your stuff or page here<br />
+<br />
+configdone:<br />
+<br />
+FunctionEnd<br />
+<br />
+HTH</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">frenchbenj</div><div class="date">4th March 2004, 17:32</div></div><div class="posttext">rock star! it works!<br />
+this forum is so incredibly helpful! Thanks to all!<br />
+<br />
+When i find a second, i will clean up my script and post it in the archive for other clueless people like me to use...:)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" using CDrom plugin for DVD, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  using CDrom plugin for DVD NSIS Discussion" />
+	
+	<title> using CDrom plugin for DVD [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  using CDrom plugin for DVD</div>
+<hr />
+<div class="pda"><a href="t-289027.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=289027">using CDrom plugin for DVD</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ChrisMorton75</div><div class="date">25th March 2008, 14:30</div></div><div class="posttext">I have an external dvd rom reader/burner which I can use to burn an installer to span unzipping files across two DVD's. I get the &quot;ready&quot; status when I put in the 2nd DVD and it works. In QA, the status never changes from 0. Should the CDrom module be able to get the DVD status the way it gets CD status ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">25th March 2008, 19:34</div></div><div class="posttext">What is this plug-in? I have never heard of it. The only CD-ROM plug-in I know ejects the tray.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ChrisMorton75</div><div class="date">25th March 2008, 19:40</div></div><div class="posttext">CDRom-plugin gets the CD reader's status. It does more than just eject the tray.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">25th March 2008, 19:59</div></div><div class="posttext">The API is the same so it should work. Try looking into its source code for the key API it uses and search the web to see if someone else hit your problem with DVDs as well.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">25th March 2008, 20:40</div></div><div class="posttext">Same problem here - the CD-ROM plugin does not work with DVDs.<br />
+I just wrote my own set of functions to replace it.<br />
+<br />
+<br />
+;check if drive type is CD/DVD drive. Push parameter X:\ to stack<br />
+; before calling, pop return value after. (note: should probably<br />
+; be GetDriveType, not GetDriveTypeA. I can't remember why I use<br />
+; the ansi version here.)<br />
+Function DVD_CheckDrive<br />
+  Exch $R0<br />
+  System::Call 'kernel32::GetDriveTypeA(t &quot;$R0&quot;) i .r10'<br />
+  StrCmp $R0 5 0 +2<br />
+  StrCpy $R0 &quot;CDROM&quot;<br />
+  Exch $R0<br />
+FunctionEnd<br />
+<br />
+;get the label of the disc in the drive X:\ (on stack, returns to stack)<br />
+Function DVD_GetLabel<br />
+  Exch $R0<br />
+  Push $R1<br />
+  Push $R2<br />
+<br />
+  ;may need some code here to check if any paremeter was passed at all<br />
+<br />
+  ;get the label of the drive (return to $R1)<br />
+  #System::Call 'kernel32::SetErrorMode(i 0) i .r11'<br />
+  System::Call 'Kernel32::GetVolumeInformation(t r10,t.r11,i ${NSIS_MAX_STRLEN},*i,*i,*i,t.r12,i ${NSIS_MAX_STRLEN})i.r10'<br />
+  StrCmp $R0 0 0 +3<br />
+    StrCpy $R0 &quot;DVDGetLabel_error&quot;<br />
+    goto +2<br />
+  StrCpy $R0 $R1<br />
+  #System::Call 'kernel32::SetErrorMode(i 1) i .r11'<br />
+  break:<br />
+<br />
+  Pop $R2<br />
+  Pop $R1<br />
+  Exch $R0<br />
+FunctionEnd<br />
+<br />
+;A replacement for the enumerate command of the CD-ROM plugin.<br />
+; Call with an emtpy string on stack to find the first CD/DVD-rom<br />
+; drive. Call with a parameter X:\ on stack to find the first<br />
+; drive after X:\ (alphabetical order). Returns found drive to stack.<br />
+Function DVD_GetNextDrive<br />
+  Exch $R1<br />
+  Push $R0<br />
+  Push $R2<br />
+  Push $R3<br />
+  Push $R4<br />
+<br />
+  StrCpy $R4 $R1<br />
+  <br />
+  ;get all drives (return to $R0, bitwise)<br />
+  System::Call 'kernel32::GetLogicalDrives() i .r10'<br />
+  StrCmp $R0 &quot;0&quot; 0 +3   ;if no drives found, error<br />
+    StrCpy $R1 &quot;&quot;<br />
+    goto break<br />
+<br />
+  ;If no parameter was supplied at all, assume we're starting at A:\.<br />
+  StrCmp $R4 &quot;&quot; 0 +2<br />
+    StrCpy $R4 &quot;A&quot;<br />
+  <br />
+  ;get ascii-number of first char in function parameter<br />
+  System::Call &quot;*(&amp;t1 r14)i.r12&quot;<br />
+  System::Call &quot;*$R2(&amp;i1 .r14)&quot;<br />
+  System::Free $R2<br />
+  IntOp $R4 $R4 - 65<br />
+<br />
+  ;check if parameter driveletter is between A and Z<br />
+  IntCmp $R4 0 0 +2<br />
+  IntCmp $R4 25 +3 +3<br />
+    StrCpy $R1 &quot;&quot;<br />
+    goto break<br />
+  <br />
+  ;If a valid parameter was supplied (ie we survived so far),<br />
+  ; skip the supplied driveletter before beginning scan<br />
+  StrCmp $R1 &quot;&quot; +2<br />
+    IntOp $R4 $R4 + 1<br />
+<br />
+  ;backup the (asciiconverted) starting driveletter, for detecting<br />
+  ; when we've cycled the entire alphabet<br />
+  StrCpy $R1 $R4<br />
+<br />
+  loop:<br />
+    IntOp $R2 0x01 &lt;&lt; $R1<br />
+    IntOp $R3 $R2 &amp; $R0<br />
+    ;if (0x01&lt;&lt;driveletter &amp; drivesfound) == 0x01&lt;&lt;driveletter<br />
+    ; (in other words, if there is a drive mounted at this driveletter)<br />
+    StrCmp $R3 $R2 0 NoDriveHere<br />
+      ;convert asciinumber of driveletter to character<br />
+      IntOp $R2 $R1 + 65<br />
+      IntFmt $R2 %c $R2<br />
+      ;get type of drive<br />
+      System::Call 'kernel32::GetDriveType(t &quot;$R2:\&quot;) i .r13'<br />
+      StrCmp $R3 5 0 NoDriveHere<br />
+        ;if type is CDROM, end<br />
+        StrCpy $R1 &quot;$R2:\&quot;<br />
+        goto break<br />
+    NoDriveHere:<br />
+    ;increment driveletter<br />
+    IntOp $R1 $R1 + 1<br />
+    StrCmp $R1 $R4 break     ;if we've cycled the entire alphabet, end<br />
+    StrCmp $R1 26 0 +2       ;if &gt;Z, return to A<br />
+      StrCpy $R1 0<br />
+    goto loop<br />
+  break:<br />
+<br />
+  Pop $R4<br />
+  Pop $R3<br />
+  Pop $R2<br />
+  Pop $R0<br />
+  Exch $R1<br />
+FunctionEnd<br />
+<br />
+<br />
+Edit: Spacing fixed. Also, find the CD-ROM plugin here: hxxp://nsis.sourceforge.net/CDRom_plug-in</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ChrisMorton75</div><div class="date">25th March 2008, 21:02</div></div><div class="posttext">Thanks - I'll keep this for the future. I'm not experienced at the windows internals, but I'll try your status call, since I know which drive I'm installing from.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" inetc background colour on banner mode?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  inetc background colour on banner mode? NSIS Discussion" />
+	
+	<title> inetc background colour on banner mode? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  inetc background colour on banner mode?</div>
+<hr />
+<div class="pda"><a href="t-334819.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=334819">inetc background colour on banner mode?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">benjohnson</div><div class="date">16th September 2011, 12:33</div></div><div class="posttext">Hi All<br />
+<br />
+I've changed the background colour of my nsDialogs pages using the normal SetCtlColors technique but when I trigger an inetc download in banner mode it has a grey background (see picture).<br />
+<br />
+Does anyone know how to change this? I've had a look using AutoIt (to find the ID) and Resource Hacker but can't seem to find what I'm looking for.<br />
+<br />
+If it helps, the inetc download is in the leave function of my page.<br />
+<br />
+Cheers.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th September 2011, 15:06</div></div><div class="posttext">You probably need to modify the plug-in.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">19th September 2011, 06:09</div></div><div class="posttext">Try to modify IDD_DIALOG1 or IDD_DIALOG2 in .rc file of plugin using Visual Studio and recompile it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">benjohnson</div><div class="date">19th September 2011, 09:48</div></div><div class="posttext">Thanks, I'll give it a go and report back.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rmangroliya</div><div class="date">25th September 2011, 09:07</div></div><div class="posttext">hello <br />
+<br />
+i have solved this issue. we could not able to set background color on .rc files. so, you have to modify code of inetc.<br />
+<br />
+i have attached inetc.cpp you can look at on that with below code.<br />
+<br />
+<br />
+<br />
+HBRUSH g_hbrBackground = CreateSolidBrush(RGB(217, 212, 213)); // background //color<br />
+/*****************************************************<br />
+* FUNCTION NAME: dlgProc()<br />
+* PURPOSE: <br />
+*    dlg message handling procedure<br />
+* SPECIAL CONSIDERATIONS:<br />
+*    todo: better dialog design<br />
+*****************************************************/<br />
+BOOL WINAPI dlgProc(HWND hDlg,<br />
+										UINT message,<br />
+										WPARAM wParam,<br />
+										LPARAM lParam )  {<br />
+											switch(message)    {<br />
+	 case WM_INITDIALOG:<br />
+		 onInitDlg(hDlg);<br />
+		 centerDlg(hDlg);<br />
+		 break;<br />
+	 case WM_PAINT:<br />
+		 // child dialog redraw problem. return false is important<br />
+		 RedrawWindow(GetDlgItem(hDlg, IDC_STATIC1), NULL, NULL, RDW_INVALIDATE);<br />
+		 RedrawWindow(GetDlgItem(hDlg, IDCANCEL), NULL, NULL, RDW_INVALIDATE);<br />
+		 RedrawWindow(GetDlgItem(hDlg, IDC_PROGRESS1), NULL, NULL, RDW_INVALIDATE);<br />
+		 UpdateWindow(GetDlgItem(hDlg, IDC_STATIC1));<br />
+		 UpdateWindow(GetDlgItem(hDlg, IDCANCEL));<br />
+		 UpdateWindow(GetDlgItem(hDlg, IDC_PROGRESS1));<br />
+		 return false;<br />
+	 case WM_TIMER:<br />
+		 if(!silent &amp;&amp; IsWindow(hDlg))<br />
+		 {<br />
+			 //  long connection period and paused state updates<br />
+			 if(status != ST_DOWNLOAD &amp;&amp; GetTickCount() - transfStart &gt; PROGRESS_MS)<br />
+				 transfStart += PROGRESS_MS;<br />
+			 if(popup) onTimer(hDlg);<br />
+			 else progress_callback();<br />
+			 RedrawWindow(GetDlgItem(hDlg, IDC_STATIC1), NULL, NULL, RDW_INVALIDATE);<br />
+			 RedrawWindow(GetDlgItem(hDlg, IDCANCEL), NULL, NULL, RDW_INVALIDATE);<br />
+			 RedrawWindow(GetDlgItem(hDlg, IDC_PROGRESS1), NULL, NULL, RDW_INVALIDATE);<br />
+		 }<br />
+		 break;<br />
+	 case WM_COMMAND:<br />
+		 switch(LOWORD(wParam))<br />
+		 {<br />
+		 case IDCANCEL:<br />
+			 if(nocancel) break;<br />
+			 if(szQuestion &amp;&amp;<br />
+				 MessageBox(hDlg, szQuestion, *szCaption ? szCaption : PLUGIN_NAME, MB_ICONWARNING|MB_YESNO) == IDNO)<br />
+				 break;<br />
+			 status = ST_CANCELLED;<br />
+		 case IDOK:<br />
+			 if(status != ST_CANCELLED &amp;&amp; HIWORD(wParam) != INTERNAL_OK) break;<br />
+			 // otherwise in the silent mode next banner windows may go to background<br />
+			 //         if(silent) sf(hDlg);<br />
+			 KillTimer(hDlg, 1);<br />
+			 DestroyWindow(hDlg);<br />
+			 break;<br />
+		 }<br />
+		 break;<br />
+	case WM_CTLCOLORSTATIC:<br />
+    {<br />
+        HDC hdcStatic = (HDC)wParam;<br />
+        SetTextColor(hdcStatic, RGB(24, 49, 75)); // foreground color<br />
+        SetBkMode(hdcStatic, TRANSPARENT);<br />
+        return (LONG)g_hbrBackground;<br />
+    }<br />
+    break;<br />
+	case WM_CTLCOLORDLG:<br />
+        return (LONG)g_hbrBackground;<br />
+<br />
+	 default: return false;<br />
+											}<br />
+											return true;<br />
+}</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Can't get Notify of control to work with MUI, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Can't get Notify of control to work with MUI NSIS Discussion" />
+	
+	<title> Can't get Notify of control to work with MUI [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Can't get Notify of control to work with MUI</div>
+<hr />
+<div class="pda"><a href="t-243278.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=243278">Can't get Notify of control to work with MUI</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Wabiloo</div><div class="date">12th April 2006, 16:27</div></div><div class="posttext">I'm trying to disable/enable a text field when a radio button is selected, as part of a ModernUI Installer with custom page.<br />
+<br />
+The page:<br />
+[Settings]<br />
+NumFields=4<br />
+<br />
+[Field 1]<br />
+Type=Label<br />
+Text=Instance<br />
+Left=10<br />
+Right=38<br />
+Top=9<br />
+Bottom=17<br />
+<br />
+[Field 2]<br />
+Type=RadioButton<br />
+Text=Default<br />
+Flags=GROUP|NOTIFY<br />
+State=1<br />
+Left=50<br />
+Right=125<br />
+Top=9<br />
+Bottom=19<br />
+<br />
+[Field 3]<br />
+Type=RadioButton<br />
+Text=Named Instance<br />
+Flags=NOTIFY<br />
+State=0<br />
+Left=50<br />
+Right=125<br />
+Top=22<br />
+Bottom=32<br />
+<br />
+[Field 4]<br />
+Type=Text<br />
+MaxLen=20<br />
+Flags=DISABLED<br />
+Left=128<br />
+Right=251<br />
+Top=20<br />
+Bottom=33<br />
+<br />
+The NSI file (selected parts):<br />
+; Welcome page<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+; Components page<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+Page custom InstancePage InstancePageLeave<br />
+<br />
+(...)<br />
+<br />
+Function .onInit<br />
+  ;Extract InstallOptions INI files<br />
+  !insertmacro MUI_INSTALLOPTIONS_EXTRACT &quot;Instance.ini&quot;<br />
+FunctionEnd<br />
+<br />
+LangString TEXT_IO_TITLE ${LANG_ENGLISH} &quot;Application Instance&quot;<br />
+LangString TEXT_IO_SUBTITLE ${LANG_ENGLISH} &quot;Select an application instance to install or upgrade.&quot;<br />
+<br />
+Function InstancePage<br />
+  !insertmacro MUI_HEADER_TEXT &quot;$(TEXT_IO_TITLE)&quot; &quot;$(TEXT_IO_SUBTITLE)&quot;<br />
+  !insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;Instance.ini&quot;<br />
+FunctionEnd<br />
+<br />
+Function InstancePageLeave<br />
+  ; At this point the user has either pressed Next or one of our custom buttons<br />
+  ; We find out which by reading from the INI file<br />
+  !insertmacro MUI_INSTALLOPTIONS_READ $0 &quot;Instance.ini&quot; &quot;Settings&quot; &quot;State&quot;<br />
+  <br />
+  StrCmp $0 2 defaultinstance  ; &quot;default instance name&quot;?<br />
+  StrCmp $0 3 namedinstance  ; &quot;non-default instance name&quot;?<br />
+  Abort ; Return to the page<br />
+<br />
+defaultinstance:<br />
+  ; Make the FileRequest field depend on the first checkbox<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;Instance.ini&quot; &quot;Field 4&quot; &quot;Flags&quot; &quot;GROUP|DISABLED&quot;<br />
+  Abort ; Return to the page<br />
+<br />
+namedinstance:<br />
+  ; Make the FileRequest field depend on the first checkbox<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;Instance.ini&quot; &quot;Field 4&quot; &quot;Flags&quot; &quot;GROUP&quot;<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;Instance.ini&quot; &quot;Field 4&quot; &quot;State&quot; &quot;Default&quot;<br />
+  Abort ; Return to the page<br />
+<br />
+FunctionEnd<br />
+<br />
+The !insertmacro after the two labels defaultinstance and namedinstance just don't seem to work. Field 4 remains disabled no matter what...<br />
+<br />
+Thanks for any help</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">12th April 2006, 17:02</div></div><div class="posttext">for classic gui this trick works fine for me, yet, has not been tested with MUI. Give it a try.<br />
+Function InstancePage<br />
+;pop $R0<br />
+strcmp $R0 'reload1' +1 elseif<br />
+ InstallOptions::initDialog /NOUNLOAD &quot;$PLUGINSDIR\Instance.ini&quot;<br />
+   !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;$PLUGINSDIR\Instance.ini&quot; &quot;Field 4&quot; &quot;Flags&quot; &quot;GROUP&quot;<br />
+   !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;$PLUGINSDIR\Instance.ini&quot; &quot;Field 4&quot; &quot;State&quot; &quot;Default&quot;<br />
+   !insertmacro MUI_HEADER_TEXT &quot;$(TEXT_IO_TITLE)&quot; &quot;$(TEXT_IO_SUBTITLE)&quot;<br />
+ InstallOptions::show<br />
+   goto end<br />
+elseif:<br />
+strcmp $R0 'reload' +1 else<br />
+ InstallOptions::initDialog /NOUNLOAD &quot;$PLUGINSDIR\Instance.ini&quot;<br />
+   !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;$PLUGINSDIR\Instance.ini&quot; &quot;Field 4&quot; &quot;Flags&quot; &quot;GROUP|DISABLED&quot;<br />
+   !insertmacro MUI_HEADER_TEXT &quot;$(TEXT_IO_TITLE)&quot; &quot;$(TEXT_IO_SUBTITLE)&quot;<br />
+ InstallOptions::show<br />
+   goto end<br />
+else:<br />
+   !insertmacro MUI_HEADER_TEXT &quot;$(TEXT_IO_TITLE)&quot; &quot;$(TEXT_IO_SUBTITLE)&quot;<br />
+ InstallOptions::dialog '$PLUGINSDIR\Instance.ini&quot;<br />
+end:<br />
+FunctionEnd<br />
+<br />
+<br />
+Function InstancePageLeave<br />
+; At this point the user has either pressed Next or one of our custom buttons<br />
+; We find out which by reading from the INI file<br />
+!insertmacro MUI_INSTALLOPTIONS_READ $0 &quot;$PLUGINSDIR\Instance.ini&quot; &quot;Settings&quot; &quot;State&quot;<br />
+<br />
+StrCmp $0 2 defaultinstance ; &quot;default instance name&quot;?<br />
+StrCmp $0 3 namedinstance ; &quot;non-default instance name&quot;?<br />
+Abort ; Return to the page<br />
+<br />
+defaultinstance:<br />
+; Make the FileRequest field depend on the first checkbox<br />
+;!insertmacro MUI_INSTALLOPTIONS_WRITE &quot;Instance.ini&quot; &quot;Field 4&quot; &quot;Flags&quot; &quot;GROUP|DISABLED&quot;<br />
+strcpy $R0 'reload'<br />
+Abort ; Return to the page<br />
+<br />
+namedinstance:<br />
+; Make the FileRequest field depend on the first checkbox<br />
+;!insertmacro MUI_INSTALLOPTIONS_WRITE &quot;Instance.ini&quot; &quot;Field 4&quot; &quot;Flags&quot; &quot;GROUP&quot;<br />
+;!insertmacro MUI_INSTALLOPTIONS_WRITE &quot;Instance.ini&quot; &quot;Field 4&quot; &quot;State&quot; &quot;Default&quot;<br />
+strcpy $R0 'reload1'<br />
+Abort ; Return to the page<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">galil</div><div class="date">12th April 2006, 17:09</div></div><div class="posttext">You have to use EnableWindow to enable/disable control rigth away, setting flag in INI is not enough.<br />
+<br />
+See ${NSISDIR}\Examples\InstallOptions\testnotify.nsi</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

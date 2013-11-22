@@ -1,0 +1,128 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Run Time Install Options, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Run Time Install Options NSIS Discussion" />
+	
+	<title> Run Time Install Options [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Run Time Install Options</div>
+<hr />
+<div class="pda"><a href="t-118651.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=118651">Run Time Install Options</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Bud-froggy</div><div class="date">22nd December 2002, 00:24</div></div><div class="posttext">Hey whats up.<br />
+The deal is that I want to have a custom install page that is compiled at run time.  Think of it as this:<br />
+The user selects a directory, and then I list all the directories that are contained in InstDir.  My reasons are a little more complex, but if someone could help get this far, I think I could manage.  I was thining of calculating the current page using the .on*Page callbacks, but those are gone.  Also, I am reading the options from a .ini file that is loaded in teh executable... Is there a way to either a) compile a .ini file in teh user's Temp directory and use that, or modify the one on board (doubtful).<br />
+Thanks for the help.<br />
+-Froggy</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Bud-froggy</div><div class="date">22nd December 2002, 01:08</div></div><div class="posttext">Originally posted by Bud-froggy <br />
+Hey whats up.<br />
+The deal is that I want to have a custom install page that is [....]<br />
+Thanks for the help.<br />
+-Froggy  <br />
+<br />
+<br />
+Ok, i just looked at the macro definition and saw when are where it was extracted, so Ill play with that...<br />
+Thanks anyway =)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Bud-froggy</div><div class="date">22nd December 2002, 03:33</div></div><div class="posttext">Haha... back again.<br />
+This time around, I wrote a plugin to return a list of all the files and directories in the current directory.  I run into problems when I try and call it from the script.<br />
+I have:<br />
+	InitPluginsDir<br />
+	ListFiles::ListFiles $PLUGINSDIR\ListFiles<br />
+And the compiler returns the following error:<br />
+InitPluginsDir<br />
+Invalid command: ListFiles::ListFiles<br />
+Error in script &quot;D:\Installer\Example.nsi&quot; on line 24 -- aborting creation process<br />
+I put the DLL in its own folder in the Contrib section of the NSIS installation...<br />
+I would very much appreciate a little help here, because I am stumped.<br />
+Then again, as soon as I hit post, I willprobably figure it out =)<br />
+-Froggy</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">matini</div><div class="date">22nd December 2002, 05:08</div></div><div class="posttext">AFAIK, you should put the dll in ${NSISDIR}\plugins. :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Bud-froggy</div><div class="date">22nd December 2002, 09:42</div></div><div class="posttext">doh.<br />
+<br />
+thanks =)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">22nd December 2002, 18:02</div></div><div class="posttext">To list files in a directory use FindFirst, FindNext and FindClose. To write into an INI file use WriteIniStr and friends. To add another plugins dir to NSIS's list use PluginsDir. You don't have to call InitPluginsDir before calling a plug-in. You only need to call this function if you wish to use $PLUGINSDIR before any plug-in was called.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Bud-froggy</div><div class="date">24th December 2002, 11:02</div></div><div class="posttext">Well, scratch the plugin then =)<br />
+<br />
+MEanwhile I have been looking around, and I cant seem to figure out how to call a function after selecting an InstDir but before the custom page....<br />
+I have a declared a custom page, to be ordered right after the directory selection page, but I cant seem to hook anything that is called between the two.<br />
+SetDirectory and SetDirectory Dialog are called before the page, and the custom function for the page is called when the custom page is destroyed... too late for me since the custom page depends on the install directory that was choosen.<br />
+I am fairly certain there is a way because I was browsing thru the forums and saw something about it, but now i cant seem to find it for the life of me... quite annoying.<br />
+Anyway, thanks for any and all help<br />
+-froggy</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">24th December 2002, 14:46</div></div><div class="posttext">There is no after page callback function currently. The custom page function is called after the custom page is destryoed, it is called to create the page. By calling InstallOptions::dialog (MUI_INSTALLOPTIONS_DISPLAY macro in the MUI's case) in this callback function you are creating the page. All you need to do is write to that INI file before you call IO::dialog or insert the macro.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Bud-froggy</div><div class="date">24th December 2002, 15:31</div></div><div class="posttext">.. which is what i did, but to no avail. here is the cut down code..<br />
+<br />
+Function SetCustomMod<br />
+	InitPluginsDir<br />
+	File /oname=$PLUGINSDIRS\ioMod.ini ioMod.ini<br />
+<br />
+	FileOpen $R0 $PLUGINSDIR\ioMod.ini &quot;a&quot;<br />
+	FileSeek $R0 0 END<br />
+	FileWrite $R0 &quot;$\r$\n&quot;<br />
+	<br />
+	FindFirst $9 $8 $INSTDIR\*.*<br />
+	Goto Find<br />
+	<br />
+	PathGood:<br />
+		FileWrite $R0 &quot;[Field &quot;<br />
+		FileWrite $R0 $R8<br />
+		FileWrite $R0 &quot;]$\r$\nType=radiobutton$\r$\nText=&quot;<br />
+		FileWrite $R0 $8<br />
+		FileWrite $R0 &quot;$\r$\nLeft=0$\r$\nRight=125$\r$\nTop=&quot;<br />
+		FileWrite $R0 $R9<br />
+		IntOp $R9 $R9 + 15<br />
+		FileWrite $R0 &quot;$\r$\nBottom=&quot;<br />
+		FileWrite $R0 $R9<br />
+		FileWrite $R0 &quot;$\r$\nState=0$\r$\n&quot;<br />
+		IntOp $R8 $R8 + 1<br />
+		IntOp $R9 $R9 + 40<br />
+		<br />
+	Find:<br />
+	FindNext $9 $8<br />
+	IfErrors End<br />
+	IfFileExists $INSTDIR\$8\liblist.gam PathGood Find<br />
+	<br />
+	<br />
+	End:<br />
+	FindClose $9<br />
+	!insertmacro MUI_HEADER_TEXT &quot;$(TEXT_IO_TITLE)&quot; &quot;$(TEXT_IO_SUBTITLE)&quot;<br />
+	!insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;ioMod.ini&quot;		# File is places in $PLUGINSDIR<br />
+FunctionEnd<br />
+<br />
+now, this code will only use what was originally in the ioMod.ini.<br />
+I looked at the contents of the temporary file ioMod.ini while i was on the custom page, and the contents is what i generated.  However, the custom page disaplays the contents of the file that was packaged with the executable, even though I tried to extract before time....<br />
+I looked thru the source of InstallOptions fairly quickly, but I did not see iy copy the file over again anywhere... do you know where in which of the two funcs it performs the copy, so I can override it and use a custom io.dll?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">24th December 2002, 15:39</div></div><div class="posttext">Why don't you use WriteIniStr? It's so much simpler then opening the file manually and writing to it...<br />
+<br />
+My best guess why this doesn't work is that you have forgot to update NumFields in [Settings].</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

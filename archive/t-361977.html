@@ -1,0 +1,143 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Editing License page text, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Editing License page text NSIS Discussion" />
+	
+	<title> Editing License page text [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Editing License page text</div>
+<hr />
+<div class="pda"><a href="t-361977.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=361977">Editing License page text</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">miraz.zaidi</div><div class="date">22nd May 2013, 13:11</div></div><div class="posttext">Hi ,<br />
+<br />
+I dont want to use the regular text box on my installer license page , rather I want to put a link to my website's License page.<br />
+<br />
+So I want to replace the default text with <br />
+<br />
+Click  here  to read the License Agreement<br />
+<br />
+Where &quot;here&quot; will be having the link in it.<br />
+<br />
+How can I make it work ?<br />
+<br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">22nd May 2013, 13:26</div></div><div class="posttext">Simply create a custom nsDialogs page (using CreateLink), using the onclick callback on the link to call ExecShell &quot;http://example.com/&quot; . Or perhaps a link does the execshell automatically? Well, just try it and see what happens, I guess.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">miraz.zaidi</div><div class="date">23rd May 2013, 10:09</div></div><div class="posttext">I dont want to create a custom license page as there are some other thing I have done on license page. How can I make it work on License page only. Tried using Linker plugin but it caused the License page to crash.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">23rd May 2013, 11:25</div></div><div class="posttext">My guess is that you used Linker without /NOUNLOAD.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">miraz.zaidi</div><div class="date">23rd May 2013, 13:04</div></div><div class="posttext">@aerDNA It still crashes.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">23rd May 2013, 13:58</div></div><div class="posttext">Dunno then, but here's a quick script that puts a link on lic page and doesn't crash (for me).<br />
+<br />
+OutFile &quot;LicLinkerTest.exe&quot;<br />
+Name &quot;LicLinkerTest&quot;<br />
+<br />
+!include &quot;MUI2.nsh&quot;<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW LicPage_Show<br />
+!insertmacro MUI_PAGE_LICENSE &quot;${NSISDIR}\COPYING&quot;<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+         Function LicPage_Show<br />
+FindWindow $R0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+System::Call 'User32::CreateWindowEx(i 0, t &quot;STATIC&quot;, t &quot;Visit NSIS homepage&quot;, i ${WS_CHILD}|${WS_VISIBLE}, i 165, i 205, i 100, i 20, i R0, i 0, i 0, i 0) i.R1'<br />
+CreateFont $1 $(^Font) $(^FontSize) &quot;400&quot;<br />
+SendMessage $R1 ${WM_SETFONT} $1 0<br />
+linker::link /NOUNLOAD $R1 &quot;http://nsis.sourceforge.net&quot;<br />
+FunctionEnd<br />
+<br />
+Section Blank<br />
+SectionEnd<br />
+<br />
+Function .onGUIEnd<br />
+Linker::unload<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">miraz.zaidi</div><div class="date">23rd May 2013, 14:39</div></div><div class="posttext">@aerDNA  thanks a lot man. Its a great help. What I was trying to do was making the link of ID 1006 , may be that was the problem.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">23rd May 2013, 17:09</div></div><div class="posttext">Any label will do, so ID 1006 can be used as well. This works fine and crash-free for me:<br />
+FindWindow $R0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+GetDlgItem $R1 $R0 1006<br />
+Linker::link /NOUNLOAD $R1 &quot;http://nsis.sourceforge.net&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">miraz.zaidi</div><div class="date">24th May 2013, 07:03</div></div><div class="posttext">Yeah , right. Actually I am using a bitmap image as installer background, so I set the controls transparent. Just figured out the installer crashes everytime I set the control having the link transparent. Linker perhaps dont like tranparency. ;)<br />
+<br />
+I tried doing this :<br />
+System::Call 'User32::CreateWindowEx(i 0, t &quot;STATIC&quot;, t &quot;Visit NSIS homepage&quot;, i ${WS_CHILD}|${WS_VISIBLE}|${WS_EX_TRANSPARENT}, i 165, i 205, i 100, i 20, i R0, i 0, i 0, i 0) i.R1'<br />
+But its not working.<br />
+<br />
+Any idea what else I can try?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">24th May 2013, 09:42</div></div><div class="posttext">You misplaced WS_EX_TRANSPARENT - it's an extended style and should be the first param of CreateWindowEx. But it's not the solution you're looking for anyway. Have you tried this:<br />
+SetCtlColors $R1 0 &quot;transparent&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">miraz.zaidi</div><div class="date">24th May 2013, 11:04</div></div><div class="posttext">Doing this causes the installer to crash.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">24th May 2013, 11:35</div></div><div class="posttext">Well, it really shouldn't, and it doesn't under normal circumstances. Linker doesn't mind transparency as such, so the reason must be the combo of transparency and bitmap background. Anyway, the answer lies in your script and my ESP ain't what it used to be, so you should post some code, otherwise I can only wish you good luck.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">miraz.zaidi</div><div class="date">24th May 2013, 12:15</div></div><div class="posttext">I am afraid, but linker seem to be incompatible with transparency.<br />
+<br />
+I tried your code with this and it crashed as well.<br />
+<br />
+<br />
+Function LicPage_Show<br />
+FindWindow $R0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+System::Call 'User32::CreateWindowEx(i 0, t &quot;STATIC&quot;, t &quot;Visit NSIS homepage&quot;, i ${WS_CHILD}|${WS_VISIBLE}, i 165, i 205, i 100, i 20, i R0, i 666, i 0, i 0) i.R1'<br />
+CreateFont $1 $(^Font) $(^FontSize) &quot;400&quot;<br />
+SendMessage $R1 ${WM_SETFONT} $1 0<br />
+linker::link /NOUNLOAD $R1 &quot;http://nsis.sourceforge.net&quot;<br />
+SetCtlColors $R1 0xFFFFFF transparent<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">24th May 2013, 12:21</div></div><div class="posttext">Apply transparency before using Linker, not after.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">miraz.zaidi</div><div class="date">24th May 2013, 12:29</div></div><div class="posttext">In that case it doesn't work.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">24th May 2013, 13:29</div></div><div class="posttext">I guess Linker resets the control's bgcolor as well as text color. How about using a button instead of a link (ButtonEvent plugin)?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">24th May 2013, 13:49</div></div><div class="posttext">I don't think there was much point in starting another thread on this.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">miraz.zaidi</div><div class="date">24th May 2013, 13:56</div></div><div class="posttext">As per the client requirement I have to use link only. Could use button instead if it was possible to add image on it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">24th May 2013, 14:45</div></div><div class="posttext">There's the SkinnedButton plugin but I've never used it and I don't know if it will skin custom buttons too or just the standard ones; in any case, I don't think it can be used to skin a single button.<br />
+I think your best course of action would be to take MSG's advice and create a full custom page.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">miraz.zaidi</div><div class="date">24th May 2013, 14:52</div></div><div class="posttext">Yeah , I guess so. I just wish Linker plugin issue could be resolved. It would save me a lot of trouble. :/<br />
+Well thanks a lot for your help. :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Integrate VersionCheckNew with If..Else..Endif, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Integrate VersionCheckNew with If..Else..Endif NSIS Discussion" />
+	
+	<title> Integrate VersionCheckNew with If..Else..Endif [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Integrate VersionCheckNew with If..Else..Endif</div>
+<hr />
+<div class="pda"><a href="t-322704.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=322704">Integrate VersionCheckNew with If..Else..Endif</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Squirre1</div><div class="date">24th September 2010, 20:34</div></div><div class="posttext">Is there a way that you can inteagrate VersionCheckNew into LogicLib for easier logic comparison... For Example:<br />
+<br />
+<br />
+${If} ${VersionCheckNew} &quot;$detectedver&quot; &quot;9.3.0&quot;  == 2<br />
+    //do stuff here<br />
+${ElseIf} ${VersionCheckNew} &quot;$detectedver&quot; &quot;9.3.3&quot;  == 1<br />
+    //do stuff here<br />
+${ElseIf} ${VersionCheckNew} &quot;$detectedver&quot; &quot;9.3.1&quot;  == 0<br />
+    //do stuff here<br />
+${ElseIf} ${VersionCheckNew} &quot;$detectedver&quot; &quot;9.3.2&quot;  == 0<br />
+    //do stuff here<br />
+${ElseIf} ${VersionCheckNew} &quot;$detectedver&quot; &quot;9.3.3&quot;  == 0<br />
+    //do stuff here<br />
+${EndIf}<br />
+<br />
+<br />
+I know there are many more ways to write this, I am just asking in general...<br />
+<br />
+Thanks All.<br />
+<br />
+Squirre1</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">24th September 2010, 21:09</div></div><div class="posttext">You can extend LogicLib, yes, but not the way you're writing it right now, of course :)<br />
+<br />
+Probably the best approach would be to add comparison logic operators, a la (I'm using ${VersionCompare} out of WordFunc.nsh):<br />
+<br />
+/* Version tests */<br />
+!insertmacro `_LOGICLIB_TEMP` /* required */<br />
+<br />
+!macro _V= _a _b _t _f<br />
+  ${VersionCompare} ${_a} ${_b} $_LOGICLIB_TEMP<br />
+  IntCmp $_LOGICLIB_TEMP 0 `${_t}` `${_f}` `${_f}`<br />
+!macroend<br />
+<br />
+!macro _V&lt;&gt; _a _b _t _f<br />
+  !insertmacro _V= `${_a}` `${_b}` `${_f}` `${_t}`<br />
+!macroend<br />
+<br />
+!macro _V&lt; _a _b _t _f<br />
+  ${VersionCompare} ${_a} ${_b} $_LOGICLIB_TEMP<br />
+  IntCmp $_LOGICLIB_TEMP 2 `${_t}` `${_f}` `${_f}`<br />
+!macroend<br />
+<br />
+!macro _V&lt;= _a _b _t _f<br />
+  !insertmacro _V&gt; `${_a}` `${_b}` `${_f}` `${_t}`<br />
+!macroend<br />
+<br />
+!macro _V&gt; _a _b _t _f<br />
+  ${VersionCompare} ${_a} ${_b} $_LOGICLIB_TEMP<br />
+  IntCmp $_LOGICLIB_TEMP 1 `${_t}` `${_f}` `${_f}`<br />
+!macroend<br />
+<br />
+!macro _V&gt;= _a _b _t _f<br />
+  !insertmacro _V&lt; `${_a}` `${_b}` `${_f}` `${_t}`<br />
+!macroend<br />
+<br />
+<br />
+Usage example for experimenting:<br />
+<br />
+!include &quot;LogicLib.nsh&quot;<br />
+!include &quot;WordFunc.nsh&quot;<br />
+<br />
+OutFile &quot;$%temp%\temp.exe&quot;<br />
+Section<br />
+<br />
+[version compare code goes here, perhaps in an include, or maybe you put it in LogicLib.nsh directly]<br />
+<br />
+Section<br />
+  StrCpy $0 &quot;1.0.0.0&quot;<br />
+  StrCpy $1 &quot;1.0.0.1&quot;<br />
+  ${If} &quot;$0&quot; V= &quot;$1&quot;<br />
+    MessageBox MB_OK &quot;$0 = $1&quot;<br />
+  ${EndIf}<br />
+  ${If} &quot;$0&quot; V&lt;&gt; &quot;$1&quot;<br />
+    MessageBox MB_OK &quot;$0 &lt;&gt; $1&quot;<br />
+  ${EndIf}<br />
+  ${If} &quot;$0&quot; V&lt; &quot;$1&quot;<br />
+    MessageBox MB_OK &quot;$0 &lt; $1&quot;<br />
+  ${EndIf}<br />
+  ${If} &quot;$0&quot; V&lt;= &quot;$1&quot;<br />
+    MessageBox MB_OK &quot;$0 &lt;= $1&quot;<br />
+  ${EndIf}<br />
+  ${If} &quot;$0&quot; V&gt; &quot;$1&quot;<br />
+    MessageBox MB_OK &quot;$0 &gt; $1&quot;<br />
+  ${EndIf}<br />
+  ${If} &quot;$0&quot; V&gt;= &quot;$1&quot;<br />
+    MessageBox MB_OK &quot;$0 &gt;= $1&quot;<br />
+  ${EndIf}<br />
+SectionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

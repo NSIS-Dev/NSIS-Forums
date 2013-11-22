@@ -1,0 +1,134 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to find list of directories?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to find list of directories? NSIS Discussion" />
+	
+	<title> How to find list of directories? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to find list of directories?</div>
+<hr />
+<div class="pda"><a href="t-230654.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=230654">How to find list of directories?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Sekator</div><div class="date">10th November 2005, 19:41</div></div><div class="posttext">I need to find the list of subfolders under a specified folder and then copy files from each of them.<br />
+<br />
+How do I do that? (i.e. first, find a list of subfolders and then iterate through them).<br />
+<br />
+I presume FindFirst / FindNext works only with files? Or can it be used with directories as well? How can I differentiate between a file and a directory if it can be used for both?<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sekator</div><div class="date">10th November 2005, 19:59</div></div><div class="posttext">Oops, found some more info after more digging...guess I have to use Locate plugin.<br />
+<br />
+But I am running into compilation errors with it:<br />
+-------------------------------------<br />
+!include &quot;FileFunc.nsh&quot;<br />
+<br />
+Section &quot;Web Services&quot; SEC02<br />
+  SetOverwrite on<br />
+  <br />
+  ;Web services<br />
+  SetDetailsPrint listonly<br />
+  DetailPrint &quot;Installing Web Services...&quot;<br />
+  SetDetailsPrint textonly<br />
+  ${Locate} &quot;C:\Inetpub\wwwroot\CRI\&quot; &quot;/L=D&quot; &quot;InstallWebService&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+Function InstallWebService<br />
+      DetailPrint &quot;Found $R9&quot;<br />
+      Sleep 1000<br />
+FunctionEnd<br />
+-------------------------------<br />
+Gives me an error on the ${Locate} line:<br />
+<br />
+Invalid command: ${Locate}<br />
+Error in script &quot;ServerInstaller.nsi&quot; on line 80 -- aborting creation process<br />
+<br />
+Why is it rejecting the ${Locate} command if I have the proper .nsh file included?<br />
+<br />
+!include &quot;FileFunc.nsh&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">10th November 2005, 20:24</div></div><div class="posttext">-------------------------------------<br />
+!include &quot;FileFunc.nsh&quot;<br />
+!insertmacro Locate<br />
+<br />
+Section &quot;Web Services&quot; SEC02<br />
+SetOverwrite on<br />
+<br />
+;Web services<br />
+SetDetailsPrint listonly<br />
+DetailPrint &quot;Installing Web Services...&quot;<br />
+SetDetailsPrint textonly<br />
+${Locate} &quot;C:\Inetpub\wwwroot\CRI\&quot; &quot;/L=D /G=0&quot; &quot;InstallWebService&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+Function InstallWebService<br />
+DetailPrint &quot;Found $R9&quot;<br />
+Sleep 1000<br />
+<br />
+Push 0<br />
+FunctionEnd<br />
+-------------------------------</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sekator</div><div class="date">10th November 2005, 21:48</div></div><div class="posttext">Thank you, that made it work.<br />
+<br />
+But, unfortunately I have another issue. Can you pass a variable to a File command (i.e. so it picks up the files to process from a soft-coded list)?<br />
+<br />
+it doesn't seem to be working for me, I get an error saying no files found:<br />
+<br />
+Section &quot;Web Services&quot; SEC02<br />
+  SetOverwrite on<br />
+  <br />
+  ;Web services<br />
+  SetDetailsPrint listonly<br />
+  DetailPrint &quot;Installing Web Services...&quot;<br />
+  SetDetailsPrint textonly<br />
+  ${Locate} &quot;C:\Inetpub\wwwroot\CRI&quot; &quot;/L=D /G=0&quot; &quot;InstallWebService&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+VAR SERVICE_DIR<br />
+VAR SERVICE_PATH<br />
+<br />
+Function InstallWebService<br />
+      ${GetFileName} $R9 $SERVICE_DIR<br />
+      StrCpy $SERVICE_PATH $R9<br />
+      <br />
+      SetDetailsPrint listonly<br />
+      DetailPrint &quot;Installing $SERVICE_DIR...&quot;<br />
+      SetDetailsPrint textonly<br />
+<br />
+      SetOutPath &quot;$WEBSERVICE_ROOT_DIRECTORY\$SERVICE_DIR&quot;<br />
+<br />
+      File /r &quot;$SERVICE_PATH\*.*&quot;  ///ERROR HAPPENS HERE<br />
+<br />
+      ;Move on to next web service directory<br />
+      Push $0<br />
+FunctionEnd<br />
+-------------------------------------<br />
+File: &quot;$SERVICE_PATH\*.*&quot; -&gt; no files found.<br />
+Usage: File [/nonfatal] [/a] ([/r] [/x filespec [...]] filespec [...] |<br />
+   /oname=outfile one_file_only)<br />
+Error in script &quot;ServerInstaller.nsi&quot; on line 108 -- aborting creation process<br />
+<br />
+Does this mean I cannot use File the way I want it? (i.e. to find all folders on my box that correspond to a particular naming scheme and install them all without having to hard-code the list of them?).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">10th November 2005, 21:54</div></div><div class="posttext">Yes, you can't. &quot;File&quot; is compile-time command, NSIS variables are run-time.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

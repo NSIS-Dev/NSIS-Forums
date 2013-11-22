@@ -1,0 +1,99 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Set environnement variable problem, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Set environnement variable problem NSIS Discussion" />
+	
+	<title> Set environnement variable problem [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Set environnement variable problem</div>
+<hr />
+<div class="pda"><a href="t-316241.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=316241">Set environnement variable problem</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Fadjerx</div><div class="date">14th January 2010, 14:35</div></div><div class="posttext">Hello friends,<br />
+<br />
+I have the need to create an environnement variable for my app. I went to the following link and I did exactly what is described in paragraph &quot;Your own variable&quot;. It works fine, and the varibale is really created after installation.<br />
+<br />
+http://nsis.sourceforge.net/Setting_Environment_Variables#Setting_Environmental_Variables_Permanently <br />
+<br />
+Now I propose to the user to launch the program after installation finished : <br />
++ If the user choose to launch the program later it continues to work fine, and my added variable is well recognised<br />
++ But if the user choose to launch the program immediately after installation finished it does not work ! :-( I don't khnow why ? <br />
+<br />
+Here is snippet of the code I use to propose launching after installation (found on NSIS site too): <br />
+<br />
+<br />
+.<br />
+.<br />
+.<br />
+!define MUI_FINISHPAGE_RUN<br />
+!define MUI_FINISHPAGE_RUN_TEXT &quot;Start $(^Name)&quot;<br />
+!define MUI_FINISHPAGE_RUN_FUNCTION &quot;LaunchLink&quot;<br />
+.<br />
+.<br />
+.<br />
+Function LaunchLink<br />
+  ExecShell &quot;&quot; &quot;$SMPROGRAMS\$StartMenuGroup\MyApp.lnk&quot;<br />
+FunctionEnd<br />
+<br />
+ <br />
+<br />
+Thanks in advance for your help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">14th January 2010, 19:00</div></div><div class="posttext">You should also do the piece of code that sets the variable temporarily (call the API Kernel32::SetEnvironmentVariableA as shown in the wiki you found). The permanent change loads the variables when the user starts the app from Explorer. The installer's variables are used when NSIS starts a process.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Fadjerx</div><div class="date">15th January 2010, 09:09</div></div><div class="posttext">Hi demiller9,<br />
+<br />
+Thanks a lot it works fine ! <br />
+<br />
+This is a summary who to do to add an environment variable permanently, while to be able to launch application immediately after installation finished : <br />
+<br />
+# To add a environment var permanently<br />
+<br />
+!include &quot;winmessages.nsh&quot;<br />
+!define env_hklm 'HKLM &quot;SYSTEM\CurrentControlSet\Control\Session Manager\Environment&quot;'<br />
+!define env_hkcu 'HKCU &quot;Environment&quot;'	<br />
+WriteRegExpandStr ${env_hklm} MY_VAR MY_VAR_VALUE<br />
+SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 &quot;STR:Environment&quot; /TIMEOUT=10000	<br />
+<br />
+<br />
+# To launch app aftrer install<br />
+<br />
+.<br />
+.<br />
+.<br />
+!define MUI_FINISHPAGE_RUN<br />
+!define MUI_FINISHPAGE_RUN_TEXT &quot;Start $(^Name)&quot;<br />
+!define MUI_FINISHPAGE_RUN_FUNCTION &quot;LaunchLink&quot;<br />
+.<br />
+.<br />
+.<br />
+<br />
+Function LaunchLink<br />
+	System::Call 'Kernel32::SetEnvironmentVariableA(t, t) i(&quot;MY_VAR&quot;, &quot;MY_VAR_VALUE&quot;).r0'<br />
+	StrCmp $0 0 error<br />
+	ExecWait ProgThatReadsEnv.exe<br />
+	Goto done<br />
+	error:<br />
+	MessageBox MB_OK &quot;Can't set environment variable&quot;<br />
+	done:<br />
+	ExecShell &quot;&quot; &quot;$SMPROGRAMS\$StartMenuGroup\MyApp.lnk&quot;<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+Good luck to you.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

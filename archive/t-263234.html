@@ -1,0 +1,90 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Using InetLoad Plugin With Port Number, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Using InetLoad Plugin With Port Number NSIS Discussion" />
+	
+	<title> Using InetLoad Plugin With Port Number [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Using InetLoad Plugin With Port Number</div>
+<hr />
+<div class="pda"><a href="t-263234.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=263234">Using InetLoad Plugin With Port Number</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">QMastor</div><div class="date">8th January 2007, 04:12</div></div><div class="posttext">Does anybody know if the InetLoad plugin takes exception to URLs that contain a port number?<br />
+<br />
+eg. http://localhost:8080/index.html<br />
+<br />
+I am attempting to use the plugin to test the validity of a user-provided URL, ensuring that it's pointing to a web service by POSTing to it, and checking the response. <br />
+<br />
+So far, tests with a URL that does not contain a port number have worked successfully, but a URL that DOES contain a port number keeps returning &quot;Server Error&quot; messages. I tried opening the same URL in Internet Explorer (Because I know that the plugin uses IE behind the scenes), and it opened fine.<br />
+<br />
+Below is a cut-down example of what I'm doing (With fake URLs), that includes a POST without a port number, and one with a port number. With actual URLs the first MessageBox will give an &quot;OK&quot; message, and the second an error.<br />
+<br />
+<br />
+!define NOPORT_URL &quot;http://localhost/WebServicePath/Page.asmx&quot;<br />
+!define PORT_URL &quot;http://localhost:8080/WebServicePath2/Page.asmx&quot;<br />
+<br />
+Name &quot;InetLoadTest&quot;<br />
+OutFile &quot;Test.exe&quot;<br />
+<br />
+!include &quot;MUI.nsh&quot;<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+Section &quot;Dummy Section&quot; SecDummy<br />
+    ; Call the &quot;Ping&quot; method of the web service<br />
+    InetLoad::load /POST &quot;&quot; &quot;${NOPORT_URL}/Ping&quot; &quot;$EXEDIR\TestURL.xml&quot;<br />
+    Pop $1<br />
+    MessageBox MB_OK &quot;$1&quot;<br />
+<br />
+    InetLoad::load /POST &quot;&quot; &quot;${PORT_URL}/Ping&quot; &quot;$EXEDIR\TestURL2.xml&quot;<br />
+    Pop $1<br />
+    MessageBox MB_OK &quot;$1&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+Any help would be greatly appreciated.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">8th January 2007, 07:38</div></div><div class="posttext">Re-tested with Apache2 on port 8080    InetLoad::load /post &quot;login=ami&amp;passwd=333&quot; \<br />
+&quot;http://localhost:8080/post.php?lg=iam&amp;pw=44&quot; &quot;$EXEDIR\post.htm&quot;<br />
+    Pop $0 # return value = exit code, &quot;OK&quot; if OK<br />
+ - works correct, &quot;OK&quot; and post.htm content. &quot;Server error&quot; means connection to port was successfull, but server returned error and it is not 401...407. You can test it using Inetc::head to get raw http headers (but the same info should be in the server logs).<br />
+http://nsis.sourceforge.net/Inetc_plug-in</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">QMastor</div><div class="date">8th January 2007, 22:25</div></div><div class="posttext">I will definitely do some more testing, but it seems a little strange that the second call is experiencing an error, when the two web services are basically the same (The same code, just running in two different places), and IE experiences no problems.<br />
+<br />
+I had thought that it might be something to do with the way web services can sort of use Windows Integrated Security, but since both web services would be using it the same way, it didn't seem likely that only the second instance would error...<br />
+<br />
+Anyway, I'll keep looking, and might be back.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">QMastor</div><div class="date">9th January 2007, 02:49</div></div><div class="posttext">OK, so far as I can determine, the discrepancy is actually being caused IIS. It would appear that a web service is allowed to accept standard URL-based (ie. No included data) POSTs from the same machine, but not from other machines.<br />
+<br />
+This would be why the web service on my local machine (The one without a port number) worked correctly, but the one on another machine (Which just happened to have a port number) didn't.<br />
+<br />
+Now my problem is working out how to send a valid SOAP request using the plugin, but hopefully somebody else has already worked out how to do this, and I can find it via some forum, Wiki, and/or Google searching. If not, I'll be back.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">QMastor</div><div class="date">10th January 2007, 00:30</div></div><div class="posttext">The InetLoad and inetc plugins are not SOAP-capable &quot;as is&quot;, because they don't allow you to manually set the &quot;Content-Type&quot; header (Or in the case of SOAP 1.1, add a custom &quot;SOAPAction&quot; header).<br />
+<br />
+I managed to get around this by downloading, modifying, and re-compiling the source code (Which is not as easy as it sounds since I'm not a C++ programmer), but ran into a slightly different problem relating to the use of Windows Authentication in the web service...<br />
+<br />
+In order for the authentication to work, calls to the &quot;InternetSetOption&quot; function are required, passing values for &quot;INTERNET_OPTION_USERNAME&quot; and &quot;INTERNET_OPTION_PASSWORD&quot; (The username and password of the currently logged in user). The problem is, how do I go about getting these values? If I connect to the web service using IE it automatically sends these values for me, so presumably there must be some way of getting the information, but I can't seem to find it anywhere... :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">13th January 2007, 16:41</div></div><div class="posttext">I added new option /header to Inetc (http://nsis.sourceforge.net/Inetc_plug-in), so now you can add or replace http request header. Also I reduces (a bit) flickering on plug-in exit - Backland' request.<br />
+Authentication - if server request this and login/pwd not defined in URL, plug-in should display common (IE) authentication popup and user can enter/confirm password. But this not work in silent mode. And you cannot get user's password as a text (I still hope :) ).</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

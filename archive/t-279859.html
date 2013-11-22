@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Include a list during compilation, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Include a list during compilation NSIS Discussion" />
+	
+	<title> Include a list during compilation [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Include a list during compilation</div>
+<hr />
+<div class="pda"><a href="t-279859.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=279859">Include a list during compilation</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">machiel</div><div class="date">24th October 2007, 11:19</div></div><div class="posttext">Hello, <br />
+<br />
+During setup, I want to edit a number of installed files (e.g. to adjust the path inside these files). I would like the list of files to be edited to be configurable (i.e., <br />
+not hardcoded in my main code, but listed in another file <br />
+e.g. &quot;editscripts.nsh&quot;). Preferably, I want to include <br />
+this list during compilation of the setup executable.<br />
+<br />
+With the following code, I can do this, but I wondered <br />
+whether there is some simpler way. <br />
+<br />
+(Another way would be to have a file &quot;editscripts.dat&quot; <br />
+that contains these filenames, and simply read this file <br />
+during execution of the setup, but I prefer to have <br />
+only one single execution file during setup and not a lot <br />
+of datafiles on the side). <br />
+<br />
+<br />
+	; editscripts.nsh, to be included in main code<br />
+	;<br />
+<br />
+Function ListEditScripts<br />
+<br />
+	; donÂ´t quit the next line, <br />
+        ; otherwise the loop wonÂ´t stop...<br />
+	Push &quot;&quot;<br />
+	; The list of files to be edited:<br />
+	Push &quot;myfiles\commandline.bat&quot;<br />
+	Push &quot;myfiles\commandline.config&quot;<br />
+	Push &quot;myfiles\utils\util.bat&quot;<br />
+        Push &quot;myfiles\utils\util.config&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+Function GetNextEditScript<br />
+	<br />
+	Call ListEditScripts<br />
+	loop:<br />
+		Pop $0<br />
+		MessageBox MB_OK &quot;Var 0 is $0&quot;<br />
+		StrCmp $0 &quot;&quot; endloop loop<br />
+	endloop:<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pospec</div><div class="date">24th October 2007, 11:33</div></div><div class="posttext">Maybe this could help you (?) - put these lines to somefile.nsi (.nsh):<br />
+<br />
+Push &quot;myfiles\commandline.bat&quot;<br />
+Push &quot;myfiles\commandline.config&quot;<br />
+Push &quot;myfiles\utils\util.bat&quot;<br />
+Push &quot;myfiles\utils\util.config&quot;<br />
+<br />
+and replace them in ListEditScripts functions with !include 'somefile.nsi'. Something says me that this is not exactly what you want :rolleyes:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">machiel</div><div class="date">24th October 2007, 11:38</div></div><div class="posttext">Well, actually, that is what I do now. <br />
+The code I showed I put in &quot;somefile.nsi&quot; and in my main <br />
+code &quot;maincode.nsi&quot; I do the include. <br />
+But I would like the code in &quot;somefile.nsi&quot; to be simpler. <br />
+In other words: I would like to get rid of all the 'push' <br />
+bit (and the 'push &quot;&quot; ' bit). <br />
+Thank you anyway.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pospec</div><div class="date">24th October 2007, 12:06</div></div><div class="posttext">You prefer to have only one single execution file during setup and not a lot of datafiles on the side. If you !include a file to NSIS script then you don't need it during setup.<br />
+OK, no problem to get rid of all the 'push'. Then you must parse your filelist from some file. You can do this:<br />
+<br />
+ By NSIS: First do Push &quot;&quot;. Then iterate over lines of the filelist and Push every line. You don't need this filelist during setup, only during compilation of NSIS script. <br />
+ By SED, AWK or something else.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pospec</div><div class="date">24th October 2007, 12:17</div></div><div class="posttext">!define filename 'example.txt'<br />
+<br />
+name &quot;example&quot;<br />
+<br />
+outfile &quot;example.exe&quot;<br />
+<br />
+setcompressor lzma<br />
+<br />
+!include &quot;logiclib.nsh&quot;<br />
+<br />
+page instfiles<br />
+<br />
+section &quot;&quot;<br />
+fileopen $0 ${filename} r<br />
+  ${do}<br />
+    fileread $0 $1<br />
+    messagebox mb_ok $1 <br />
+  ${loopuntil} $1 == ''<br />
+fileclose $0  <br />
+sectionend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">machiel</div><div class="date">24th October 2007, 12:24</div></div><div class="posttext">I guess what I donÂ´t see is how to do  &quot;Then iterate over lines of the filelist&quot; during compilation. <br />
+When I create a custom page, e.g.: <br />
+            Page custom EditMyFiles <br />
+and do as you suggest inside &quot;EditMyFiles&quot; (iterate over the filelist), this will only happen during execution time, not during compilation. Indeed, in this case, my filelist.dat can be simply: <br />
+       filename1<br />
+       filename2<br />
+<br />
+On the other hand, if I do it by means of &quot;!include somefile.nsh&quot;, then inside somefile.nsh I cannot simply have a list of files, I have to present them there with <br />
+     Push &quot;filename1&quot;<br />
+     Push &quot;filename2&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">machiel</div><div class="date">24th October 2007, 12:28</div></div><div class="posttext">In the code example, the fileread loop is done during execution of example.exe, not during creation of example.exe.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pospec</div><div class="date">24th October 2007, 12:38</div></div><div class="posttext">Then you should do &quot;pre-build step&quot; (using sed or awk) and &quot;translate&quot; simple filelist into the Push-filelist. And !include this new one :up:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pospec</div><div class="date">24th October 2007, 12:42</div></div><div class="posttext">Just for your info - this is my way how I &quot;build&quot; setups. Simple batch file:<br />
+<br />
+call get_files_CD.bat<br />
+echo !define VERZE_CD &gt; DDVerze.nsi<br />
+echo !define DDVERZE 'CD' &gt;&gt; DDVerze.nsi<br />
+..\common\get_time.exe &quot;!define DATUM_VYROBY&quot; &gt;&gt; DDVerze.nsi<br />
+makensis install.nsi <br />
+pause</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">machiel</div><div class="date">24th October 2007, 12:48</div></div><div class="posttext">Ok, thatÂ´s a good idea. Instead of directly compiling the nsi code, do some sed/awk stuff first to create the necessary include files. <br />
+I might go and do just that. <br />
+Many thanks for the help.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

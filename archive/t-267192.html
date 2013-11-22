@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" create Database with NSIS, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  create Database with NSIS NSIS Discussion" />
+	
+	<title> create Database with NSIS [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  create Database with NSIS</div>
+<hr />
+<div class="pda"><a href="t-267192.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=267192">create Database with NSIS</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">pozbremser</div><div class="date">5th March 2007, 11:54</div></div><div class="posttext">Hallo,<br />
+<br />
+I call msi for install SQL Server Express.<br />
+I have an mdf-file and backup-file of my database.<br />
+Is it possible create database with NSIS from mdf or backup-files or use sql-scripts?<br />
+<br />
+Thank You.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pafcosta</div><div class="date">7th March 2007, 16:57</div></div><div class="posttext">Hi,<br />
+<br />
+You have two possibilities.<br />
+One is use osql. This application is install with SQL SERVER. With this app you can exec sql scripts. For example:<br />
+::SET VARIABLES<br />
+set DBNAME=NAMEOFDATABASEBEINGRESTORED<br />
+set DBDIRECTORY=C:\Program Files\Microsoft SQL Server\MSSQL\Data<br />
+<br />
+TITLE Restoring %DBNAME% Database<br />
+<br />
+::PUT DATABASE IN SINGLE USER MODE TO ALLOW RESTORE<br />
+osql -E -d master -Q &quot;alter database %DBNAME% set single_user with rollback immediate&quot;<br />
+<br />
+::RESTORE DATABASE<br />
+osql -E -d master -Q &quot;restore database %DBNAME% from disk='%~dp0\%DBNAME%.bak' WITH MOVE '%DBNAME%_Data' TO '%DBDIRECTORY%\%DBNAME%_Data.MDF',  MOVE '%DBNAME%_Log' TO '%DBDIRECTORY%\%DBNAME%_Log.LDF'&quot;<br />
+<br />
+::GRANT PERMISSION TO ASPNET USER<br />
+osql -E -d %DBNAME% -Q &quot;sp_grantdbaccess '%COMPUTERNAME%\ASPNET'&quot;<br />
+osql -E -d %DBNAME% -Q &quot;sp_addrolemember 'db_owner', '%COMPUTERNAME%\ASPNET'&quot;<br />
+<br />
+::RESTORE TO MULTI USER<br />
+osql -E -d master -Q &quot;alter database %DBNAME% set multi_user&quot;<br />
+<br />
+pause<br />
+<br />
+The previous example you can find in:<br />
+http://weblogs.asp.net/jgalloway/archive/2005/12/02/432088.aspx<br />
+<br />
+<br />
+About the second option is do when you start the first time your application. <br />
+<br />
+I have one question to you about the &lt;B&gt;&quot;I call msi for install SQL Server Express&quot;&lt;/B&gt;. How you call? I trying to find a example, but without success.<br />
+<br />
+I hope this can help you.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pozbremser</div><div class="date">9th March 2007, 11:13</div></div><div class="posttext">Thanks, pafcosta!<br />
+<br />
+osql was not with SQL Server Express.<br />
+<br />
+I use Microsoft Component Installer 2.0 SDK<br />
+for install the needed komponents:<br />
+http://www.microsoft.com/downloads/details.aspx?familyid=2A5E4EBC-651C-40AA-9525-1810AF47C317&amp;displaylang=en<br />
+<br />
+short futures:<br />
+<br />
+The SDK provides support for installing any or all of the following components:<br />
+<br />
+* Microsoft Windows Installer 2.0 <br />
+* Microsoft Windows Installer 3.1 <br />
+* Microsoft Data Access Components (MDAC) 2.8 <br />
+* Microsoft .NET Framework 1.1 and language packs <br />
+* Microsoft .NET Framework 1.1 Service Pack 1 <br />
+* Microsoft Visual J# runtime and language packs<br />
+* Microsoft .NET Framework 2.0 (x86) and language packs<br />
+* Microsoft Visual J# 2.0 runtime and language packs<br />
+* Microsoft DirectX 9.0c (December 2005 ) <br />
+* Microsoft Report Viewer 2005 redistributable and language packs<br />
+* Microsoft Visual Studio 2005 Tools for the Microsoft Office System redistributable and language packs<br />
+* Microsoft SQL Server 2005 Express Edition redistributable<br />
+<br />
+then you call yours NSIS - Setup in the file PSetup.ini.<br />
+This file belongs to the Microsoft Component Installer 2.0 SDK<br />
+ <br />
+PostInstallAction=your-nsis-setup.exe<br />
+<br />
+or you can extract msi-files of sqlserver.exe<br />
+i think this option is /r or \r bat not sure.<br />
+<br />
+and then call msi-files from NSIS-setup.<br />
+<br />
+You can call MSI with the line:<br />
+<br />
+Section -demo<br />
+ExecWait '&quot;msiexec&quot; /i &quot;$EXEDIR\Demo.msi&quot; /passive '<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pafcosta</div><div class="date">9th March 2007, 11:48</div></div><div class="posttext">I found this in the internet yestarday.<br />
+Please see if this help you:<br />
+http://www.hoohee.com/PermaLink,guid,98f42375-f7bd-496a-95e0-0cd3a0b9e7ee.aspx<br />
+<br />
+Thanks<br />
+Paulo Costa</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sgiusto</div><div class="date">14th March 2007, 12:31</div></div><div class="posttext">You can use sqlcmd (osql replacement in sql2005) or use the MSSQL plugin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">astolfo</div><div class="date">9th January 2009, 11:38</div></div><div class="posttext">why I can't see the URL submitted by the users?<br />
+I'm Logged in</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">9th January 2009, 16:22</div></div><div class="posttext">astolfo wrote<br />
+why I can't see the URL submitted by the users?<br />
+I'm Logged in<br />
+It's a spam prevention mechanism applied to new posters.  (It's a pain, but I don't make the rules.)  If you click the &quot;reply&quot; button, you can scroll down and see the URLs.  Once you've posted enough times, your level changes and then you can submit URLs that others can actually see.<br />
+<br />
+Here's the link for the Microsoft Component Installer 2.0 SDK:<br />
+http://www.microsoft.com/downloads/details.aspx?familyid=2A5E4EBC-651C-40AA-9525-1810AF47C317&amp;displaylang=en</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Russell81</div><div class="date">26th March 2009, 11:31</div></div><div class="posttext">Can anyone give code example to &quot;create database&quot; with NSIS from metadata.txt? Idea is that first create a database then input the metadata. Please help me with nsis code example.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

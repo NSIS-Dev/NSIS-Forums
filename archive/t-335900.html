@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Using File instruction to copy entire folders, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Using File instruction to copy entire folders NSIS Discussion" />
+	
+	<title> Using File instruction to copy entire folders [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Using File instruction to copy entire folders</div>
+<hr />
+<div class="pda"><a href="t-335900.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=335900">Using File instruction to copy entire folders</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Ron.Stordahl</div><div class="date">12th October 2011, 23:04</div></div><div class="posttext">I am successfully copying individual files to my INSTDIR using:<br />
+<br />
+SectionIn RO<br />
+SetOutPath &quot;$INSTDIR&quot;	;The 'program files' will go in this location<br />
+SetOverwrite ON		;Overwrite existing files.<br />
+File &quot;..\BPQ32\Files\AGWtoBPQ.exe&quot;<br />
+File &quot;..\BPQ32\Files\BPQ32.EXE&quot;<br />
+File &quot;..\BPQ32\Files\BPQadapters.exe&quot;<br />
+...and continuing for about a dozen more individual filenames<br />
+<br />
+But next I want to copy a folder named Documents and all it contents including subfolders so I tried<br />
+<br />
+File &quot;..\BPQ32\Files\Documents&quot;<br />
+<br />
+But it failes with:<br />
+File: &quot;..BPQ32\Files\Documents&quot;  &gt; no files found.  I have also tried Documents\&quot; and Documents\*.*&quot; to no avail.  In INSTDIR I want to add the Document subfolder and all it contents.  I realize it says no files found, but there is a Documents folder at the same level as the individual files successfully being copied so there must be a similar way to specify it.  I must not be specifying this correctly?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">12th October 2011, 23:38</div></div><div class="posttext">The &quot;File&quot; command doesn't copy files.<br />
+<br />
+Instead the File command will scan for the specified file(s) at compile-time, i.e. on the machine where the installer is compiled!<br />
+<br />
+The file(s) will then be built-in into the installer executable. And, at install-time, they'll be extracted to the current $OUTDIR.<br />
+<br />
+Also, when specifying a relative path, e.g. &quot;..\BPQ32\Files\Documents&quot;, it is interpreted relative to the directory where the .NSI file is located.<br />
+<br />
+So if you want to copy files, at install-time, you have to use the CopyFiles command instead...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">13th October 2011, 01:16</div></div><div class="posttext">Check the manual (http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.1.5). You need the /r switch.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ron.Stordahl</div><div class="date">13th October 2011, 02:00</div></div><div class="posttext">OK, copy files was not the right term.  The 'File' command does extract and place files in my instance in the INSTDIR folder and &quot;..\BPQ32\Files\filename&quot; does place the given file name where I want it at install time.  So the relative path I am expressing is understood by 'File'.  What I am trying to do is to use in in a form which places entire folders not just named files.  Thus I thought ..\BPQ32\Files\Documents or some variation on that describing the folder I want to extract and place at INSTDIR would work.  But it doesn't.  Is there some way to use perhaps a wildcard expression to place an entire folder and all it's subfolders and contents?<br />
+<br />
+I did try the /r switch and it worked inconsistently.  At install times it would work often, but at other times it would error out with something like 'unable to write file.'  I am not at my office now so I don't have my notes to give the exact message.  But it was not consistent.<br />
+<br />
+So I was looking for some other way to do the job.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">13th October 2011, 10:57</div></div><div class="posttext">I did try the /r switch and it worked inconsistently.  At install times it would work often, but at other times it would error out with something like 'unable to write file.'  I am not at my office now so I don't have my notes to give the exact message.  But it was not consistent.<br />
+<br />
+This kind of error message usually means one of these:<br />
+<br />
+(1) The file that your installer is going to write (or at least one of the files that your installer is going to write) already exists and can not be overwritten. This can happen because the file is locked by another process or because of insufficient access rights.<br />
+<br />
+(2) The file (or directory) can not be created at the desired location, because of insufficient access rights.<br />
+<br />
+(3) The target device is out of free disc space.<br />
+<br />
+<br />
+You are using &quot;RequestExecutionLevel admin&quot; and check for Admin rights with UserInfo plug-in ???</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ron.Stordahl</div><div class="date">13th October 2011, 15:57</div></div><div class="posttext">I use the following code to check that I have admin rights<br />
+<br />
+  userInfo::getAccountType	;This gets the account type and puts it in the stack<br />
+  pop $0<br />
+  ${If} $0 == &quot;Admin&quot;<br />
+    !ifdef debug_display<br />
+      messageBox MB_ICONINFORMATION &quot;900-.onInit: Executing with Administrator privileges&quot;<br />
+    !endif<br />
+  ${Else}<br />
+    !ifdef debug_display<br />
+      messageBox MB_ICONINFORMATION &quot;910-.onInit: not admin: $0&quot;<br />
+    !endif<br />
+    ${If} ${AtLeastWinNT4}<br />
+      messageBox MB_ICONINFORMATION &quot;920-Administrator Privileges are required to install BPQ32&quot;<br />
+      abort<br />
+    ${Endif}<br />
+  ${Endif}<br />
+<br />
+<br />
+I also check that the BPQ32 application (the one that I am installing or updating) is not running.  If it is I abort with a message.  The fault has occurred when writing to either %programfiles% and to %appdata%.  But if I rerun the installer typically it does not fault, or it it does it is with a different file.  I suppose it is possible that Microsoft Security Essentials could be reading the exact file at the time, I can't think of any other program that would be assigned.  I have changed SetOverWrite ON immediately proceeding to SetOverWrite TRY, but have not done sufficient testing to see if this matters.  One has to run the installer many times before the error occurs, so it is difficult to test for this.<br />
+<br />
+You mentioned the 'Userinfo' plugin.  What will this tell me re Admin rights that my preceeding example won't?  Also where do I get that plugin?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">13th October 2011, 16:00</div></div><div class="posttext">You should also add &quot;RequestExecutionLevel admin&quot; to add a proper Manifest for Vista+ support.<br />
+<br />
+(UAC will automatically elevate NSIS installers that do not have a Manifest at all, but explicitly requesting the elevation via Manifest is safer and more correct. And, by the way, I think you can skip the ${AtLeastWinNT4} check nowadays)<br />
+<br />
+Also an Antivirus program should never cause file-access to fail, it only can delay the file access while it's scanning the file.<br />
+<br />
+(I use MSE too and do not experience such behavior)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

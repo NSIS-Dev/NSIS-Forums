@@ -1,0 +1,309 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Prevent Multiple Instances with UMUI, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Prevent Multiple Instances with UMUI NSIS Discussion" />
+	
+	<title> Prevent Multiple Instances with UMUI [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Prevent Multiple Instances with UMUI</div>
+<hr />
+<div class="pda"><a href="t-315674.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=315674">Prevent Multiple Instances with UMUI</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">HSorgYves</div><div class="date">24th December 2009, 22:11</div></div><div class="posttext">The following code finds a running instance on language change:<br />
+Name Test<br />
+OutFile Test.exe<br />
+<br />
+!include UMUI.nsh<br />
+<br />
+!insertmacro UMUI_PAGE_MULTILANGUAGE<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+<br />
+!insertmacro MUI_LANGUAGE English<br />
+!insertmacro MUI_LANGUAGE German<br />
+<br />
+Section Install<br />
+SectionEnd<br />
+<br />
+Function .onInit<br />
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;myMutex&quot;) i .r1 ?e'<br />
+  Pop $R0<br />
+  StrCmp $R0 0 +3<br />
+    MessageBox MB_OK|MB_ICONEXCLAMATION &quot;The installer is already running.&quot;<br />
+    Abort<br />
+  !insertmacro UMUI_MULTILANG_GET<br />
+FunctionEnd<br />
+This is due to a bug in the macro UMUI_FUNCTION_MULTILANGUAGEPAGE where ExecWait is used instead of Exec. Change lines 5212-5216 to:<br />
+!ifndef MUI_UNINSTALLER<br />
+  Exec &quot;$R0 $R1 /L=$LANGUAGE /NCRC&quot;<br />
+!else<br />
+  Exec &quot;$R0 $R1 /L=$LANGUAGE _?=$INSTDIR&quot;<br />
+!endif<br />
+<br />
+<br />
+Best Regards,<br />
+Yves</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">SuperPat</div><div class="date">24th December 2009, 23:52</div></div><div class="posttext">ExecWait was used because the Exec function break the NSIS UAC plugin:<br />
+<br />
+Originally posted by LoRd_MuldeR <br />
+I noticed a serious problem with UMUI and the UAC plugin: The UAC plugin will create two processes. The &quot;outer&quot; process is running with user privileges, the &quot;inner&quot; one with elevated rights. The &quot;inner&quot; process is the actual installer, but whenever it needs to do something as the normal user (e.g. launch an application that we don't want elevated) it will ask to the &quot;outer&quot; process to do that. So far this works fine and fixed my problems.<br />
+<br />
+Now the UMUI problem: When UMUI changes the language, it will re-start the installer. When using UAC this means: The &quot;inner&quot; process will terminate (and re-start), the &quot;outer&quot; process will terminate after the &quot;inner&quot; has terminated. Now only the &quot;inner&quot; process (the new instance created by UMUI after language switch) is running, but the &quot;outer&quot; process is missing. Consequently all actions that needed the &quot;outer&quot; process will fail (do nothing in fact).<br />
+<br />
+How can I workaround that problem? Thanks in advance :)  <br />
+<br />
+<br />
+You may be use this code:<br />
+<br />
+<br />
+Name Test<br />
+OutFile Test.exe<br />
+<br />
+!include UMUI.nsh<br />
+<br />
+!insertmacro UMUI_PAGE_MULTILANGUAGE<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+<br />
+!insertmacro MUI_LANGUAGE English<br />
+!insertmacro MUI_LANGUAGE German<br />
+<br />
+Section Install<br />
+SectionEnd<br />
+<br />
+Function .onInit<br />
+<br />
+;This macro set the UMUI_LANGISSET install flag if a langid if it is passed in the commandline<br />
+  !insertmacro UMUI_MULTILANG_GET<br />
+<br />
+;If the langid is not passeed in the command line<br />
+!insertmacro UMUI_IF_INSTALLFLAG_ISNOT ${UMUI_LANGISSET}<br />
+<br />
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;myMutex&quot;) i .r1 ?e'<br />
+  Pop $R0<br />
+  StrCmp $R0 0 +3<br />
+    MessageBox MB_OK|MB_ICONEXCLAMATION &quot;The installer is already running.&quot;<br />
+    Abort<br />
+<br />
+!insertmacro UMUI_ENDIF_INSTALLFLAG<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">HSorgYves</div><div class="date">25th December 2009, 00:19</div></div><div class="posttext">Thanks for your quick answer. But this means that if someone is calling the installer with the language flag set (s)he can call it as often as (s)he likes... it's not 100% but it is working.<br />
+<br />
+Isn't there a way to check that the &quot;new&quot; installer is run depending on the &quot;old&quot; one?<br />
+<br />
+Best Regards,<br />
+Yves</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">SuperPat</div><div class="date">25th December 2009, 11:38</div></div><div class="posttext">You can use two mutex to prevent the execution:<br />
+<br />
+<br />
+Name Test<br />
+OutFile Test.exe<br />
+<br />
+!include UMUI.nsh<br />
+<br />
+!insertmacro UMUI_PAGE_MULTILANGUAGE<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+<br />
+!insertmacro MUI_LANGUAGE English<br />
+!insertmacro MUI_LANGUAGE German<br />
+<br />
+Section Install<br />
+SectionEnd<br />
+<br />
+Function .onInit<br />
+<br />
+;This macro set the UMUI_LANGISSET install flag if a langid if it is passed in the commandline<br />
+  !insertmacro UMUI_MULTILANG_GET<br />
+<br />
+;If the langid is not passeed in the command line<br />
+!insertmacro UMUI_IF_INSTALLFLAG_IS ${UMUI_LANGISSET}<br />
+<br />
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;myMutex1&quot;) i .r1 ?e'<br />
+  Pop $R0<br />
+  StrCmp $R0 0 +3<br />
+    MessageBox MB_OK|MB_ICONEXCLAMATION &quot;The installer is already running.&quot;<br />
+    Abort<br />
+<br />
+!insertmacro UMUI_ENDIF_INSTALLFLAG<br />
+!insertmacro UMUI_IF_INSTALLFLAG_ISNOT ${UMUI_LANGISSET}<br />
+<br />
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;myMutex2&quot;) i .r1 ?e'<br />
+  Pop $R0<br />
+  StrCmp $R0 0 +3<br />
+    MessageBox MB_OK|MB_ICONEXCLAMATION &quot;The installer is already running.&quot;<br />
+    Abort<br />
+<br />
+!insertmacro UMUI_ENDIF_INSTALLFLAG<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">HSorgYves</div><div class="date">25th December 2009, 17:12</div></div><div class="posttext">Thanks for your quick suggestion.<br />
+<br />
+This works 99,99%; however I can still run a maximum of 2 installers, one with default language and one with language flag set on start.<br />
+<br />
+Isn't there a way to check that the one executed from within the installer is dependant on the installer? This would be 100%... ;-)<br />
+<br />
+Best Regards,<br />
+Yves</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">SuperPat</div><div class="date">26th December 2009, 11:56</div></div><div class="posttext">A little improvement with the two mutex methods to prevent the execution:<br />
+<br />
+<br />
+Name Test<br />
+OutFile Test.exe<br />
+<br />
+!include UMUI.nsh<br />
+<br />
+!insertmacro UMUI_PAGE_MULTILANGUAGE<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+<br />
+!insertmacro MUI_LANGUAGE English<br />
+!insertmacro MUI_LANGUAGE German<br />
+<br />
+Section Install<br />
+SectionEnd<br />
+<br />
+Function .onInit<br />
+<br />
+;This macro set the UMUI_LANGISSET install flag if a langid if it is passed in the commandline<br />
+  !insertmacro UMUI_MULTILANG_GET<br />
+<br />
+;If the langid is not passeed in the command line<br />
+!insertmacro UMUI_IF_INSTALLFLAG_IS ${UMUI_LANGISSET}<br />
+<br />
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;myMutex1&quot;) i .r1 ?e'<br />
+  Pop $R0<br />
+  StrCmp $R0 0 +3<br />
+    MessageBox MB_OK|MB_ICONEXCLAMATION &quot;The installer is already running.&quot;<br />
+    Abort<br />
+<br />
+; create the second mutex to prevent the instalelr to be relaunch without the /L parameter<br />
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;myMutex2&quot;) i .r1 ?e'<br />
+  Pop $R0<br />
+<br />
+!insertmacro UMUI_ENDIF_INSTALLFLAG<br />
+!insertmacro UMUI_IF_INSTALLFLAG_ISNOT ${UMUI_LANGISSET}<br />
+<br />
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;myMutex2&quot;) i .r1 ?e'<br />
+  Pop $R0<br />
+  StrCmp $R0 0 +3<br />
+    MessageBox MB_OK|MB_ICONEXCLAMATION &quot;The installer is already running.&quot;<br />
+    Abort<br />
+<br />
+!insertmacro UMUI_ENDIF_INSTALLFLAG<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">HSorgYves</div><div class="date">26th December 2009, 22:17</div></div><div class="posttext">I have finally managed to program what i described/asked for. The following .onInit function will check if the newly launched installer (if mutex fails) is a subprocess (the language has been chosen in UMUI) or if it is a new process (another instance of the installer has been launched).<br />
+Function .onInit<br />
+  !insertmacro UMUI_MULTILANG_GET<br />
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;MutexA&quot;) ?e'<br />
+  Pop $R0<br />
+  ${IfNot} 0 = $R0<br />
+    # MutexA already exists!<br />
+    # Now the choice has to be made:<br />
+    # 1) another installer lauch (new process)<br />
+    # 2) language selection in UMUI (subprocess)<br />
+    # First get the process id of the current process and store it in $R0<br />
+    System::Call &quot;kernel32::GetCurrentProcessId() i .R0&quot;<br />
+    # Then create a snapshot of all running processes<br />
+    System::Call &quot;kernel32::CreateToolhelp32Snapshot(i 0x00000002, i 0) i .r0&quot;<br />
+    # And prepare the PROCESSENTRY32 structure<br />
+    System::Call &quot;*(i, i, i, i, i, i, i, i, i, &amp;t1024) i .r1&quot;<br />
+    # Get the size of the PROCESSENTRY32 structure<br />
+    System::Call &quot;*$1(_, &amp;l0 .r2)&quot;<br />
+    # Set the size of the PROCESSENTRY32 structure in its first member (as required)<br />
+    System::Call &quot;*$1(i r2, i, i, i, i, i, i, i, i, &amp;t1024)&quot;<br />
+    # Retrieve the information about the first process<br />
+    System::Call &quot;kernel32::Process32First(i r0, i r1) i .r2&quot;<br />
+    # Loop as long as the call is successful (TRUE)<br />
+    ${DoWhile} 1 = $2<br />
+      # Retrieve the members &quot;process id&quot; in $R1 and &quot;parent process id&quot; in $R2<br />
+      System::Call &quot;*$1(i, i, i .R1, i, i, i, i .R2, i, i, &amp;t1024)&quot;<br />
+      # Check if the current process and the one just looking at in the snapshot have the same id<br />
+      ${If} $R0 = $R1<br />
+        # If they so exit the loop<br />
+        ${Break}<br />
+      ${EndIf}<br />
+      # If they do not retrieve the information about the next process<br />
+      System::Call &quot;kernel32::Process32Next(i r0, i r1) i .r2&quot;<br />
+    ${Loop}<br />
+    # Free the created structure<br />
+    System::Free $1<br />
+    # Release the snapshot<br />
+    System::Call &quot;kernel32::CloseHandle(i r0)&quot;<br />
+<br />
+    # Now we have stored:<br />
+    # $R0: the current process id<br />
+    # $R1: the process id of the process we last looked at in the snapshot<br />
+    # $R2: the parent process id of the process we last looked at in the snapshot<br />
+    # If $R0 = $R1 (what we hope for) than $R2 is the process id of the parent process of the current one<br />
+    <br />
+    # Inistialisations<br />
+    StrCpy $0 0<br />
+    StrCpy $1 0<br />
+    # Loop until we find some exist condition in the loop code<br />
+    ${Do}<br />
+      # Get the first/next NSIS window handle<br />
+      FindWindow $0 &quot;#32770&quot; &quot;&quot; 0 $0<br />
+      # If the found handle is 0 or if $R0 != $R1 we have to abort<br />
+      ${If} 0 = $0<br />
+      ${OrIfNot} $R0 = $R1<br />
+        # If we didn't find the main installer window, we show an error message<br />
+        ${If} 0 = $1<br />
+          MessageBox MB_OK|MB_ICONEXCLAMATION &quot;The installer is already running!&quot;<br />
+        # If we did find the main installer window, we make it the foreground window<br />
+        ${Else}<br />
+          System::Call &quot;user32::ShowWindow(i r1, i 9)&quot;<br />
+          System::Call &quot;user32::SetForegroundWindow(i r1)&quot;<br />
+        ${EndIf}<br />
+        Abort<br />
+      # We found an NSIS installer<br />
+      ${Else}<br />
+        # We get its window title<br />
+        System::Call &quot;user32::GetWindowText(i r0, t .r2, i 1024) i .r3&quot;<br />
+        # We strip the NULL character at the end<br />
+        IntOp $3 $3 - 1<br />
+        StrCpy $2 $2 $3<br />
+        # If it is the same as the one of this installer, we might have found the parent<br />
+        # or we discover its a new one<br />
+        # Here you need to change &quot;$(^Name) Setup&quot; if you changed the caption of the installer<br />
+        ${If} &quot;$(^Name) Setup&quot; == $2<br />
+          # Get the process id from the window handle<br />
+          System::Call &quot;user32::GetWindowThreadProcessId(i r0, *i .r2)&quot;<br />
+          # If it is the same as the one of our parent, than the language was chosen and we break the loop<br />
+          ${If} $2 = $R2<br />
+            ${Break}<br />
+          # If it is not the same, than we store the window handle (of the first one discovered;<br />
+          # normally there is only one) to be used later on to set that window to the foreground<br />
+          ${ElseIf} 0 = $1<br />
+            StrCpy $1 $0<br />
+          ${EndIf}<br />
+        ${EndIf}<br />
+      ${EndIf}<br />
+    ${Loop}<br />
+  ${EndIf}<br />
+FunctionEnd<br />
+Best Regards,<br />
+Yves</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

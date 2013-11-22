@@ -1,0 +1,307 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" HOWTO: Close a java application, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  HOWTO: Close a java application NSIS Discussion" />
+	
+	<title> HOWTO: Close a java application [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  HOWTO: Close a java application</div>
+<hr />
+<div class="pda"><a href="t-177496.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=177496">HOWTO: Close a java application</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">drbungle</div><div class="date">21st April 2004, 15:03</div></div><div class="posttext">Hi<br />
+<br />
+heres what i want to do:<br />
+<br />
+I want the installer to shutdown a java application (a gui started with a command line order like java.exe -jar myapplication). The problem is that the app also has an icon in the systray, so if you close the app window, the icon in the taskbar still remains there and the java app is also still running (its using a dll file to be in the systray).<br />
+<br />
+I used the KillProcDLL Plugin but the problem is that if you are a developer, your development environment is also being closed. Currently i managed to solve that problem with a warning and about 6 java.exe kills running in the installer to ensure that my application is closed, but isnt there an other way ? (I hate warnings)<br />
+<br />
+How can i kill that dll and the app window ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sundaram123</div><div class="date">23rd April 2004, 16:10</div></div><div class="posttext">To Close the java application, you need to write the start/stop method in you java application.<br />
+<br />
+You can follow the tomcat method of starting/stoping application.<br />
+<br />
+1. While starting create a socket and listen for it.<br />
+2. To Stop connect to that port and send shutdown message.<br />
+<br />
+Here is the sample code I have. <br />
+<br />
+Hope this helps you, please let me know, if you need any more information on this<br />
+<br />
+-Sundaram<br />
+<br />
+/*<br />
+ * Deamon.java<br />
+ *<br />
+ * Created on April 20, 2004, 1:54 PM<br />
+ */<br />
+import java.io.*;<br />
+import java.util.*;<br />
+import java.beans.IndexedPropertyDescriptor;<br />
+import java.beans.PropertyChangeListener;<br />
+import java.beans.PropertyChangeSupport;<br />
+import java.beans.PropertyDescriptor;<br />
+import java.io.File;<br />
+import java.io.FileOutputStream;<br />
+import java.io.IOException;<br />
+import java.io.InputStream;<br />
+import java.io.OutputStreamWriter;<br />
+import java.io.PrintWriter;<br />
+import java.net.InetAddress;<br />
+import java.net.ServerSocket;<br />
+import java.net.Socket;<br />
+import java.security.AccessControlException;<br />
+import java.sql.Timestamp;<br />
+import java.util.Enumeration;<br />
+import java.util.Hashtable;<br />
+import java.util.Random;<br />
+<br />
+import java.rmi.*;<br />
+import java.rmi.registry.*;<br />
+import javax.rmi.*;<br />
+<br />
+public class Deamon {<br />
+    <br />
+    public static String SERVERIP =&quot;127.0.0.1&quot;;<br />
+    public static int SHUT_PORT=9191;<br />
+    <br />
+    protected static Deamon server = null;<br />
+    <br />
+    /**<br />
+     * Use shutdown hook flag.<br />
+     */<br />
+    protected boolean useShutdownHook = true;<br />
+    <br />
+    /**<br />
+     * The shutdown command string we are looking for.<br />
+     */<br />
+    private String shutdown = &quot;SHUTDOWN&quot;;<br />
+    <br />
+    /**<br />
+     * Shutdown hook.<br />
+     */<br />
+    protected Thread shutdownHook = null;<br />
+    <br />
+    /** Creates a new instance of Deamon */<br />
+    public Deamon() {<br />
+    }<br />
+    <br />
+    /**<br />
+     * @param args the command line arguments<br />
+     */<br />
+    public static void main(String[] args) {<br />
+        <br />
+        server = new Deamon();<br />
+        <br />
+        try {<br />
+            String command = &quot;start&quot;;<br />
+            if (args.length &gt; 0) {<br />
+                command = args[args.length - 1];<br />
+            }<br />
+            System.out.println(&quot;Args: &quot; + command);<br />
+            <br />
+            if (command.equals(&quot;startd&quot;) ||command.equals(&quot;start&quot;)) {<br />
+                server.start();<br />
+            } else if (command.equals(&quot;stopd&quot;)|| command.equals(&quot;stop&quot;)) {<br />
+                server.stop();<br />
+            }<br />
+        } catch (Throwable t) {<br />
+            t.printStackTrace();<br />
+        }<br />
+        <br />
+    }<br />
+    <br />
+    public void startWriting() {<br />
+        PrintWriter pw = null;<br />
+        <br />
+        String fileName =&quot;c:\\test.txt&quot;;<br />
+        try {<br />
+            <br />
+            FileWriter  fw = new FileWriter(new File(fileName), true);<br />
+            pw = new PrintWriter(fw);<br />
+            <br />
+            while(true){<br />
+                pw.println(new Date().toString() + &quot; : Waiting.....\n&quot; );<br />
+                <br />
+                pw.flush() ;<br />
+                Thread.sleep((60 * 60)* 2);<br />
+            }<br />
+            <br />
+            <br />
+        }catch(Exception ex){<br />
+            System.out.println(&quot;Unable to open the file :&quot; + ex);<br />
+        }<br />
+        <br />
+    }<br />
+    <br />
+    public void start() {<br />
+        <br />
+        try {<br />
+            server= this;<br />
+            // Wait for shutdown message to stop<br />
+            new Thread(){<br />
+                public void run() {<br />
+                    System.out.println(&quot;Calling await&quot;);<br />
+                    await();<br />
+                }<br />
+            }.start();<br />
+            <br />
+            <br />
+            startRmiRegistry();<br />
+            startWriting();<br />
+            <br />
+            <br />
+        } catch( Exception ex) {<br />
+            System.out.println(&quot;Error : &quot; + ex.getMessage() );<br />
+        }<br />
+        <br />
+        <br />
+    }<br />
+    <br />
+    <br />
+    public void stop() {<br />
+        <br />
+        // Stop the existing server<br />
+        try {<br />
+            Socket socket = new Socket(SERVERIP, SHUT_PORT);<br />
+            OutputStream stream = socket.getOutputStream();<br />
+            //  String shutdown = server.getShutdown();<br />
+            for (int i = 0; i &lt; shutdown.length(); i++)<br />
+                stream.write(shutdown.charAt(i));<br />
+            stream.flush();<br />
+            stream.close();<br />
+            socket.close();<br />
+        } catch (IOException e) {<br />
+            System.out.println(&quot;App.stop: &quot; + e);<br />
+           // e.printStackTrace(System.out);<br />
+            System.exit(1);<br />
+        }<br />
+        <br />
+        System.out.println(&quot;Done!&quot;);<br />
+        System.exit(0);<br />
+    }<br />
+    <br />
+    // Start RMI Registry<br />
+    public void startRmiRegistry() {<br />
+        // ==================== Start RMi registry ===============<br />
+        try {<br />
+            Registry registry =  LocateRegistry.createRegistry(1099);<br />
+            System.out.println(&quot;RMI registry started&quot;);<br />
+        } catch ( Exception x) {<br />
+            System.out.println(&quot;Error while start RMI registry&quot;);<br />
+        }<br />
+    }<br />
+    <br />
+    <br />
+    /**<br />
+     * Wait until a proper shutdown command is received, then return.<br />
+     */<br />
+    public void await() {<br />
+        <br />
+        // Set up a server socket to wait on<br />
+        ServerSocket serverSocket = null;<br />
+        System.out.println(&quot;creating server socket&quot;);<br />
+        try {<br />
+            serverSocket =<br />
+            new ServerSocket(SHUT_PORT, 1,<br />
+            InetAddress.getByName(&quot;127.0.0.1&quot;));<br />
+        } catch (IOException e) {<br />
+            System.err.println(&quot;StandardServer.await: create[&quot; + SHUT_PORT<br />
+            + &quot;]: &quot; + e);<br />
+            e.printStackTrace();<br />
+            System.exit(1);<br />
+        }<br />
+        <br />
+        // Loop waiting for a connection and a valid command<br />
+        while (true) {<br />
+            <br />
+            // Wait for the next connection<br />
+            Socket socket = null;<br />
+            InputStream stream = null;<br />
+            try {<br />
+                socket = serverSocket.accept();<br />
+                socket.setSoTimeout(10 * 1000);  // Ten seconds<br />
+                stream = socket.getInputStream();<br />
+            } catch (AccessControlException ace) {<br />
+                System.err.println(&quot;StandardServer.accept security exception: &quot;<br />
+                + ace.getMessage());<br />
+                continue;<br />
+            } catch (IOException e) {<br />
+                System.err.println(&quot;StandardServer.await: accept: &quot; + e);<br />
+                e.printStackTrace();<br />
+                System.exit(1);<br />
+            }<br />
+            <br />
+            // Read a set of characters from the socket<br />
+            StringBuffer command = new StringBuffer();<br />
+            Random random=null;<br />
+            int expected = 1024; // Cut off to avoid DoS attack<br />
+            while (expected &lt; shutdown.length()) {<br />
+                if (random == null)<br />
+                    random = new Random(System.currentTimeMillis());<br />
+                expected += (random.nextInt() % 1024);<br />
+            }<br />
+            while (expected &gt; 0) {<br />
+                int ch = -1;<br />
+                try {<br />
+                    ch = stream.read();<br />
+                } catch (IOException e) {<br />
+                    System.err.println(&quot;StandardServer.await: read: &quot; + e);<br />
+                    e.printStackTrace();<br />
+                    ch = -1;<br />
+                }<br />
+                if (ch &lt; 32)  // Control character or EOF terminates loop<br />
+                    break;<br />
+                command.append((char) ch);<br />
+                expected--;<br />
+            }<br />
+            <br />
+            // Close the socket now that we are done with it<br />
+            try {<br />
+                socket.close();<br />
+            } catch (IOException e) {<br />
+                ;<br />
+            }<br />
+            <br />
+            // Match against our command string<br />
+            boolean match = command.toString().equals(shutdown);<br />
+            if (match) {<br />
+                break;<br />
+            } else<br />
+                System.err.println(&quot;StandardServer.await: Invalid command '&quot; +<br />
+                command.toString() + &quot;' received&quot;);<br />
+            <br />
+        }<br />
+        <br />
+        // Close the server socket and return<br />
+        try {<br />
+            serverSocket.close();<br />
+        } catch (IOException e) {<br />
+            ;<br />
+        }<br />
+        System.out.println(&quot;Shuting down!!!&quot;);<br />
+        System.exit(0);<br />
+    }<br />
+    <br />
+}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">drbungle</div><div class="date">26th April 2004, 11:39</div></div><div class="posttext">I havent tried the code above yet, the developer has to include it in the next program version, but if its working how to connect to that socket from within NSIS, do you have a sample code for that too ? <br />
+<br />
+But its good to see that there is an other way, killing javaw.exe x 5 isnt a good solution, like i said, on the developers machine i killed the Java Development Environment when testing the installer ;)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

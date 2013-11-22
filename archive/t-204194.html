@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" NSIS logging, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  NSIS logging NSIS Discussion" />
+	
+	<title> NSIS logging [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  NSIS logging</div>
+<hr />
+<div class="pda"><a href="t-204194.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=204194">NSIS logging</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">dblock</div><div class="date">7th January 2005, 19:33</div></div><div class="posttext">Is there a way to log NSIS actions to a file?<br />
+Similar to msiexec /l*v options.<br />
+<br />
+Thx<br />
+dB.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">7th January 2005, 22:26</div></div><div class="posttext">nsExec::Exec '&quot;${NSISDIR}\makensis.exe&quot; /OFILE.LOG FILE.nsi'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">7th January 2005, 22:38</div></div><div class="posttext">I think dblock wants to log actions of an installer, not the makensis compiler.<br />
+<br />
+You need to download the Advanced Login build of NSIS from:<br />
+http://nsis.sourceforge.net/download/specialbuilds/<br />
+<br />
+See this for LogSet and LogText usage:<br />
+http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.12<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dblock</div><div class="date">10th January 2005, 15:17</div></div><div class="posttext">You are right, that's more of what I am looking for. But I'd really like an automatic logger enabled through command line like msiexec has. Something that logs all standard actions without me having to add LogText in the code or enable logging for all installations.<br />
+<br />
+With an MSI you can do msiexec /l*v out.log /i installer.msi and you're on.<br />
+<br />
+Thx<br />
+dB.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">10th January 2005, 15:36</div></div><div class="posttext">Another solution (but somewhat less automatic). This solution is similar to LogText (you need to log every line explicitly). I needed logging before INSTDIR gets created. Here's my solution.<br />
+<br />
+First logging happens in TMP, after creating INSTDIR, logfile will be moved and continued there.<br />
+<br />
+<br />
+; logging<br />
+Var MY_LOGFILE<br />
+!define MY_LOGFILENAME &quot;MyInstall.log&quot;<br />
+!macro _logline LINE<br />
+  ; Messagebox MB_OK &quot;logline $MY_LOGFILE ${LINE}&quot;<br />
+  StrCmp &quot;$MY_LOGFILE&quot; &quot;&quot; +10<br />
+  Push $R0<br />
+  Push $R1<br />
+  StrCpy $R1 &quot;${LINE}&quot;<br />
+  FileOpen $R0 &quot;$MY_LOGFILE&quot; a<br />
+  FileSeek $R0 0 END<br />
+  FileWrite $R0 &quot;$R1$\r$\n&quot;<br />
+  FileClose $R0<br />
+  Pop $R1<br />
+  Pop $R0<br />
+!macroend<br />
+<br />
+!macro LogToTmpDir<br />
+  StrCpy $MY_LOGFILE &quot;$PLUGINSDIR\MyInstall.log&quot;<br />
+!macroend<br />
+<br />
+!macro LogToInstDir<br />
+  IfFileExists &quot;$MY_LOGFILE&quot; 0 +3<br />
+  StrCmp &quot;$MY_LOGFILE&quot; &quot;$INSTDIR\MyInstall.log&quot; +3<br />
+  CopyFiles /SILENT &quot;$MY_LOGFILE&quot; &quot;$INSTDIR\MyInstall.log&quot;<br />
+  StrCpy $MY_LOGFILE &quot;$INSTDIR\MyInstall.log&quot;  <br />
+!macroend<br />
+<br />
+!macro LogDelete<br />
+  IfFileExists &quot;$MY_LOGFILE&quot; 0 +2<br />
+  Delete &quot;$MY_LOGFILE&quot;<br />
+  StrCpy $MY_LOGFILE &quot;&quot;<br />
+!macroend<br />
+<br />
+!define logline `!insertmacro _logline`<br />
+<br />
+<br />
+You have to call those macros in Functions or Sections:<br />
+<br />
+<br />
+Function .onInit<br />
+  InitPluginsDir<br />
+  !insertmacro LogToTmpDir<br />
+  ${logline} &quot;log to tmp&quot;<br />
+FunctionEnd<br />
+<br />
+Section SecTest<br />
+  SetOutPath &quot;$INSTDIR&quot;<br />
+  !insertmacro LogToInstDir  <br />
+  ${logline} &quot;log to instdir&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th January 2005, 20:15</div></div><div class="posttext">You can turn Logging on and off using LogSet on/off<br />
+You can read command-line parameters using the GetParameters function in the NSIS docs. There are more functions on the archive for getting command-line switches and values etc. A search on there should help you.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MrEyes</div><div class="date">3rd November 2005, 12:45</div></div><div class="posttext">Originally posted by Afrow UK <br />
+I think dblock wants to log actions of an installer, not the makensis compiler.<br />
+<br />
+You need to download the Advanced Login build of NSIS from:<br />
+http://nsis.sourceforge.net/download/specialbuilds/<br />
+<br />
+See this for LogSet and LogText usage:<br />
+http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.12<br />
+<br />
+-Stu  <br />
+<br />
+Apologies for resurecting and old thread but its better to keep everything in one place for future searchers<br />
+<br />
+The url given above for the Logging build points to an empty Wiki page.  Does this build still exist somewhere?<br />
+<br />
+if it does exist how does it work, i.e. do you have to logging commands into the script (e.g. LogThis &quot;My Log Entry&quot;) or does NSIS log what it is doing without explicit log commands.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">3rd November 2005, 17:42</div></div><div class="posttext">The top page is now at:<br />
+http://nsis.sourceforge.net/Special_Builds<br />
+<br />
+As for the second question, check the second link.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

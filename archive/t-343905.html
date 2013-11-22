@@ -1,0 +1,170 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" calling DLL - help needed, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  calling DLL - help needed NSIS Discussion" />
+	
+	<title> calling DLL - help needed [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  calling DLL - help needed</div>
+<hr />
+<div class="pda"><a href="t-343905.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=343905">calling DLL - help needed</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">8th April 2012, 12:30</div></div><div class="posttext">I have a code fragment like this<br />
+StrCpy $0 &quot;removetray&quot;<br />
+StrCpy $1 &quot;&quot;<br />
+StrCpy $2 &quot;&quot;<br />
+<br />
+then a dll-call of &quot;install.dll&quot;<br />
+$1 contains the result<br />
+<br />
+this dll knows what to do. i need a hint to (re)build this call<br />
+http://nsis.sourceforge.net/Docs/System/System.html<br />
+http://nsis.sourceforge.net/Calling_an_external_DLL_using_the_System.dll_plugin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">8th April 2012, 13:31</div></div><div class="posttext">That DLL you are going to call, is it a NSIS plugin-DLL or some other kind of DLL?<br />
+<br />
+If it's a NSIS plug-in DLL, i.e. a DLL that implements the NSIS plug-in API, you would call it simple with a:<br />
+SomePlugin::SomeFunction [Arg_1 Arg_2 ... Arg_N]<br />
+<br />
+If it is not a NSIS plug-in DLL, you can still call it by using the NSIS System plug-in. Though this will be more complex!<br />
+<br />
+(The System plug-in has a manual. See 'NSIS\Docs\System\System.html' for details!)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">8th April 2012, 13:53</div></div><div class="posttext">If you look closer, you'll see he already linked to the system plugin readme himself. I think he needs help with the system::call syntax.<br />
+<br />
+What is the syntax of the dll function you're trying to call?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">8th April 2012, 14:45</div></div><div class="posttext">a) no nsis dll - external found. there is an install.exe for 64bit buit 32bit has only the dll<br />
+<br />
+b) i have neither nor a clue - for EXE it would be 'install.exe &quot;removetray&quot;'<br />
+<br />
+and each time i dig in i get more and more confused<br />
+could be like this<br />
+System::Call 'YourDllName::YourDllFunction(i, *i, t) i(.r0, r1, .r2) .r1'<br />
+but<br />
+YourDllFunction = unknown<br />
+t = unknown<br />
+<br />
+#<br />
+<br />
+i found a &quot;public nsisfunc&quot; which handles the command line parameters, maybe my &quot;YourDllFunction&quot;?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">8th April 2012, 15:01</div></div><div class="posttext">1) It will be impossible to call a Non-NSIS DLL, unless you know the exact definition of the exported function you want to call! Only if you know the exact definition of the function you want to call, preferably in C notation, you may use the System plug-in to call it.<br />
+<br />
+A proper description of a function exported from some DLL looks like this:<br />
+http://msdn.microsoft.com/en-us/library/windows/desktop/ms645505%28v=vs.85%29.aspx<br />
+<br />
+<br />
+2) Just in case you are not aware of this yet: It is NOT possible to call any 64-Bit DLL's from NSIS. That's NOT a limitation of NSIS, but a limitation of the operating systems. 32-Bit processes can't load/use 64-Bit DLL's. There is NO way around that.<br />
+<br />
+(Creating 64-Bit processes from a 32-Bit process works perfectly fine though)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">8th April 2012, 15:31</div></div><div class="posttext">2) i mentioned for 64bit an exe-file, same purpos as dll/32bit but exe<br />
+<br />
+1) i work on this ;)<br />
+<br />
+i created some code with the system plugin and the result here is, that the install.dll must be called directly<br />
+RegisterDLL $PLUGINSDIR\System.dll Call 0<br />
+RegisterDLL $PLUGINSDIR\install.dll nsisfunc 0<br />
+<br />
+so the next questzion - again: what ist YourDllName::YourDllFunction<br />
+  System::Call 'install::nsisfunc(i, *i, t) i(.r0) .r1' <br />
+<br />
+returns &quot;1&quot; with correct parameter in $0<br />
+other tests returned &quot;-1&quot;<br />
+<br />
+install.dll is extracted on runtime, not as a plugin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">8th April 2012, 15:44</div></div><div class="posttext">That &quot;install.dll&quot;, is that a DLL you created yourself or is it some 3rd-party DLL ???<br />
+<br />
+(1) If it's your own DLL, then please show us some code. The code (C/C++) inside the DLL you want to call!<br />
+<br />
+(2) If it's a 3rd-party DLL, then please show as the API specification provided by whoever created the DLL.<br />
+<br />
+Note: If that is a 3rd-party DLL, but no API specification is publicly available, forget about calling it from NSIS!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">8th April 2012, 18:36</div></div><div class="posttext">that is some of the main problem - 3rd party and no doc.<br />
+its used to install a printer driver - and its older and noone available for support (gave up).<br />
+<br />
+the other solution is to wrap that installation with my code and files - quick and dirty.<br />
+the major problem around is that the installer creates a failure message - but install <br />
+files correctly and need reboot. i can uninstall all files without a reboot but i dont have<br />
+knowledge how to install this driver so i try the original routines.<br />
+<br />
+oh, this is suprising<br />
+  StrCpy $0 &quot;in&quot;<br />
+  StrCpy $1 &quot;&quot;<br />
+  StrCpy $2 &quot;&quot;<br />
+  install::nsisfunc 'install::nsisfunc(i, *i, t) i(.r0, r1, .r2) .r1' <br />
+  Messagebox mb_ok &quot;install1: '$0' '$1' '$2'&quot;<br />
+<br />
+  StrCpy $0 &quot;in&quot;<br />
+  StrCpy $1 &quot;&quot;<br />
+  StrCpy $2 &quot;&quot;<br />
+  install::nsisfunc '(i, *i, t) i(.r0, r1, .r2) .r1' <br />
+  Messagebox mb_ok &quot;install2: '$0' '$1' '$2'&quot;<br />
+<br />
+both return same (error) message as i know similar from the installer.<br />
+but i had to copy the dll to nsis plugins, strange</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">8th April 2012, 19:09</div></div><div class="posttext">that is some of the main problem - 3rd party and no doc.<br />
+<br />
+Then this is a lost case. Unless are able to reverse engineer the existing DLL :rolleyes:<br />
+<br />
+Currently you are calling a function names &quot;nsisfunc&quot; from the DLL &quot;install.dll&quot;. Does that DLL really export a function of that name?<br />
+<br />
+Also you are using this function like nsisfunc(int X, int *Y, char* Z). Is that how the function is defined?<br />
+<br />
+If so, how do you know that the function is defined like this? You said no Docs are available for the DLL, so where is that info from?<br />
+<br />
+[EDIT]<br />
+<br />
+Sorry, my first comment was wrong.<br />
+<br />
+Now I noticed that you are not calling the DLL via System plug-in. You calling it as if it was a NSIS plug-in DLL.<br />
+<br />
+And you are passing a single String argument to it, which appears to be formated in a System-plugin-like syntax :eek:<br />
+<br />
+Previously you said that your DLL is not a NSIS plug-in DLL. So you are contradicting yourself. I give up...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">8th April 2012, 22:23</div></div><div class="posttext">reverse engineering aint really possible - its possible to showup assembler but not the source code.<br />
+&quot;nsisfunc&quot; is given by the installer made in nsis - and there is a name in this file.<br />
+RegisterDLL $PLUGINSDIR\install.dll nsisfunc 0<br />
+<br />
+nsis code aint possible to reverse too, creates some crap, only hints.<br />
+i can only rewrite it from my experience and investigations with google and nsis wiki.<br />
+<br />
+so i put some code with system-plugin and reversed that file to compare if i am wrong.<br />
+first i was wrong but the structur of any plugin dll is close to dllname::command so i<br />
+tried install.dll as a plugin. it works this way but i still think it was not written for this purpose.<br />
+<br />
+easter is close to end and my spare time too. keep fingers crossed.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">9th April 2012, 00:56</div></div><div class="posttext">The 'RegisterDLL' command is used to register COM DLL's. That's yet another completely different thing :rolleyes:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">9th April 2012, 13:32</div></div><div class="posttext">maybe - but its the reversed command from any nsis package using dll:function<br />
+its not documented in the online help</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

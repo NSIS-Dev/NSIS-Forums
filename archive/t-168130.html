@@ -1,0 +1,158 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" IfFileExists, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  IfFileExists NSIS Discussion" />
+	
+	<title> IfFileExists [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  IfFileExists</div>
+<hr />
+<div class="pda"><a href="t-168130.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=168130">IfFileExists</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">csunil</div><div class="date">5th February 2004, 03:18</div></div><div class="posttext">Hi,<br />
+<br />
+I want to do something like<br />
+<br />
+---------<br />
+IfFileExists &quot;$INSTDIR\Manual\*.*&quot;<br />
+{<br />
+  CreateDirectory &quot;$SMPROGRAMS\MySoft\${PRODUCT}\Help&quot;<br />
+  <br />
+  IfFileExists &quot;$INSTDIR\Manual\Manual.html&quot; &quot;&quot; +2<br />
+    CreateShortCut &quot;$SMPROGRAMS\MySoft\${PRODUCT}\Help\Manual (English).lnk&quot; &quot;$INSTDIR\Manual\Manual.html&quot; &quot;&quot; &quot;$INSTDIR\Manual\Manual.html&quot; 0<br />
+}<br />
+---------<br />
+<br />
+How can I do this &quot;{ }&quot; (begin-end) sort of thing with NSIS syntax? I've tried it with the labels with no success.<br />
+<br />
+Also, I've seen that in makensis.nsi you add a &quot;+2&quot; as a parameter of IfFileExists. Why is that?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">5th February 2004, 07:45</div></div><div class="posttext">Try this code:<br />
+<br />
+IfFileExists &quot;$INSTDIR\Manual\*.*&quot; 0 NotFileExisted<br />
+  CreateDirectory &quot;$SMPROGRAMS\MySoft\${PRODUCT}\Help&quot;<br />
+  IfFileExists &quot;$INSTDIR\Manual\Manual.html&quot; &quot;&quot; +2<br />
+    CreateShortCut &quot;$SMPROGRAMS\MySoft\${PRODUCT}\Help\Manual (English).lnk&quot; \<br />
+&quot;$INSTDIR\Manual\Manual.html&quot; &quot;&quot; &quot;$INSTDIR\Manual\Manual.html&quot; 0<br />
+NotFileExisted: +2 means that the installer should skip the next 2 lines.<br />
+<br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">csunil</div><div class="date">5th February 2004, 08:32</div></div><div class="posttext">Yes, I tried something similar but it didn't work. This is my current code:<br />
+<br />
+  Section $(TITLE_StartMenuShortCuts) StartMenuShortCuts<br />
+    CreateDirectory &quot;$SMPROGRAMS\MySoft\${PRODUCT}&quot;<br />
+    <br />
+    IfFileExists &quot;$INSTDIR\Manual\*.*&quot; 0 NotFileExisted<br />
+      CreateDirectory &quot;$SMPROGRAMS\MySoft\${PRODUCT}\Help&quot;<br />
+      <br />
+      IfFileExists &quot;$INSTDIR\Manual\Manual.html&quot; &quot;&quot; +2<br />
+        CreateShortCut &quot;$SMPROGRAMS\MySoft\${PRODUCT}\Help\Manual (English).lnk&quot; &quot;$INSTDIR\Manual\Manual.html&quot; &quot;&quot; &quot;$INSTDIR\Manual\Manual.html&quot; 0<br />
+    NotFileExisted:<br />
+    <br />
+    CreateShortCut &quot;$SMPROGRAMS\MySoft\${PRODUCT}\${PRODUCT}.lnk&quot; &quot;$INSTDIR\${PRODUCT_EXENAME}&quot; &quot;&quot; &quot;$INSTDIR\${PRODUCT_EXENAME}&quot; 0<br />
+    CreateShortCut &quot;$SMPROGRAMS\MySoft\${PRODUCT}\Uninstall ${PRODUCT}.lnk&quot; &quot;$INSTDIR\uninstall.exe&quot; &quot;&quot; &quot;$INSTDIR\uninstall.exe&quot; 0<br />
+  SectionEnd<br />
+<br />
+What I want to do is, add a shortcut in the start menu to a manual (.html file) ONLY if the manual was installed. Manual installation is optional, it is in a section:<br />
+<br />
+<br />
+SubSection $(TITLE_Manual) Manual<br />
+  Section $(TITLE_ManualEnglish) &quot;&quot;<br />
+    SetOutPath $INSTDIR\Help<br />
+    File &quot;${FILESPATH}\Help\Manual.html&quot;<br />
+  SectionEnd<br />
+SubSectionEnd<br />
+<br />
+If I can't use IfFileExists to check if the manual was installed, can I at least check if the section of the english manual was checked for installation? The problem is that I will have multiple translations of the manual so it will be something like:<br />
+<br />
+<br />
+SubSection $(TITLE_Manual) Manual<br />
+  Section $(TITLE_ManualEnglish) &quot;&quot;<br />
+    SetOutPath $INSTDIR\Help<br />
+    File &quot;${FILESPATH}\Help\Manual.html&quot;<br />
+  SectionEnd<br />
+  Section $(TITLE_ManualLanguageX) &quot;&quot;<br />
+    SetOutPath $INSTDIR\Help<br />
+    File &quot;${FILESPATH}\Help\ManualLANGX.html&quot;<br />
+  SectionEnd<br />
+  ...<br />
+SubSectionEnd<br />
+<br />
+<br />
+So I will need to check if at least one of the manual translations was checked to install.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th February 2004, 10:15</div></div><div class="posttext">You should use the LogicLib. See Examples\LogicLib.nsi and search for FileExists. It will be much easier.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">csunil</div><div class="date">5th February 2004, 22:42</div></div><div class="posttext">Thanks for the tip. I finally decided to give up FileExists and use variables to know if the person decided to install X translation of the help file. Ej. something like<br />
+<br />
+<br />
+SubSection $(TITLE_Manual) Manual<br />
+  var &quot;ManualEnglish&quot;<br />
+  var &quot;ManualLangX&quot;<br />
+<br />
+  ; I use this to initialize variables<br />
+  Section &quot;&quot; &quot;&quot;<br />
+    StrCpy $ManualEnglish &quot;F&quot;<br />
+    StrCpy $ManualLangX &quot;F&quot;<br />
+  SectionEnd<br />
+<br />
+  Section $(TITLE_ManualEnglish) &quot;&quot;<br />
+    StrCpy $ManualEnglish &quot;T&quot;<br />
+    SetOutPath $INSTDIR\Help<br />
+    File &quot;${FILESPATH}\Help\Manual.html&quot;<br />
+  SectionEnd<br />
+<br />
+  Section $(TITLE_ManualLangX) &quot;&quot;<br />
+    StrCpy $ManualLangX &quot;T&quot;<br />
+    SetOutPath $INSTDIR\Help<br />
+    File &quot;${FILESPATH}\Help\ManualLangX.html&quot;<br />
+  SectionEnd<br />
+<br />
+<br />
+and then, on the create shortcuts section:<br />
+<br />
+<br />
+  ${If} $ManualEnglish == &quot;T&quot;<br />
+    CreateShortCut &quot;$SMPROGRAMS\MySoft\${PRODUCT}\Help\Manual (English).lnk&quot; &quot;$INSTDIR\Manual\Manual.html&quot; &quot;&quot; &quot;$INSTDIR\Manual\Manual.html&quot; 0<br />
+  ${EndIf}<br />
+  ${If} $ManualLangX == &quot;T&quot;<br />
+    CreateShortCut &quot;$SMPROGRAMS\MySoft\${PRODUCT}\Help\Manual (Español).lnk&quot; &quot;$INSTDIR\Manual\ManualLangX.html&quot; &quot;&quot; &quot;$INSTDIR\Manual\ManualLangX.html&quot; 0<br />
+  ${EndIf}<br />
+<br />
+<br />
+My questions:<br />
+<br />
+- Is there an easier way to use boolean variables without using StrCpy?<br />
+- Is there an easier way to check if a section was selected for installation?<br />
+- How can I do something like:<br />
+<br />
+  ${If} $ManualEnglish == &quot;T&quot; ${or} $ManualLangX == &quot;T&quot;<br />
+    CreateDirectory &quot;$SMPROGRAMS\MySoft\${PRODUCT}\Help&quot;<br />
+<br />
+I need that because I need to create the main &quot;Help&quot; entry in the start menu only if at least one of the translations of the manual were selected to install.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th February 2004, 13:31</div></div><div class="posttext">Is there an easier way to use boolean variables without using StrCpy?No.Is there an easier way to check if a section was selected for installation?Use LogicLib's ${SectionIsSelected}.How can I do something like...Maybe: if condition 1, add 1 to some var; if condition 2, add 1 to some var; if some var = 2, create directory. With StrCmp it's a lot easier:<br />
+<br />
+StrCmp $0 T 0 skip<br />
+StrCmp $1 T 0 skip<br />
+CreateDirectory ...<br />
+skip:</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

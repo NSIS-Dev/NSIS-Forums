@@ -1,0 +1,428 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Extremely slow installer startup on Vista, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Extremely slow installer startup on Vista NSIS Discussion" />
+	
+	<title> Extremely slow installer startup on Vista [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Extremely slow installer startup on Vista</div>
+<hr />
+<div class="pda"><a href="t-305783.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=305783">Extremely slow installer startup on Vista</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">27th April 2009, 20:57</div></div><div class="posttext">I have a fairly complex and huge installer I'm working on right now, and have an issue where on Vista (not XP), it takes forever to start up on some machines.<br />
+<br />
+For an idea of the size of this thing, it's about 6000 lines (without counting all the includes...), about 12000 files (for a total of about 1.25 GB), and with SetCompressor lzma weighs in at about 700 MB.<br />
+<br />
+As it needs to write to \Program Files, it has RequestExecutionLevel admin. The installer is also Authenticode-signed.<br />
+<br />
+I have tried usiing the UAC plugin instead of RequestExecutionLevel admin (that causes... additional issues...), but that did nothing to speed up what I assume is a verification phase.<br />
+<br />
+I've ruled out antivirus and such, and disk performance is certainly not the issue. And by slow, I mean: &quot;It takes longer to launch the installer than to build it.&quot; I've also tried all variants of compression. (That should rule out ReserveFile... But, if not, how would I determine *which* file was causing this? All my functions are in an include at the very top of the script...)<br />
+<br />
+Has anyone encountered something similar? It's unreasonable to release a product which can conceivably take &gt; 15 minutes to &quot;do something&quot; at install time (the customer's first impression, too!), and plopping up a splash screen that says &quot;now loading&quot; just won't cut it...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">27th April 2009, 21:51</div></div><div class="posttext">have you tried using processmonitor to see what your installer's doing during this log wait?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">27th April 2009, 21:54</div></div><div class="posttext">It seems that Windows is copying the entire shebang to %TEMP%... This, also, seems &quot;not right&quot;. :P</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">27th April 2009, 23:47</div></div><div class="posttext">are you using solid compression?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">27th April 2009, 23:49</div></div><div class="posttext">I've tried both solid and non-solid compression, as well as with compression off. At this point, it seems my only option is to include the bulk of the data in an external file, uncompressing it during the point I'd normally copy files. :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Pidgeot</div><div class="date">28th April 2009, 23:01</div></div><div class="posttext">Have you tried without signing? Signing involves storing a hash of the signed executable, and this could take quite a while to verify. If the source media is slow, that could slow the verification down considerably, in which case a different method might be preferable (such as storing the files seperately, or perhaps only signing a stub .exe that requests permissions and launches the real installer).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">29th April 2009, 05:55</div></div><div class="posttext">Yes, I've tried signing and not, RequestExecutionLevel admin and undefined, compression on and off, solid and not, zlib, bzip2, and lzma. All seem to cause the installer to be copied to %TEMP%.<br />
+<br />
+The only way I seem to be able to avoid getting it copied to the temp dir is by requesting user-level permissions. Of course, this doesn't work terribly well for installing system-wide. :(<br />
+<br />
+Also, the source media is irrelevant; I can duplicate this from local hard disk, network share, CD-ROM, and USB flash drive.<br />
+<br />
+Hopefully, I'll get a chance to whip together a small test-case in a little bit.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">1st May 2009, 16:14</div></div><div class="posttext">I hate bumping threads, but I was curious if anyone's come up with any ideas. I'm not using ReserveFile anywhere, all my functions are defined at the top of my script, it doesn't happen on XP (nothing earlier is supported for this app, so remain untested), it happens on both Vista and Windows 7 (meaning this isn't a &quot;passing Vista issue&quot; or something that may disappear in a Service Pack), it happens regardless of RequestExecutionLevel being admin or none (or user + the UAC plugin), signing doesn't affect the behavior positively nor negatively, compression set to anything, solid or not...<br />
+<br />
+I was going to come up with a smallish testcase, but I decided there's no great way to do so that I can think of. Certainly, if I figure out a test case that's not a few hundred megs in size that's likely to work, I'll post one. :)<br />
+<br />
+As it stands, it looks like we're going to have to go with a 30-ish megabyte &quot;mini installer&quot; (about the largest which doesn't &quot;feel slow&quot; while copying to %TEMP%) which does the install of the bulk of the files (again, more than ten thousand files weighing in at well over a gig) from a compressed archive, external of the installer.<br />
+<br />
+The real problem with this is that it's a second file, of course. A second file means that distribution methods are slightly more limited. (I don't make the distribution decisions, but I would rather not have to revisit this issue in some months.)<br />
+<br />
+Also, there's been testing done on a fair sampling of our large-ish installers from the past 5+ years, and it seems that they all behave this way on Vista. :( But this is the first one that I recall doing with such a large installed footprint, personally.<br />
+<br />
+In any case, it would be awesome if someone could give some pointers on how to make the installer not copy to the temp dir. :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">1st May 2009, 17:16</div></div><div class="posttext">It has to do with UAC elevation somehow... Are you starting the installer from a shared folder or something?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">1st May 2009, 21:56</div></div><div class="posttext">Thanks Anders for the quick reply again. :)<br />
+<br />
+I figured it had to do with UAC; but I can't quite finger what... And, as stated before, I can replicate this from across the network, on optical storage, USB flash, USB hard disk, as well as various local hard disk locations. It really seems to not care where it's running from. :(<br />
+<br />
+I'm having a test run right now where they have 3 installers: no compression (SetCompress off), bzip2 (SetCompressor bzip2), and LZMA Solid (SetCompressor /FINAL /SOLID lzma). They will be testing from various install media with the installers both signed and unsigned across various machines. We're hoping that there's a result of &quot;That particular combination seemed to not take forever!&quot; for some combination, though my hopes are not high.<br />
+<br />
+I have been searching the forum, as I thought I posted something about this in 2003 or so. (I seem to recall my first multi-hundred-megabyte installer having a slowness-while-launching-from-CD issue on 2000... Though that was probably around the introduction of /SOLID and me not knowing how to use it yet or something... So I wanted to see if it was potentially related to this issue, at the least.) But, all I could find were a couple of scattered posts of people complaining about the issue and the &quot;solution&quot; being to just not have such large installers.<br />
+<br />
+I recall that there's a couple of fairly large installs out there which use NSIS... How are they coping with this, as it appears to not be isolated to me?<br />
+<br />
+(And I am still trying to figure out how to get a minimal test case up... And, sadly, no, I can't post my &quot;real&quot; .nsi for various reasons [not least would be &quot;permission&quot;, followed by &quot;altogether, we're looking at a megabyte of installer script&quot;], so if you can't duplicate it there, let's see if my brain kicks in something smart.)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">2nd May 2009, 01:39</div></div><div class="posttext">when you say its copied to temp, are you talking about the .exe? what is the filename? the same as the &quot;original&quot; exe? Check in Process Explorer, are there 1 or 2 processes etc</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">2nd May 2009, 02:50</div></div><div class="posttext">I just ran a check again, from two approaches.<br />
+<br />
+1) Process Explorer shows one process.<br />
+<br />
+2) Watching from Process Monitor, it appears that Windows Explorer does its normal &quot;launching an exe&quot; reads. Then, svchost.exe takes over and copies to C:\Windows\Temp. In the case I'm watching, it's being copied as C:\Windows\Temp\20,208D.tmp from a folder in my %USERPROFILE%. Then, the .tmp file executes and consent.exe takes over.<br />
+<br />
+Anything else I can do to shed light on this? Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">2nd May 2009, 03:53</div></div><div class="posttext">OK, I figured out how to get a test case. :D<br />
+<br />
+Attached is a 7-zip file (couldn't get the 1 gig file compressed to under 200 KB with .zip) with a 1 gig test file and a very minimal script. Yes, you'll need about 3-4 gigabytes of free disk space to test this. :P  (At least: 1 gig to extract the archive, 1 gig to build it, 1 gig to run it.)<br />
+<br />
+If someone could verify that they see the described behavior, it'd be awesome. :) I'm tired of feeling like I've gone insane... :(<br />
+<br />
+Note that the versioning keys are irrelevant to whether it does this or not. I included them out of habit.<br />
+<br />
+N.B. The installation portion of this thing is untested. I've only tested its behavior up to the consent prompt. :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Pidgeot</div><div class="date">2nd May 2009, 10:08</div></div><div class="posttext">Well, I can certainly verify it's being copied and that the UAC prompt takes ages to appear.<br />
+<br />
+I do not see the issue if RequestExecutionLevel is set to user, but if the issue pops up once the UAC plugin is used, that doesn't do you much good.<br />
+<br />
+I also do not see the issue if the installer is launched from a process that is already elevated (Command Prompt, in my testcase).<br />
+<br />
+This is a workaround, but if you really want to stick to a single file, you could use a form of bootstrapping. You make a bootstrapper that requires admin, and only serves to launch the real installer with these privileges. This bootstrapper, and the installer, is then packaged into a single file that has RequestExecutionLevel user, and extracts the two files to %TEMP% and launches the bootstrapper.<br />
+<br />
+It'll take a while to extract, and it's going to require more disk space on the user's computer - but at least it won't look like nothing's happening.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">2nd May 2009, 12:58</div></div><div class="posttext">But, still, the extraction will take a while. :P And people expect to see the welcome page of an installer pretty quickly. With the bulk of the stuff in an external data file (using Nsis7z, for the compression and the fancy ExtractWithDetails), I have a 5-8 MB installer (for things that shouldn't go into $INSTDIR for whatever reason). That, at least, comes up reasonably fast.<br />
+<br />
+And, yes, the UAC plugin doesn't change the issue. Well, it does from a watching-the-processes standpoint, but nothing a user can see. It seems Windows really wants the thing in %TEMP% before elevation. :(<br />
+<br />
+I suppose, now that someone has verified it, the question is: &quot;Who's at fault? NSIS or Windows?&quot; This would be followed by the corollary of: &quot;Can it be fixed within NSIS?&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">2nd May 2009, 14:21</div></div><div class="posttext">I don't really have any workaround suggestions other than testing with the nightly build. And you should file a bug report so this does not get lost on the forum</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">2nd May 2009, 15:07</div></div><div class="posttext">I verified that it's an issue in the nightlies, and I verified with a circa-2002 installer I had in my bookcase. (Is there a way to determine version of an NSIS installer?) So, this is definitely a long-standing issue.<br />
+<br />
+A quick poke around shows this to be a much-reported issue on the tracker. As far as I can tell, kichik marks them all as dupes, with a trail leading to a bug for making multi-archive installers. (Which, really, is the polar opposite of what is desired here.) Hopefully, he won't do so with [url=http://sourceforge.net/tracker/?func=detail&amp;aid=2785629&amp;group_id=22049&amp;atid=373085]my latest bug[url]. :cool:<br />
+<br />
+As I mentioned in the bug, this makes NSIS unusable for many use cases where a single-file installer is necessary. Which means not only having the same program with an NSIS multi-part installer and a &quot;solid&quot; installer in another system (or just skipping the NSIS version altogether...), but having to keep people trained on both and writing all support functions for both. This is actually an expensive proposition (if not in money, in manpower and training) which can make NSIS a liability for some organizations and projects. This could potentially affect NSIS's popularity as XP dies off and people stop hating UAC, while software also continues its trend of growing larger.<br />
+<br />
+I really hope this post doesn't come off as bashing NSIS or kichik or anyone. I wouldn't still be using NSIS after all these years if I didn't feel it was the appropriate tool. I simply want to be able to keep using it in the future, without being pushed away to another product simply due to user perception. :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Xutzl</div><div class="date">4th May 2009, 13:16</div></div><div class="posttext">Blame Vista, not NSIS!<br />
+<br />
+It seems that Vista scans the whole exe if it requests admin privileges (proper Authenticode signature does not help). Last year I had to make a big (1.2GB) patch for a game and had the same problem. Here is the solution:<br />
+<br />
+1. The installer DOES NOT request admin level.<br />
+2. The installer silently copies a small launcher to the temp dir, executes it and quits.<br />
+3. The launcher requests admin level (UAC::RunElevated). Vista scans it quickly, as it's very small.<br />
+4. The launcher launches the main installer (again), this time use /NOCRC to save time. The installer inherits admin privileges granted to launcher, but Vista does not scan it, so it launches immediately.<br />
+<br />
+The whole trick takes almost no time (just unpacking 75 kilobytes).<br />
+<br />
+Notes:<br />
+- Obviously, the installer must &quot;know&quot; if it's launched by the user or by the launcher, and the launcher must know the path of the installer. Hint: commandline arguments ;-).<br />
+- Both installer and launcher should be signed, otherwise UAC will display 3 ugly warnings before the installer GUI is shown. <br />
+- To be precise: I used UAC plugin to elevate user rights (both the installer and the launcher request USER execution level). It's wise to test if UAC::RunElevated worked (should return 1223) before starting the actual installation.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">4th May 2009, 13:36</div></div><div class="posttext">Wow, I am curious to try that approach. But I'm afraid to see the process tree as that starts up. :D<br />
+<br />
+And, I'm not sure one can claim it's really Vista's fault... It seems that if you have a Vista manifest on an app requesting elevation, you don't see this behavior. But, if it only has an XP manifest, you do. And, NSIS only has an XP manifest. :( It seems some other install systems now use Vista (maybe even Windows 7) manifests, so they avoid the &quot;slow startup&quot; issue.<br />
+<br />
+I haven't updated the bug with this information, as I'm still verifying it. (Yay huge drives, for things like this, eh?) But, hopefully, I'll be able to post some source soon to demonstrate this.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Xutzl</div><div class="date">4th May 2009, 13:52</div></div><div class="posttext">In the process tree you will see just 3 processes, and only if you are quick enough ;-)<br />
+<br />
+I doubt if changing anything in the manifest would help (even Authenticode have not helped, and anyone can write anything in the manifest).<br />
+But I suppose your idea can be tested by simply changing the manifest with a resource editor.<br />
+I am curious myself but I don't have time to test it now (not to mention I don't know much about the manifests :-) ).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">4th May 2009, 14:20</div></div><div class="posttext">Well, the bug tracker has a patch for an updated manifest (http://sourceforge.net/tracker/index.php?func=detail&amp;aid=2725883&amp;group_id=22049&amp;atid=373085). Perhaps I'll apply that and rebuild in a few hours to do some testing. :)<br />
+<br />
+It'd be kinda neat if that one patch could kill both bugs.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">4th May 2009, 14:39</div></div><div class="posttext">AFAIK, that Vista manifest GUID was added in Win7, Vista itself does not know about it<br />
+<br />
+@Xutzl: UAC::RunElevated returning 1223 means user pressed cancel IIRC, only 0 means success</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">4th May 2009, 14:41</div></div><div class="posttext">Hm, I guess that means it's time to look closer at what the large non-NSIS installers that don't have this issue are doing. :P</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">4th May 2009, 14:43</div></div><div class="posttext">MS could be looking for nsis installers and thinking they need this, but why I don't know. I don't understand the point of running it from $temp. Maybe you could ask on the MSDN forum</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">4th May 2009, 14:46</div></div><div class="posttext">My experience with the MSDN forum is unpleasant. So, I think I'll first see if I can figure out what's different between NSIS and other things. :)<br />
+<br />
+And I'm already fairly sure it sees NSIS and does &quot;special&quot; stuff. I'm not entirely sure what signature it's looking for though, yet. :P I'd like to defeat that check, to see if it changes things. :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Xutzl</div><div class="date">4th May 2009, 14:56</div></div><div class="posttext">Vista may recognize installers (NSIS, WISE etc.) without proper manifest and grant them admin rights (with the usual UAC warning window), but I doubt it does something nasty just because a file is compiled with NSIS.<br />
+Besides, I have seen also a Wise installer suffering the same long start issue (but it was created with some older version of Wise, I mean before it supported Windows Installer).<br />
+Edit: More here, search for &quot;Installer Detection Technology&quot; http://technet.microsoft.com/en-us/library/cc709628.aspx<br />
+<br />
+Anyway, big files requesting only USER rights launch fast on Vista. Files that inherit admin rights from their parents also start quickly (like on XP), that's why my &quot;trick&quot; works.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">7th May 2009, 18:55</div></div><div class="posttext">So... It looks like I've managed to &quot;solve&quot; the issue of the slow startup... Apparently Vista is seeing the name of the exehead in the manifest and applying this special-for-NSIS behavior.<br />
+<br />
+Simply changing &lt;assemblyIdentity name=&gt; to anything else did the trick. So, my test installers currently have manifests where it is set to &quot;Nullsoft.NSIS.win32.exehead&quot;. Et voila, instant elevation prompt.<br />
+<br />
+I've not done extensive testing yet to see what compatibility stuff is now being &quot;turned off&quot; by Vista, but I've got a sneaking suspicion that whatever this was working around is probably fixed. If not, it will now be visible (hopefully) enough to fix. :)<br />
+<br />
+Can anyone else verify that a simple manifest update does the trick for them? (Use RequestExecutionLevel, not the UAC plugin for testing this, btw. This causes you to need /NCRC on the installer.) If so, I'll update the bug and write a script to update my manifests for now.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">7th May 2009, 19:03</div></div><div class="posttext">Originally posted by Xutzl <br />
+Edit: More here, search for &quot;Installer Detection Technology&quot; <br />
+<br />
+I meant to reply to this the other day and forgot.<br />
+<br />
+From the URL you Linked to:<br />
+<br />
+Installer Detection only applies to:<br />
+<br />
+1. 32 bit executables <br />
+<br />
+2. Applications without a requestedExecutionLevel <br />
+<br />
+3. Interactive processes running as a Standard User with LUA enabled<br />
+<br />
+#1 and #3 certainly apply. #2 does not, in our case. So, it's not this particular technology being triggered. And, as I said, I've not seen this with any other modern installers.<br />
+<br />
+So, something needs to be done on NSIS's side, probably. As my previous post shows, embedding a slightly different manifest appears to do the trick. I'm currently rebuilding my NSIS sources with a slight change to see if I can submit a patch (likely to be rejected in current form, but it'll be on the right track, I hope) to make these large installers work better. Let me just tell you that on a 1.2 GB installer, it's the difference between night and day.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">7th May 2009, 19:56</div></div><div class="posttext">(If this is true)<br />
+<br />
+I fucking hate MS<br />
+<br />
+Probably some installer out there that they tested required running from $temp for whatever insane reason and they decided that this was a smart thing to do for every NSIS installer without even filing a bug report or a simple forum post<br />
+<br />
+If a manifest change is required, I guess that is not too bad, but what happens during Win8 testing and they add a *NSIS* check?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Xutzl</div><div class="date">7th May 2009, 20:59</div></div><div class="posttext">Originally posted by lewellyn <br />
+As my previous post shows, embedding a slightly different manifest appears to do the trick.<br />
+That's great :D. I wish I knew that last year (I wouldn't have to make up my weird way of getting admin rights...).<br />
+<br />
+Could you post your full manifest here? Then anyone struggling with the problem will be able to change the manifest in their installers without waiting for fixed NSIS.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Pidgeot</div><div class="date">8th May 2009, 07:53</div></div><div class="posttext">Has anyone tested the test installer on Win7 RC1? I just did on a fresh install of the 64-bit version, and although it was not *instantaneous*, it only took about 10 seconds to appear. That is WAY quicker than Vista x86, and should be quite acceptable.<br />
+<br />
+Of course, this COULD be due to the 64-bit version reacting diferently to 32-bit executables - I can't say this for certain, as I don't have the 32-bit RC installed.<br />
+<br />
+I might download the 32-bit RC and set up a VM for testing, if no one else has it installed already - if the problem is indeed fixed for Win7, then changing the manifest should be quite managable.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GaryandDonnaM</div><div class="date">10th May 2009, 14:25</div></div><div class="posttext">Hi There,<br />
+<br />
+Not sure if my problem is the same as what you are talking about. I am no where near as tech savvy as you guys but i cannot install AOL software (9.1 or BETA) from aol's download page. It gets to my desktop but when i double click...nothing. I have contacted AOL and my ISP. I have uninstalled my security software. I have tried everything that i know and still nothing. When I click run as, I then get an error message NSIS error eror launching installer. Any advice?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">10th May 2009, 16:20</div></div><div class="posttext">@GaryandDonnaM: probably http://nsis.sourceforge.net/Why_do_I_get_NSIS_Error and not related to this thread</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">11th May 2009, 11:40</div></div><div class="posttext">OK, I've spent the past 3 or 4 days trying to get NSIS built. I've come to the conclusion that there's a magic combination that isn't documented well enough.<br />
+<br />
+(Assume Python 2.6.2 and SCons 1.2.0.d20090223 below, unless noted otherwise.)<br />
+<br />
+Build box #1: Vista 64-bit + Python (64-bit) = SCons can't find Python<br />
+Build box #2: XP SP 3 + Python + SCons + VS 2008 (no SP) = SCons &quot;Couldn't find a good version of libcp.lib&quot;<br />
+Build box #3: XP SP 2 + Python + SCons + VC++ 2005 Express (no SP) = can't find windows.h<br />
+Build box #3(a): Above + WSDK 6.0 = same as box #2<br />
+Build box #4: XP SP 3 + Python + SCons + Mingw = same as #2 (WTF? I even modified the SConscript to try to force mingw...)<br />
+Build box #5: Linux + Python 2.4.4 + SCons + Mingw =  Contrib/MakeLangId/MakeLangId.cpp:1:21: windows.h: No such file or directory<br />
+<br />
+So, yeah. I can't come up with a patch for others to apply, since I can't build the result myself, to test it. But, to answer Xutzl's request: just modify the manifest to have anything different as &lt;assemblyIdentity name=&quot;&quot;&gt;. I added to the end of it, and got the results I mentioned earlier in this thread. But, I can't verify this is a general fix or just a random behavior on the two test machines that I've tested on (large binary to be tossing around, after all), due to not being able to get NSIS built.<br />
+<br />
+If someone monitoring this thread can get NSIS built, the change to be made is in Source/manifest.cpp on line 31. Just change &quot;Nullsoft.NSIS.exehead&quot; to anything else, and try building and running the script I included earlier in this thread with the resultant MakeNSIS. You should get approximately the same speed launching the installer on XP and Vista.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">13th May 2009, 17:42</div></div><div class="posttext">I can't confirm that this is a NSIS specific issue, but I can confirm the copy to %windir%\temp (not %temp%)<br />
+<br />
+The code I used:<br />
+!define APPNAME &quot;Test of Slow Installers2&quot;<br />
+RequestExecutionLevel admin<br />
+CRCCheck off<br />
+XPStyle on<br />
+SetCompress Off<br />
+Name &quot;${APPNAME}&quot;<br />
+Caption &quot;${APPNAME}&quot;<br />
+OutFile &quot;${APPNAME}.exe&quot;<br />
+InstallDir &quot;$PROGRAMFILES\${APPNAME}&quot;<br />
+VIProductVersion 0.1.2.3<br />
+VIAddVersionKey &quot;ProductAppName&quot; &quot;${APPNAME}&quot;<br />
+VIAddVersionKey &quot;FileDescription&quot; &quot;http://forums.winamp.com/showthread.php?s=&amp;threadid=305783&quot;<br />
+page directory<br />
+page instfiles<br />
+Section &quot;This is a LOT of files...&quot;<br />
+  SetShellVarContext all<br />
+  File 1gigfile<br />
+ /* DetailPrint &quot;Creating Uninstaller...&quot;<br />
+  WriteUninstaller &quot;Uninstall.exe&quot;<br />
+  CreateShortCut &quot;$SMPROGRAMS\${APPNAME}\Uninstall.lnk&quot; &quot;$INSTDIR\uninstall.exe&quot;<br />
+SectionEnd<br />
+Section &quot;Uninstall&quot;<br />
+  SetShellVarContext all<br />
+  RMDir /R &quot;$INSTDIR&quot;<br />
+  Delete &quot;$SMPROGRAMS\${APPNAME}\Uninstall.lnk&quot;*/<br />
+SectionEnd<br />
+<br />
+you can comment out the large file, the problem still exists, its just so fast that you don't notice<br />
+<br />
+The reason I say its not nsis specific is, it still happens if I rename things in the manifest (there is one NSIS string in the internal header that I did not change so it COULD still be nsis specific, one would have to recompile with a different name to make sure)<br />
+<br />
+now for some pics:<br />
+<br />
+changed strings:<br />
+http://stashbox.org/514888/slowstart0.jpg<br />
+<br />
+service file copy:<br />
+http://stashbox.org/514891/slowstart1.jpg<br />
+<br />
+consent.exe scanning for? (ignore the different temp name)<br />
+http://stashbox.org/514892/slowstart2.jpg<br />
+<br />
+..and we are up and running (the &quot;real&quot; exe, not the copy):<br />
+http://stashbox.org/514894/slowstart3.jpg<br />
+<br />
+<br />
+<br />
+WHY it's doing this, I don't know, but I would _guess_ its one of the services starting with &quot;Application&quot; seen here http://stashbox.org/514895/slowstart.jpg</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">13th May 2009, 18:15</div></div><div class="posttext">Originally posted by Anders <br />
+you can comment out the large file, the problem still exists, its just so fast that you don't notice<br />
+<br />
+I probably should have made it clearer that it still happens with every installer, but that it's only noticeable with large ones.<br />
+<br />
+The reason I say its not nsis specific is, it still happens if I rename things in the manifest (there is one NSIS string in the internal header that I did not change so it COULD still be nsis specific, one would have to recompile with a different name to make sure)<br />
+<br />
+Yeah, I'd like to poke at changing some things in the exehead sources, too. If you have good instructions for creating a build environment, please let me know. :)<br />
+<br />
+WHY it's doing this, I don't know, but I would _guess_ its one of the services starting with &quot;Application&quot; seen here <br />
+<br />
+Well, Application Experience controls &quot;compatibility&quot; and has no effect and Application Information is kinda required for UAC so it's impossible to be sure if it's the cause. :P<br />
+<br />
+Also, it's weird that editing the manifest didn't work for you; but I'm not wholly surprised. Further testing indicates that it's very hit or miss. :(<br />
+<br />
+I haven't had the time yet, but I'm curious if the following manifest manifests any changes (sorry...):<br />
+<br />
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;<br />
+&lt;assembly xmlns=&quot;urn:schemas-microsoft-com:asm.v1&quot; manifestVersion=&quot;1.0&quot;&gt;<br />
+&lt;assemblyIdentity version=&quot;1.2.3.4&quot; processorArchitecture=&quot;X86&quot; name=&quot;xxxx&quot; type=&quot;win32&quot;&gt;<br />
+&lt;/assemblyIdentity&gt;<br />
+&lt;description&gt;XXXX&lt;/description&gt;<br />
+&lt;trustInfo xmlns=&quot;urn:schemas-microsoft-com:asm.v3&quot;&gt;<br />
+&lt;security&gt;&lt;requestedPrivileges&gt;<br />
+&lt;requestedExecutionLevel level=&quot;requireAdministrator&quot; uiAccess=&quot;false&quot;&gt;<br />
+&lt;/requestedExecutionLevel&gt;<br />
+&lt;/requestedPrivileges&gt;&lt;/security&gt;<br />
+&lt;/trustInfo&gt;<br />
+&lt;/assembly&gt;<br />
+<br />
+Hopefully, I'll find the time today to revisit this again.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">13th May 2009, 18:34</div></div><div class="posttext">Hm... More research is indicating that manifest changes won't likely make a difference... (Why did I see a difference? Who knows? Yay Windows?)<br />
+<br />
+It's been noted by a couple MVPs that playing with secpol.msc may give an idea what's really going on. (I've not had time yet...)<br />
+<br />
+Is anyone following this thread able to recompile NSIS to see if a simple change to the source will fix things?<br />
+<br />
+Alternatively, how difficult would it be to add Xutzl's approach to the UAC plugin? My only real concern with wrapping the installer like that is that &quot;Run program&quot; will still run as an administrator, due to the plugin not being able to get the &quot;real&quot; user...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">13th May 2009, 18:44</div></div><div class="posttext">it does the same copy to temp with a random inno setup I tested</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lewellyn</div><div class="date">13th May 2009, 19:19</div></div><div class="posttext">Awesome. :( I'll try making a .msi later to see what it does... But maybe this is a core fault in Vista? :(<br />
+<br />
+On the plus side, perhaps this could be leveraged longer-term by NSIS. If the &quot;proper&quot; solution is to spawn the installer via an elevated stub that's extracted, perhaps the functionality of the UAC plugin could/should be rolled into the core at some point?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">13th May 2009, 19:23</div></div><div class="posttext">.msi is special and it uses msiexec and services, does not have the problem probably<br />
+<br />
+I'm not going to add anything to the UAC plugin, you would need a external .exe in $pluginsdir</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">13th May 2009, 19:58</div></div><div class="posttext">I just tried the manifest you posted on a random .exe (WinSpy), same result and that is not even an installer<br />
+<br />
+edit: as far as I can tell, process monitor does not seem to have this problem</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">13th May 2009, 20:37</div></div><div class="posttext">If someone could test lewellyn's example on Win7, that would really help narrow things down</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Pidgeot</div><div class="date">13th May 2009, 22:12</div></div><div class="posttext">I'm downloading the x86 RC now. I'll probably have a VM up and running in about an hour or so - I'll post an update then.<br />
+<br />
+UPDATE: VM is ready. I copied the installer over, just like I did on my x64 install.<br />
+<br />
+It's *much* slower to start up than on Win7 x64, so it looks like this might not be fixed. However, it still seems faster than Vista x86, as well as my Win7 Beta1 x86 VM.<br />
+<br />
+Process Monitor actually CRASHES when I try to start the installer, claiming it's out of memory (granted, the VM only has 512MB of RAM...), so I can't say for sure what happens. I'd allocate more RAM, but this computer doesn't have THAT much available (2GB RAM total, but keep in mind that it's a VM and Vista is running as well, so it might compromise the test result. Indeed, this might cause quite a bit of the slowdown here (my x64 machine has 4 GB RAM, and it's running &quot;natively&quot; there, not in a VM).<br />
+<br />
+I don't see the file appearing in %windir%\temp - or %temp%, for that matter - so I'm guessing it now does whatever check it needs to do in-place.<br />
+<br />
+I haven't tried altering the manifest yet, but if you have a specific one you want me to try, let me know - I'll keep an eye on this thread.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">13th May 2009, 23:27</div></div><div class="posttext">Process Monitor failed for me also, and I was not running in a VM</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ginglese</div><div class="date">6th November 2009, 16:51</div></div><div class="posttext">Hi everybody,<br />
+<br />
+Did you find a solution to this issue ?<br />
+i'm experiencing the same problem.<br />
+<br />
+i tried to change the manifest and rebuild makensisw.exe but issue is the same.<br />
+<br />
+any clue ?<br />
+<br />
+Guillaume</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">6th November 2009, 18:04</div></div><div class="posttext">there is no solution, NT6 sucks, deal with it</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ginglese</div><div class="date">6th November 2009, 18:12</div></div><div class="posttext">ok.<br />
+<br />
+Thanks for this answer. ;)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

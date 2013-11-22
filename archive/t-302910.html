@@ -1,0 +1,218 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Custom page failed on IIS 5.0, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Custom page failed on IIS 5.0 NSIS Discussion" />
+	
+	<title> Custom page failed on IIS 5.0 [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Custom page failed on IIS 5.0</div>
+<hr />
+<div class="pda"><a href="t-302910.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=302910">Custom page failed on IIS 5.0</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">domisse</div><div class="date">8th February 2009, 17:44</div></div><div class="posttext">Hello,<br />
+<br />
+I'm writing an installer for my package and I have a problem<br />
+with IIS 5.0 (win2000).<br />
+I want to show the list of available server running on IIS in a custom page.<br />
+I use the latest NSIS 2.43 and the same script on a Win2000 (IIS 5.0), XP (IIS 5.1) and Server 2003 (IIS 6.0)<br />
+It works fine on XP and 2003 but not on 2000, I really don't understand why.<br />
+Is there something specific to IIS 5.0 ???<br />
+<br />
+<br />
+I have a custom page<br />
+Page custom PickWebsite ValidateCustom<br />
+to choose between IIS server available.<br />
+<br />
+To get this list, I use a vbs script :<br />
+Function GetWebsites<br />
+ ; Output the VBScript<br />
+ FileOpen $4 &quot;$PLUGINSDIR\GetWebsites.vbs&quot; w<br />
+ FileWrite $4 'Set IISOBJ = getObject(&quot;IIS://localhost/&quot; &amp; &quot;w3svc&quot;)$\n'<br />
+ FileWrite $4 'Set objFSO = CreateObject(&quot;Scripting.FileSystemObject&quot;)$\n'<br />
+ FileWrite $4 'Set objTextFile = objFSO.OpenTextFile(&quot;$PLUGINSDIR\websites.ini&quot;, 8, True)$\n'<br />
+ FileWrite $4 'AllSites = &quot;&quot;$\n'<br />
+ FileWrite $4 'for each Web in IISOBJ$\n'<br />
+ FileWrite $4 'if (Web.Class = &quot;IIsWebServer&quot;) then$\n'<br />
+ FileWrite $4 'Set IISWebSite = getObject(&quot;IIS://localhost/&quot; &amp; &quot;w3svc&quot; &amp; &quot;/&quot; &amp; Web.Name)$\n'<br />
+ FileWrite $4 'Set IISWebSiteRoot = getObject(&quot;IIS://localhost/&quot; &amp; &quot;w3svc&quot; &amp; &quot;/&quot; &amp; Web.Name &amp; &quot;/root&quot;)$\n'<br />
+ FileWrite $4 'AllSites = AllSites &amp; &quot;|&quot; &amp; IISWebSite.ServerComment$\n'<br />
+ FileWrite $4 'objTextFile.WriteLine(&quot;[&quot; &amp; IISWebSite.ServerComment &amp; &quot;]&quot;)$\n'<br />
+ FileWrite $4 'objTextFile.WriteLine(&quot;Path=&quot; &amp; IISWebSiteRoot.Path)$\n'<br />
+ FileWrite $4 'objTextFile.WriteLine(&quot;Name=&quot; &amp; Web.Name)$\n'<br />
+ FileWrite $4 'objTextFile.WriteLine(&quot;LogDir=&quot; &amp; IISWebSite.LogFileDirectory &amp; &quot;/w3svc/&quot; &amp; Web.Name &amp; &quot;/&quot;)$\n'<br />
+ FileWrite $4 'objTextFile.WriteLine(&quot;&quot;)$\n'<br />
+ FileWrite $4 'Set IISWebSiteRoot = nothing$\n'<br />
+ FileWrite $4 'Set IISWebSiteLogDir = nothing$\n'<br />
+ FileWrite $4 'Set IISWebSite = Nothing$\n'<br />
+ FileWrite $4 'end if$\n'<br />
+ FileWrite $4 'next$\n'<br />
+ FileWrite $4 'objTextFile.WriteLine(&quot;[Websites]&quot;)$\n'<br />
+ FileWrite $4 'objTextFile.WriteLine(&quot;AllSites=&quot; &amp; Right(AllSites, Len(AllSites)-1))$\n'<br />
+ FileWrite $4 'objTextFile.Close$\n'<br />
+ FileWrite $4 'Set objFSO = Nothing$\n'<br />
+ FileWrite $4 'Set objTextFile = Nothing$\n'<br />
+ FileWrite $4 'Set IISOBj = Nothing$\n'<br />
+ FileClose $4<br />
+<br />
+ ; Execute the script<br />
+ nsExec::Exec /TIMEOUT=20000 '&quot;$SYSDIR\cscript.exe&quot; &quot;$PLUGINSDIR\GetWebsites.vbs&quot;'<br />
+FunctionEnd<br />
+<br />
+which return the list of server available in AllSites.<br />
+(ie AllSites = &quot;Default Web Server|MyDomain.com Server&quot;)<br />
+<br />
+When I populate this value in pick_website.ini<br />
+<br />
+<br />
+function WriteIni<br />
+<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Settings' 'NumFields' '4'<br />
+<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 1' 'Type' 'Label'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 1' 'Text' 'Please Select which Web Site to set the application to use:'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 1' 'Left' '0'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 1' 'Right' '-1'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 1' 'Top' '0'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 1' 'Bottom' '10'<br />
+<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'Type' 'Droplist'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'Text' 'droplist'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'ListItems' ''<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'Left' '25'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'Right' '150'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'Top' '10'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'Bottom' '22'<br />
+<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 3' 'Type' 'label'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 3' 'Text' 'Directory for the application (leave blank for default) :'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 3' 'Left' '0'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 3' 'Right' '-1'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 3' 'Top' '30'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 3' 'Bottom' '40'<br />
+<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 4' 'Type' 'text'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 4' 'Text' 'webPath'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 4' 'State' ''<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 4' 'Left' '25'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 4' 'Right' '150'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 4' 'Top' '40'<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 4' 'Bottom' '52'<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+The PickWebsite is here :<br />
+<br />
+Function PickWebsite<br />
+ Call GetWebsites<br />
+ Call WriteIni<br />
+ ReadINIStr $0 &quot;$PLUGINSDIR\websites.ini&quot; &quot;Websites&quot; &quot;AllSites&quot;<br />
+ WriteINIStr &quot;$PLUGINSDIR\pick_website.ini&quot; &quot;Field 2&quot; &quot;ListItems&quot; $0<br />
+ !insertmacro MUI_HEADER_TEXT &quot;Webserver Configuration&quot; &quot;Choose the website and path that your installation will reside at.&quot;<br />
+ !insertmacro MUI_INSTALLOPTIONS_INITDIALOG &quot;pick_website.ini&quot;<br />
+ !insertmacro MUI_INSTALLOPTIONS_SHOW<br />
+FunctionEnd<br />
+<br />
+Any help welcome !<br />
+<br />
+Laurent</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">8th February 2009, 18:04</div></div><div class="posttext">My suggestion would be to run your VBScript by itself on Windows 2000 to make sure it's returning the correct values before trying to troubleshoot NSIS.<br />
+<br />
+Also, when you write files for Windows, make sure you end each line with both a carriage return and a line feed.  In you example, you only have a line feed.  Use $\r$\n at the end of each line of text.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">domisse</div><div class="date">8th February 2009, 18:10</div></div><div class="posttext">Thanks for your very fast reply !!! :)<br />
+<br />
+I've ran the vbs script on Win2000 and it works fine.<br />
+I've also added a MessageBox<br />
+<br />
+ReadINIStr $0 &quot;$PLUGINSDIR\websites.ini&quot; &quot;Websites&quot; &quot;AllSites&quot;<br />
+ WriteINIStr &quot;$PLUGINSDIR\pick_website.ini&quot; &quot;Field 2&quot; &quot;ListItems&quot; $0<br />
+MessageBox MB_OK &quot;Debug $0&quot;<br />
+<br />
+to check IIS value and it was fine also.<br />
+<br />
+Will add \r\n as you suggest.....thanks !</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">domisse</div><div class="date">14th February 2009, 22:29</div></div><div class="posttext">No way .... <br />
+If I use ListBox instead of Droplist it works ... the list<br />
+of website is displayed. Combobox fails.<br />
+As I need user to select only one website, listbox is not<br />
+an option.<br />
+<br />
+If someone has a any idea why listbox works and not droplist or combobox ....<br />
+Any idea welcome...was not able to find anything like this on google !<br />
+<br />
+Laurent<br />
+<br />
+PS: I have this problem on Win2000, it works fine on XP and 2003 with droplist (same script with same NSIS version).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">15th February 2009, 05:40</div></div><div class="posttext">On droplist (field 2), try using a higher value for the &quot;bottom&quot; setting.<br />
+<br />
+See this thread:<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=263440</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">domisse</div><div class="date">15th February 2009, 12:45</div></div><div class="posttext">Great ! :)<br />
+It works fine !<br />
+<br />
+Many thanks to you !<br />
+<br />
+Laurent</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">domisse</div><div class="date">29th June 2009, 17:57</div></div><div class="posttext">Sadly, someone report me there is still an issue<br />
+with Windows server 2003 R2 enterprise x64 Edition (SP2).<br />
+I have no problem with 2003 R2 32bits....<br />
+Does anyone have any idea ?<br />
+Thanks !<br />
+<br />
+See http://www.w3perl.com/Immagine.jpg</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">29th June 2009, 19:36</div></div><div class="posttext">Sure you don't have a load of ||| etc in the file?<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">domisse</div><div class="date">29th June 2009, 20:29</div></div><div class="posttext">will check....</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">domisse</div><div class="date">30th June 2009, 11:05</div></div><div class="posttext">The string send is :<br />
+<br />
+Default Web Site|SharePoint Central Administration v3|default|SharePoint - LinkedCube.dsgroup.it|SharePoint - 23064|Office Server Web Services<br />
+<br />
+The file :<br />
+<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'Type' 'Droplist'<br />
+<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'Text' 'droplist'<br />
+<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'ListItems' ''<br />
+<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'Left' '25'<br />
+<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'Right' '150'<br />
+<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'Top' '10'<br />
+<br />
+WriteIniStr '$PLUGINSDIR\pick_website.ini' 'Field 2' 'Bottom' '500'<br />
+<br />
+Any hint ?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

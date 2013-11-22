@@ -1,0 +1,160 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to not copy specific folders?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to not copy specific folders? NSIS Discussion" />
+	
+	<title> How to not copy specific folders? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to not copy specific folders?</div>
+<hr />
+<div class="pda"><a href="t-220647.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=220647">How to not copy specific folders?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">AlexanderG</div><div class="date">4th July 2005, 15:40</div></div><div class="posttext">I need to copy a user's files from a previous install directory to the new install directory, but I do not want to copy any of the standard files that I install, only the ones that the user has created.<br />
+I can copy over all of the contents of a directory,<br />
+<br />
+!macro CopyTemplates<br />
+  CopyFiles /SILENT &quot;$R0\a&quot;&quot;$INSTDIR&quot;<br />
+!macroend<br />
+<br />
+(Where $R0 is the old install path)<br />
+Any ideas on how to not copy specific folders?<br />
+(i.e. I want to copy $R0\a and all of it's subfolders except for $R0\a\f and $R0\a\g)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">4th July 2005, 17:25</div></div><div class="posttext">You need RecFind from: http://nsis.sourceforge.net/wiki/ReqFind:_Recursive_FindFirst%2C_FindNext%2C_FindClose<br />
+<br />
+!include RecFind.nsh<br />
+<br />
+Function CopyUserFiles<br />
+Exch $R0<br />
+Push $R1<br />
+Push $R2<br />
+<br />
+ ${RecFindOpen} $R0 $R1 $R2<br />
+ ${RecFindFirst}<br />
+  IfFileExists &quot;$INSTDIR$R1\$R2&quot; +2<br />
+   CopyFiles &quot;$R0$R1\$R2&quot; &quot;$INSTDIR$R1\$R2&quot;<br />
+ ${RecFindNext}<br />
+ ${RecFindClose}<br />
+<br />
+Pop $R2<br />
+Pop $R1<br />
+Pop $R0<br />
+FunctionEnd<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">4th July 2005, 18:02</div></div><div class="posttext">You can try also:Name &quot;Output&quot;<br />
+OutFile &quot;Output.exe&quot;<br />
+<br />
+!include &quot;FileFunc.nsh&quot;<br />
+!insertmacro Locate<br />
+<br />
+Section<br />
+	StrCpy $R0 'C:\a'      #source<br />
+	StrCpy $R1 '$INSTDIR'  #destination<br />
+<br />
+	${Locate} &quot;$R0&quot; &quot;/L=D /G=0&quot; &quot;LocateCallback&quot;<br />
+<br />
+	IfErrors 0 +2<br />
+	MessageBox MB_OK &quot;Error&quot;<br />
+SectionEnd<br />
+<br />
+Function LocateCallback<br />
+	StrCmp $R7 'f' end<br />
+	StrCmp $R7 'g' end<br />
+<br />
+	CreateDirectory &quot;$R1\$R7&quot;<br />
+	CopyFiles /SILENT &quot;$R9\*.*&quot; &quot;$R1\$R7&quot;<br />
+<br />
+	end:<br />
+	Push $0<br />
+FunctionEndScript uses header (http://forums.winamp.com/attachment.php?s=&amp;postid=1680197)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AlexanderG</div><div class="date">5th July 2005, 12:17</div></div><div class="posttext">Originally posted by Afrow UK <br />
+You need RecFind from: http://nsis.sourceforge.net/wiki/ReqFind:_Recursive_FindFirst%2C_FindNext%2C_FindClose<br />
+<br />
+&lt;snip&gt;<br />
+<br />
+-Stu  <br />
+I keep getting the following:<br />
+<br />
+Error: could not resolve label &quot;checkFile52.2D:\Test&quot; in function &quot;CopyUserFiles&quot;<br />
+Error - aborting creation process<br />
+<br />
+I am trying:<br />
+Function CopyUserFiles<br />
+Push $R1<br />
+Push $R2<br />
+ ${RecFindOpen} &quot;D:\Test&quot; $R1 $R2<br />
+ StrCmp $R1 &quot;Default&quot; Found<br />
+ ${RecFindNext}<br />
+Found:<br />
+ ${RecFindClose}<br />
+Pop $R2<br />
+Pop $R1<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">5th July 2005, 12:39</div></div><div class="posttext">Hmm, I see what the problem is.<br />
+Goto line 64 in Include\RecFind.nsh and change:<br />
+<br />
+!define Local       &quot;${__LINE__}${Dir}&quot;<br />
+To:<br />
+!define Local       &quot;${__LINE__}&quot;<br />
+<br />
+It's because D:\Test has a &quot;:&quot; in it which is used at the end of labels.<br />
+<br />
+Edit: Uploaded fixed version: http://myweb.tiscali.co.uk/imker/downloads/RecFind.nsh<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AlexanderG</div><div class="date">5th July 2005, 12:44</div></div><div class="posttext">Error: could not resolve label &quot;checkFile54.2&quot; in function &quot;CopyUserFiles&quot;<br />
+Error - aborting creation process</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">5th July 2005, 12:45</div></div><div class="posttext">Ok, you're using it wrongly that's why it's not working.<br />
+You're missing ${RecFindFirst}<br />
+Check the readme again.<br />
+<br />
+I'll add some code to prevent people making this mistake.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">5th July 2005, 12:53</div></div><div class="posttext">Function CopyUserFiles<br />
+Push $R1<br />
+Push $R2<br />
+ ${RecFindOpen} &quot;D:\Test&quot; $R1 $R2<br />
+ ${RecFindFirst}<br />
+ StrCmp $R1 &quot;Default&quot; Found<br />
+ ${RecFindNext}<br />
+Found:<br />
+ ${RecFindClose}<br />
+Pop $R2<br />
+Pop $R1<br />
+FunctionEnd<br />
+<br />
+Uploaded new version with some error checking.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AlexanderG</div><div class="date">5th July 2005, 15:17</div></div><div class="posttext">Got it working perfectly.:D <br />
+Thanks for the help!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

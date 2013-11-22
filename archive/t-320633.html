@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" x64 SysWOW64 and running app, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  x64 SysWOW64 and running app NSIS Discussion" />
+	
+	<title> x64 SysWOW64 and running app [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  x64 SysWOW64 and running app</div>
+<hr />
+<div class="pda"><a href="t-320633.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=320633">x64 SysWOW64 and running app</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">underline</div><div class="date">8th July 2010, 19:23</div></div><div class="posttext">Hi,<br />
+<br />
+As I see all 32-bit apps are forwarded in x64 to the SysWOW64 folder for backward compatibility but I can't understand how to run an exe located inside SysWOW64?<br />
+<br />
+I included x64.nsh and I tried Exec, ExecWait, ExecShell &quot;open&quot; and even creating an shortcut but all those always point to system32 folder instead SysWOW64<br />
+<br />
+I also tried ${EnableX64FSRedirection} but the same issue. Can anyone here let me know how to run an exe app located inside SysWOW64?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">9th July 2010, 06:33</div></div><div class="posttext">If you want to open a file/application from SysWOW64 (The 32bit System folder on a 64bit machine.  Yes, blame MSFT for the naming - it's &quot;System Windows32 on Windows64&quot;), from a 32bit application (such as NSIS currently), you should actually be fine with Exec, ExecWait, etc.<br />
+<br />
+If you want to open a file/application from System32 (The 64bit System folder on a 64bit machine), that's when you either use ${DisableX64FSRedirection} before the Exec/ExecWait/etc. and ${EnableX64FSRedirection} afterward, -or-, instead of specifying System32, use SysNative.  I.e. `Exec &quot;$WINDIR\SysNative\YourApp.exe&quot;`.  Note that SysNative is only available from Vista and up.  There's a special hotfix for XP64, but you can't rely on that being installed at all.<br />
+<br />
+I suggest testing with a simple set of text files with the content indicating in which folder they actually are (i.e. &quot;This text file is in SysWOW64 - the 32bit System directory&quot;), so you can easily see if filesystem redirection is messing with things.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">underline</div><div class="date">9th July 2010, 11:05</div></div><div class="posttext">Hi Animaether<br />
+<br />
+Thank you for your solution! I will do some tests using your suggestion.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">underline</div><div class="date">10th July 2010, 23:06</div></div><div class="posttext">My installer is 32bit and install some files using $SYSDIR which redirect installation to SysWOW32. This is OK until I try to run using Exec, ExecWait or even ExecShell &quot;open&quot; an exe file from SysWOW32. This never works as when I use   Exec &quot;$SYSDIR\folder\myapp.exe&quot;  this will fail as this will try to start myapp.exe from  Windows\system32\folder\myapp.exe  instead Windows\SysWOW64\folder\myapp.exe<br />
+<br />
+This is the same even if I use ${EnableX64FSRedirection} before to SetOutPath $SYSDIR\folder<br />
+I can't use SysNative as I need my app compatible also with XP.<br />
+<br />
+Please let me have a working solution if any.<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">10th July 2010, 23:49</div></div><div class="posttext">well.. as far as I can tell, this should work 'as is' without anything special needed.<br />
+<br />
+Just to make 100% sure.. you -want- your application to be in SysWoW64 and you -want- to run it from that location.. correct?<br />
+<br />
+If so.. here's my test set... one small installer that simply reports where it was originally run from:<br />
+<br />
+RequestExecutionLevel admin<br />
+OutFile &quot;test.exe&quot;<br />
+Section<br />
+	MessageBox MB_OK &quot;application run from $EXEDIR&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+And one to place it in SYSDIR and run it from there:<br />
+<br />
+!include &quot;LogicLib.nsh&quot;<br />
+!include &quot;x64.nsh&quot;<br />
+OutFile &quot;test_system32.exe&quot;<br />
+RequestExecutionLevel admin<br />
+Section<br />
+	${Unless} ${RunningX64}<br />
+	    MessageBox MB_OK &quot;You are not running on a 64bit machine - no point in running these tests.&quot;<br />
+	    Abort<br />
+	${EndUnless}<br />
+<br />
+	MessageBox MB_OK &quot;Running 32-bit (SysWOW64) tests&quot;<br />
+	SetOutPath &quot;$SYSDIR&quot;<br />
+	MessageBox MB_OK &quot;Output path is now: $SYSDIR&quot;<br />
+	File &quot;test.exe&quot;<br />
+	MessageBox MB_OK &quot;Test executable written to: $SYSDIR .  Please verify (check for '$WINDIR\SysWOW64\test.exe').&quot;<br />
+	MessageBox MB_OK &quot;Testing 'Exec $$SYSDIR\test.exe'&quot;<br />
+	Exec &quot;$SYSDIR\test.exe&quot;<br />
+	MessageBox MB_OK &quot;Testing 'ExecWait $$SYSDIR\test.exe'&quot;<br />
+	ExecWait &quot;$SYSDIR\test.exe&quot;<br />
+	MessageBox MB_OK &quot;Testing 'ExecShell $$SYSDIR\test.exe'&quot;<br />
+	ExecShell &quot;&quot; &quot;$SYSDIR\test.exe&quot;<br />
+	MessageBox MB_OK &quot;32-bit Tests concluded.&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">underline</div><div class="date">11th July 2010, 08:13</div></div><div class="posttext">Thanks again for your solution!<br />
+<br />
+Seems that $SYSDIR always point to Windows\system32 when Exec, ExecWait or ExecShell are used.<br />
+<br />
+What I can see is that if I use &quot;$WINDIR\SysWOW64&quot; instead &quot;$SYSDIR&quot; then everythings works as expected. Now my questions are:<br />
+<br />
+1. Can be there any issue with Non English OS if I use  &quot;$WINDIR\SysWOW64&quot;  ? I mean this path is the same for all languages OS or on some languages this &quot;SysWOW64&quot; is renamed/transalted?<br />
+<br />
+2. Finally, can I meet any compatibility issue using &quot;$WINDIR\SysWOW64&quot; instead &quot;$SYSDIR&quot; ? It is recommended to use it like that or not? As seems a very easy way to fix that x64 redirection issue...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">12th July 2010, 14:51</div></div><div class="posttext">...Seems that $SYSDIR always point to Windows\system32 when Exec, ExecWait or ExecShell are used.<br />
+<br />
+What I can see is that if I use &quot;$WINDIR\SysWOW64&quot; instead &quot;$SYSDIR&quot; then everythings works as expected...<br />
+<br />
+Are you using the x64.nsh include with the ${DisableX64FSRedirection} macro run prior to executing?  If so then that's why you are seeing this behavior.<br />
+<br />
+If not then I have a few other theories:<br />
+<br />
+ A 64bit file redirection API is being called by you, anouther include, or maybe even a plugin (but I doubt it).<br />
+ Your version of NSIS is bugged.  I'm running the release version of v2.46 and I was unable to replicate the issue.<br />
+ Your version of windows isn't 64 bit and it has a SysWOW64 directory in the System32 folder.  (Even more unlikly but still possible.)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">underline</div><div class="date">12th July 2010, 15:02</div></div><div class="posttext">Zinthose, thank for your reply!<br />
+<br />
+I'm using x64 (64-bit) edition XP and 7, I had included x64.nsh and I disable and enable redirection befor Exec but my mistake was that I do that before and after ExecShel &quot;open&quot; shortcut (my exe is run through an shortcut) instead disable and enable x64 redirection before and after creation of that shortcut. After I do it like that now works.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

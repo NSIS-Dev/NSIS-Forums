@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Bug with GetFileTime under Win9x, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Bug with GetFileTime under Win9x NSIS Discussion" />
+	
+	<title> Bug with GetFileTime under Win9x [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Bug with GetFileTime under Win9x</div>
+<hr />
+<div class="pda"><a href="t-229288.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=229288">Bug with GetFileTime under Win9x</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">smatte</div><div class="date">25th October 2005, 15:41</div></div><div class="posttext">I used this code :<br />
+-----------------------------------<br />
+!define LOW1 $0 <br />
+!deinfe HIGH1 $1 <br />
+!define LOW2 $2 <br />
+!deinfe HIGH2 $3 <br />
+GetFileTime ${FILENAME} ${HIGH1} ${LOW1} <br />
+GetFileTimeLocal &quot;c:\program files\local file.dat&quot; ${HIGH2} ${LOW2} <br />
+IntCmpU ${HIGH1} ${HIGH2} 0 local_is_newer user_has_newer <br />
+  ; compare lows <br />
+  IntCmpU ${LOW1} ${LOW2} 0 local_is_newer user_has_newer <br />
+    ; files has the same time <br />
+    Return <br />
+<br />
+  local_is_newer: <br />
+    ; user has an old file, install a newer version <br />
+    File /oname=${FILENAME} &quot;localfile.dat&quot; <br />
+    Return <br />
+<br />
+  user_has_newer: <br />
+    ; user has a newer version <br />
+    MessageBox MB_OK &quot;cheater!&quot;<br />
+---------------------------------------<br />
+<br />
+But it didn't work under win9x because the low value isn't the same under this OS? Any patch or other way to compare local file and destination file?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">25th October 2005, 15:51</div></div><div class="posttext">How exactly didn't it work? And why not use SetOverwrite ifnewer?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">smatte</div><div class="date">26th October 2005, 13:51</div></div><div class="posttext">What I need is Overwrite ifdiff. But anyway SetOverwrite ifdiff also have a bug under Win9x. <br />
+<br />
+Step to reproduce:<br />
+-Install on a clean Win9x machine<br />
+-Reinstall the same software(always using SetOverwrite ifdiff)<br />
+<br />
+Result: The file is replaced and if the file was locked, the error flag is set.<br />
+Expected: The file is skiped because it is the same.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th October 2005, 19:52</div></div><div class="posttext">The attached script works perfectly fine for me. Can you attach a complete script that shows the problem?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">smatte</div><div class="date">27th October 2005, 20:26</div></div><div class="posttext">Don't forgat that the error is only under win9x and ME but works well under WinXP. <br />
+<br />
+Your script is a very good example:<br />
+Install for the first time.<br />
+Reinstall without uninstalling before.<br />
+The file is already present and is not suppose to be replaced. So on win98 you'll see in details window: Extract: Blah.nsi...100%<br />
+But on winXP you'll have Skipped: Blah.nsi<br />
+<br />
+Got it? :confused:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th October 2005, 20:34</div></div><div class="posttext">I wrote and tested it on Windows 98. On the first time it was extracted, and on the second, it was skipped. If it's always extracted for you, you might have some program running on the background and altering the timestamps. Maybe an anti-virus or some automatic file scanner?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">smatte</div><div class="date">27th October 2005, 22:29</div></div><div class="posttext">OK! now I know...you must compile on WinXp but execute on Win98. If you compile on Win98 you wont get the bug.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">28th October 2005, 00:02</div></div><div class="posttext">Must be the FAT 2 seconds time resultion. I'll check it out tomorrow.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">smatte</div><div class="date">28th October 2005, 22:49</div></div><div class="posttext">This could help you...<br />
+http://support.microsoft.com/default.aspx?scid=kb;en-us;127830<br />
+but you seem to already know that.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th October 2005, 00:01</div></div><div class="posttext">There are a few things to think about: Should GetLocalFileTime and GetFileTime be affected as well, or should the user implement this at wish? Will it be enough to round the time only on the compiler's side? It will work, but it will break backward compatibility. Upgraded installers that already used ifdiff, will install the file once again, but only once. However, this is easier to implement, and can be tuned by some compiler directive. Other things I forgot because it's late.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th November 2005, 14:08</div></div><div class="posttext">Made it round the time on the compiler side. Improvements can be added later.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Windows 2003 Server; Unable to add registry entries?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Windows 2003 Server; Unable to add registry entries? NSIS Discussion" />
+	
+	<title> Windows 2003 Server; Unable to add registry entries? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Windows 2003 Server; Unable to add registry entries?</div>
+<hr />
+<div class="pda"><a href="t-193421.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=193421">Windows 2003 Server; Unable to add registry entries?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">13th September 2004, 14:14</div></div><div class="posttext">Hello All,<br />
+<br />
+I'm running into an issue with my installer on Windows 2003 Server; in regards to the registry. I', an admin user and therefore have complete privileges. If I use regedit i can add a key no probblem, however, if I use the installer which works on all the other windows operating systems, it fails to add any of the registry keys. I'm using a pretty simple macro to do this:<br />
+<br />
+<br />
+  !macro CreateRegVarIfNotExist UPDATE TYPE ROOT KEY NAME VALUE<br />
+  ; Update: 1= Yes, 0 = No<br />
+  ; Type One of: STRING, STRINGEX, DWORD, HEX<br />
+    push $R0<br />
+    !define Index 'Line${__LINE__}'<br />
+    !insertmacro IfKeyExists &quot;${ROOT}&quot; &quot;${KEY}&quot; &quot;${NAME}&quot;<br />
+    Pop $R0<br />
+    ;$R0 contains 0 (not present) or 1 (present)<br />
+<br />
+    IntCmp &quot;$R0&quot; &quot;1&quot; &quot;${Index}-Exists&quot; 0<br />
+    StrCmp &quot;${TYPE}&quot; &quot;STRING&quot; 0 +3<br />
+      WriteRegStr &quot;${ROOT}&quot; &quot;${KEY}&quot; &quot;${NAME}&quot; &quot;${VALUE}&quot;<br />
+      Goto &quot;${Index}-Done&quot;<br />
+    StrCmp &quot;${TYPE}&quot; &quot;STRINGEX&quot; 0 +3<br />
+      WriteRegExpandStr &quot;${ROOT}&quot; &quot;${KEY}&quot; &quot;${NAME}&quot; &quot;${VALUE}&quot;<br />
+      Goto &quot;${Index}-Done&quot;<br />
+    StrCmp &quot;${TYPE}&quot; &quot;DWORD&quot; 0 +3<br />
+      WriteRegDWord &quot;${ROOT}&quot; &quot;${KEY}&quot; &quot;${NAME}&quot; &quot;${VALUE}&quot;<br />
+      Goto &quot;${Index}-Done&quot;<br />
+!ifdef _HEXED_<br />
+    StrCmp &quot;${TYPE}&quot; &quot;HEX&quot; 0 +3<br />
+      WriteRegBin &quot;${ROOT}&quot; &quot;${KEY}&quot; &quot;${NAME}&quot; &quot;${VALUE}&quot;<br />
+      Goto &quot;${Index}-Done&quot;<br />
+!endif<br />
+<br />
+    &quot;${Index}-Exists:&quot;<br />
+    ; update?<br />
+    IntCmp &quot;${UPDATE}&quot; &quot;0&quot; &quot;${Index}-Done&quot; 0<br />
+    StrCmp &quot;${TYPE}&quot; &quot;STRING&quot; 0 +3<br />
+      WriteRegStr &quot;${ROOT}&quot; &quot;${KEY}&quot; &quot;${NAME}&quot; &quot;${VALUE}&quot;<br />
+      Goto &quot;${Index}-Done&quot;<br />
+    StrCmp &quot;${TYPE}&quot; &quot;STRINGEX&quot; 0 +3<br />
+      WriteRegExpandStr &quot;${ROOT}&quot; &quot;${KEY}&quot; &quot;${NAME}&quot; &quot;${VALUE}&quot;<br />
+      Goto &quot;${Index}-Done&quot;<br />
+    StrCmp &quot;${TYPE}&quot; &quot;DWORD&quot; 0 +3<br />
+      WriteRegDWord &quot;${ROOT}&quot; &quot;${KEY}&quot; &quot;${NAME}&quot; &quot;${VALUE}&quot;<br />
+      Goto &quot;${Index}-Done&quot;<br />
+!ifdef _HEXED_<br />
+    StrCmp &quot;${TYPE}&quot; &quot;HEX&quot; 0 +3<br />
+      WriteRegBin &quot;${ROOT}&quot; &quot;${KEY}&quot; &quot;${NAME}&quot; &quot;${VALUE}&quot;<br />
+      Goto &quot;${Index}-Done&quot;<br />
+!endif<br />
+<br />
+    &quot;${Index}-Done:&quot;<br />
+    !undef Index<br />
+    pop $R0<br />
+ !macroend<br />
+<br />
+ !macro IfKeyExists ROOT MAIN_KEY KEY<br />
+   push $R0<br />
+   push $R1<br />
+<br />
+   !define IKEIndex 'Line${__LINE__}'<br />
+<br />
+   StrCpy $R1 &quot;0&quot;<br />
+<br />
+   &quot;${IKEIndex}-Loop:&quot;<br />
+   ; Check for Key<br />
+   EnumRegKey $R0 ${ROOT} &quot;${MAIN_KEY}&quot; &quot;$R1&quot;<br />
+   StrCmp $R0 &quot;&quot; &quot;${IKEIndex}-False&quot;<br />
+     IntOp $R1 $R1 + 1<br />
+     StrCmp $R0 &quot;${KEY}&quot; &quot;${IKEIndex}-True&quot; &quot;${IKEIndex}-Loop&quot;<br />
+<br />
+   &quot;${IKEIndex}-True:&quot;<br />
+   ;Return 1 if found<br />
+   push &quot;1&quot;<br />
+   goto &quot;${IKEIndex}-End&quot;<br />
+<br />
+   &quot;${IKEIndex}-False:&quot;<br />
+   ;Return 0 if not found<br />
+   push &quot;0&quot;<br />
+   goto &quot;${IKEIndex}-End&quot;<br />
+<br />
+   &quot;${IKEIndex}-End:&quot;<br />
+   !undef IKEIndex<br />
+   exch 2<br />
+   pop $R0<br />
+   pop $R1<br />
+ !macroend<br />
+<br />
+Which you'd call like:<br />
+<br />
+    ; ODBC Driver<br />
+    !insertmacro CreateRegVarIfNotExist 1 &quot;STRING&quot; HKLM &quot;Software\ODBC\ODBCINST.INI\ODBC Drivers&quot; &quot;$(DESC_ODBC_DRIVER)&quot;  &quot;Installed&quot;<br />
+    !insertmacro CreateRegVarIfNotExist 1 &quot;STRING&quot; HKLM &quot;Software\ODBC\ODBCINST.INI\$(DESC_ODBC_DRIVER)&quot; &quot;CPTimeout&quot; &quot;&lt;not pooled&gt;&quot;<br />
+    !insertmacro CreateRegVarIfNotExist 1 &quot;STRING&quot; HKLM &quot;Software\ODBC\ODBCINST.INI\$(DESC_ODBC_DRIVER)&quot; &quot;Driver&quot; &quot;$INSTDIR\myodbc.dll&quot;<br />
+    !insertmacro CreateRegVarIfNotExist 1 &quot;STRING&quot; HKLM &quot;Software\ODBC\ODBCINST.INI\$(DESC_ODBC_DRIVER)&quot; &quot;Setup&quot; &quot;$INSTDIR\myodbc.dll&quot;<br />
+<br />
+<br />
+Anyone have any ideas as to why I'm unable to add registry keys?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Davion</div><div class="date">13th September 2004, 14:34</div></div><div class="posttext">if it's urgent try to work around the Problem with regfiles which you copy into a tmp folder, execute the reg files and the delete them... no other Idea... but I try to test it on our win2003 machine within the next days<br />
+<br />
+greetz Dave</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">13th September 2004, 17:25</div></div><div class="posttext">I believe WriteRegStr is broken on Windows Server 2003. No matter what I try to add to the registry via this command it fails to be added. I am logged on as the administrator. Any ideas?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th September 2004, 18:04</div></div><div class="posttext">Are you sure it's not some scripting error? Have you tested it with just WriteRegStr?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">13th September 2004, 18:33</div></div><div class="posttext">Kichik, the following script will demonstrate the error. It's a modified Basic.nsi that copies no files, but does try to create 4 registry entries, two under HKCU and two under HKLM. The ones under HKCU get created, the ones under HKLM do not. I am the administrator, is there something special I need to do or is this a bug?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th September 2004, 18:41</div></div><div class="posttext">Can you compile it with logging enabled and attach the log?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">13th September 2004, 18:50</div></div><div class="posttext">yeah ok, where is config.h kept? I modified modifiedbasic.nsi to contain the &quot;LogSet on&quot; command, but where is this config.h I have to put the define in?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th September 2004, 18:53</div></div><div class="posttext">Source\exehead\config.h.<br />
+<br />
+You can also download a prebuilt makensis with logging from the download page.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">13th September 2004, 19:07</div></div><div class="posttext">Here are the complete contents of the install.log file as requested. I placed the LogSet around the main install section.<br />
+<br />
+<br />
+WriteRegStr: set -2147483647\Software\Modern UI Test\ to C:\Program Files (x86)\Modern UI Test<br />
+WriteRegStr: set -2147483647\Software\Modern UI Test\Bacon to Bits<br />
+WriteRegStr: set -2147483646\Software\Modern UI Test\ to C:\Program Files (x86)\Modern UI Test<br />
+WriteRegStr: set -2147483646\Software\Modern UI Test\Bacon to Bits<br />
+created uninstaller: 863, &quot;C:\Program Files (x86)\Modern UI Test\Uninstall.exe&quot;<br />
+settings logging to 0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th September 2004, 19:14</div></div><div class="posttext">Is the error flag set?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">13th September 2004, 19:29</div></div><div class="posttext">No the error flag was not set.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th September 2004, 20:58</div></div><div class="posttext">That's weird... According to all the information you've provided, the string is written successfully. Maybe it writes it to some special registry just like the program files folder is located in C:\Program Files (x86)\ and not C:\Program Files\. Did you try adding a ReadRegStr line to see if at least the installer itself can read those values?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">13th September 2004, 21:11</div></div><div class="posttext">Yeah, unfortunately it doesn't find them. <br />
+<br />
+Perhaps the call in the NSIS source is 32bit only and not 64bit, and therefore doesn't function the same? Just an idea. The files, shortcuts and everything else get placed and created properly, just the HKLM registry items seem to be missing in action.<br />
+<br />
+That or perhaps HKLM entries need an extra security permission applied.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th September 2004, 21:31</div></div><div class="posttext">I have to go, I'll be back tomorrow. The code is in Source\exehead\exec.c line 1160 (case EW_WRITEREG: //write registry value). Mind doing some tests with it? A few things I can think of: RegCreateKey-&gt;RegCreateKeyEx SetLastError and GetLastError around RegSetValueEx to see if there is some error even if the return value says there isn't Use RegQueryValueEx with the open HKEY Replace RegSetValueEx with RegSetValueExW Add a few NULLs to data/buf2 RegFlushKey</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">14th September 2004, 13:56</div></div><div class="posttext">I just got your message, I'll try a few things here.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">14th September 2004, 14:32</div></div><div class="posttext">hmm, Most of the existing functions in that code are labeled as obsolete, and are only provided for 16 bit apps. Ouch. It needs a good rewrite. It's too bad really, M$ made something so easy extremely painful by incorporating all the new security stuff into it. Not only will the user have to do it twice (security based on pre XP SP2, but for SP2 as well).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">14th September 2004, 17:04</div></div><div class="posttext">Here's a pseudo markup of the new additions that will have to be made to the registry functions. I'm not sure if these are backwards compatible. Unfortunately that's all the time I had to spare. The class is not complete and is not functional. It basically demonstrates how security is done when creating a registry key. Anyways, hope it speeds up a fix, for someone that has time to spare.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">14th September 2004, 20:12</div></div><div class="posttext">Obsolete doesn't mean it shouldn't work. If it's provided for compatibility it should still work.<br />
+<br />
+Have you tried replacing RegOpenKey with RegOpenKeyEx and made sure it worked? It's not clear from your message if you got it working or just found that some deprecated APIs are used (on purpose, by the way).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">15th September 2004, 15:54</div></div><div class="posttext">I tried to change the source you specified to use the new format, however, that implies adding all the security information as well; as I stated in a previous post. I did not have the time to make the modifications to your source. All of the functions appear to work properly except for Key creation. The key creation will require modifying the NSIS source to support RegCreateKeyEX using the security attributes structure, as specified in the RegCreateKeyEx documentation. Until this has been done registry keys will appear to be created, (since no errors are reported), but the keys never get created when using the WriteReg* functions. <br />
+<br />
+Microsoft states:<br />
+<br />
+Obsolete Functions<br />
+<br />
+These functions are provided ONLY for compatibility with 16-bit versions of Windows:<br />
+<br />
+RegCreateKey <br />
+RegEnumKey <br />
+RegOpenKey <br />
+RegQueryValue <br />
+RegSetValue <br />
+<br />
+<br />
+It looks like they are no longer supported when running against a 32 or 64 bit OS, as of the release of the Windows 2003 Product Family.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">15th September 2004, 16:34</div></div><div class="posttext">You can simply specify NULL for lpSecurityAttributes.If lpSecurityAttributes is NULL, the key gets a default security descriptor. The ACLs in a default security descriptor for a key are inherited from its direct parent key.You can see how RegCreateKeyEx is used in all the other registry instructions.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">15th September 2004, 16:46</div></div><div class="posttext">hmmm, interesting....</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">15th September 2004, 23:49</div></div><div class="posttext">i'm using win2003 myself, and i doubt it's an issue with the OS, never had problems writing regkeys in nsis..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JeronimoColon</div><div class="date">24th September 2004, 16:20</div></div><div class="posttext">Yathosho,<br />
+Have you tried zimsms sample script? - Just curious...<br />
+<br />
+zimsms,<br />
+What version of WS2K3 are you using?<br />
+Also, I read a technote about some weirdness with WS2K3 and registry permision if you have TS install.  I believe it doesn't matter whether or not your actually using TS at the time your writing to the registry.  If this turns out to be the source of the problem I believe M$ has issued a patch - by direct request of coarse...<br />
+<br />
+Either way I'll try it this weekend. I'll log-in with each default security group i.e. User, Power User, Admin, etc. and report my findings.<br />
+<br />
+jc3</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">24th September 2004, 19:10</div></div><div class="posttext">i have just tested it, works perfectly.<br />
+<br />
+talking on icq with kichik, we came to the conclusion, that this appears to be an issue with the &quot;Program Files (x86)&quot; directory in the 64bit version.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JeronimoColon</div><div class="date">25th September 2004, 06:35</div></div><div class="posttext">I'm just curious and want to understand this a little further...<br />
+What's the correlation between &quot;Program Files (x86)&quot; directory and zimsms registry problem? :confused: <br />
+<br />
+Thanks,<br />
+<br />
+jc3</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">25th September 2004, 09:58</div></div><div class="posttext">sorry, i just figured what bullshit i was typing there. it was of course not related to the name of that directory, we just talked about it, to spot whether it might be an 64-bit issue. at least a hint.<br />
+<br />
+i guess you have to wait for kichik's word on that, since i havn't followed the problem since.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rawk</div><div class="date">24th May 2005, 18:01</div></div><div class="posttext">If you are running Windows Server 2003 64 bit, then yes entries into the registry by a 32 bit program are redirected in the same way as 32 bit programs accessing /system32 or /program files are redirected.<br />
+<br />
+http://msdn.microsoft.com/library/default.asp?url=/library/en-us/win64/win64/registry_redirector.asp<br />
+<br />
+HTH</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

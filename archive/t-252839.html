@@ -1,0 +1,176 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Set permission to write in registry, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Set permission to write in registry NSIS Discussion" />
+	
+	<title> Set permission to write in registry [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Set permission to write in registry</div>
+<hr />
+<div class="pda"><a href="t-252839.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=252839">Set permission to write in registry</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">The Glimmerman</div><div class="date">8th August 2006, 11:31</div></div><div class="posttext">I found this code in a tread (http://forums.winamp.com/showthread.php?s=&amp;threadid=244401). <br />
+It stores the defaultpassword in HKLM\SECURITY\Policy\Secrets\DefaultPassword.<br />
+The code works. <br />
+But my problem is when using this on a clean installation of XP. <br />
+The Administrator has no permission to write to HKLM\SECURITY\Policy\Secrets\DefaultPassword<br />
+<br />
+How do i set the permission for the admin to write to this key?<br />
+(HKLM\SECURITY\Policy\Secrets\DefaultPassword)<br />
+<br />
+<br />
+!macro CreateLsaUnicodeString VAR STRING<br />
+StrLen ${VAR} &quot;${STRING}&quot;<br />
+IntOp ${VAR} ${VAR} * 2<br />
+System::Call '*(&amp;i2 ${VAR}, &amp;i2 ${VAR}, w `${STRING}`) i .s'<br />
+Pop ${VAR}<br />
+!macroend<br />
+<br />
+# open lsa handle<br />
+System::Call '*${strLSA_OBJECT_ATTRIBUTES}(24,n,n,0,n,n).s'<br />
+Pop $R1<br />
+StrCpy $4 ${POLICY_CREATE_SECRET}<br />
+System::Call 'advapi32::LsaOpenPolicy(w n, i R1, i r4, *i .R0) i .R6'<br />
+System::Call 'advapi32::LsaNtStatusToWinError(i R6) i .R6'<br />
+<br />
+!insertmacro CreateLsaUnicodeString $R2 DefaultPassword<br />
+!insertmacro CreateLsaUnicodeString $R3 $UserPassword<br />
+<br />
+# create private data<br />
+<br />
+System::Call 'advapi32::LsaStorePrivateData(i R0, i R2, i R3) i .R6'<br />
+System::Call 'advapi32::LsaNtStatusToWinError(i R6) i .R6'<br />
+<br />
+# delete private data<br />
+<br />
+System::Call 'advapi32::LsaStorePrivateData(i R0, i R2, i n) i .R6'<br />
+System::Call 'advapi32::LsaNtStatusToWinError(i R6) i .R6'<br />
+<br />
+# close handle<br />
+<br />
+System::Call 'advapi32::LsaClose(i R0)'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">8th August 2006, 11:35</div></div><div class="posttext">Can't you just use the AccessControl plugin (http://nsis.sf.net/AccessControl_plug-in)?<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">The Glimmerman</div><div class="date">8th August 2006, 11:38</div></div><div class="posttext">I will test it out.<br />
+Thx Afrow</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">The Glimmerman</div><div class="date">8th August 2006, 12:01</div></div><div class="posttext">Sorry *** SPAM ***</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">The Glimmerman</div><div class="date">8th August 2006, 12:13</div></div><div class="posttext">It works great!! :D<br />
+<br />
+Thx afrow</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">8th August 2006, 12:14</div></div><div class="posttext">Like Everyone or Administrators?<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">The Glimmerman</div><div class="date">8th August 2006, 12:16</div></div><div class="posttext">Yes like that.<br />
+But my bad.<br />
+<br />
+I didn't try before cry. :)<br />
+<br />
+It works great.<br />
+<br />
+<br />
+  AccessControl::GrantOnRegKey \<br />
+    HKLM &quot;Security&quot; &quot;Administrators&quot; &quot;FullAccess&quot;<br />
+<br />
+<br />
+Good plugin.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">10th August 2006, 08:28</div></div><div class="posttext">At what stage are you trying to write to that key in your installation? I am doing the same and I didn't have to give access to the user for that key. Are you sure you are storing a secret for the Administrator's account?<br />
+<br />
+My guess is that you are trying to store the password of a non administrator account that you are creating. In that case, although the account running your code has admin privileges, the secret that you are trying to store belongs to the non-admin account. An easy way around this is to add the non-admin account to the admin group, store the secret, then remove the account from the admin group. No need to manually change permissions on the LSA keys (which by the way is not recommended!).<br />
+Hope this helps<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">The Glimmerman</div><div class="date">10th August 2006, 12:44</div></div><div class="posttext">That's right.<br />
+I'm logged in as administrator. The user that's created in my app is added to the administratorsgroup. And for that user the secret is stored. <br />
+So i'm curious how you did that.<br />
+Even the administratorsgroup has no rights on the secretkey.<br />
+To test if my code works, i had to manualy give permission to that key.<br />
+<br />
+Extra Info<br />
+When my unattended install is ready, and the Admin is logging in for the first time, my app creates a user in the admin group en stores the secret.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">10th August 2006, 15:23</div></div><div class="posttext">I am not sure where your code is failing, since I am also using the code shown in the thread that you quoted and it works fine, without having to give registry access to the user running the application. The only important thing is to add the user to the admin group before storing his/her secret. This is the part of my script that does the job (without the error-checking routines):<br />
+!macro CreateUnicodeString VAR STRING<br />
+StrLen ${VAR} &quot;${STRING}&quot;<br />
+IntOp ${VAR} ${VAR} * 2<br />
+System::Call /NOUNLOAD '*(&amp;i2 ${VAR}, &amp;i2 ${VAR}, w &quot;${STRING}&quot;) i .s'<br />
+Pop ${VAR}<br />
+!macroend<br />
+<br />
+!define POLICY_CREATE_SECRET		0x00000020<br />
+!define strLSA_OBJECT_ATTRIBUTES	'(i,i,w,i,i,i)i'<br />
+System::Call /NOUNLOAD '*${strLSA_OBJECT_ATTRIBUTES}(24,0,0,0,0,0).R1'<br />
+System::Call 'advapi32::LsaOpenPolicy(,i R1,i ${POLICY_CREATE_SECRET},*i .R5)i.R6'<br />
+!insertmacro CreateUnicodeString $R3 &quot;DefaultPassword&quot;<br />
+!insertmacro CreateUnicodeString $R4 &quot;$Password&quot;<br />
+System::Call 'advapi32::LsaStorePrivateData(i R5,i R3,i R4)i.R6'<br />
+System::Call 'advapi32::LsaClose(i R5)'<br />
+System::Free $R3<br />
+System::Free $R4<br />
+<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">The Glimmerman</div><div class="date">10th August 2006, 19:00</div></div><div class="posttext">I got this and I use no &quot;/NOUNLOAD&quot;<br />
+<br />
+<br />
+System::Call '*${strLSA_OBJECT_ATTRIBUTES}(24,n,n,0,n,n).s'<br />
+StrCpy $4 ${POLICY_CREATE_SECRET}<br />
+System::Call 'advapi32::LsaOpenPolicy(w n, i R1, i r4, *i .R0) i .R6'<br />
+<br />
+ Maybe that's the problem.<br />
+I will test it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">11th August 2006, 01:02</div></div><div class="posttext">Nope, I doubt that the /NOUNLOAD is the problem. I should have removed it anyway, it doesn't make a difference.<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">The Glimmerman</div><div class="date">11th August 2006, 15:26</div></div><div class="posttext">But see the difference between my code and yours.<br />
+<br />
+My code:<br />
+System::Call '*${strLSA_OBJECT_ATTRIBUTES}(24,n,n,0,n,n).s'<br />
+<br />
+Your code:<br />
+System::Call /NOUNLOAD '*${strLSA_OBJECT_ATTRIBUTES}(24,0,0,0,0,0).R1'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">11th August 2006, 15:29</div></div><div class="posttext">.s is for the stack. You need a Pop $Var afterwards. .R1 will put the data straight into $R1.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">The Glimmerman</div><div class="date">11th August 2006, 19:11</div></div><div class="posttext">Thx I was wondering what the s stands for.<br />
+I'm beginning to understand that system call dll stuff :P<br />
+(Early stage ofcource)<br />
+<br />
+Thx afrow and CF for your help</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

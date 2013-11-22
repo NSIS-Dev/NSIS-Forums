@@ -1,0 +1,106 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Delimiter Question, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Delimiter Question NSIS Discussion" />
+	
+	<title> Delimiter Question [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Delimiter Question</div>
+<hr />
+<div class="pda"><a href="t-323030.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=323030">Delimiter Question</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">10th October 2010, 23:00</div></div><div class="posttext">i'm parsing the attached file for certain keywords using the good old SearchByteFile (http://nsis.sourceforge.net/Find_a_string_in_an_e.g._exe_or_dll_file). this works in most cases, but sometimes the result would be more dependable if i could parse for two keywords.<br />
+<br />
+example: the attached file contains the words &quot;Screen Reverse&quot;. at the moment i can only parse the file for &quot;Reverse&quot;, using the both words seperated by a  space as delimiter won't work (encoding issue?).<br />
+<br />
+does anybody has a suggestion on how i can detect the delimiter between the two words? if was thinking of using WordFind2x maybe, but i wouldn't know how to make it work with a file<br />
+<br />
+ps: i'm using this to detect if an avs-preset is using a plugin (in this case the Screen Reverse plugin), so i can install the plugin if missing</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">11th October 2010, 01:13</div></div><div class="posttext">That function seems pretty iffy.. sometimes finding a string, sometimes not, depending on whether or not its group size happens to bisect the search string.. which in a worst case scenario means you have to run that search function as many times as your search string is long (on large files).<br />
+<br />
+I.e. if you try to find the word &quot;Screen&quot; and use a group size of 15, it's fine:<br />
+<br />
+Nullsoft AVS Pr<br />
+eset 0.2 P0›V<br />
+irtual Effect: <br />
+Screen Reverse <br />
+            <br />
+  H0šVirtual E<br />
+<br />
+<br />
+Try again with search size 16...<br />
+<br />
+Nullsoft AVS Pre<br />
+set 0.2 P0›Vir<br />
+tual Effect: Scr<br />
+een Reverse    <br />
+           H0š<br />
+Virtual Effect:<br />
+<br />
+<br />
+Which appears to be the actual problem you're seeing, as the character in that file is most definitely just a space character, and if I use a group size of 15 (see above where &quot;Screen Reverse&quot; happens to fit in a single grouping), the output of that function is 'yes' (found) and '1' (once).<br />
+Any multiple of that minimum fit will work, as well as any value greater than that string's position in the file -and- smaller than the actual file size (which is why the default value of '500' in that function doesn't work.. the file itself is only 181 bytes).<br />
+<br />
+That function probably needs fixing... and clean-up (I see an initializable variable that's inside a loop) ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">11th October 2010, 04:21</div></div><div class="posttext">alright.. hit my head against some max string length thing somewhere.. probably missing a +1 or a -1 somewhere in the actual code.. but for now I'm tossing a 'max length' into a variable that's one less than the actual max string length define.<br />
+<br />
+which is also why I'm posting this as pastebin.. so somebody can point out where that +1 / -1 I'm missing went before I sanitize it into something a bit more usable (and without custom variables).<br />
+<br />
+That said.. it does work.. you don't have to worry about a group size (it'll default to NSIS's maximum string length (uhh.. see above)) and will find the string you're looking for even across the group boundaries (by simply keeping the last bit of a previous group).<br />
+http://www.pastebin.ca/1959048<br />
+( copy/paste into an editor that doesn't linewrap. ouch. )<br />
+<br />
+There's a few tweaks in there, if you want to poke at it right now in its above pastebin state..<br />
+- the file offsets at which the search string is found will be pushed to the stack.  This can all be removed for slightly faster execution / less code.  This includes a small bit that deals with NULL bytes.<br />
+- the character that represents a NULL byte can be changed.. not that it really matters, as it's only used in order to keep file offset counting correct.<br />
+- the file offsets can be 0-based or 1-based (currently.. as every editor I use uses 1-based offsets, but pieces of code will usually be 0-based)<br />
+- the search is currently case sensitive.. can easily be made case insensitive by changing the &quot;S==&quot; logic to a &quot;==&quot; logic.<br />
+- the search currently searches the entire file... obviously, you only care about finding it -once-.. so in your case, you could exit the outer loop (a hacky goto will do) as soon as it finds the first needle and increases the counter.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">11th October 2010, 07:26</div></div><div class="posttext">you're a star, will test this as soon as i get home. thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">11th October 2010, 09:38</div></div><div class="posttext">btw: to make this macro work multiple times, you need to add<br />
+<br />
+StrCpy $file.eof 0<br />
+<br />
+before the loop</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">11th October 2010, 12:14</div></div><div class="posttext">yeah, like I said.. haven't sanitized it yet.. 'd like to know why my maximum string length needs to be 1 less than the actual maximum string length first before potentially replacing / amending the wiki page; that pastebin will expire in about a month.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">13th October 2010, 12:45</div></div><div class="posttext">i'm also wondering why this macro (like the one i used before) are performing so weak. i did a search in notepad++ and got 3517 hits in 1563 files in about 16s. the same search using this macro takes a lot longer (something between 30 and 40mins.) some guy on the avs forum wrote a c++ app and search took about a second. (hope he can/wants to turn that into a nsis plugin!)<br />
+<br />
+how can there be such a huge difference between those three methods?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">13th October 2010, 13:12</div></div><div class="posttext">Well it's a 'use the right tool for the job' sort of thing.  NSIS is very powerful and flexible and just the fact that you -can- use it to search for strings in binaries is a testament to that.<br />
+<br />
+But that doesn't mean you -should- unless you have no choice (and as there is indeed no plugin, your choices are limited).<br />
+There's several things that make the macro much slower than a more dedicated solution.. starting with NSIS code being semi-interpreted, going through the various variable access bits and pieces, the need to read one byte at a time if going binary in NSIS (while another app might simple read 8K of bytes in one go), etc.  It's also entirely possible that my code can be optimized further.<br />
+<br />
+It can probably at least be sped up by ignoring the fact that you're reading a binary file (as you only care about plaintext), and search within that; there's probably already functions for doing so in the WiKi, but the main adjustment would be how $haystack gets built.<br />
+<br />
+But it will never be as fast as a dedicated solution.  And if your installer needs to seek through thousands of files or files any larger than a few kilobytes, a dedicated solution is most likely what you'd want :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">13th October 2010, 13:35</div></div><div class="posttext">will stick with your macro for now as it's more reliable than everything i tried before. i used a more sloppy one in the previous version of my &quot;installer&quot;. so while this might be performing as good or bad as the previous one, it's certainly a win. and in the best case i will get a plugin to replace it soon.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

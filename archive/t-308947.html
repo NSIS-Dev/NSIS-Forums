@@ -1,0 +1,149 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problem to delete installer when cancel, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problem to delete installer when cancel NSIS Discussion" />
+	
+	<title> Problem to delete installer when cancel [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problem to delete installer when cancel</div>
+<hr />
+<div class="pda"><a href="t-308947.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=308947">Problem to delete installer when cancel</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">skuallpa</div><div class="date">27th July 2009, 12:57</div></div><div class="posttext">Hello,<br />
+<br />
+I am working on an updater. Once the download is done, the updater is automatically launched, then overwrite some files and finally delete itself (using the SelfDel plug-in)<br />
+<br />
+Function .onInstSuccess<br />
+ <br />
+  SelfDel::del<br />
+<br />
+FunctionEnd<br />
+<br />
+This works well. <br />
+<br />
+However the updater is not deleted in the following case.<br />
+<br />
+At the very beginning of the updater, the user can choose language:<br />
+Function .onInit<br />
+	<br />
+    ;display multilanguage list<br />
+    !insertmacro MUI_LANGDLL_DISPLAY<br />
+<br />
+FunctionEnd<br />
+<br />
+If the user press &quot;cancel&quot; in the window that appear to choose the language, the updater exit and the updater file is not deleted.<br />
+<br />
+How can I deal with this case?<br />
+<br />
+Thanks in advance</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">27th July 2009, 13:14</div></div><div class="posttext">Have you tried calling selfdel from another callback function, such as .onGUIEnd or .onInstFailed?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">skuallpa</div><div class="date">27th July 2009, 13:53</div></div><div class="posttext">Thanks for your reply MSG,<br />
+<br />
+I just tried calling SelfDel from inside the .onGUIEnd and .onInstFailed function but the updater has not been deleted.<br />
+<br />
+I have also tried calling from inside  .onUserAbort but this gave me a compilation error. (function .onUserAbort already defined).<br />
+<br />
+Is the .onUserAbort already defined in the macro ?<br />
+!insertmacro MUI_LANGDLL_DISPLAY<br />
+<br />
+<br />
+Another idea?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">27th July 2009, 14:27</div></div><div class="posttext">Ah, yes, onuserabort and some other callbacks are used in MUI. You have to use this instead:<br />
+<br />
+!define MUI_CUSTOMFUNCTION_ABORT MyOnUserAbort<br />
+<br />
+Function MyOnUserAbort<br />
+  SelfDel::del<br />
+FunctionEnd<br />
+<br />
+<br />
+See http://nsis.sourceforge.net/Docs/Modern%20UI%202/Readme.html  (search for 'custom functions')</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Kshiro</div><div class="date">27th July 2009, 16:28</div></div><div class="posttext">I used this to enable Cancel Button during installing .<br />
+GetDlgItem $0 $HWNDPARENT 2<br />
+EnableWindow $0 1<br />
+And i used SelfDel plug-in but it only work when extract the first file . If i click cancel button when extracting above 2nd file , it dont work .</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">skuallpa</div><div class="date">28th July 2009, 09:31</div></div><div class="posttext">Thanks for these answers. <br />
+I have tried this <br />
+<br />
+!define MUI_CUSTOMFUNCTION_ABORT MyOnUserAbort<br />
+<br />
+Function MyOnUserAbort<br />
+SelfDel::del<br />
+FunctionEnd<br />
+<br />
+But this doesn't work. The updater is still not deleted if user press cancel in the window in which he can choose the language.<br />
+<br />
+Concerning the solution proposed by Kshiro: I don't see very well how to use this code. The cancel button is already enable. I just want to remove installer if user press cancel.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">28th July 2009, 13:14</div></div><div class="posttext">This is because the MUI_LANGDLL_DISPLAY macro calls Abort when the user canceled the Languages dialog, which causes an instant quit of the installer (see chapter 4.7.2.1.2 of the NSIS user manual).<br />
+<br />
+I think this some sort of bug in MUI.<br />
+<br />
+You can prevent this by removing${if} $LANGUAGE == &quot;cancel&quot;<br />
+     Abort<br />
+${endif}from the MUI_LANGDLL_DISPLAY macro (in Localization.nsh for MUI2)<br />
+You need to add this then in the .onInit function after calling MUI_LANGDLL_DISPLAY.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">29th July 2009, 01:59</div></div><div class="posttext">Maybe you should post a feature request for a MUI_CUSTOMFUNCTION_LANGDLL_ABORT MyOnUserAbort or something similar.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">skuallpa</div><div class="date">29th July 2009, 08:29</div></div><div class="posttext">Thanks for these answers<br />
+<br />
+So I have finally edit the file Localization.nsh (located in Program Files\NSIS\Contrib\Modern UI 2). I have add the following line<br />
+<br />
+<br />
+Pop $LANGUAGE<br />
+${if} $LANGUAGE == &quot;cancel&quot;<br />
+      SelfDel::del   ;remove updater file <br />
+      Abort<br />
+${endif}<br />
+<br />
+<br />
+and let in my installer the functions <br />
+<br />
+<br />
+!define MUI_CUSTOMFUNCTION_ABORT MyOnUserAbort<br />
+<br />
+Function  MyOnUserAbort<br />
+    SelfDel::del  ;remove updater file<br />
+FunctionEnd<br />
+	<br />
+Function .onInstSuccess<br />
+    SelfDel::del   ;remove updater file<br />
+FunctionEnd<br />
+<br />
+<br />
+So that, the updater file is deleted:<br />
+<br />
+-If the user directly press cancel during the language selection<br />
+-If the user cancel the installation <br />
+-after the installation was successful.<br />
+<br />
+Thanks again for your help</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

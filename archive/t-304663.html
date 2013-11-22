@@ -1,0 +1,171 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Changing default button fuctions in nsDialogPage, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Changing default button fuctions in nsDialogPage NSIS Discussion" />
+	
+	<title> Changing default button fuctions in nsDialogPage [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Changing default button fuctions in nsDialogPage</div>
+<hr />
+<div class="pda"><a href="t-304663.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=304663">Changing default button fuctions in nsDialogPage</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">RG2</div><div class="date">27th March 2009, 00:27</div></div><div class="posttext">Hey guys<br />
+<br />
+Ok, so I am a super n00b at this...so bear with me.<br />
+<br />
+What I am aiming to do is create a single custom page which has two buttons - each of them point to a different installer (the other installers already work - I didn't make them though).<br />
+<br />
+I have looked at a few tutorials and have managed to make a blank custom page using 'Page custom nsDialogsPage'.  This gives me a blank page with two buttons - Cancel and Quit.  I have figured out how to add the code for the other two buttons I want which point to the other installers.<br />
+<br />
+My question is...how do I change the function or text of the two default buttons - Cancel and Quit?  It would be nice to keep the Quit button and change the text of the Cancel button to 'More'.  Also, I would like the 'More' button to open a webpage, but I don't want the webpage to open when I click on the red X in the upper corner of the window.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">27th March 2009, 01:41</div></div><div class="posttext">You can get those buttons using...<br />
+<br />
+GetDlgItem $0 $HWNDPARENT 3 ; Back Button<br />
+GetDlgItem $1 $HWNDPARENT 1 ; Next/Close Button<br />
+GetDlgItem $2 $HWNDPARENT 2 ; Cancel Button<br />
+<br />
+<br />
+You can change the text on them using...<br />
+<br />
+SendMessage $0 ${WM_SETTEXT} 0 &quot;STR:Your Text Here&quot;<br />
+<br />
+<br />
+You can hide them using..<br />
+<br />
+ShowWindow $0 ${SW_HIDE} ; ${SW_SHOW}<br />
+<br />
+<br />
+Disable using..<br />
+<br />
+EnableWindow $0 0 ; 1<br />
+<br />
+<br />
+But you can't really modify their behavior.<br />
+If the 'Quit' button you mention is actually the 'Next' button, you could just create another custom page after the one you've already made, and launch the webpage in that new custom page.<br />
+The red X is hooked up to the Cancel button, which you could re-label Quit if you'd like.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RG2</div><div class="date">27th March 2009, 02:55</div></div><div class="posttext">Ok, awesome.  Thanks for the reply!<br />
+<br />
+After I posted this I mucked around a bit more and came to the conclusion you mentioned - to hook up the Next button to open a blank page which launches the webpage.  So, yay for figuring that out.<br />
+<br />
+After the code to launch the webpage I added a Call to relauch my original page so my installer would stop closing on me.  So now the fuction for the 'Next' button looks like this:<br />
+<br />
+Function Next<br />
+        ExecShell &quot;open&quot; &quot;http://www.yahoo.com&quot;<br />
+        Call nsDialogsWelcome<br />
+FunctionEnd<br />
+<br />
+When this runs the webpage opens and the original installer page opens (like I want it to), but the 'Next' and Quit buttons are now gone and replaced by a single Back button.  Clicking this Back button takes me to the original installer page, but minus the 'next' and quit buttons.  All I want is for the original installer window to remain up when the 'Next' button is clicked and for a webpage to open.  Am I coding this completely wrong to do what I want?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">27th March 2009, 03:37</div></div><div class="posttext">my mistake - better off using this:<br />
+<br />
+!addplugindir &quot;.&quot;<br />
+!addincludedir &quot;.&quot;<br />
+<br />
+!include &quot;nsDialogs.nsh&quot;<br />
+!include &quot;winmessages.nsh&quot;<br />
+!include &quot;logiclib.nsh&quot;<br />
+<br />
+; !include &quot;MUI2.nsh&quot;<br />
+<br />
+OutFile &quot;test.exe&quot;<br />
+<br />
+var dialog<br />
+var hwnd<br />
+var null<br />
+<br />
+Page Custom page.custom page.custom.next<br />
+<br />
+Function page.custom<br />
+	nsDialogs::Create 1018<br />
+	Pop $dialog<br />
+<br />
+	${NSD_CreateButton} 0 0 50% 10% &quot;A&quot;<br />
+	    Pop $hwnd<br />
+		${NSD_OnClick} $hwnd page.custom.buttonA.onclick<br />
+	${NSD_CreateButton} 50% 0 50% 10% &quot;B&quot;<br />
+	    Pop $hwnd<br />
+	    ${NSD_OnClick} $hwnd page.custom.buttonB.onclick<br />
+<br />
+	GetDlgItem $0 $HWNDPARENT 3 ; Back Button<br />
+	GetDlgItem $1 $HWNDPARENT 1 ; Next/Close Button<br />
+	GetDlgItem $2 $HWNDPARENT 2 ; Cancel Button<br />
+<br />
+	${NSD_SetText} $1 &quot;More Info...&quot;<br />
+<br />
+	nsDialogs::Show<br />
+FunctionEnd<br />
+Function page.custom.buttonA.onclick<br />
+	MessageBox MB_OK &quot;A&quot;<br />
+FunctionEnd<br />
+Function page.custom.buttonB.onclick<br />
+	MessageBox MB_OK &quot;B&quot;<br />
+FunctionEnd<br />
+<br />
+Function page.custom.next<br />
+	ExecShell &quot;open&quot; &quot;http://www.winamp.com/&quot;<br />
+	Abort<br />
+FunctionEnd<br />
+<br />
+Section<br />
+SectionEnd<br />
+<br />
+; !insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+So that 'page.custom.next' is called in the first Custom Page's 'leave' callback.  'page.custom.next' then calls 'Abort' to prevent the Next click from actually moving on to the next page / closing the installer (if the last page).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RG2</div><div class="date">27th March 2009, 05:42</div></div><div class="posttext">Thanks Animaether...That is exactly what I am looking for!!  That was also a much easier way to do what I wanted.  There was easily double that code on my end to get the same effect.<br />
+<br />
+I do have another question.  I copy n pasted your example and complied it and the installer did not close when clicking the More Info button (YAY).  When I re-edited my code to match yours the More Info button closed the installer (BOO).<br />
+<br />
+I am curious as to what exactly tells the installer not to close when that button is clicked.  From what you are saying it sounds like that 'Abort' call in the Next function should do that.<br />
+<br />
+My next function looks like this:<br />
+<br />
+Function page.custom.next<br />
+        ExecShell &quot;open&quot; &quot;http://www.yahoo.com&quot;<br />
+        Abort<br />
+FunctionEnd<br />
+<br />
+Same as yours, but just pointing to Yahoo.  Is there some sort of parameter that is critical to call outside of this function in order to get my desired effect?  Now, I am just curious.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RG2</div><div class="date">27th March 2009, 05:55</div></div><div class="posttext">It looks like I jsut answered my own question.  I started playing around with my code and I had this setup on my end.<br />
+<br />
+    Page custom page.custom<br />
+    Page custom page.custom.next<br />
+<br />
+And you had:<br />
+<br />
+    Page custom page.custom page.custom.next<br />
+<br />
+<br />
+I changed mine to look like yours and the installer no longer closed when clicking the More Info button (YAY).  Why is that?  Is it because I do not want to go to a second page therefor I do not define a second page?  I assumed the 'page.custom.next' was defining a 2nd page.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">27th March 2009, 07:30</div></div><div class="posttext">it -was- defining a 2nd page (with that second &quot;Page custom page.custom.next&quot; line), but now we're just re-using it (with different code inside that function) as the first page's 'leave' function.<br />
+<br />
+A custom page basically has 2 functions... 1 function to create it, and another when the user leaves it by pressing the Next button (or 'close' if it's so-labeled.. still the same button).<br />
+<br />
+If you don't need another page - then there's no real use in creating one; just handle it in the current page's leave function :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RG2</div><div class="date">27th March 2009, 07:38</div></div><div class="posttext">Interesting...good to know!  Thanks a lot for the help!  :D</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

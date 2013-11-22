@@ -1,0 +1,245 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Oracle: Detect if user exist or not, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Oracle: Detect if user exist or not NSIS Discussion" />
+	
+	<title> Oracle: Detect if user exist or not [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Oracle: Detect if user exist or not</div>
+<hr />
+<div class="pda"><a href="t-266224.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=266224">Oracle: Detect if user exist or not</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">internetfreakz</div><div class="date">20th February 2007, 16:17</div></div><div class="posttext">Hello,<br />
+<br />
+Is there some code (for an nsi script) to detect if a user already exist in an oracle database when i give the username and a database?<br />
+<br />
+Who can I implement that?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">20th February 2007, 16:44</div></div><div class="posttext">Save the following script to checkuserexists.sql:<br />
+<br />
+SET VERIFY OFF<br />
+WHENEVER SQLERROR EXIT SQL.SQLCODE<br />
+VARIABLE NUM NUMBER;<br />
+BEGIN<br />
+    BEGIN<br />
+        SELECT COUNT(*) INTO :NUM FROM ALL_USERS WHERE USERNAME=UPPER('&amp;1');<br />
+    EXCEPTION WHEN OTHERS THEN<br />
+        :NUM := SQLCODE;<br />
+    END;<br />
+END;<br />
+/<br />
+EXIT :NUM<br />
+<br />
+<br />
+You can run it as follows:<br />
+<br />
+SetOutPath $TEMP<br />
+File checkuserexists.sql<br />
+Push $1<br />
+nsExec::Exec &quot;sqlplus.exe -S sys/manager@orcl @checkuserexists.sql SOMEUSER&quot;<br />
+Pop $1<br />
+IntCmp $1 0 not_exist oracleerror<br />
+IntCmp $1 1 0 0 oracleerror<br />
+MessageBox MB_OK &quot;User exists&quot;<br />
+goto done<br />
+not_exist:<br />
+MessageBox MB_OK &quot;User doesn't exist&quot;<br />
+goto done<br />
+oracleerror:<br />
+MessageBox MB_OK|MB_ICONSTOP &quot;Oracle Error: $1&quot;<br />
+done:<br />
+Pop $1<br />
+<br />
+<br />
+Replace sqlplus.exe with the correct path, and SOMEUSER with the user name.<br />
+Replace sys/manager@orcl with the correct oracle login information- this should ideally be SYSTEM.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">internetfreakz</div><div class="date">21st February 2007, 01:23</div></div><div class="posttext">Thanks for your answer but is it possible there's something wrong? When I run the script, I get always the message &quot;user exists&quot;, even if I give a user that's not in my database :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">21st February 2007, 01:36</div></div><div class="posttext">Works for me. Attach your script.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">internetfreakz</div><div class="date">21st February 2007, 03:49</div></div><div class="posttext">Hellow,<br />
+<br />
+My complete nsi script is in attach.<br />
+<br />
+First, the function for the custom page 'Oracle' will be executed, then the function for the custom page 'sql'.<br />
+<br />
+After that, the wizard starts to execute my first section 'pisad'.<br />
+<br />
+In the next section 'database', i will check if a given user (in the custom page 'sql') is already exists or not.<br />
+<br />
+There, I get everytime 'user exist'.<br />
+<br />
+Thanks for your response!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">21st February 2007, 05:10</div></div><div class="posttext">It appears to me that checkuserexists.sql is not being extracted to $TEMP properly.<br />
+This code looks suspicious:<br />
+<br />
+        File /r &quot;sql&quot;<br />
+<br />
+        ; De locatie van sqlplus bepalen<br />
+        StrCpy $0 &quot;$oradir\BIN\sqlplus.exe&quot;<br />
+        <br />
+        GetFullPathName /SHORT $6 $INSTDIR<br />
+        StrCpy $4 &quot;$6\sql\checkuserexists.sql&quot;<br />
+<br />
+SetOutPath $TEMP<br />
+File checkuserexists.sql<br />
+Push $1<br />
+nsExec::Exec &quot;$0 -S system/$db_passsystem@XE @checkuserexists.sql $db_user&quot;<br />
+<br />
+<br />
+Is checkuserexists.sql in the same directory as the script or is it in the sql subdirectory?<br />
+<br />
+Perhaps it should be:<br />
+<br />
+        File /r &quot;sql&quot;<br />
+<br />
+        ; De locatie van sqlplus bepalen<br />
+        StrCpy $0 &quot;$oradir\BIN\sqlplus.exe&quot;<br />
+        <br />
+        GetFullPathName /SHORT $6 $INSTDIR<br />
+        StrCpy $4 &quot;$6\sql\checkuserexists.sql&quot;<br />
+<br />
+Push $1<br />
+nsExec::Exec &quot;$0 -S system/$db_passsystem@XE @$4 $db_user&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">internetfreakz</div><div class="date">21st February 2007, 09:45</div></div><div class="posttext">I changed my database section to the following but the problem is not solved with that :(<br />
+<br />
+Section &quot;Database&quot; Database<br />
+        MessageBox MB_OK &quot;Database  sectie uitvoeren - Eerst handmatig de gebruiker nog aanmaken!&quot;<br />
+<br />
+        SetOutPath &quot;$INSTDIR&quot;<br />
+        File /r &quot;sql&quot;<br />
+<br />
+        ; De locatie van sqlplus bepalen<br />
+        StrCpy $0 &quot;$oradir\BIN\sqlplus.exe&quot;<br />
+        <br />
+        GetFullPathName /SHORT $6 $INSTDIR<br />
+        StrCpy $4 &quot;$6\sql\checkuserexists.sql&quot;<br />
+<br />
+Push $1<br />
+nsExec::Exec &quot;$0 -S system/$db_passsystem@XE @$4 $db_user&quot;<br />
+Pop $1<br />
+IntCmp $1 0 not_exist oracleerror<br />
+IntCmp $1 1 0 0 oracleerror<br />
+MessageBox MB_OK &quot;User exists&quot;<br />
+goto done<br />
+not_exist:<br />
+MessageBox MB_OK &quot;User doesn't exist&quot;<br />
+goto done<br />
+oracleerror:<br />
+MessageBox MB_OK|MB_ICONSTOP &quot;Oracle Error: $1&quot;<br />
+done:<br />
+Pop $1<br />
+<br />
+        ;GetFullPathName /SHORT $6 $INSTDIR<br />
+<br />
+        ; Na eventueel die twee scripts te hebben uitgevoerd moeten er ook nog scripts voor de<br />
+        ; applicatie van PISAD worden geÃ¯nstalleerd.<br />
+<br />
+        GetFullPathName /SHORT $6 $INSTDIR<br />
+        StrCpy $4 &quot;$6\sql\opvullen_tab.sql&quot;<br />
+        nsExec::ExecToLog '$0 $db_user/$db_passuser@XE @&quot;$4&quot;'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">21st February 2007, 14:06</div></div><div class="posttext">Attach your sql.ini file.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">internetfreakz</div><div class="date">21st February 2007, 14:16</div></div><div class="posttext">I have rename the file to .txt just to upload it</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">21st February 2007, 14:19</div></div><div class="posttext">FYI, using the registry to find the Oracle home is not reliable starting from Oracle 10g. You should use C:\Program Files\Oracle\Inventory\ContentsXML\inventory.xml.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">21st February 2007, 14:27</div></div><div class="posttext">I don't know what to tell you :) - it works for me with your sql.ini.<br />
+Here's something to try:<br />
+Before actually executing the sql, pop up a messagebox with the command string:<br />
+<br />
+MessageBox MB_OK &quot;$0 -S system/$db_passsystem@XE @$4 $db_user&quot;<br />
+<br />
+<br />
+Then execute that exact command from the DOS prompt, followed by:<br />
+<br />
+echo %ERRORLEVEL%<br />
+<br />
+<br />
+The ERRORLEVEL should show you the return code from the sql.<br />
+If the user exists, you will see 1 otherwise you will see 0.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">internetfreakz</div><div class="date">21st February 2007, 16:15</div></div><div class="posttext">Hello,<br />
+<br />
+The messagebox gives me the command that we expect but the echo gives me a value 0 :(<br />
+<br />
+When I do the query at the sql prompt, I get the correct value (1) ...<br />
+<br />
+There is a 'time out' of 1 to 2 minutes between the messagebox and the echo, is this normal?<br />
+<br />
+And is there a simple script to extract the Oracle dir from the file C:\Program Files\Oracle\Inventory\ContentsXML\inventory.xml ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">21st February 2007, 17:44</div></div><div class="posttext">Originally posted by internetfreakz <br />
+Hello,<br />
+<br />
+The messagebox gives me the command that we expect but the echo gives me a value 0 :(<br />
+<br />
+When I do the query at the sql prompt, I get the correct value (1) ...<br />
+ <br />
+<br />
+Strange. I don't see this problem. Maybe it is some nsExec problem. Try executing it using Exec.<br />
+<br />
+There is a 'time out' of 1 to 2 minutes between the messagebox and the echo, is this normal? <br />
+ <br />
+<br />
+No, it should not take that long.<br />
+<br />
+<br />
+And is there a simple script to extract the Oracle dir from the file C:\Program Files\Oracle\Inventory\ContentsXML\inventory.xml ?  <br />
+<br />
+You can probably parse it using the xml plugin.<br />
+Extract the home(s) from the xml file and then retrieve the directory. There may be multiple homes if the user has installed multiple versions of Oracle.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">internetfreakz</div><div class="date">21st February 2007, 18:50</div></div><div class="posttext">Originally posted by iceman_k <br />
+Strange. I don't see this problem. Maybe it is some nsExec problem. Try executing it using Exec.<br />
+<br />
+<br />
+Same problem :(<br />
+<br />
+<br />
+No, it should not take that long.<br />
+<br />
+<br />
+Some problem with de db? But what kind of problem, any idea?<br />
+ <br />
+<br />
+You can probably parse it using the xml plugin.<br />
+Extract the home(s) from the xml file and then retrieve the directory. There may be multiple homes if the user has installed multiple versions of Oracle.  <br />
+[/quote]<br />
+<br />
+Hmm, that's new for me but I take a look at that in a few hours ;) <br />
+<br />
+One question yes: How can I find the xml file when the user installs his Oracle software in an other directory than the default? (That was the reason why I look in the register...)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">21st February 2007, 19:49</div></div><div class="posttext">ReadRegStr HKLM Software\Oracle inst_loc</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

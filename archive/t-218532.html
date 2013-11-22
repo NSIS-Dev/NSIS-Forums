@@ -1,0 +1,112 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Redraw Desktop, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Redraw Desktop NSIS Discussion" />
+	
+	<title> Redraw Desktop [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Redraw Desktop</div>
+<hr />
+<div class="pda"><a href="t-218532.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=218532">Redraw Desktop</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">10th June 2005, 12:06</div></div><div class="posttext">i'm using this script to remove the internet explorer symbol from the desktop (it's not a standard .lnk).<br />
+WriteRegDWORD HKCU &quot;Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu&quot; &quot;{871C5380-42A0-1069-A2EA-08002B30309D}&quot; &quot;1&quot;<br />
+System::Call 'user32.dll::GetDesktopWindow(v) i .r0'<br />
+SendMessage $0 ${WM_SETREDRAW} 1 0<br />
+however, the desktop does not get redrawn. only when i press f5 the ie symbol disappears. any clue where the bug is in my code?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">10th June 2005, 12:21</div></div><div class="posttext">Try calling UpdateWindow.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">10th June 2005, 15:33</div></div><div class="posttext">using this, still no result<br />
+System::Call 'user32.dll::GetDesktopWindow(v) i .r0'<br />
+System::Call 'user32.dll::UpdateWindow(i r0) v r1'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">10th June 2005, 18:54</div></div><div class="posttext">Use NULL window handle<br />
+(C)      RedrawWindow(NULL, NULL, NULL, RDW_INVALIDATE | RDW_ERASE);</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">10th June 2005, 19:54</div></div><div class="posttext">Not works :(<br />
+But I found in my old progs how I added hook to desktop listview, following code gets it handle<br />
+<br />
+System::Call 'user32.dll::FindWindowEx(i 0, i 0, t &quot;Progman&quot;, i 0) i .r0'<br />
+System::Call 'user32.dll::FindWindowEx(i r0, i 0, t &quot;SHELLDLL_DefView&quot;, i 0) i .r0'<br />
+System::Call 'user32.dll::FindWindowEx(i r0, i 0, t &quot;SysListView32&quot;, i 0) i .r0'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">10th June 2005, 21:51</div></div><div class="posttext">Yathosho:<br />
+System::Call 'shell32::SHChangeNotify(i, i, i, i) v (0x08000000, 0, 0, 0)'<br />
+<br />
+Takhir:<br />
+!define WM_KEYDOWN 0x0100<br />
+!define VK_F5      0x74<br />
+<br />
+FindWindow $0 &quot;Progman&quot;<br />
+FindWindow $0 &quot;SHELLDLL_DefView&quot; &quot;&quot; $0 0<br />
+FindWindow $0 &quot;SysListView32&quot; &quot;&quot; $0 0<br />
+SendMessage $0 ${WM_KEYDOWN} ${VK_F5} 0I try this too, but &quot;0x0100&quot; isn't correct interpreted (most probably as &quot;0x01&quot;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">11th June 2005, 04:11</div></div><div class="posttext">System::Call 'shell32::SHChangeNotify(i, i, i, i) v (0x08000000, 0, 0, 0)'<br />
+<br />
+this alone works, thanks. however, so i can understand this better i have another question. which part of the call addresses the desktop (is it 0x08000000)? can i use the call to redraw other parts, i.e. the start-menu?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DrO</div><div class="date">11th June 2005, 10:37</div></div><div class="posttext">0x08000000 is the SHCNE_ASSOCCHANGED flag (from here (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/shellcc/platform/shell/reference/functions/shchangenotify.asp)) and it's essentially forcing the OS to force update the icon cache and re-check any items which should be shown<br />
+<br />
+-daz</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">11th June 2005, 12:14</div></div><div class="posttext">i was asking, cause i also plan on changing the startmenu to &quot;classic mode&quot; and change some explorer settings (detail view, show file extensions, etc.). i'd make those changes by changing registry-entries. is any of the above mentioned calls able to apply these settings, so the user does not have to reboot?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">11th August 2005, 12:12</div></div><div class="posttext">Originally posted by Yathosho <br />
+System::Call 'shell32::SHChangeNotify(i, i, i, i) v (0x08000000, 0, 0, 0)'<br />
+<br />
+this alone works, thanks. <br />
+<br />
+is there something like this to remove the IE icon from the quick launch too</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">11th August 2005, 13:59</div></div><div class="posttext">The icon should be in the $QUICKLAUNCH folder.<br />
+<br />
+i.e.<br />
+C:\Documents and Settings\[user_account]\Application Data\Microsoft\Internet Explorer\Quick Launch<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">11th August 2005, 17:15</div></div><div class="posttext">the problem is, that the icon gets deleted, but still remains in the quicklaunch until i crash+reload the explorer or reboot windows</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Chilli24</div><div class="date">12th August 2005, 07:33</div></div><div class="posttext">Can anybody help me with a code to refresh the tray area? When I kill a process it's icon is still present in the tray. I want it to disappear by refresh the tray. Is there a code for this ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">12th August 2005, 08:46</div></div><div class="posttext">yeah, how about a plugin to redraw several parts of windows? :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">12th August 2005, 11:55</div></div><div class="posttext">I've searched Google and they all say you have to use Shell_NotifyIcon to delete the tray icon by its handle.<br />
+<br />
+http://msdn.microsoft.com/library/default.asp?url=/library/en-us/shellcc/platform/shell/reference/functions/shell_notifyicon.asp<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">9th September 2005, 00:20</div></div><div class="posttext">sorry for the late response, forgot about this since my trip to london.<br />
+<br />
+i was speaking of the quicklaunch, not the tray. this (http://forums.winamp.com/showthread.php?postid=1750085#post1750085) summed up pretty well what i was looking for :p</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

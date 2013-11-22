@@ -1,0 +1,194 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Controling hacked dialog buttons?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Controling hacked dialog buttons? NSIS Discussion" />
+	
+	<title> Controling hacked dialog buttons? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Controling hacked dialog buttons?</div>
+<hr />
+<div class="pda"><a href="t-216400.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=216400">Controling hacked dialog buttons?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Alasdair</div><div class="date">19th May 2005, 00:08</div></div><div class="posttext">Hello,<br />
+<br />
+I needed an extra button at the bottom of the setup screen (along with next, back, cancel) and so I used the resource hacker to add this button into the UI executable (is there a better way?) I gave the button ID 8888, which I assume is not being used.<br />
+<br />
+This button now appears nicely on all pages of the setup program, but I need to do the following, and don't know how:<br />
+<br />
+1. I only want the button to appear on certain pages of the setup program. Is there a way to make it invisible on the other pages?<br />
+<br />
+2. I want the button to perform certain actions when pressed, and slightly different actions for different pages that it appears on. How to I go about implementing this?<br />
+<br />
+Please help me out if you can. Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">19th May 2005, 04:48</div></div><div class="posttext">1 - Call ShowWindow in the show func for each page<br />
+2 - You will have to write a plugin that subclasses the main window</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Alasdair</div><div class="date">19th May 2005, 11:33</div></div><div class="posttext">Thanks, but could you please be a bit more specific? I'm new to NSIS and haven't done enough programming in regards to dialogs to know how they work.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Aaron's rod</div><div class="date">19th May 2005, 12:19</div></div><div class="posttext">I don't think it's possible to do what you are trying without using InstallOptions plugin. You need it at lest to get the button actions.<br />
+<br />
+However I am using &quot;hacked&quot; checkbox in my Self-Extractor thingy so that way I don't have to use InstallOptions plugin.<br />
+<br />
+Use this code to hide and show the button.<br />
+!include WinMessages.nsh<br />
+<br />
+Page directory &quot;&quot; page_hide<br />
+Page instfiles &quot;&quot; page_show<br />
+<br />
+Function page_function<br />
+ Push $R0<br />
+ Push $R1<br />
+<br />
+  FindWindow $R0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+  GetDlgItem $R1 $R0 8888<br />
+  ShowWindow $R1 ${SW_HIDE}<br />
+<br />
+ Pop $R1<br />
+ Pop $R0<br />
+FunctionEnd<br />
+<br />
+Function page_show<br />
+...<br />
+just as the page_hide but use ${SW_SHOW}<br />
+<br />
+<br />
+<br />
+I am using this code to get the checkbox status.Page directory &quot;&quot; &quot;&quot; get_checkbs<br />
+<br />
+Function get_checkbs<br />
+ Push $R0<br />
+ Push $R1<br />
+<br />
+  FindWindow $R0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+  GetDlgItem $R1 $R0 1080<br />
+  SendMessage $R1 0x00F0 0 0 $checkb_val<br />
+<br />
+ Pop $R1<br />
+ Pop $R0<br />
+FunctionEnd<br />
+I am quite sure that this don't help you thou.<br />
+Because you can only use it to check control status between pages.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Aaron's rod</div><div class="date">19th May 2005, 16:49</div></div><div class="posttext">Apparently that hide show script don't work if your button is in dialog 105, then you have to use function like this.<br />
+<br />
+!include WinMessages.nsh<br />
+<br />
+Page directory &quot;&quot; page_hide<br />
+<br />
+Function page_hide<br />
+ Push $R0<br />
+<br />
+  GetDlgItem $R0 $HWNDPARENT 8888<br />
+  ShowWindow $R0 ${SW_HIDE}<br />
+<br />
+ Pop $R0<br />
+FunctionEndThose previous functions only effect in current page's conrols.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Alasdair</div><div class="date">19th May 2005, 17:30</div></div><div class="posttext">Okay, I've got the button displaying and hiding on the correct pages. But I'm using UltraModern UI (which is just an extension to Modern UI) and when I set pages using:<br />
+Page directory &quot;&quot; decline_hide<br />
+...the background of the page is grey instead of blue.<br />
+<br />
+I tried the following but it gives an error:<br />
+Page MUI_PAGE_DIRECTORY &quot;&quot; decline_hide<br />
+<br />
+Is there a different way of doing it on Modern/Ultramodern UI?<br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">19th May 2005, 18:37</div></div><div class="posttext">!define MUI_PAGE_CUSTOMFUNCTION_SHOW showFunc<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">19th May 2005, 20:20</div></div><div class="posttext">UltraModern UI? Never heard of this. Do you mean Experience UI which has blue pages?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Alasdair</div><div class="date">19th May 2005, 22:14</div></div><div class="posttext">No, UltraModern UI. It looks very nice:<br />
+http://guerin45.free.fr/UltraModernUI/<br />
+<br />
+Thanks Afrow UK!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Alasdair</div><div class="date">19th May 2005, 22:43</div></div><div class="posttext">Okay, I've got the buttons appearing on the right pages. Thanks with that!<br />
+<br />
+I'm still stuck as to how to make the button do stuff when it's clicked. I want it to be able to do one of the following on different pages of the setup program:<br />
+1. Display a message box.<br />
+2. Set a variable and go to the next page.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">20th May 2005, 04:22</div></div><div class="posttext">Did someone publish this UI here when it was released? I sincerely don't remember anything about this.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">20th May 2005, 11:42</div></div><div class="posttext">Says it's made by SuperPat in docs.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">20th May 2005, 12:06</div></div><div class="posttext">Originally posted by deguix <br />
+Did someone publish this UI here when it was released? I sincerely don't remember anything about this. It was pusblished in the Winamp FR forums (http://www.winampfr.com/forum/viewtopic.php?t=8102).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Alasdair</div><div class="date">20th May 2005, 14:25</div></div><div class="posttext">So does anyone know the answer to this:<br />
+<br />
+---&gt;&gt;<br />
+Okay, I've got the buttons appearing on the right pages. Thanks with that!<br />
+<br />
+I'm still stuck as to how to make the button do stuff when it's clicked. I want it to be able to do one of the following on different pages of the setup program:<br />
+1. Display a message box.<br />
+2. Set a variable and go to the next page.<br />
+&lt;&lt;---<br />
+<br />
+Help me out if you can please. This is very important to me an I really have no idea!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">20th May 2005, 15:16</div></div><div class="posttext">As Anders has already pointed out you have to write a plugin to do that. You have to assign a button to actually do something. This isn't possible with NSIS code on its own.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Alasdair</div><div class="date">20th May 2005, 17:28</div></div><div class="posttext">Yeah, but I didn't really understand what he said. I'll break it down:<br />
+<br />
+&quot;You will have to write&quot; &lt;- Understand this bit.<br />
+&quot;a plugin&quot; &lt;- What kind of plugin? A DLL?<br />
+&quot;that&quot; &lt;- Okay with this bit.<br />
+&quot;subclasses&quot; &lt;- How do you mean? Like working with the HWND or something?<br />
+&quot;the main window&quot; &lt;- This bit's fine.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">wanderer</div><div class="date">20th May 2005, 17:47</div></div><div class="posttext">looks like this one does something like that process... http://forums.winamp.com/showthread.php?postid=1638685#post1638685</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Alasdair</div><div class="date">20th May 2005, 22:36</div></div><div class="posttext">Ahhhh, I need lots of this kind of thing and it seems very complicated. It looks like NSIS can't be used to make my complicated setup programs, which is a pity because I thought it was looking good.<br />
+<br />
+I know you people are all NSIS fans, but are there any other good scripted installer creators (free or commercial) that allow more flexibility in terms of UI? (And not Inno Setup because I just left that as it's not powerful enough.)<br />
+<br />
+And thank you for all your help!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">20th May 2005, 23:19</div></div><div class="posttext">I don't think so.<br />
+And trust me, NSIS is extremely flexible...<br />
+http://hmd.hostileintent.org/mapupdater<br />
+Software for updating computer games written in NSIS.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

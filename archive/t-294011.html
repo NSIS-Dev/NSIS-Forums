@@ -1,0 +1,97 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Read / Output Entire File, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Read / Output Entire File NSIS Discussion" />
+	
+	<title> Read / Output Entire File [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Read / Output Entire File</div>
+<hr />
+<div class="pda"><a href="t-294011.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=294011">Read / Output Entire File</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">parasoul</div><div class="date">5th July 2008, 11:46</div></div><div class="posttext">Section<br />
+FileOpen $0 &quot;$TEMP\test.txt&quot; &quot;r&quot;<br />
+FileRead $0 $1<br />
+loop:<br />
+      StrCmp $1 &quot;$\r&quot; loop<br />
+      StrCmp $1 &quot;$\n&quot; loop<br />
+FileClose $0<br />
+MessageBox MB_OK &quot;Contents of that file : $1&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+is what I have -- but it's only outputting up to where there's a new line<br />
+<br />
+is there a way to make it read the entire file regardless of returns/newlines?<br />
+<br />
+any help would be great, thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">5th July 2008, 15:31</div></div><div class="posttext">Try it like this:<br />
+<br />
+Name &quot;FileReadTest&quot;<br />
+OutFile &quot;FileReadTest.exe&quot;<br />
+<br />
+ShowInstDetails show<br />
+<br />
+Section<br />
+  ClearErrors<br />
+  FileOpen $0 &quot;$INSTDIR\Foobar.dat&quot; r ; open file<br />
+  IfErrors done<br />
+<br />
+  StrCpy $3 0 ; initialize counter<br />
+<br />
+  Loop:<br />
+  ClearErrors<br />
+  FileReadByte $0 $1 ; read next byte<br />
+  IfErrors eof ; end of file ?<br />
+  IntFmt $2 &quot;0x%02X&quot; $1<br />
+  IntFmt $4 &quot;0x%08X&quot; $3<br />
+  DetailPrint &quot;$4 -&gt; $2&quot; ; print: &lt;Address&gt; -&gt; &lt;Byte&gt;<br />
+  IntOp $3 $3 + 1 ; increase counter<br />
+  Goto Loop<br />
+<br />
+  eof:<br />
+  FileClose $0 ; close file<br />
+<br />
+  done:<br />
+SectionEnd<br />
+<br />
+This code will read the entire file byte-by-byte.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">5th July 2008, 17:12</div></div><div class="posttext">parasoul,<br />
+Your original function would never work.  It's always going to just read one line.  The loop is bad too because if you ever just got a single carriage return or a single line feed, you'd be caught in an endless loop.  (What's the purpose?)<br />
+<br />
+Assuming that the file is text and not binary, the code below should also work.  However, keep in mind that the file can only be 1024 characters (or 8192 if you use the NSIS  long strings (http://nsis.sourceforge.net/Special_Builds) version.)<br />
+<br />
+!include LogicLib.nsh<br />
+...<br />
+<br />
+Section<br />
+   ClearErrors<br />
+   FileOpen $0 &quot;$TEMP\text.txt&quot; r<br />
+   ${Do}<br />
+      FileRead $0 $1 <br />
+      ${If} ${Errors}<br />
+         ${ExitDo}<br />
+      ${EndIf}<br />
+      StrCpy $2 &quot;$2$1&quot;<br />
+   ${Loop}<br />
+   FileClose $0<br />
+   ; contents should now be in $2:<br />
+   MessageBox MB_OK &quot;Contents: $\r$2&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

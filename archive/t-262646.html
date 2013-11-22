@@ -1,0 +1,382 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problem modifying a string in a .cfg file, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problem modifying a string in a .cfg file NSIS Discussion" />
+	
+	<title> Problem modifying a string in a .cfg file [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problem modifying a string in a .cfg file</div>
+<hr />
+<div class="pda"><a href="t-262646.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=262646">Problem modifying a string in a .cfg file</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">EndeavourCmdr</div><div class="date">29th December 2006, 03:45</div></div><div class="posttext">I seem to have run into a problem during the creation of my installer. One of the steps I need performed, involves the manipulation of a string of text within a .cfg file. However, the config file is not devided into sections, it is all one big section, without a section header such as <br />
+<br />
+[Main]<br />
+<br />
+Instead, the config file flows sort of like:<br />
+<br />
+HazeColor = 1.2 1.3 .56<br />
+LightLevel = 2.0 1.3 0.5<br />
+AtmAlt = 64e3<br />
+<br />
+etc, etc.<br />
+<br />
+I need to have the installer modify one of those lines, ex., HazeColor = 1.0 1.0 1.0<br />
+<br />
+Without there being any Sections defined in brackets, how can I get the value in that string to be changed by the installer?<br />
+<br />
+I've tried to research the forums on this, and I am currently also in the IRC channel in case anyone in there can give some insight, but so far, I havent been able to find a problem similar to mine, and I will admit, I am brand new at scripting, and have maybe a total of 10 hours in Visual C++, so Im most definitely not skilled in this kind of thing, and would need a pretty decent explaination. Any help is appreciated greatly.<br />
+<br />
+Thanks,<br />
+<br />
+EndeavourCmdr.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">29th December 2006, 04:23</div></div><div class="posttext">Re-format the file.cfg to a new structured file.cfg and you'll be able to modify any string.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">EndeavourCmdr</div><div class="date">29th December 2006, 04:50</div></div><div class="posttext">Unfortunately, thats not an option, beceause the program I am having installed is simply a modification to an existing program, of which I do not have any access or rights to, other then just being an addon developer for it. Thus, the config file structure has to remain the same, and it is not even feasible to have the structure changed. Every single config however does have the same line of text in it which is:<br />
+<br />
+AtmHazeColor = valuehere<br />
+<br />
+Is it possible to have the script just find that string without a section defined and replace the value?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">29th December 2006, 04:52</div></div><div class="posttext">Hold on a second I'll be back</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">29th December 2006, 05:12</div></div><div class="posttext">!include TextFunc.nsh<br />
+!insertmacro TrimNewLines<br />
+<br />
+!define STR_TO_FIND &quot;HazeColor = 1.2 1.3 .56&quot;<br />
+!define STR_TO_REPLACE &quot;HazeColor = 1.0 1.0 1.0&quot;<br />
+<br />
+<br />
+Section<br />
+#......<br />
+FileOpen $0 &quot;path_to_file\file.cfg&quot; r ; file to read<br />
+GetTempFileName '$R2'<br />
+FileOpen $R2 w ; file to write<br />
+ClearErrors<br />
+<br />
+start:<br />
+FileRead $0 $1 ${NSIS_MAX_STRLEN}<br />
+IfErrors end<br />
+${TrimNewLines} '$1' '$1'<br />
+StrCmp '$1' '${STR_TO_FIND}' 0 next<br />
+StrCpy '$1' '${STR_TO_REPLACE}'<br />
+FileWrite $R2 '$\r$\n$\r$\n'<br />
+FileWrite $R2 '$1'<br />
+<br />
+next:<br />
+FileWrite $R2 '$\r$\n$\r$\n'<br />
+FileWrite $R2 '$1'<br />
+goto start<br />
+<br />
+end:<br />
+FileClose $0<br />
+FileClose $R2<br />
+Rename &quot;path_to_file\file.cfg&quot; &quot;path_to_file\file.cfg.bak&quot;<br />
+Rename $R2 &quot;path_to_file\file.cfg&quot;<br />
+#......<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">EndeavourCmdr</div><div class="date">29th December 2006, 05:18</div></div><div class="posttext">Well thanks! That is alot more complex then I expected. Are there any good tutorials out there on how do learn some of this stuff, other then the manual, which seems to be just a reference?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">EndeavourCmdr</div><div class="date">29th December 2006, 05:25</div></div><div class="posttext">Hmm, actually on a second look, that code wouldnt quite work, because everyone needs to have<br />
+<br />
+AtmHazeColor = 1.0 1.0 1.0<br />
+<br />
+after the install.<br />
+<br />
+Before the install, the values may be different on every users machine.<br />
+<br />
+So user 1 might have  <br />
+<br />
+AtmHazeColor = 0.535 0.76 1.0<br />
+<br />
+User 2 might have<br />
+<br />
+AtmHazeColor = 0.7 0.85 1.0<br />
+<br />
+etc, etc.<br />
+<br />
+But in the end, they all need to read, <br />
+<br />
+AtmHazeColor = 1.0 1.0 1.0<br />
+<br />
+So, now I am once again where I started Lol.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">29th December 2006, 05:27</div></div><div class="posttext">You may find everything in the forum, just point your search to the required keywords. Also browse to wiki http://nsis.sourceforge.net there are about 1000 articles with functions and code examples, simply, everything is possible within NSIS :-)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">29th December 2006, 05:45</div></div><div class="posttext">!define STR_TO_FIND &quot;HazeColor&quot;<br />
+<br />
+StrLen $2 ${STR_TO_FIND}<br />
+start:<br />
+FileRead $0 $1 ${NSIS_MAX_STRLEN}<br />
+IfErrors end<br />
+${TrimNewLines} '$1' '$1'<br />
+StrCpy '$3' '$1' $2<br />
+StrCmp '$3' '${STR_TO_FIND}' 0 next<br />
+StrCpy '$1' '${STR_TO_REPLACE}'<br />
+FileWrite $R2 '$\r$\n$\r$\n'<br />
+FileWrite $R2 '$1'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">EndeavourCmdr</div><div class="date">29th December 2006, 07:03</div></div><div class="posttext">I dont quite understand. The following is the contents of my script. Where did I mess up?<br />
+<br />
+<br />
+Name &quot;EndeavourCmdr's Environment Enhancement&quot;<br />
+OutFile &quot;EEEo2006.exe&quot;<br />
+InstallDir $PROGRAMFILES<br />
+<br />
+;--------------------------------<br />
+<br />
+Page components<br />
+Page directory<br />
+Page instfiles<br />
+<br />
+;--------------------------------<br />
+<br />
+Section &quot;EEE (required)&quot;<br />
+<br />
+  SectionIn RO<br />
+<br />
+  SetOutPath $INSTDIR\Textures<br />
+  File &quot;Horizon.dds&quot;<br />
+<br />
+  FileOpen $0 $INSTDIR\file.dat a<br />
+  !define STR_TO_FIND &quot;AmtHazeColor&quot;<br />
+<br />
+StrLen $2 ${STR_TO_FIND}<br />
+start:<br />
+FileRead $0 $1 ${NSIS_MAX_STRLEN}<br />
+IfErrors end<br />
+${TrimNewLines} '$1' '$1'<br />
+StrCpy '$3' '$1' $2<br />
+StrCmp '$3' '${STR_TO_FIND}' 0 next<br />
+StrCpy '$1' '${STR_TO_REPLACE}'<br />
+FileWrite $R2 '$\r$\n$\r$\n'<br />
+FileWrite $R2 '$1'<br />
+  <br />
+  FileClose $0<br />
+  <br />
+SectionEnd<br />
+<br />
+<br />
+Sorry to be a bother, but this is very new and confusing, and I am a hand on learner, so I will get the hang of this all by having someone explain it a bit and then doing it myself, but it's something I want to learn.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">29th December 2006, 07:17</div></div><div class="posttext">Replace/add the lines in my upper post with the red lines in the followed post.<br />
+Don't forget on the top of your script the defines and the includes.<br />
+<br />
+Now you should have this:<br />
+<br />
+!define STR_TO_FIND &quot;HazeColor&quot;<br />
+!define STR_TO_REPLACE &quot;HazeColor = 1.0 1.0 1.0&quot;<br />
+<br />
+<br />
+Section<br />
+#......<br />
+FileOpen $0 &quot;path_to_file\file.cfg&quot; r ; file to read<br />
+GetTempFileName '$R2'<br />
+FileOpen $R2 w ; file to write<br />
+ClearErrors<br />
+<br />
+StrLen $2 ${STR_TO_FIND}<br />
+<br />
+start:<br />
+FileRead $0 $1 ${NSIS_MAX_STRLEN}<br />
+IfErrors end<br />
+${TrimNewLines} '$1' '$1'<br />
+StrCpy '$3' '$1' $2<br />
+StrCmp '$3' '${STR_TO_FIND}' 0 next<br />
+StrCpy '$1' '${STR_TO_REPLACE}'<br />
+FileWrite $R2 '$\r$\n$\r$\n'<br />
+FileWrite $R2 '$1'<br />
+<br />
+next:<br />
+FileWrite $R2 '$\r$\n$\r$\n'<br />
+FileWrite $R2 '$1'<br />
+goto start<br />
+<br />
+end:<br />
+FileClose $0<br />
+FileClose $R2<br />
+Rename &quot;path_to_file\file.cfg&quot; &quot;path_to_file\file.cfg.bak&quot;<br />
+Rename $R2 &quot;path_to_file\file.cfg&quot;<br />
+#......<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">29th December 2006, 08:03</div></div><div class="posttext">I'm so sorry...<br />
+I messed things a little :-)<br />
+here is the right one, please doenload and test.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">EndeavourCmdr</div><div class="date">29th December 2006, 08:12</div></div><div class="posttext">Sigh...<br />
+<br />
+I'm trying hard to get this, but here is my script, which you gave me most of.<br />
+<br />
+<br />
+<br />
+Name &quot;EndeavourCmdr's Environment Enhancement&quot;<br />
+OutFile &quot;EEEo2006.exe&quot;<br />
+InstallDir $PROGRAMFILES<br />
+<br />
+!include TextFunc.nsh<br />
+!insertmacro TrimNewLines<br />
+<br />
+!define STR_TO_FIND &quot;AtmHazeColor&quot;<br />
+!define STR_TO_REPLACE &quot;AtmHazeColor = 1.0 1.0 1.0&quot;<br />
+<br />
+;-----------------------------------------------------<br />
+<br />
+Section<br />
+#......<br />
+SetOutPath $INSTDIR\Textures<br />
+File &quot;Horizon.dds&quot;<br />
+<br />
+FileOpen $0 &quot;$INSTDIR\config\earth.cfg&quot; r ; file to read<br />
+GetTempFileName '$R2'<br />
+FileOpen $R2 w ; file to write<br />
+ClearErrors<br />
+<br />
+StrLen $2 $(STR_TO_FIND)<br />
+<br />
+start:<br />
+FileRead $0 $1 ${NSIS_MAX_STRLEN}<br />
+IfErrors end<br />
+${TrimNewLines} '$1' '$1'<br />
+StrCpy '$3' '$1' $2<br />
+StrCmp '$3' '${STR_TO_FIND}' 0 next<br />
+StrCpy '$1' '${STR_TO_REPLACE}'<br />
+FileWrite $R2 '$\r$\n$\r$\n'<br />
+FileWrite $R2 '$1'<br />
+<br />
+next:<br />
+FileWrite $R2 '$\r$\n$\r$\n'<br />
+FileWrite $R2 '$1'<br />
+goto start<br />
+<br />
+end:<br />
+FileClose $0<br />
+FileClose $R2<br />
+Rename &quot;$INSTDIR\config\earth.cfg&quot; &quot;$INSTDIR\config\earth.cfg.bak&quot;<br />
+Rename $R2 &quot;$INSTDIR\config\earth.cfg&quot;<br />
+#......<br />
+SectionEnd<br />
+<br />
+<br />
+<br />
+But after trying to compile that, I get this... <br />
+<br />
+<br />
+MakeNSIS v2.22 - Copyright 1995-2006 Contributors<br />
+See the file COPYING for license details.<br />
+Credits can be found in the Users Manual.<br />
+<br />
+Processing config: <br />
+Processing plugin dlls: &quot;C:\Program Files\NSIS\Plugins\*.dll&quot;<br />
+ - AdvSplash::show<br />
+ - Banner::destroy<br />
+ - Banner::getWindow<br />
+ - Banner::show<br />
+ - BgImage::AddImage<br />
+ - BgImage::AddText<br />
+ - BgImage::Clear<br />
+ - BgImage::Destroy<br />
+ - BgImage::Redraw<br />
+ - BgImage::SetBg<br />
+ - BgImage::SetReturn<br />
+ - BgImage::Sound<br />
+ - Dialer::AttemptConnect<br />
+ - Dialer::AutodialHangup<br />
+ - Dialer::AutodialOnline<br />
+ - Dialer::AutodialUnattended<br />
+ - Dialer::GetConnectedState<br />
+ - InstallOptions::dialog<br />
+ - InstallOptions::initDialog<br />
+ - InstallOptions::show<br />
+ - LangDLL::LangDialog<br />
+ - Math::Script<br />
+ - NSISdl::download<br />
+ - NSISdl::download_quiet<br />
+ - Splash::show<br />
+ - StartMenu::Init<br />
+ - StartMenu::Select<br />
+ - StartMenu::Show<br />
+ - System::Alloc<br />
+ - System::Call<br />
+ - System::Copy<br />
+ - System::Free<br />
+ - System::Get<br />
+ - System::Int64Op<br />
+ - System::Store<br />
+ - TypeLib::GetLibVersion<br />
+ - TypeLib::Register<br />
+ - TypeLib::UnRegister<br />
+ - UserInfo::GetAccountType<br />
+ - UserInfo::GetName<br />
+ - VPatch::vpatchfile<br />
+ - nsExec::Exec<br />
+ - nsExec::ExecToLog<br />
+ - nsExec::ExecToStack<br />
+<br />
+!define: &quot;MUI_INSERT_NSISCONF&quot;=&quot;&quot;<br />
+<br />
+Changing directory to: &quot;C:\Documents and Settings\Adm.EL-081FF12C7FDC\Desktop\Orbiter Environment Installer&quot;<br />
+<br />
+Processing script file: &quot;C:\Documents and Settings\Adm.EL-081FF12C7FDC\Desktop\Orbiter Environment Installer\Copy of In Progress.nsi&quot;<br />
+Name: &quot;EndeavourCmdr's Environment Enhancement&quot;<br />
+OutFile: &quot;EEEo2006.exe&quot;<br />
+InstallDir: &quot;$PROGRAMFILES&quot;<br />
+!include: &quot;C:\Program Files\NSIS\Include\TextFunc.nsh&quot;<br />
+!define: &quot;TEXTFUNC_INCLUDED&quot;=&quot;&quot;<br />
+!include: closed: &quot;C:\Program Files\NSIS\Include\TextFunc.nsh&quot;<br />
+!insertmacro: TrimNewLines<br />
+!insertmacro: end of TrimNewLines<br />
+!define: &quot;STR_TO_FIND&quot;=&quot;AtmHazeColor&quot;<br />
+!define: &quot;STR_TO_REPLACE&quot;=&quot;AtmHazeColor = 1.0 1.0 1.0&quot;<br />
+Section: &quot;&quot;<br />
+SetOutPath: &quot;$INSTDIR\Textures&quot;<br />
+File: &quot;Horizon.dds&quot; [compress] 4890/65664 bytes<br />
+FileOpen: $INSTDIR\config\earth.cfg as r -&gt; $0<br />
+GetTempFileName -&gt; $R2<br />
+FileOpen expects 3 parameters, got 2.<br />
+Usage: FileOpen $(user_var: handle output) filename openmode<br />
+   openmode=r|w|a<br />
+Error in script &quot;C:\Documents and Settings\Adm.EL-081FF12C7FDC\Desktop\Orbiter Environment Installer\Copy of In Progress.nsi&quot; on line 21 -- aborting creation process<br />
+<br />
+<br />
+I cant understand what part is wrong there, but im assuming its the:<br />
+<br />
+ FileOpen $R2 w ; file to write<br />
+<br />
+line, that is missing something?<br />
+<br />
+Thanks btw for all your help so far. It's actually making sence, but I dont understand all those variables yet.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">EndeavourCmdr</div><div class="date">29th December 2006, 08:18</div></div><div class="posttext">Excellent! The file you sent works perfectly. Im going to study it thouroughly and incorporate it into the rest with my new values. Thank you so much.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">29th December 2006, 09:07</div></div><div class="posttext">You're welcome! and sorry for the mess...<br />
+This happens to me often when I try to write code straight in the reply window :-) A full screen editor is always required.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

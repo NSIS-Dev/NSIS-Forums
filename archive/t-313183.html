@@ -1,0 +1,75 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" behavior when File command encounters an error, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  behavior when File command encounters an error NSIS Discussion" />
+	
+	<title> behavior when File command encounters an error [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  behavior when File command encounters an error</div>
+<hr />
+<div class="pda"><a href="t-313183.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=313183">behavior when File command encounters an error</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">dbyron</div><div class="date">30th September 2009, 21:32</div></div><div class="posttext">Is there a way to suppress the dialog box that NSIS presents if there's an error in a File command (the one that says &quot;error opening file for writing...&quot;)?<br />
+<br />
+Clearly running in silent mode suppresses the dialog box but I'm looking for something less drastic than that.<br />
+<br />
+The reason I'd like to suppress the dialog box is that if the user chooses Cancel (when AllowSkipFiles is off) or Abort (when AllowSkipFiles is on), I don't get control back in my script.  The installer just exits.  I'm trying to find some way to learn that File errors happened in my script.<br />
+<br />
+I suppose another alternative would be to tell NSIS that I don't want to allow the user to cancel in case of File errors.  Then it's my responsibility to handle them in the script.<br />
+<br />
+Thanks for your help.<br />
+<br />
+-DB</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">1st October 2009, 01:10</div></div><div class="posttext">This macro will attempt to replace the file. If the file is locked, will replace it on reboot.  I don't have a locked file at the moment so I haven't tested it.<br />
+<br />
+!include &quot;FileFunc.nsh&quot;<br />
+!include &quot;LogicLib.nsh&quot;<br />
+<br />
+!define FileTry `!insertmacro _FileTry`<br />
+!macro _FileTry _FilePath<br />
+	ClearErrors<br />
+	SetOverwrite try<br />
+	File `${_FilePath}`<br />
+	${If} ${Errors}<br />
+		Push $0<br />
+		Push $1<br />
+		GetTempFileName $0<br />
+		File /oname=$0 `${_FilePath}`<br />
+		${GetFileName} `${_FilePath}` $1<br />
+		Rename /REBOOTOK `$0` `$OUTDIR\$1`<br />
+		Pop $1<br />
+		Pop $0<br />
+		SetRebootFlag true<br />
+	${EndIf}<br />
+	SetOverwrite lastused<br />
+!macroend<br />
+<br />
+OutFile FileTryDemo.exe<br />
+<br />
+Section Main<br />
+	InitPluginsDir<br />
+	SetOutPath $PLUGINSDIR<br />
+	${FileTry} `LockedFile.exe`<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dbyron</div><div class="date">1st October 2009, 22:28</div></div><div class="posttext">Thanks for the code.  It appears the most important part for me is:<br />
+<br />
+SetOverwrite try<br />
+<br />
+That seems to turn off the dialog box in case of file extraction errors.  On reading the docs again it seems more obvious but I definitely needed a pointer.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

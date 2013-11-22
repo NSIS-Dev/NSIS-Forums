@@ -1,0 +1,157 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Customize language selection dialog, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Customize language selection dialog NSIS Discussion" />
+	
+	<title> Customize language selection dialog [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Customize language selection dialog</div>
+<hr />
+<div class="pda"><a href="t-318996.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=318996">Customize language selection dialog</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jdt2oo7</div><div class="date">7th May 2010, 01:14</div></div><div class="posttext">Hello all,<br />
+<br />
+1. Is there a way to use the bitmap image of the installation wizard in the language selection dialog also?<br />
+2. For #1 to work, we'll need increase the size of the language selection dialog, can we do that?<br />
+<br />
+Only things that we can customized from reading the readme file are:<br />
+- The window title of the language selection dialog.<br />
+- The text to display on the language selection dialog.<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">7th May 2010, 09:28</div></div><div class="posttext">You need to modify the LangDLL plug-in.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CrushBug</div><div class="date">10th May 2010, 22:36</div></div><div class="posttext">Or write your own, which is what we are having to do.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">11th May 2010, 01:21</div></div><div class="posttext">You could also create your own dialog using existing constructs. I think this (from Afrow UK) is one of the more sensible solutions:<br />
+The easiest solution would be to move your custom dialog to another NSIS executable and run that from .onInit. You can store the chosen language in the registry temporarily or pass it as the exit code (error level): http://nsis.sourceforge.net/Docs/AppendixD.html#D.1.<br />
+http://forums.winamp.com/showthread.php?t=318551</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CrushBug</div><div class="date">11th May 2010, 17:34</div></div><div class="posttext">While that is true, you would not be able to get a full, localized multi-code page selection. I don't think it would be much better than the existing one.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">11th May 2010, 18:02</div></div><div class="posttext">you would not be able to get a full, localized multi-code page selection.<br />
+Perhaps I missed something, but as far as I know, the only thing the LangDLL plugin does is to take the stack of UI text data, language IDs and strings, build a small UI from that with the UI text data and a dropdown, and return the chosen language when done.<br />
+<br />
+All of the actual language handling itself is unrelated to that part - and that part can certainly be set up using e.g. nsDialogs.. at which point you can add a bitmap or any other control.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">12th May 2010, 18:19</div></div><div class="posttext">Quoting the manual:<br />
+<br />
+4.10.1 Language Selection<br />
+When the installer starts up it goes through these steps to select the interface language:<br />
+<br />
+1. Get user's default Windows UI language<br />
+2. Find a perfect match for the language<br />
+3. If there is no perfect match, find a primary language match<br />
+4. If there is no match, use the first language defined in the script (make sure your first language is a common one like English)<br />
+5. If the language variable $LANGUAGE has changed during .onInit, NSIS goes through steps 2 to 4 again.<br />
+<br />
+In my experience:<br />
+<br />
+1. The codepage is determined by the system language<br />
+2. You include language files<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;Italian&quot; ; default<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+The codepage is redefined to Italian on an Italian OS, English on an English OS, and Italian on a German OS. Italian, appearing first, is the default.<br />
+<br />
+3a. Insert the LangDLL macro in .onInit<br />
+<br />
+!insertmacro MUI_LANGDLL_DISPLAY<br />
+<br />
+The language dialog will display.<br />
+<br />
+3b. Alternatively ...<br />
+<br />
+;Language selection dialog<br />
+<br />
+Push &quot;&quot;<br />
+Push ${LANG_Italian}<br />
+Push Italian<br />
+Push ${LANG_ENGLISH}<br />
+Push English<br />
+Push A<br />
+LangDLL::LangDialog &quot;$(MESSAGE_INST_LANG_TITLE)&quot; &quot;$(MESSAGE_INST_LANG_INFO)&quot;<br />
+Pop $LANGUAGE<br />
+StrCmp $LANGUAGE &quot;cancel&quot; 0 +2<br />
+Abort<br />
+<br />
+The language dialog will also display.<br />
+<br />
+4. You only want to display the language dialog if neither English, nor Italian are the Windows language.<br />
+<br />
+${If} $LANGUAGE != 1033 ; English<br />
+${AndIf} $LANGUAGE != 1040 ; Italian<br />
+  !insertmacro MUI_LANGDLL_DISPLAY<br />
+${EndIf}<br />
+<br />
+Will this display the language dialog on a German OS, but not on an Italian or English OS?<br />
+<br />
+It shouldn't. Remember, the installer's codepage was set to 1040, Italian. <br />
+<br />
+The installation obviously can't be in German because the German language file was never inserted.<br />
+<br />
+Is there a known method of displaying the language dialog on the German OS to let the user choose between installing in Italian or English, and skipping the language dialog, if the Windows UI language is Italian or English? In short, to get the system codepage 1031 (for German) before the installer redefines the codepage based on the included languages in the script?<br />
+<br />
+---------<br />
+Note, I'm about to go trawling (on the forum/in the documentation) for an environment variable or system call that returns the user's system language. It would be much better, if the installer retained the original codepage, instead of redefining it.<br />
+---------</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CrushBug</div><div class="date">12th May 2010, 18:53</div></div><div class="posttext">Perhaps I missed something, but as far as I know, the only thing the LangDLL plugin does is to take the stack of UI text data, language IDs and strings, build a small UI from that with the UI text data and a dropdown, and return the chosen language when done.<br />
+<br />
+All of the actual language handling itself is unrelated to that part - and that part can certainly be set up using e.g. nsDialogs.. at which point you can add a bitmap or any other control.<br />
+<br />
+The Lang DLL plugin cannot do this (should be a language select image there):<br />
+<br />
+http://www.scratchpaper.com/home<br />
+<br />
+We need to support English, French, German, Italian, Spanish, Czech, Hungarian, Polish and Russian. Lang select has to take place before GUI init and language isn't set there so we cannot set the text on the Lang DLL to Russian if we are on a Russian OS and see it display properly unless you change your code page for non-Unicode. This is a PITA for testing. What we want is a language select dialog similar to how Steam does its language selection, showing both the name of the language in the current OS language as well as the name of the language in its native language. Our Loc QA constantly ding us for the lack of full loc support in language select. For that, we are going to write our own Language select plug-in.<br />
+<br />
+Everything else you say is completely correct and is not a problem that we are having.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">12th May 2010, 21:37</div></div><div class="posttext">What we want is a language select dialog similar to how Steam does its language selection, showing both the name of the language in the current OS language as well as the name of the language in its native language.<br />
+Well that's what I'm saying.. you should be able to do that using nsDialogs + the unicode build of NSIS of course, created as a separate installer executable, run with execwait from .onINit, and returning the value needed to select the language in .onInit.<br />
+<br />
+A plugin may be easier, of course, but I do think it can be done without :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CrushBug</div><div class="date">12th May 2010, 21:55</div></div><div class="posttext">Well that's what I'm saying.. you should be able to do that using nsDialogs + the unicode build of NSIS of course...<br />
+<br />
+We aren't allowed to use the Unicode build which is why we have to do it ourselves via a plug-in.<br />
+<br />
+It is the struggle that we have where we are limited in what we can and can not do with NSIS due to corporate regulations. NSIS is 90% of what we need with the power and flexibility to cover another 5-8% through our own plug-ins and funky scripting. The rest we just tell them we cannot do or conform to the rules. There are just a few things, that if changed in NSIS, would make it perfect for us. But we love what we have and are much happier with NSIS than our past battles with InstallShield and the like.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">12th May 2010, 22:32</div></div><div class="posttext">We aren't allowed to use the Unicode build which is why we have to do it ourselves via a plug-in.<br />
+Ahhhhh... gotcha :)  Yes, that would complicate matters vastly ;)<br />
+<br />
+Good luck with the plugin :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">12th May 2010, 23:12</div></div><div class="posttext">I would have used the existing LangDLL plug-in as a base (assuming you haven't already) or otherwise writen a new plug-in (as you are doing) or even just a standard Windows executable (a bit quicker to produce).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Move control according to DPI, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Move control according to DPI NSIS Discussion" />
+	
+	<title> Move control according to DPI [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Move control according to DPI</div>
+<hr />
+<div class="pda"><a href="t-306890.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=306890">Move control according to DPI</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">grundic</div><div class="date">30th May 2009, 10:02</div></div><div class="posttext">Hello!<br />
+I'm developing nsis setup with nsDialogs custom pages. I've figured out, that when i use units, not pixels, the control's position is OK on different DPI. <br />
+But I've encounter a different problem: I need to move BrandingText. Right now I do it this way:<br />
+<br />
+Function setBrandTextPos<br />
+   GetDlgItem $0 $HWNDPARENT 1028<br />
+   System::Call &quot;User32::SetWindowPos(i, i, i, i, i, i, i) b ($0, 0, 25, 307, 510, 230, ${SWP_NOZORDER}|${SWP_NOMOVE})&quot;<br />
+   GetDlgItem $0 $HWNDPARENT 1256<br />
+   System::Call &quot;User32::SetWindowPos(i, i, i, i, i, i, i) b ($0, 0, 25, 307, 510, 230, ${SWP_NOZORDER}|${SWP_NOMOVE})&quot;<br />
+<br />
+   GetDlgItem $0 $HWNDPARENT 1035<br />
+   System::Call &quot;User32::BringWindowToTop(i) b ($0)&quot; <br />
+FunctionEnd<br />
+ <br />
+<br />
+That is - via System::Call &quot;User32::SetWindowPos. But I don't know, how to make it independent to the DPI. <br />
+I read several times h++p://forums.winamp.com/showthread.php?s=&amp;threadid=275299, but I can't figure out the idea. <br />
+<br />
+Can somebody give me a working example?<br />
+Thanks in advance.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">30th May 2009, 11:07</div></div><div class="posttext">Move it using Resource Hacker.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">grundic</div><div class="date">30th May 2009, 13:38</div></div><div class="posttext">I changed modern.exe with ResHacker, but my custom page is the same. What ID should I use in nsDialogs::Create? Currently I'm using 1018.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">30th May 2009, 18:54</div></div><div class="posttext">What has the branding text label got to do with your custom page? The branding text label (1028) is on the outer dialog (105) and therefore applies to the entire install (all pages as they are child dialogs of the outer dialog).<br />
+<br />
+Edit: You should also make a copy of the modern.exe into your install script folder and use it with !define MUI_UI modern_mod.exe. Otherwise when you upgrade NSIS it will be overwritten.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">31st May 2009, 15:18</div></div><div class="posttext">Just to answer the original question a bit more... dialog units are not just dependent on DPI, but also on the font used by the dialog (see: SetFont).  That's why you'll find that if you create a button that is 100x100 dialog units, it's typically not square; the dialog units are defined based on the average width of the font's glyphs horizontally, and the average height of the font's glyphs vertically.<br />
+<br />
+Here's a very dirty way to get the dialog unit &gt; pixels multiplier:<br />
+<br />
+!addplugindir &quot;.&quot;<br />
+!addincludedir &quot;.&quot;<br />
+<br />
+!include &quot;nsDialogs.nsh&quot;<br />
+!include &quot;winmessages.nsh&quot;<br />
+!include &quot;logiclib.nsh&quot;<br />
+!include &quot;MUI2.nsh&quot;<br />
+<br />
+!include &quot;LoadRTF.nsh&quot;<br />
+<br />
+OutFile &quot;test.exe&quot;<br />
+SetFont &quot;Times New Roman&quot; 12<br />
+<br />
+var dialog<br />
+var hwnd<br />
+var null<br />
+<br />
+Page Custom CustomPage<br />
+<br />
+<br />
+Function CustomPage<br />
+	nsDialogs::Create 1018<br />
+		Pop $dialog<br />
+<br />
+	; Define some sizes (in dialog units, but don't add the 'u' here!)<br />
+	!define width 100<br />
+	!define height 100<br />
+<br />
+	; Create a button with the dialog units.<br />
+	; This could be moved off-screen or<br />
+	; be invoked but never displayed on installer startup, etc.<br />
+	${NSD_CreateButton} 0 0 ${width}u ${height}u &quot;A&quot;<br />
+	    Pop $hwnd<br />
+<br />
+	System::Call &quot;*(i, i, i, i) i .r1&quot;<br />
+	System::Call &quot;User32::GetWindowRect(i $hwnd, i r1) i .r2&quot;<br />
+	System::Call &quot;*$1(i .r2, i.r3, i.r4, i.r5)&quot;<br />
+	System::Free $1<br />
+<br />
+	IntOp $2 $4 - $2 ; $2 now contains the width of $hwnd<br />
+	IntOp $3 $5 - $3 ; $3 now contains the height of $hwnd<br />
+<br />
+	Math::Script &quot;r0 = $2 / ${width}.0&quot; ; Need float?<br />
+	Math::Script &quot;r1 = $3 / ${height}.0&quot; ; Need float!<br />
+<br />
+	MessageBox MB_OK &quot;Dialog units: ${width}u Ã— ${height}u$\r$\nPixels: $2px Ã— $3px$\r$\nMultiplier: $0 Ã— $1&quot;<br />
+<br />
+	; Now let's create another button next to it that should<br />
+	; match (1 pixel error margin) the first.<br />
+	${NSD_CreateButton} ${width}u 0 $2 $3 &quot;B&quot;<br />
+	    Pop $null<br />
+<br />
+	nsDialogs::Show<br />
+FunctionEnd<br />
+<br />
+Section<br />
+SectionEnd<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+<br />
+Edit: The more appropriate methods are explained at Microsoft here:<br />
+http://support.microsoft.com/kb/145994</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">grundic</div><div class="date">1st June 2009, 12:02</div></div><div class="posttext">Thanks a lot for your answers! Gona test it now.<br />
+By the way, I've found, that when I use <br />
+!define MUI_HEADERIMAGE then branding text position is always left aligned (after I resourceHacked it). If I remove this define, than everything is Ok.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

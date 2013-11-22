@@ -1,0 +1,100 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" MGSBOX async, ExecDos::exec running after installer closes and registry comparison., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  MGSBOX async, ExecDos::exec running after installer closes and registry comparison. NSIS Discussion" />
+	
+	<title> MGSBOX async, ExecDos::exec running after installer closes and registry comparison. [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  MGSBOX async, ExecDos::exec running after installer closes and registry comparison.</div>
+<hr />
+<div class="pda"><a href="t-336864.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=336864">MGSBOX async, ExecDos::exec running after installer closes and registry comparison.</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">rick.m</div><div class="date">1st November 2011, 20:23</div></div><div class="posttext">Hi NSIS experts,<br />
+<br />
+I'm playing with NSIS installer during the last 2 weeks and it's awesome, congratulations! :)<br />
+<br />
+I have 3 questions and I can't find the answer myself, neither reading google and documentation, so I'm asking your help.<br />
+<br />
+My installer is an application that will be deployed silent to our workstations of our company via Windows Netlogon.<br />
+<br />
+1) My installer is silent as I told, however, I want to give a brief message to our users that the installation is running just to make them aware. I'm using MSGBOX, and it works, the problem is that I noted that if the user do not click on the &quot;OK&quot; button it never continue the installation and it's a problem, in special because I'm sure that I few users will be switching between applications and this MSGBOX will be minimized and they will not see it and at the end of the day they will turn off the computer and the installation will not be properly completed. There is a way to do a MSGBOX asynchronous ? Or another alternative?<br />
+<br />
+2) At the end of my installer I want to delete all temporary files, including my all installer (because I have confidential data inside), I created a .bat file to delete everything and it works fine when I call from cmd.exe, but not from NSIS installer. I'm using ExecDOS::exec and I tried with /ASYNC and NOUNLOAD, but both fails, I mean, they work, but they are not able to delete my installer because it's in-use. There is a way to execute a command (bat file) in silent mode and exit from the installer but keep the bat file working? Or any other alternative solution to accomplish this goal?<br />
+<br />
+3) I need to do a registry comparison, if value equal x86 I have to execute command A, B and C, if equal to x64 I have to execute command D, E and F and at the end independent of this registry values I have to execute command G and H. I have the following code:<br />
+<br />
+ ReadRegStr $1 HKLM &quot;Software\Microsoft\Office\14.0\Outlook&quot; &quot;Bitness&quot;<br />
+          StrCmp $1 &quot;x86&quot; 86Machine<br />
+          Goto Independent<br />
+          <br />
+          ReadRegStr $3 HKLM &quot;Software\Microsoft\Office\14.0\Outlook&quot; &quot;Bitness&quot;<br />
+          StrCmp $3 &quot;x64&quot; 64Machine<br />
+          Goto Independent<br />
+          <br />
+          86Machine:<br />
+          Command A<br />
+          Command B<br />
+          Command C<br />
+          <br />
+          64Mchine:<br />
+          Command D<br />
+          Command E<br />
+          Command F<br />
+<br />
+          Independent:<br />
+          Command G<br />
+          Command H<br />
+<br />
+However it always execute all routines (86Machine, 64Machine and Independent). Can you please help me to fix it?<br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">2nd November 2011, 06:38</div></div><div class="posttext">1) Asynchronous MSG is wrong idea, MessageBoxes are used for controlling flow of program, ofter they are used for user decision.<br />
+a) simply do not show this MSG<br />
+b) create modeless window which will inform user that installer is running - but when installer finishes window will be closed.<br />
+<br />
+2) Create another (silent) installer - called setup2.exe<br />
+In your setup.exe call [at the end] setup2.exe which will simply wait several seconds {while setup.exe exits} and then setup2.exe will delete setup.exe and any other files.<br />
+<br />
+3) Flow of your code is wrong, use another GoTo after executing commands for each platform.<br />
+<br />
+ReadRegStr $1 HKLM &quot;Software\Microsoft\Office\14.0\Outlook&quot; &quot;Bitness&quot;<br />
+StrCmp $1 &quot;x86&quot; 86Machine<br />
+Goto Independent<br />
+<br />
+ReadRegStr $3 HKLM &quot;Software\Microsoft\Office\14.0\Outlook&quot; &quot;Bitness&quot;<br />
+StrCmp $3 &quot;x64&quot; 64Machine<br />
+Goto Independent<br />
+<br />
+86Machine:<br />
+Command A<br />
+Command B<br />
+Command C<br />
+GoTo ContinueAll ; Without this jump you will fall into 64Mchine and execute Command D ...<br />
+<br />
+64Mchine:<br />
+Command D<br />
+Command E<br />
+Command F<br />
+GoTo ContinueAll ; Without this jump you will fall into Independent and execute Command G ...<br />
+<br />
+Independent:<br />
+Command G<br />
+Command H <br />
+<br />
+ContinueAll:<br />
+; You are here now...</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

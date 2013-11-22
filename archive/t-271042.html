@@ -1,0 +1,200 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" backup file on copy if differ, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  backup file on copy if differ NSIS Discussion" />
+	
+	<title> backup file on copy if differ [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  backup file on copy if differ</div>
+<hr />
+<div class="pda"><a href="t-271042.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=271042">backup file on copy if differ</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Kefir</div><div class="date">12th May 2007, 16:10</div></div><div class="posttext">Hello All,<br />
+<br />
+I want to make a backup copy of file only in case when it is different from installed version and then overwrite it.<br />
+<br />
+Here is a macro I wrote to do this:<br />
+<br />
+!macro CopyFileEx LOCAL_DIR DEST_DIR FILE_NAME<br />
+  SetOverwrite ifdiff<br />
+  DetailPrint &quot;Backup file path ${DEST_DIR}${FILE_NAME}.old&quot;        <br />
+  GetFileTimeLocal &quot;${LOCAL_DIR}${FILE_NAME}&quot; $R0 $R1<br />
+  IfFileExists ${FILE_NAME} 0 +10<br />
+  GetFileTime ${FILE_NAME} $R2 $R3<br />
+  DetailPrint &quot;LOW_LOCAL=$R1 LOW=$R3 HIGH_LOCAL=$R0 HIGH=$R2&quot;  <br />
+  IntCmp $R0 $R2 0 +4 +4<br />
+  DetailPrint &quot;HIGH_LOCAL=$R0 equal HIGH=$R2&quot;    <br />
+  IntCmp $R1 $R3 +5 0 0<br />
+  DetailPrint &quot;LOW_LOCAL=$R1 not equal LOW=$R3&quot;      <br />
+  IfFileExists &quot;${FILE_NAME}.old&quot; 0 +2  <br />
+  Delete &quot;${DEST_DIR}${FILE_NAME}.old&quot;<br />
+  Rename &quot;${FILE_NAME}&quot; &quot;${FILE_NAME}.old&quot; <br />
+  File &quot;${LOCAL_DIR}${FILE_NAME}&quot;  <br />
+  ;nothing changed <br />
+!macroend<br />
+<br />
+!insertmacro CopyFileEx &quot;${_DATA_DIR}\syntax\&quot; &quot;$INSTDIR\data\&quot; &quot;xml_user.xml&quot;<br />
+<br />
+<br />
+but generally it does not work.<br />
+File time is always different (event after reinstall),<br />
+existing .old files are not deleted and rename in this case does not work, File command says skipped even when file time read from GetFileTime and GetFileTimeLocal is different.<br />
+<br />
+For me coding looks correct and I dont know what to check more.<br />
+Maybe some has idea how to make this working or maybe better solutions for backup of files which differ exist?<br />
+<br />
+Thanks a lot for help!<br />
+<br />
+Regards,<br />
+Kefira</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">12th May 2007, 17:52</div></div><div class="posttext">What about this xml file?<br />
+Is it dynamically created at runtime and/or writing/updating it at application usage?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Kefir</div><div class="date">12th May 2007, 18:23</div></div><div class="posttext">No this is normal static file, not dynamically created, which contais configuration for xml highlighting in my editor.<br />
+File is not chnaged during script execution. No file attributes changed also.<br />
+I think result would be the same for any other file.<br />
+<br />
+The installation log can looks like this:<br />
+<br />
+Output folder: C:\Program Files\HippoEdit\data\syntax<br />
+Backup file path C:\Program Files\HippoEdit\data\xml_spec.xml.old<br />
+LOW_LOCAL=1979421442 LOW=1973640192 HIGH_LOCAL=29856398 HIGH=29856398<br />
+HIGH_LOCAL=29856398 equal HIGH=29856398<br />
+LOW_LOCAL=1979421442 not equal LOW=1973640192<br />
+Skipped: xml_spec.xml</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">12th May 2007, 18:34</div></div><div class="posttext">Well, wouldn't be easier to add an entry in the file which identifies its version so reading this entry e.g. in function .onInit would allow you to backup the file if necessary?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Kefir</div><div class="date">12th May 2007, 18:40</div></div><div class="posttext">No. I dont think that this is a solution, because file can be changed by user manually, and he whould not think about increasing of some &quot;version&quot;. Last modified date is most suitable thing, because it changes allways and as I have noticed NSIS would set date/time of installed file as date/time of original.<br />
+The idea is to not overwrite user changes in configuration files and merge them, on first start of updated application, with updated configuration file.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">12th May 2007, 18:57</div></div><div class="posttext">hmm, I think you're using improperly the GetFileTimeLocal instruction, probably you need to run another script which generates a header with those 2 values as defines.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Kefir</div><div class="date">12th May 2007, 23:47</div></div><div class="posttext">And what is correct usage for this function?<br />
+What I have found with it, that GetFileTimeLocal does not accept any variable as file name. It only works when it is inline string or macro with inline string..<br />
+Using of the external tool for generating of time stamp would be rather complicated, because I need to do this for all (more then 30) configuration fles which are installed...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">13th May 2007, 02:24</div></div><div class="posttext">I don't see a problem with the way you use GetFileTimeLocal. It won't allow a variable for the file name or path because it executes strictly during compile time, when the variables don't yet have any values.<br />
+<br />
+Are you installing onto the same type of file system as the setup is built on (NTFS or FAT32 for both)? The file times depend upon the resolution of the file system; it looks like the LOW word differs by about a half second for the two files - close enough that the FS could be the cause.<br />
+<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Kefir</div><div class="date">14th May 2007, 00:14</div></div><div class="posttext">Hello Don,<br />
+<br />
+The installation is executed in the same machine where it is build. From drive D to drive C, both have NTFS, on XP.<br />
+The strange thing you can see in the log:<br />
+<br />
+LOW_LOCAL=1979421442 not equal LOW=1973640192<br />
+Skipped: xml_spec.xml<br />
+<br />
+The File function skipes copying, but time low time is different, and this is when overwrite settings for File is ifdiff.<br />
+<br />
+Regards,<br />
+Kefir</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">14th May 2007, 02:05</div></div><div class="posttext">Someone familiar with the NSIS source might be a better person  to provide this answer, but it looks like NSIS expects the file time to have no better than 2 seconds resolution, and any difference less than that is considered to be matching times. Your file times differ by 0.58 seconds, so the script thinks they match and it skips the extraction of the new one.<br />
+<br />
+The GetFileTime / GetFileTimeLocal commands give you the Windows FILETIME data type, the number of seconds since 1/1/1601, expressed in units of 100 nanoseconds. The low word only goes up to (2^32 / 10^7 seconds, about 4 minutes); put a decimal point in the value with 7 digits to the right of it: 1979421442 -&gt; 197.9421442. Since both the target and the build file times' low words start 197..., the difference is less than one second.<br />
+<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">14th May 2007, 18:27</div></div><div class="posttext">Someone familiar with the NSIS source might be a better person to provide this answer, but it looks like NSIS expects the file time to have no better than 2 seconds resolution, and any difference less than that is considered to be matching times. Your file times differ by 0.58 seconds, so the script thinks they match and it skips the extraction of the new one.Indeed. That's done to avoid issues between FAT and NTFS, because FAT uses a 2 seconds resolution.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Kefir</div><div class="date">15th May 2007, 22:23</div></div><div class="posttext">Hello guys,<br />
+<br />
+thanks a lot for help! This description helps to make working solution. I have corrected the script to skip changes if time difference less then 3 seconds (to be safe ;) ). I submit it here, maybe would be helpful to somebody.<br />
+<br />
+<br />
+!macro CopyFileEx LOCAL_DIR FILE_NAME<br />
+  SetOverwrite ifdiff<br />
+  IfFileExists ${FILE_NAME} 0 +11<br />
+  	GetFileTimeLocal &quot;${LOCAL_DIR}${FILE_NAME}&quot; $R0 $R1<br />
+    GetFileTime ${FILE_NAME} $R2 $R3<br />
+    IntCmp $R0 $R2 0 +7 +7<br />
+      	IntOp $R1 $R1 / 10000000<br />
+        IntOp $R3 $R3 / 10000000<br />
+        IntOp $R5 $R1 - $R3<br />
+        IntCmp $R5 0 +2 0 +2<br />
+			IntOp $R5 $R5 * -1<br />
+        IntCmp $R5 3 +2 +2 0<br />
+    Rename &quot;${FILE_NAME}&quot; &quot;${FILE_NAME}.old&quot;<br />
+  File &quot;${LOCAL_DIR}${FILE_NAME}&quot;<br />
+!macroend<br />
+ <br />
+<br />
+can be used like this:<br />
+<br />
+!insertmacro CopyFileEx &quot;${FILE_DIR}&quot; &quot;${FILE_NAME}&quot;<br />
+<br />
+<br />
+Best regards,<br />
+Kefir.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">NPenteado</div><div class="date">19th June 2007, 18:59</div></div><div class="posttext">Is there any way to work around the 2 second resolution of file modified dates?  I'm creating a CD installer for a Java WebStart application, which compares the file dates with ones on a web server to see if an update is required.  The problem I'm having is that the installer is setting the file date on one of the files to Friday, June 15, 2007, 11:22:04 PM but the original file date was Friday, June 15, 2007, 11:22:05 PM... this causes the auto update feature of Java Web Start to kick in every time... negating the benefits of an off line CD install.<br />
+<br />
+If it helps, here's the relevant portion of the script:<br />
+<br />
+Function .onInit<br />
+  InitPluginsDir<br />
+  SetOutPath $PLUGINSDIR<br />
+...<br />
+Function InstallLSGAM<br />
+  File /a &quot;LSGAM\*&quot;<br />
+  ExecWait '&quot;javaws&quot; -shortcut -codebase file:. -import LSGAM40.jnlp' $0<br />
+...<br />
+<br />
+It finds and installs the files just fine, its only the modified dates that are off.<br />
+<br />
+As an alternate solution, is there a way to get the drive letter of the CD the installer is running from?  I'm sure this is a n00b question, so I apologize if this question has been answered before...<br />
+<br />
+Any help would be greatly appreciated!<br />
+<br />
+Thanks,<br />
+Nick</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th June 2007, 19:05</div></div><div class="posttext">You could use $EXEDIR to get the directory where the installer is located. You can then use GetRoot (http://nsis.sourceforge.net/Docs/AppendixE.html#E.1.14) to get the root drive of that directory.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">NPenteado</div><div class="date">19th June 2007, 22:05</div></div><div class="posttext">Exactly what I needed. thanks!  Kinda out of place, but if it helps anyone else, here's the modified code:<br />
+<br />
+<br />
+ExecWait '&quot;javaws&quot; -shortcut -codebase file:&quot;$EXEDIR\LSGAM&quot; -import &quot;$EXEDIR\LSGAM\LSGAM40.jnlp&quot;' $0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">NPenteado</div><div class="date">19th June 2007, 22:10</div></div><div class="posttext">Oops, the slashes went away in my last post<br />
+<br />
+<br />
+ExecWait '&quot;javaws&quot; -shortcut -codebase file:&quot;$EXEDIR\\LSGAM&quot; -import &quot;$EXEDIR\\LSGAM\\LSGAM40.jnlp&quot;' $0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">19th June 2007, 22:57</div></div><div class="posttext">Use [code] not [php] :p<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

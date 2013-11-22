@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" &quot;Bus error&quot; compressing big file in makensis on linux, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  &quot;Bus error&quot; compressing big file in makensis on linux NSIS Discussion" />
+	
+	<title> &quot;Bus error&quot; compressing big file in makensis on linux [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  &quot;Bus error&quot; compressing big file in makensis on linux</div>
+<hr />
+<div class="pda"><a href="t-190617.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=190617">&quot;Bus error&quot; compressing big file in makensis on linux</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">rex123</div><div class="date">19th August 2004, 11:45</div></div><div class="posttext">I've been using makensis on linux for a while now, very successfully (see This thread (http://forums.winamp.com/showthread.php?s=&amp;threadid=183292) for some of the teething troubles, and how they were solved).<br />
+<br />
+But now I'm getting a &quot;bus error&quot;. It occurs when makensis tries to add a large (22M) file to the installer. I know it's daft to include a 22M file in a windows installer, but it's part of the Sun JVM and there's pressure to distribute the JVM with the app, rather than make people download it separately. Please don't just tell me this is a bad idea - I know that already.<br />
+<br />
+In an attempt to narrow down the problem, I created this script:<br />
+<br />
+<br />
+$cat test.nsi<br />
+SetCompress off<br />
+Section<br />
+        File /r jre/lib/rt.jar<br />
+SectionEnd<br />
+<br />
+<br />
+And here's the output when I run it:<br />
+$ makensis /V4 test.nsi<br />
+MakeNSIS v2.01 - Copyright 1999-2004 Nullsoft, Inc.<br />
+<br />
+Portions Copyright (C) 1995-1998 Jean-loup Gailly and Mark Adler (zlib).<br />
+Portions Copyright (C) 1996-2002 Julian R Seward (bzip2).<br />
+Portions Copyright (C) 1999-2003 Igor Pavlov (lzma).<br />
+<br />
+Contributors: nnop@newmail.ru, Ryan Geiss, Andras Varga, Drew Davidson,<br />
+Peter Windridge, Dave Laundon, Robert Rainwater, Yaroslav Faybishenko, Jeff Doozan,<br />
+Amir Szekely, Ximon Eighteen, et al.<br />
+<br />
+Processing config:<br />
+Processing plugin dlls: &quot;NSIS/Plugins/*.dll&quot;<br />
+<br />
+... lots of dlls ...<br />
+<br />
+!define: &quot;MUI_INSERT_NSISCONF&quot;=&quot;&quot;<br />
+<br />
+Changing directory to: ...<br />
+<br />
+Processing script file: &quot;test.nsi&quot;<br />
+SetCompress: off<br />
+Section: &quot;&quot;<br />
+File: &quot;rt.jar&quot;Bus error<br />
+<br />
+<br />
+I'm using a version of makensis built yesterday from cvs code.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th August 2004, 22:08</div></div><div class="posttext">Thanks, fixed.<br />
+<br />
+Changed source attached as pserver CVS lags behind.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rex123</div><div class="date">20th August 2004, 10:20</div></div><div class="posttext">Brilliant. Thanks. Another lightning-fast response. I thought it was still giving problems after doing a make, but a make clean and fresh compile fixed it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rex123</div><div class="date">20th August 2004, 11:44</div></div><div class="posttext">Some less good news...<br />
+<br />
+When I run the new installer I've just made, it reaches the point of decompressing the jt.jar file, and dies with the message &quot;Error decompressing data! Corrupted installer?&quot; (after decompressing other files fine).<br />
+<br />
+This happens with zlib or lzma. I can't seem to get bzip2 to work, and I can't seem to get it to work with no compression either. Setting either of these gives segmentation faults.<br />
+<br />
+I also get segmentation faults using lzma (but not using zlib) with this test script:<br />
+<br />
+<br />
+SetCompress force<br />
+SetCompressor lzma<br />
+<br />
+OutFile test.exe<br />
+Section<br />
+        File jre/lib/rt.jar<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">20th August 2004, 11:49</div></div><div class="posttext">try this one.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rex123</div><div class="date">20th August 2004, 14:50</div></div><div class="posttext">Sorry, still no good. I get the same  &quot;Error decompressing data! Corrupted installer?&quot; error on that file. I seem to be able to create a test installer containing the one file (uncompressed), but that gives the same error when I run it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">20th August 2004, 18:13</div></div><div class="posttext">another one</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rex123</div><div class="date">23rd August 2004, 13:03</div></div><div class="posttext">Looks like that's fixed it. Thanks a lot for doing the work.<br />
+<br />
+I still seem to get a segmentation fault at the end of compiling a test installer using bzip2, but I'm not using bzip2, and mine apprears to work OK.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">26th August 2004, 22:08</div></div><div class="posttext">Which test installer did you try to compile? I've tested some of the examples and got no segmentation fault. Did you try using the latest CVS sources and a clean build? Note that the fixed strlist.h is not yet in CVS.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rex123</div><div class="date">27th August 2004, 09:19</div></div><div class="posttext">Latest cvs seems to have fixed it - I just did a cvs update, and a clean build (but leaving the fixed strlist.h), and now there's no segmentation fault. I was using latest cvs last time, but it must have changed in the last week, I guess.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th August 2004, 09:27</div></div><div class="posttext">Cool, thanks. Let me know if you get the segmentation fault again. It would also be useful if you can compile with debug symbols and get a backtrace with gdb when it crashes for any reason. To do so, remove the -s flag from LDFLAGS and add the -g flag to CXXFLAGS and CFLAGS.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

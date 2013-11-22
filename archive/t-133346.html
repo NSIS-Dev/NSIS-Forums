@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" String manipulation for registry, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  String manipulation for registry NSIS Discussion" />
+	
+	<title> String manipulation for registry [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  String manipulation for registry</div>
+<hr />
+<div class="pda"><a href="t-133346.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=133346">String manipulation for registry</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">mlm</div><div class="date">27th April 2003, 09:24</div></div><div class="posttext">During my installation I set a registry key in the following way:<br />
+<br />
+ReadRegStr $R0 HKCU ${VS6_INCLUDE_DIRS_KEY} &quot;Include Dirs&quot;<br />
+WriteRegStr HKCU ${VS6_INCLUDE_DIRS_KEY} &quot;Include Dirs&quot; &quot;${myDir};$R0&quot;<br />
+  <br />
+The key value is a listing of directories for visual studio to look in for include files. First of all, I don't know if this is the best way of doing this, but it seems to work without any problems.<br />
+<br />
+My problem is during the uninstall. I need to remove my directory paths from the key value. I thought at first I could just store the original $R0 and set the key value back to the original value, but if the user has added other paths to the key value after my installation, then it will remove those values also. <br />
+<br />
+So during uninstall I need to get the current value and then remove the paths I added (if it still exists of course). I'm having problems figuring out how to implement this.<br />
+<br />
+<br />
+thanks in advance,<br />
+mlm (aka digitalda)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">27th April 2003, 17:02</div></div><div class="posttext">Well...<br />
+For set way it's only this:<br />
+<br />
+WriteRegStr HKLM &quot;SOFTWARE\${MUI_PRODUCT}&quot; &quot;InstallPath&quot; &quot;$INSTDIR&quot;<br />
+<br />
+If you don't problems, go for it :D<br />
+Now, to remove it:<br />
+<br />
+DeleteRegKey HKLM &quot;SOFTWARE\${MUI_PRODUCT}&quot; <br />
+; or<br />
+DeleteRegValue HKLM &quot;SOFTWARE\${MUI_PRODUCT}&quot; &quot;InstallPath&quot; <br />
+<br />
+<br />
+Helps?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th April 2003, 17:27</div></div><div class="posttext">My Path Manipulation (http://nsis.sourceforge.net/archive/viewpage.php?pageid=91) functions do something very similar, they may help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mlm</div><div class="date">27th April 2003, 19:24</div></div><div class="posttext">kichik, <br />
+<br />
+Can you expain what's going on in StrStr. This script is exactly what I need, but I don't know enough to change it for my needs. <br />
+<br />
+I don't understand the initial push, then Exch, and subsequent manipulation of the stack. I read what these opeations do, but I don't understand why you do them. <br />
+<br />
+<br />
+thanks,<br />
+mlm (aka digitalda)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th April 2003, 23:33</div></div><div class="posttext">All of the Pushes, Pops and Exchs are meant for the function to receive arguments, return values and keep global registers' original values. I'll add some more information tomorrow if needed.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mlm</div><div class="date">28th April 2003, 04:00</div></div><div class="posttext">I've gone ahead and used this script: http://nsis.sourceforge.net/archive/nsisweb.php?page=197<br />
+<br />
+It works beautifully. But it would still be nice to understand the logic of your script, kichik. I would like to write some of my own stuff in the future and I think it is important to understand. Any input on your script would be appreciated.<br />
+<br />
+<br />
+thanks,<br />
+mlm (aka digitalda)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">28th April 2003, 16:37</div></div><div class="posttext">This article (http://nsis.sourceforge.net/archive/nsisweb.php?page=252&amp;instances=0) on the archive might assist you understanding the stack better. As for my clumsy old StrStr it pushes the value of $0 on the top of the stack (Push $0), exchanges the top two values of the stack - $0 value with string to find (Exch), pops the value on the top of the stack (the value that was on top of the stack before we started - the string to find) into $0 (Pop $0), pushes the value of $1 on the top of the stack (Push $1), exchanges the top value on the stack with the one 2 below it - $1 value with the string to look in (Exch 2),  pops the value on the top of the stack into $1 - the string to look in (Pop $1) and finally exchanges the top two values on the stack ($0's value with $1's value - $1 is now on the top). That leaves us with $1's value and $0's value on the stack and the string to search in, and the string to search for in $0 and $1. Now we can play with $0 and $1, change their values and when we're done we can get their old values from the stack so the user's old value wouldn't change.<br />
+<br />
+I don't think that helped much... heh :)<br />
+There is an easier way to do this (StrStr in the docs for example).<br />
+<br />
+It's always easier, for me at least, when I draw the stack. You can easily see what's going on that way. Maybe DumpState (http://nsis.sourceforge.net/archive/nsisweb.php?page=159&amp;instances=0,32) can help you too.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

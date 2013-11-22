@@ -1,0 +1,156 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Vista/7 Registry VirtualStore, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Vista/7 Registry VirtualStore NSIS Discussion" />
+	
+	<title> Vista/7 Registry VirtualStore [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Vista/7 Registry VirtualStore</div>
+<hr />
+<div class="pda"><a href="t-315080.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=315080">Vista/7 Registry VirtualStore</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Quib</div><div class="date">4th December 2009, 01:55</div></div><div class="posttext">I'm dealing with a legacy application (1997), so all it knows about is Win95 and very lax rules about where it can write in the registry. It writes to HKEY_LOCAL_MACHINE\Software (of course), which really isn't a problem thanks to Vista/7 virtualizing the writes and reads to a user-based virtualized registry (specifically for HKLM\Software).<br />
+<br />
+I need NSIS to be able to interact with this virtualized registry to manage settings maintenance, the problem being that Vista/7 seems to really not want to virtualize NSIS's use of the registry. Looking up Microsoft's documentation on this (http://msdn.microsoft.com/en-us/library/aa965884(VS.85).aspx), right off the bat, it's disabling registry virtualization because my NSIS-based program has a ''requestedExecutionLevel'' entry in its manifest. That's easy enough to deal with, however, it seems that Vista/7 still won't let an NSIS-based program (with a manifest, but no requestedExecutionLevel entry) at the virtualized registry.<br />
+<br />
+From what I read about installer auto-detection, as long as there's a manifest of any sort, it shouldn't be triggered, but just to be safe, I turned off NSIS's CRC check and went through the executable with a hex editor and replaced any strings that were installer or NSIS related, with the exception of the NullsoftInst string. This didn't help.<br />
+<br />
+I REALLY would prefer not to directly access the virtualized entries by accessing them in VirtualStore, as I'd have to add a fun layer of Windows version checking to change behavior, and this would also leave forwards-compatibility up in the air (if a future version of Windows drops registry virtualization). I'd prefer it if my NSIS-based program can simply interact with the registry the exact same way the legacy application it's assisting does.<br />
+<br />
+Quib</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">4th December 2009, 07:30</div></div><div class="posttext">did you also remove the supportedOS tag in the manifest?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Quib</div><div class="date">4th December 2009, 17:41</div></div><div class="posttext">Yup, and tried various ways of stripping out other values, for example, leaving an empty security tag. I also tried leaving an empty manifest (instead of removing it entirely).<br />
+<br />
+I spent probably a good hour messing with every conceivable permutation and mutation of the manifest, and am thinking it doesn't hold a solution, but there could certainly still be some odd entry that can be added that'd do what I want.<br />
+<br />
+I'm nearly done with an NSIS reg file parser that handles them identically to the way regedit does (I haven't worked out all the nuances of regedit's handling of binary value imports yet) that would let me check for incoming HKLM\Software values and change them to their corresponding VirtualStore locations, but it's a really ugly workaround compared to just having NSIS's registry calls virtualized.<br />
+<br />
+Quib</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">podnuh</div><div class="date">7th December 2009, 00:56</div></div><div class="posttext">Virtualization really means that the registry read/writes are being redirected to a different part of the registry (which should be accessible to your installer). There is no need to impersonate a virtualized application. In the case of reads/writes to HKLM, substitute the following &quot;HKEY_CURRENT_USER\Software\Classes\VirtualStore\MACHINE&quot;. To use an example of legacy program on my own computer:<br />
+<br />
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Money<br />
+<br />
+is redirected to<br />
+<br />
+HKEY_CURRENT_USER\Software\Classes\VirtualStore\MACHINE\SOFTWARE\Microsoft\Money<br />
+<br />
+Your installer should be able to read and write to this branch. Bear in mind that you are in HKCU. Accordingly, any changes are on a per user base. In addition, if your user used the &quot;runas&quot; feature to run the installer as somebody else, then you will be in somebody else's HKCU. My guess is that this will not be a common case. Finally, remember that a standard account can read from HKLM, even though it cannot write there. You may wish to check MSDN on the rules of precedence when the same key exists both in HKLM and HKCU. This might happen if your installer writes to HKLM. <br />
+<br />
+I hope this helps.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Quib</div><div class="date">8th December 2009, 02:32</div></div><div class="posttext">Well, I agree that there's no ''need'' for my registry calls to be virtualized since the redirected location IS accessible, however, it would certainly have made things simpler. Here's the solution I decided on (and implemented):<br />
+1) Check Windows' major number.<br />
+2) If 6 (Vista/7), check if admin. If not 6, assume admin (for virtualization purposes).<br />
+3) If not admin, operation will occur on the VirtualStore location instead of HKLM.<br />
+4) Parse a REG file containing the program's settings. Dynamically alter key location based on the preceding two checks. If the REG file's data is saved pointing at the VirtualStore, it needs to write to HKLM instead on non-Vista/7 system, or on Vista/7 if running elevated.<br />
+5) Run the legacy program and wait for its termination.<br />
+6) Copy settings from the correct registry location to a REG file for backup.<br />
+<br />
+Now, imagine if the NSIS-based program's registry calls were simply virtualized? That whole ordeal would've been as simple as import REG file, run program and wait, export REG file.<br />
+<br />
+Step 4 was a huge pain in the butt; I put together a REG file parser that mimics regedit.exe's handling of REG files as closely as possible. All the nuances about comments and whitespace, its incredibly forgiving handling of key names, but unforgiving handling of values, its 4 escape characters (but only in values, not in key names).<br />
+<br />
+Quib</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">8th December 2009, 05:56</div></div><div class="posttext">I suggest you don't check windows versions manually. Use winver.nsh instead.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Quib</div><div class="date">8th December 2009, 08:59</div></div><div class="posttext">But WinVer adds so much bloat; I don't use LogicLib either. I'm using the following to check Windows' major version number:<br />
+	System::Alloc 148<br />
+	Pop $0<br />
+	System::Call '*$0(i 148)'<br />
+	System::Call 'kernel32::GetVersionEx(i r0) !e'<br />
+	System::Call '*$0(i .n,i .s)'<br />
+	System::Free $0<br />
+	Pop $0<br />
+Where the final result on $0 is the major version number. Isn't this just a very cut down and efficient version of what WinVer is doing? For my check, all I do is compare $0 to &quot;6&quot; and if it matches, that means it's Vista/7.<br />
+<br />
+Quib</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">podnuh</div><div class="date">8th December 2009, 15:31</div></div><div class="posttext">I am not sure I understand what you are trying to do. Nonetheless, the following observations may be helpful.<br />
+<br />
+1. In my experience, Windows 7 will not automatically elevate if you use:<br />
+<br />
+RequestExecutionLevel user<br />
+<br />
+This is explained in the NSIS on-line help and works for me in both Vista and Windows 7<br />
+<br />
+2. An application can pretend it is virtualized by reading and writing directly to HKEY_CURRENT_USER\Software\Classes\VirtualStore\MACHINE\SOFTWARE. To use the same code for both instances (elevated and non-elevated) you would use SetShellVarContext and a variable for beginning of the subkey. The variable would be &quot;&quot; for addressing HKLM and would be &quot;Software\Classes\VirtualStore\MACHINE\&quot; for addressing the VirtualStore. For example, the following will address HKLM:<br />
+<br />
+SetShellVarContext all<br />
+Strcpy $R0 &quot;&quot;<br />
+ReadRegStr  $0 shctx &quot;$R0SOFTWARE\MyProgram&quot; &quot;Path&quot;<br />
+<br />
+and the following will address the VirtualStore<br />
+<br />
+SetShellVarContext current<br />
+Strcpy $R0 &quot;Software\Classes\VirtualStore\MACHINE\&quot;<br />
+ReadRegStr  $0 shctx &quot;$R0SOFTWARE\MyProgram&quot; &quot;Path&quot;<br />
+<br />
+Notice that in both cases you are using the same code for ReadRegStr.<br />
+<br />
+3. Your follow-up message mentioned that you are running the legacy app from the installer. Bear in mind that if the installer is elevated the legacy app will also be running with elevated privileges and will be writing directly to HKLM.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th December 2009, 16:04</div></div><div class="posttext">LogicLib and WinVer have a minimal overhead of code size. Most of its logic is done with macros at compile time. LogicLib's overhead is almost non-existent compared regular labels and comparison yet it allows you to code freely without worrying of relative jumps and labels.<br />
+<br />
+I want to insist on making this point so new users and hopefully everybody will use both as much as possible to make scripts simpler and more coherent and improve overall NSIS experience. So I ask you to back up future claims of bloat with hard data.<br />
+<br />
+As for your question, Vista and probably 7 actually do look for that one string you didn't replace - &quot;NullsoftInst&quot;. They also look for the name in the manifest. I would write a little legacy program that does the registry work, or rebuild NSIS with changes in Source\exehead\fileform.h.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Quib</div><div class="date">8th December 2009, 17:30</div></div><div class="posttext">I need to apologize and clear something up: I didn't mean to imply that LogicLib was bloated. I was stating that I don't use LogicLib and so that impedes using WinVer.<br />
+<br />
+My choice to not use LogicLib is simply personal preference.<br />
+<br />
+When I said ''WinVer adds so much bloat'' I really just meant in comparison to the solution I was using; all I need is the Windows' major version number, so WinVer's double call to GetVersionEx on 9x, its parsing of the versioninfo structure, and its logical tests (etc.) are all extra features I don't need (and so are bloat from the perspective of this program).<br />
+<br />
+podnuh, something to consider is that I'm not actually using NSIS as an installer; I'm using it as a scripting language to automate settings backup for a legacy program. I do appreciate the feedback though, and I hadn't considered your approach (using SetShellVarContext) to handle which part of the registry I work with. I am fully aware of the user privileges situation I face; the problem I encountered seems to have more to do with Vista/7 installer detection than anything else.<br />
+<br />
+kichik, I had considered writing this utility in a standard programming language (or even another scripting language), but really appreciate NSIS's string handling capabilities (and that it doesn't get flagged as malware as frequently as say AutoIt3) and the short development time provided by such a scripting language. I mean, this utility's been up and running for a couple days now since developing a work-around was a breeze (thanks mostly to NSIS's string handling). I would like to continue this discussion for academic reasons (such as nailing down a way for NSIS to go through Vista/7's virtualization). I do figure Vista/7 is checking for ''NullsoftInst'' but changing that with a hex editor breaks the NSIS-based program and I've yet to set up a NSIS build environment.<br />
+<br />
+Quib</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th December 2009, 19:44</div></div><div class="posttext">NSIS looks for that string so just changing it won't be enough. You need to rebuild or change the function that looks for it too. Search for:81 7D E8 49 6E 73 74<br />
+75 60<br />
+81 7D E4 73 6F 66 74<br />
+75 57<br />
+81 7D E0 4E 75 6C 6C<br />
+75 4ENotice the last four bytes are &quot;Null&quot;, &quot;soft&quot; and &quot;Inst&quot;.<br />
+<br />
+As for the bloatage, it's your call as to what fits in your program. But I think making the code more complex that it can be and not delegating the maintenance work just to save the extra 50 or so opcodes which get compressed to way less than a KB, doesn't serve you. Not that I have not done it myself many times in the past...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Quib</div><div class="date">11th December 2009, 10:21</div></div><div class="posttext">Thanks for pointing me in the right direction kichik.<br />
+<br />
+So here are the three things needed to get an NSIS-based program to have its HKLM\SOFTWARE registry calls virtualized:<br />
+1) The string ''NullsoftInst'' needs to be changed (and its corresponding validation check; search for ''Null'', ''soft'', and ''Inst'').<br />
+2) In the manifest, the string ''Nullsoft.NSIS.exehead'' needs to be changed.<br />
+3) The manifest must NOT contain a requestedExecutionLevel entry (but can contain any other trustInfo entries).<br />
+<br />
+I only have tested this on Vista so far (not Windows 7).<br />
+<br />
+Quib</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

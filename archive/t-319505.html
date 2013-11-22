@@ -1,0 +1,135 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" how to use library WinSCard with NSIS, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  how to use library WinSCard with NSIS NSIS Discussion" />
+	
+	<title> how to use library WinSCard with NSIS [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  how to use library WinSCard with NSIS</div>
+<hr />
+<div class="pda"><a href="t-319505.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=319505">how to use library WinSCard with NSIS</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">maanifiik</div><div class="date">28th May 2010, 10:53</div></div><div class="posttext">hello,<br />
+I try to use this function:<br />
+<br />
+lReturn = SCardEstablishContext(SCARD_SCOPE_USER,<br />
+NULL,<br />
+NULL,<br />
+phSC);<br />
+<br />
+with NSIS!<br />
+<br />
+i try:<br />
+<br />
+!define SCardListReaders &quot;Advapi32::SCardListReaders(l,t,*t,*l) i&quot;<br />
+<br />
+System::Call &quot;${SCardEstablishContext}(${SCARD_SCOPE_USER},0, 0, .r0) .r1&quot;<br />
+<br />
+<br />
+It's not work! CAn you help me, please??</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">28th May 2010, 11:33</div></div><div class="posttext">!define SCardListReaders &quot;Advapi32::SCardListReaders(l,t,*t,*l) i&quot;<br />
+System::Call &quot;${SCardEstablishContext}(${SCARD_SCOPE_USER},0, 0, .r0) .r1&quot;<br />
+You're defining it as SCardListReaders, but then calling another define (SCardEstablishContext).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">28th May 2010, 12:51</div></div><div class="posttext">Also * isn't used for pointers. Just use i or l.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th May 2010, 12:59</div></div><div class="posttext">MSDN says these functions are in Winscard, not Advapi32.<br />
+You also can't just use random windows constants/defines, you need to !define them because nsis does not mirror the entire windows sdk!<br />
+<br />
+Maybe something like:<br />
+<br />
+!define SCARD_SCOPE_USER 0<br />
+!define SCARD_AUTOALLOCATE -1<br />
+!define SCARD_S_SUCCESS 0<br />
+<br />
+!include LogicLib.nsh<br />
+<br />
+System::Call 'Winscard::SCardEstablishContext(i ${SCARD_SCOPE_USER},i0,i0,*i.r1)i.r0'<br />
+${If} $0 = ${SCARD_S_SUCCESS}<br />
+	System::Call 'Winscard::SCardListReaders(ir1,i0,*i.r2,*i ${SCARD_AUTOALLOCATE})i.r0'<br />
+	${If} $0 = ${SCARD_S_SUCCESS} ;might also want to check for SCARD_E_NO_READERS_AVAILABLE?<br />
+		;do something with $2 (&quot;multi-string&quot;)<br />
+		System::Call 'Winscard::SCardFreeMemory(ir1,ir2)'<br />
+	${EndIf}<br />
+	System::Call 'Winscard::SCardReleaseContext(ir1)'<br />
+${EndIf}<br />
+<br />
+<br />
+Note: I have never used the Winscard API and I'm coding this in the forum reply box without testing so there are probably bugs!<br />
+<br />
+Afrow:* are for pointers, but t is a pointer already on the &quot;winapi side&quot; of system.dll</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">maanifiik</div><div class="date">28th May 2010, 13:47</div></div><div class="posttext">thanks for your answer!<br />
+<br />
+I'm going to test this code!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">maanifiik</div><div class="date">28th May 2010, 14:51</div></div><div class="posttext">IT'S WORK!<br />
+<br />
+I love you! <br />
+<br />
+Thanks YOU</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">28th May 2010, 16:13</div></div><div class="posttext">Thanks Anders. I'm a little confused with p now. Is that for handles (HANDLE, PVOID etc)? For example, in the System readme under Copy -&gt; Usage example, p has been used for returning a pointer to the allocated buffer &quot;allocate a buffer and put 'test string' and an int in it&quot;. I think that's a typo? Shouldn't it be i? p certainly doesn't work when I try it...<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th May 2010, 19:50</div></div><div class="posttext">Afrow: p is only a valid type in &quot;2.47&quot; (eg SVN only at this point) (Why the online docs are the svn version and not just the latest stable version, I don't know) And yes, they are for pointers like handle/void* etc<br />
+<br />
+As far as * goes, if you had a C function like: void foo(HANDLE p1,HANDLE*p2) the system syntax would be System::Call foodll::foo(p [???],*p [???|.][???]) Ex: System::Call foodll::foo(p $somehandlevalue,*p.r2) ... (p2 input: function foo gets a pointer to a pointer-sized memory location with undefined contents. p2 output: lets say foo() did: *p2=p1-&gt;somevalue;, after the call returns, $2 contains the same value as p1-&gt;somevalue)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">28th May 2010, 20:17</div></div><div class="posttext">Ah that explains all. Thanks again.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">maanifiik</div><div class="date">31st May 2010, 16:22</div></div><div class="posttext">Hey guys,,<br />
+<br />
+I have 2 questions:<br />
+<br />
+Firstly, I want to cut a string, for example :<br />
+<br />
+      &quot;C:\Mes documents\hahaha.txt&quot;  =&gt;  &quot;hahaha.txt&quot;<br />
+<br />
+Secondly, I don't want to have a lot of directory with my NSIS.exe! I want to have one file only .<br />
+With my exe, i have 2 directory. for example, in one directory , i have the exe of java! It's possible to do that?????</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">31st May 2010, 17:02</div></div><div class="posttext">1. http://nsis.sourceforge.net/Docs/AppendixE.html#E.1.16<br />
+2. Have you had a look at the examples? http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.1.5<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">maanifiik</div><div class="date">3rd June 2010, 10:41</div></div><div class="posttext">Hey, <br />
+<br />
+I have a new question! I have a .ini file! I want to configure the .ini after execute my setup but he have to do a new compilation. <br />
+Is it possible to modify the .ini file after the compilation???????</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">maanifiik</div><div class="date">3rd June 2010, 11:02</div></div><div class="posttext">Sorry, i have the answer.<br />
+<br />
+I don't give the true path</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

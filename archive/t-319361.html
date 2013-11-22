@@ -1,0 +1,341 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Install .Net if it is not installed - newbie needs help - 99% working just one thing!, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Install .Net if it is not installed - newbie needs help - 99% working just one thing! NSIS Discussion" />
+	
+	<title> Install .Net if it is not installed - newbie needs help - 99% working just one thing! [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Install .Net if it is not installed - newbie needs help - 99% working just one thing!</div>
+<hr />
+<div class="pda"><a href="t-319361.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=319361">Install .Net if it is not installed - newbie needs help - 99% working just one thing!</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">martinmacca</div><div class="date">22nd May 2010, 00:25</div></div><div class="posttext">I've installed this script http://nsis.sourceforge.net/How_to_Automatically_download_and_install_a_particular_version_of_.NET_if_it_is_not_already_installed and it integrates into my installer perfectly. <br />
+<br />
+If .Net isnt installed it downloads and installs it with no issues.<br />
+<br />
+However - it always wants to install .Net 2.0 even if its already installed. I cant help thinking i'm doing something wrong! All i've done is copy and paste the code and change the .Net version from 1.1 to 2.0<br />
+<br />
+; Usage<br />
+; 1 Call SetupDotNetSectionIfNeeded from .onInit function<br />
+;   This function will check if the required version <br />
+;   or higher version of the .NETFramework is installed.<br />
+;   If .NET is NOT installed the section which installs dotnetfx is selected.<br />
+;   If .NET is installed the section which installs dotnetfx is unselected.<br />
+ <br />
+#!define SF_USELECTED  0<br />
+#!define SF_SELECTED   1<br />
+#!define SF_SECGRP     2<br />
+#!define SF_BOLD       8<br />
+#!define SF_RO         16<br />
+#!define SF_EXPAND     32<br />
+###############################<br />
+ <br />
+!define DOT_MAJOR 2<br />
+!define DOT_MINOR 0<br />
+ <br />
+!macro SecSelect SecId<br />
+  Push $0<br />
+  IntOp $0 ${SF_SELECTED} | ${SF_RO}<br />
+  SectionSetFlags ${SecId} $0<br />
+  SectionSetInstTypes ${SecId} 1<br />
+  Pop $0<br />
+!macroend<br />
+ <br />
+!define SelectSection '!insertmacro SecSelect'<br />
+#################################<br />
+ <br />
+!macro SecUnSelect SecId<br />
+  Push $0<br />
+  IntOp $0 ${SF_USELECTED} | ${SF_RO}<br />
+  SectionSetFlags ${SecId} $0<br />
+  SectionSetText  ${SecId} &quot;&quot;<br />
+  Pop $0<br />
+!macroend<br />
+ <br />
+!define UnSelectSection '!insertmacro SecUnSelect'<br />
+###################################<br />
+ <br />
+!macro SecExtract SecId<br />
+  Push $0<br />
+  IntOp $0 ${SF_USELECTED} | ${SF_RO}<br />
+  SectionSetFlags ${SecId} $0<br />
+  SectionSetInstTypes ${SecId} 2<br />
+  Pop $0<br />
+!macroend<br />
+ <br />
+!define SetSectionExtract '!insertmacro SecExtract'<br />
+###################################<br />
+ <br />
+!macro Groups GroupId<br />
+  Push $0<br />
+  SectionGetFlags ${GroupId} $0<br />
+  IntOp $0 $0 | ${SF_RO}<br />
+  IntOp $0 $0 ^ ${SF_BOLD}<br />
+  IntOp $0 $0 ^ ${SF_EXPAND}<br />
+  SectionSetFlags ${GroupId} $0<br />
+  Pop $0<br />
+!macroend<br />
+ <br />
+!define SetSectionGroup &quot;!insertmacro Groups&quot;<br />
+####################################<br />
+ <br />
+!macro GroupRO GroupId<br />
+  Push $0<br />
+  IntOp $0 ${SF_SECGRP} | ${SF_RO}<br />
+  SectionSetFlags ${GroupId} $0<br />
+  Pop $0<br />
+!macroend<br />
+ <br />
+!define MakeGroupReadOnly '!insertmacro GroupRO'<br />
+ <br />
+Function SetupDotNetSectionIfNeeded<br />
+ <br />
+  StrCpy $0 &quot;0&quot;<br />
+  StrCpy $1 &quot;SOFTWARE\Microsoft\.NETFramework&quot; ;registry entry to look in.<br />
+  StrCpy $2 0<br />
+ <br />
+  StartEnum:<br />
+    ;Enumerate the versions installed.<br />
+    EnumRegKey $3 HKLM &quot;$1\policy&quot; $2<br />
+ <br />
+    ;If we don't find any versions installed, it's not here.<br />
+    StrCmp $3 &quot;&quot; noDotNet notEmpty<br />
+ <br />
+    ;We found something.<br />
+    notEmpty:<br />
+      ;Find out if the RegKey starts with 'v'.  <br />
+      ;If it doesn't, goto the next key.<br />
+      StrCpy $4 $3 1 0<br />
+      StrCmp $4 &quot;v&quot; +1 goNext<br />
+      StrCpy $4 $3 1 1<br />
+ <br />
+      ;It starts with 'v'.  Now check to see how the installed major version<br />
+      ;relates to our required major version.<br />
+      ;If it's equal check the minor version, if it's greater, <br />
+      ;we found a good RegKey.<br />
+      IntCmp $4 ${DOT_MAJOR} +1 goNext yesDotNetReg<br />
+      ;Check the minor version.  If it's equal or greater to our requested <br />
+      ;version then we're good.<br />
+      StrCpy $4 $3 1 3<br />
+      IntCmp $4 ${DOT_MINOR} yesDotNetReg goNext yesDotNetReg<br />
+ <br />
+    goNext:<br />
+      ;Go to the next RegKey.<br />
+      IntOp $2 $2 + 1<br />
+      goto StartEnum<br />
+ <br />
+  yesDotNetReg:<br />
+    ;Now that we've found a good RegKey, let's make sure it's actually<br />
+    ;installed by getting the install path and checking to see if the <br />
+    ;mscorlib.dll exists.<br />
+    EnumRegValue $2 HKLM &quot;$1\policy\$3&quot; 0<br />
+    ;$2 should equal whatever comes after the major and minor versions <br />
+    ;(ie, v1.1.4322)<br />
+    StrCmp $2 &quot;&quot; noDotNet<br />
+    ReadRegStr $4 HKLM $1 &quot;InstallRoot&quot;<br />
+    ;Hopefully the install root isn't empty.<br />
+    StrCmp $4 &quot;&quot; noDotNet<br />
+    ;build the actuall directory path to mscorlib.dll.<br />
+    StrCpy $4 &quot;$4$3.$2\mscorlib.dll&quot;<br />
+    IfFileExists $4 yesDotNet noDotNet<br />
+ <br />
+  noDotNet:<br />
+    ${SelectSection} ${SECDOTNET}<br />
+    goto done<br />
+ <br />
+  yesDotNet:<br />
+    ;Everything checks out.  Go on with the rest of the installation.<br />
+    ${UnSelectSection} ${SECDOTNET}<br />
+    goto done<br />
+ <br />
+  done:<br />
+    ;All done.<br />
+ <br />
+FunctionEnd<br />
+ <br />
+!define BASE_URL http://download.microsoft.com/download<br />
+; .NET Framework<br />
+; English<br />
+!define URL_DOTNET_1033 &quot;${BASE_URL}/5/6/7/567758a3-759e-473e-bf8f-52154438565a/dotnetfx.exe&quot;<br />
+<br />
+ <br />
+ <br />
+Var &quot;LANGUAGE_DLL_TITLE&quot;<br />
+Var &quot;LANGUAGE_DLL_INFO&quot;<br />
+Var &quot;URL_DOTNET&quot;<br />
+Var &quot;OSLANGUAGE&quot;<br />
+Var &quot;DOTNET_RETURN_CODE&quot;<br />
+ <br />
+ <br />
+LangString DESC_REMAINING ${LANG_ENGLISH} &quot; (%d %s%s remaining)&quot;<br />
+LangString DESC_PROGRESS ${LANG_ENGLISH} &quot;%d.%01dkB/s&quot; ;&quot;%dkB (%d%%) of %dkB @ %d.%01dkB/s&quot;<br />
+LangString DESC_PLURAL ${LANG_ENGLISH} &quot;s&quot;<br />
+LangString DESC_HOUR ${LANG_ENGLISH} &quot;hour&quot;<br />
+LangString DESC_MINUTE ${LANG_ENGLISH} &quot;minute&quot;<br />
+LangString DESC_SECOND ${LANG_ENGLISH} &quot;second&quot;<br />
+LangString DESC_CONNECTING ${LANG_ENGLISH} &quot;Connecting...&quot;<br />
+LangString DESC_DOWNLOADING ${LANG_ENGLISH} &quot;Downloading %s&quot;<br />
+LangString DESC_SHORTDOTNET ${LANG_ENGLISH} &quot;Microsoft .Net Framework 2.0&quot;<br />
+LangString DESC_LONGDOTNET ${LANG_ENGLISH} &quot;Microsoft .Net Framework 2.0&quot;<br />
+LangString DESC_DOTNET_DECISION ${LANG_ENGLISH} &quot;$(DESC_SHORTDOTNET) is required.$\nIt is strongly \<br />
+  advised that you install$\n$(DESC_SHORTDOTNET) before continuing.$\nIf you choose to continue, \<br />
+  you will need to connect$\nto the internet before proceeding.$\nWould you like to continue with \<br />
+  the installation?&quot;<br />
+LangString SEC_DOTNET ${LANG_ENGLISH} &quot;$(DESC_SHORTDOTNET) &quot;<br />
+LangString DESC_INSTALLING ${LANG_ENGLISH} &quot;Installing&quot;<br />
+LangString DESC_DOWNLOADING1 ${LANG_ENGLISH} &quot;Downloading&quot;<br />
+LangString DESC_DOWNLOADFAILED ${LANG_ENGLISH} &quot;Download Failed:&quot;<br />
+LangString ERROR_DOTNET_DUPLICATE_INSTANCE ${LANG_ENGLISH} &quot;The $(DESC_SHORTDOTNET) Installer is \<br />
+  already running.&quot;<br />
+LangString ERROR_NOT_ADMINISTRATOR ${LANG_ENGLISH} &quot;$(DESC_000022)&quot;<br />
+LangString ERROR_INVALID_PLATFORM ${LANG_ENGLISH} &quot;$(DESC_000023)&quot;<br />
+LangString DESC_DOTNET_TIMEOUT ${LANG_ENGLISH} &quot;The installation of the $(DESC_SHORTDOTNET) \<br />
+  has timed out.&quot;<br />
+LangString ERROR_DOTNET_INVALID_PATH ${LANG_ENGLISH} &quot;The $(DESC_SHORTDOTNET) Installation$\n\<br />
+  was not found in the following location:$\n&quot;<br />
+LangString ERROR_DOTNET_FATAL ${LANG_ENGLISH} &quot;A fatal error occurred during the installation$\n\<br />
+  of the $(DESC_SHORTDOTNET).&quot;<br />
+LangString FAILED_DOTNET_INSTALL ${LANG_ENGLISH} &quot;The installation of $(PRODUCT_NAME) will$\n\<br />
+  continue. However, it may not function properly$\nuntil $(DESC_SHORTDOTNET)$\nis installed.&quot;<br />
+ <br />
+ <br />
+Section $(SEC_DOTNET) SECDOTNET<br />
+    SectionIn RO<br />
+    IfSilent lbl_IsSilent<br />
+    !define DOTNETFILESDIR &quot;Common\Files\MSNET&quot;<br />
+    StrCpy $DOTNET_RETURN_CODE &quot;0&quot;<br />
+!ifdef DOTNET_ONCD_1033<br />
+    StrCmp &quot;$OSLANGUAGE&quot; &quot;1033&quot; 0 lbl_Not1033<br />
+    SetOutPath &quot;$PLUGINSDIR&quot;<br />
+    file /r &quot;${DOTNETFILESDIR}\dotnetfx1033.exe&quot;<br />
+    DetailPrint &quot;$(DESC_INSTALLING) $(DESC_SHORTDOTNET)...&quot;<br />
+    Banner::show /NOUNLOAD &quot;$(DESC_INSTALLING) $(DESC_SHORTDOTNET)...&quot;<br />
+    nsExec::ExecToStack '&quot;$PLUGINSDIR\dotnetfx1033.exe&quot; /q /c:&quot;install.exe /noaspupgrade /q&quot;'<br />
+    pop $DOTNET_RETURN_CODE<br />
+    Banner::destroy<br />
+    SetRebootFlag true<br />
+    Goto lbl_NoDownloadRequired<br />
+    lbl_Not1033:<br />
+!endif<br />
+; Insert Other language blocks here<br />
+ <br />
+    ; the following Goto and Label is for consistencey.<br />
+    Goto lbl_DownloadRequired<br />
+    lbl_DownloadRequired:<br />
+    DetailPrint &quot;$(DESC_DOWNLOADING1) $(DESC_SHORTDOTNET)...&quot;<br />
+    MessageBox MB_ICONEXCLAMATION|MB_YESNO|MB_DEFBUTTON2 &quot;$(DESC_DOTNET_DECISION)&quot; /SD IDNO \<br />
+      IDYES +2 IDNO 0<br />
+    Abort<br />
+    ; &quot;Downloading Microsoft .Net Framework&quot;<br />
+    AddSize 153600<br />
+    nsisdl::download /TRANSLATE &quot;$(DESC_DOWNLOADING)&quot; &quot;$(DESC_CONNECTING)&quot; \<br />
+       &quot;$(DESC_SECOND)&quot; &quot;$(DESC_MINUTE)&quot; &quot;$(DESC_HOUR)&quot; &quot;$(DESC_PLURAL)&quot; \<br />
+       &quot;$(DESC_PROGRESS)&quot; &quot;$(DESC_REMAINING)&quot; \<br />
+       /TIMEOUT=30000 &quot;$URL_DOTNET&quot; &quot;$PLUGINSDIR\dotnetfx.exe&quot;<br />
+    Pop $0<br />
+    StrCmp &quot;$0&quot; &quot;success&quot; lbl_continue<br />
+    DetailPrint &quot;$(DESC_DOWNLOADFAILED) $0&quot;<br />
+    Abort<br />
+ <br />
+    lbl_continue:<br />
+      DetailPrint &quot;$(DESC_INSTALLING) $(DESC_SHORTDOTNET)...&quot;<br />
+      Banner::show /NOUNLOAD &quot;$(DESC_INSTALLING) $(DESC_SHORTDOTNET)...&quot;<br />
+      nsExec::ExecToStack '&quot;$PLUGINSDIR\dotnetfx.exe&quot; /q /c:&quot;install.exe /noaspupgrade /q&quot;'<br />
+      pop $DOTNET_RETURN_CODE<br />
+      Banner::destroy<br />
+      SetRebootFlag true<br />
+      ; silence the compiler<br />
+      Goto lbl_NoDownloadRequired<br />
+      lbl_NoDownloadRequired:<br />
+ <br />
+      ; obtain any error code and inform the user ($DOTNET_RETURN_CODE)<br />
+      ; If nsExec is unable to execute the process,<br />
+      ; it will return &quot;error&quot;<br />
+      ; If the process timed out it will return &quot;timeout&quot;<br />
+      ; else it will return the return code from the executed process.<br />
+      StrCmp &quot;$DOTNET_RETURN_CODE&quot; &quot;&quot; lbl_NoError<br />
+      StrCmp &quot;$DOTNET_RETURN_CODE&quot; &quot;0&quot; lbl_NoError<br />
+      StrCmp &quot;$DOTNET_RETURN_CODE&quot; &quot;3010&quot; lbl_NoError<br />
+      StrCmp &quot;$DOTNET_RETURN_CODE&quot; &quot;8192&quot; lbl_NoError<br />
+      StrCmp &quot;$DOTNET_RETURN_CODE&quot; &quot;error&quot; lbl_Error<br />
+      StrCmp &quot;$DOTNET_RETURN_CODE&quot; &quot;timeout&quot; lbl_TimeOut<br />
+      ; It's a .Net Error<br />
+      StrCmp &quot;$DOTNET_RETURN_CODE&quot; &quot;4101&quot; lbl_Error_DuplicateInstance<br />
+      StrCmp &quot;$DOTNET_RETURN_CODE&quot; &quot;4097&quot; lbl_Error_NotAdministrator<br />
+      StrCmp &quot;$DOTNET_RETURN_CODE&quot; &quot;1633&quot; lbl_Error_InvalidPlatform lbl_FatalError<br />
+      ; all others are fatal<br />
+ <br />
+    lbl_Error_DuplicateInstance:<br />
+    DetailPrint &quot;$(ERROR_DOTNET_DUPLICATE_INSTANCE)&quot;<br />
+    GoTo lbl_Done<br />
+ <br />
+    lbl_Error_NotAdministrator:<br />
+    DetailPrint &quot;$(ERROR_NOT_ADMINISTRATOR)&quot;<br />
+    GoTo lbl_Done<br />
+ <br />
+    lbl_Error_InvalidPlatform:<br />
+    DetailPrint &quot;$(ERROR_INVALID_PLATFORM)&quot;<br />
+    GoTo lbl_Done<br />
+ <br />
+    lbl_TimeOut:<br />
+    DetailPrint &quot;$(DESC_DOTNET_TIMEOUT)&quot;<br />
+    GoTo lbl_Done<br />
+ <br />
+    lbl_Error:<br />
+    DetailPrint &quot;$(ERROR_DOTNET_INVALID_PATH)&quot;<br />
+    GoTo lbl_Done<br />
+ <br />
+    lbl_FatalError:<br />
+    DetailPrint &quot;$(ERROR_DOTNET_FATAL)[$DOTNET_RETURN_CODE]&quot;<br />
+    GoTo lbl_Done<br />
+ <br />
+    lbl_Done:<br />
+    DetailPrint &quot;$(FAILED_DOTNET_INSTALL)&quot;<br />
+    lbl_NoError:<br />
+    lbl_IsSilent:<br />
+SectionEnd<br />
+ <br />
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN<br />
+!insertmacro MUI_DESCRIPTION_TEXT ${SECDOTNET} $(DESC_LONGDOTNET)<br />
+!insertmacro MUI_FUNCTION_DESCRIPTION_END<br />
+<br />
+and then i'm pasting this at the bottom of my .nsi compiler file<br />
+<br />
+Function .onInit<br />
+  StrCpy $LANGUAGE_DLL_TITLE &quot;Installer Language&quot;<br />
+  StrCpy $LANGUAGE_DLL_INFO &quot;Please select a language:&quot;<br />
+  StrCpy $URL_DOTNET &quot;${URL_DOTNET_1033}&quot;<br />
+  StrCpy $OSLANGUAGE &quot;1033&quot;<br />
+ <br />
+; Insert other Language Blocks Here<br />
+ <br />
+  !define MUI_LANGDLL_WINDOWTITLE &quot;$LANGUAGE_DLL_TITLE&quot;<br />
+  !define MUI_LANGDLL_INFO &quot;$LANGUAGE_DLL_INFO&quot;<br />
+  !insertmacro MUI_LANGDLL_DISPLAY<br />
+  !undef MUI_LANGDLL_WINDOWTITLE<br />
+  !undef MUI_LANGDLL_INFO<br />
+  InitPluginsDir<br />
+  SetOutPath &quot;$PLUGINSDIR&quot;<br />
+  File /r &quot;${NSISDIR}\Plugins\*.*&quot;<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">22nd May 2010, 10:13</div></div><div class="posttext">Looks like that code is written to only work with .NET 1.1. 2.0 and above do not depend on 1.1 and therefore the check is not going to work. In particular, the HKLM\Software\Microsoft\.NETFramework\Policy key it is enumerating does not contain any .NET version information after 1.1. You need to be enumerating the HKLM\Software\Microsoft\NET Framework Setup\NDP key instead.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">martinmacca</div><div class="date">22nd May 2010, 12:39</div></div><div class="posttext">Thanks Stu - i'll look at the keys in more detail - thought i was installing it wrong!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

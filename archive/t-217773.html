@@ -1,0 +1,146 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" how to check a specfied user whether in administrators group, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  how to check a specfied user whether in administrators group NSIS Discussion" />
+	
+	<title> how to check a specfied user whether in administrators group [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  how to check a specfied user whether in administrators group</div>
+<hr />
+<div class="pda"><a href="t-217773.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=217773">how to check a specfied user whether in administrators group</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">RexHsu</div><div class="date">2nd June 2005, 14:54</div></div><div class="posttext">It seems UserInfo:GetAccountType can only check current loggon user. But I want to check any user.How to make that?<br />
+<br />
+thx</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MrWhammy</div><div class="date">9th June 2005, 09:14</div></div><div class="posttext">I added a function to UserMgr.c (in http://nsis.sourceforge.net/archive/download.php?file=UserMgr.zip )<br />
+I'm not a C/C++ programmer, so there might be quite some errors in it (not deleting and stuff like that), but it works for me right now.<br />
+<br />
+int __declspec(dllexport) GetUserGroups(HWND hwndParent, int string_size, <br />
+                                      char *variables, stack_t **stacktop,<br />
+                                      extra_parameters *extra)<br />
+{<br />
+   LPGROUP_USERS_INFO_0 ui = NULL;<br />
+   DWORD dwLevel = 0;<br />
+   DWORD dwError = 0;<br />
+   NET_API_STATUS nStatus;<br />
+<br />
+   DWORD entriesRead = 0;<br />
+   DWORD totalEntries = 0;<br />
+   <br />
+   static char userid[256];<br />
+   static char response[1024];<br />
+<br />
+   static WCHAR u_userid[256];<br />
+<br />
+   memset( u_userid, 0, sizeof( u_userid ) );<br />
+<br />
+   g_hwndParent=hwndParent;<br />
+<br />
+  EXDLL_INIT();<br />
+<br />
+  popstring(userid);<br />
+  swprintf(u_userid, L&quot;%S&quot;, userid);<br />
+   <br />
+   nStatus = NetUserGetLocalGroups(NULL, <br />
+							u_userid, <br />
+							dwLevel, <br />
+							LG_INCLUDE_INDIRECT,<br />
+							(LPBYTE *)&amp;ui,<br />
+							MAX_PREFERRED_LENGTH,<br />
+							&amp;entriesRead,<br />
+							&amp;totalEntries);<br />
+<br />
+   if (nStatus != NERR_Success)<br />
+   {<br />
+	   sprintf(userid, &quot;ERROR %d&quot;, nStatus);<br />
+	   pushstring(userid);<br />
+	   NetApiBufferFree(ui);<br />
+	   return nStatus;<br />
+   }<br />
+   else<br />
+   {<br />
+<br />
+   LPGROUP_USERS_INFO_0 pTmpBuf;<br />
+      DWORD i;<br />
+      DWORD dwTotalCount = 0;<br />
+<br />
+	  if ((pTmpBuf = ui) != NULL)<br />
+      {<br />
+         //<br />
+         // Loop through the entries; <br />
+         //  print the name of the global groups <br />
+         //  to which the user belongs.<br />
+         //<br />
+         for (i = 0; i &lt; entriesRead; i++)<br />
+         {<br />
+<br />
+            if (pTmpBuf == NULL)<br />
+            {<br />
+				sprintf(userid, &quot;ERROR An access violation has occurred: %d&quot;, nStatus);<br />
+				pushstring(userid);<br />
+				 NetApiBufferFree(ui);<br />
+				return nStatus;<br />
+            }<br />
+<br />
+            sprintf(response, &quot;%S&quot;, pTmpBuf-&gt;grui0_name);	   <br />
+			pushstring(response);<br />
+<br />
+            pTmpBuf++;<br />
+            dwTotalCount++;<br />
+         }<br />
+      }<br />
+<br />
+	  sprintf(response, &quot;%d&quot;, dwTotalCount);<br />
+	   pushstring(response);<br />
+	   NetApiBufferFree(ui);<br />
+	   return STATUS_SUCCESS;<br />
+   }<br />
+}<br />
+<br />
+This pushes &quot;ERROR&lt;space&gt;&lt;errormessage&gt;&quot; on the stack in case of an error, or all groups the user belongs to on the local machine, with the number of groups on top.<br />
+<br />
+Example usage:<br />
+InitPluginsDir<br />
+<br />
+	UserMgr::GetUserGroups &quot;SQLDebugger&quot;<br />
+	Pop $0<br />
+<br />
+ 	Push &quot;$0&quot; <br />
+	Push &quot;ERROR&quot;<br />
+	Call StrStr<br />
+	Pop $1<br />
+<br />
+	StrCmp $1 &quot;&quot; +1 error<br />
+<br />
+<br />
+	MessageBox MB_OK &quot;Nr. results: $0&quot;<br />
+<br />
+	loop:<br />
+	StrCmp $0 &quot;0&quot; end<br />
+<br />
+	Pop $1<br />
+	MessageBox MB_OK &quot;Group: $1&quot;<br />
+	IntOp $0 $0 - 1<br />
+	Goto loop<br />
+<br />
+        error:<br />
+        MessageBox MB_OK &quot;Error: $1&quot;<br />
+	end:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RexHsu</div><div class="date">9th June 2005, 17:47</div></div><div class="posttext">you guys good!£¡</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

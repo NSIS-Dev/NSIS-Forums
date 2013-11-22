@@ -1,0 +1,271 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Parseing regkey, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Parseing regkey NSIS Discussion" />
+	
+	<title> Parseing regkey [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Parseing regkey</div>
+<hr />
+<div class="pda"><a href="t-314086.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=314086">Parseing regkey</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Mik0z</div><div class="date">22nd October 2009, 18:52</div></div><div class="posttext">Hi, I am new to NSIS, I have a basic installer working that installs and uninstalls, so I have that working.<br />
+<br />
+My current question comes to this:<br />
+<br />
+What I am trying to write an installer for is a mod for a different program. So I want it to search the registry for its install path and install it there.<br />
+<br />
+I know that there is the option to search for install path in an example, but my problem is, what do I do if the key can be stored in multiple places, IE its different on XP, Vista/7, and via two different methods, one is digital distribution, one is actual cd, so install keys are dif.<br />
+<br />
+Can anyone point me in the right direction? :)<br />
+<br />
+Thank you in advance.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">msroboto</div><div class="date">22nd October 2009, 19:46</div></div><div class="posttext">I think you have to test all the places based on your conditions.<br />
+<br />
+GetVersion:WindowsName (or whatever will work for you)<br />
+<br />
+${If} $Version == xx<br />
+ do what you have to<br />
+<br />
+etc</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mik0z</div><div class="date">22nd October 2009, 19:52</div></div><div class="posttext">Problem with that is XP would have two separate locations.<br />
+Vista/7 would have two separate locations.<br />
+<br />
+Cd vs Digital Distribution.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">msroboto</div><div class="date">22nd October 2009, 20:05</div></div><div class="posttext">Check both.<br />
+If you find the CD Key do what you need to.<br />
+Else look for the Digital Key<br />
+<br />
+There is no magic bullet here.  <br />
+I have to do similar stuff sometimes the key is in HKLM sometime HKCU might depend how something was installed.<br />
+<br />
+It's not always pretty.<br />
+ReadRegStr ....<br />
+IfErrors KeyNotFound KeyFound</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mik0z</div><div class="date">22nd October 2009, 20:16</div></div><div class="posttext">I found this code on the wiki:<br />
+<br />
+Function GetCurrentAutoCADKey<br />
+;// =====================================================================<br />
+;// Construct a product key for the last AutoCAD run or installed.<br />
+;// This is referred to as the &quot;Primary&quot; AutoCAD.  All CLSID entries<br />
+;// and path references in the registry should be consistent with this<br />
+;// entry.<br />
+;// Parameters<br />
+;//   $1           Upon successful return<br />
+;//                   this will contain the fully qualified key that<br />
+;//                   will be found under HKEY_LOCAL_MACHINE<br />
+;//   $2           Upon successful return<br />
+;//                   will contain the ACAD-ID InstallId<br />
+;//   $3           Upon successful return<br />
+;//                   this will contain the path to acad.exe that is<br />
+;//                   associated with the current AutoCAD.<br />
+;// =====================================================================<br />
+    ;// Inspect the CurVer value at the ..\AutoCAD level to<br />
+    ;// determine the major release version key.  This will<br />
+    ;// point us to a section in the registry based upon the<br />
+    ;// version number.<br />
+    ReadRegStr $1 HKLM &quot;Software\Autodesk\AutoCAD&quot; &quot;CurVer&quot;<br />
+    ;// Must have the release version<br />
+    IfErrors 0 NoError1<br />
+      Goto Error<br />
+    NoError1:<br />
+    ;// Inspect the CurVer value at the ..\AutoCAD\szKey level to<br />
+    ;// determine the registry key id.  This will point us to a<br />
+    ;// major registry key where the Applications Subkey can be found<br />
+    ReadRegStr $2 HKLM &quot;Software\Autodesk\AutoCAD\$1&quot; &quot;CurVer&quot;<br />
+    ;// Must have the ID<br />
+    IfErrors 0 NoError2<br />
+      StrCpy $1 &quot;&quot;<br />
+      Goto Error<br />
+    NoError2:<br />
+    ReadRegStr $3 HKLM &quot;Software\Autodesk\AutoCAD\$1\$2&quot; &quot;AcadLocation&quot;<br />
+    ;// Must have the Path<br />
+    IfErrors 0 NoError3<br />
+      StrCpy $1 &quot;&quot;<br />
+      StrCpy $2 &quot;&quot;<br />
+      Goto Error<br />
+    NoError3:<br />
+    Error:<br />
+FunctionEnd<br />
+<br />
+So what I'm understanding here is, I could modify this code to search one location, if it errors out, move along to the next? and just have nested ifs?<br />
+<br />
+Along these lines:<br />
+<br />
+ReadRegStr $1 HKLM &quot;Software\Maker\Program&quot; &quot;Install_dir&quot;<br />
+<br />
+if errors 0 install_dir = $1<br />
+	goto test2<br />
+	<br />
+test2:<br />
+ReadRegStr $1 HKLM &quot;Software\wow64\Maker\Program&quot; &quot;Install_dir&quot;<br />
+if errors 0 install_dir = $1<br />
+	goto test3<br />
+<br />
+<br />
+and so on?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">22nd October 2009, 20:23</div></div><div class="posttext">I always simply do:<br />
+<br />
+ReadRegStr $1 HKLM &quot;location1&quot;<br />
+${If} $1 == &quot;&quot;<br />
+  ReadRegStr $1 HKLM &quot;location2&quot;<br />
+${EndIf}<br />
+${If} $1 == &quot;&quot;<br />
+  ReadRegStr $1 HKCU &quot;location3&quot;<br />
+${EndIf}<br />
+<br />
+etc.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">msroboto</div><div class="date">22nd October 2009, 20:25</div></div><div class="posttext">The code in the wiki is EXACTLY what you want.<br />
+<br />
+Look up IfErrors.<br />
+<br />
+You are messing with the proper syntax in your example.<br />
+<br />
+IfErrors jumpto_iferror [jumpto_ifnoerror]<br />
+<br />
+so yours might be something like<br />
+IfErrors 0 KeyFound<br />
+<br />
+.... keep checking<br />
+<br />
+KeyFound: (this is the jump label)<br />
+do what you need to.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mik0z</div><div class="date">22nd October 2009, 20:31</div></div><div class="posttext">Okay thank you for your help, I will give it a whack in a few and post back if my code isn't working :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">msroboto</div><div class="date">22nd October 2009, 20:38</div></div><div class="posttext">Get familiar with LogicLib if you are not.<br />
+<br />
+You can write nicer code.<br />
+<br />
+You MIGHT even be able to write<br />
+<br />
+ReadRegStr ...<br />
+${If} {Errors}<br />
+;not found<br />
+<br />
+${EndIf}<br />
+<br />
+Not sure if this will work but it looked like it might and would be better than writing in jumps.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">msroboto</div><div class="date">22nd October 2009, 20:39</div></div><div class="posttext">sorry<br />
+<br />
+${If} ${Errors}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mik0z</div><div class="date">22nd October 2009, 22:00</div></div><div class="posttext">okay, having issues using the information to do anything productive. How do I tell it to use this for the installdirectory?<br />
+<br />
+Installdir cant be composed in a section, and readregkey cant be used outside of one.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">msroboto</div><div class="date">23rd October 2009, 06:15</div></div><div class="posttext">I use InstallDir just as like a default.<br />
+<br />
+I use a variable called $INSTDIR - i set that <br />
+<br />
+in your sections<br />
+<br />
+SetOutPath $INSTDIR</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">23rd October 2009, 07:14</div></div><div class="posttext">Actually, what he needs is  StrCpy $INSTDIR $1  (assuming $1 contains the path read from registry).  You can of course also just ReadRegStr into $INSTDIR directly.<br />
+<br />
+To elaborate on my earlier post, it's often advantageous to use ${If} $1 == &quot;&quot; instead of ${If} ${Errors}, because the error flag will only be set if the regkey doesn't exist. If the regkey does exist but is empty for some reason, you'll end up with an empty install path and you're still in trouble.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mik0z</div><div class="date">23rd October 2009, 16:52</div></div><div class="posttext">I ended up doing it like this, seems working so far.<br />
+<br />
+Function .onInit ; Performed on start of the installer.<br />
+	; Check for ArmA2 Steam install on Windows XP Via Steam<br />
+	ReadRegStr $INSTDIR HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 33900&quot; &quot;InstallLocation&quot;<br />
+	IfErrors abort end<br />
+		Goto end<br />
+<br />
+	; Check for ArmA2 Steam install on Vista/7 Via Steam	<br />
+	ReadRegStr $INSTDIR HKLM &quot;SOFTWARE\Wow6432Node\Bohemia Interactive Studio\ArmA 2&quot; &quot;Main&quot;<br />
+	IfErrors abort end<br />
+		Goto end<br />
+<br />
+	abort:<br />
+		Abort<br />
+<br />
+	end:<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">msroboto</div><div class="date">23rd October 2009, 19:12</div></div><div class="posttext">ReadRegStr $INSTDIR HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 33900&quot; &quot;InstallLocation&quot;<br />
+	IfErrors abort end<br />
+		Goto end        you will never perform the next test <br />
+<br />
+	; Check for ArmA2 Steam install on Vista/7 Via Steam	<br />
+	ReadRegStr $INSTDIR HKLM &quot;SOFTWARE\Wow6432Node\Bohemia Interactive Studio\ArmA 2&quot; &quot;Main&quot;<br />
+	IfErrors abort end<br />
+		Goto end<br />
+<br />
+	abort:<br />
+		Abort<br />
+<br />
+	end:<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mik0z</div><div class="date">23rd October 2009, 19:26</div></div><div class="posttext">Weird that you say it wouldn't go to next test, as it did work on my actual machine detecting the correct install path. Any ideas what would cause it to work?<br />
+<br />
+I 100% see why you say it wont, and will fix it later on today, just confused as to why it does lol.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">msroboto</div><div class="date">23rd October 2009, 20:35</div></div><div class="posttext">Actually that line I highlighted would never get hit due to<br />
+<br />
+IfErrors abort end<br />
+<br />
+If there is an error - reg key not found you are going to abort<br />
+else you are going to end.<br />
+<br />
+IfErrors 0 end might be better and get rid of that goto end<br />
+<br />
+Are you just passing the first condition on your machine perhaps???</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mik0z</div><div class="date">23rd October 2009, 22:10</div></div><div class="posttext">Nope I have virtualmachines to test each case. I modified the code to:<br />
+<br />
+Function .onInit ; Performed on start of the installer.<br />
+	; Check for ArmA2 Steam install on Windows XP Via Steam<br />
+	ReadRegStr $INSTDIR HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 33900&quot; &quot;InstallLocation&quot;<br />
+	IfErrors steamvista end<br />
+<br />
+	steamvista:<br />
+	; Check for ArmA2 Steam install on Vista/7 Via Steam	<br />
+	ReadRegStr $INSTDIR HKLM &quot;SOFTWARE\Wow6432Node\Bohemia Interactive Studio\ArmA 2&quot; &quot;Main&quot;<br />
+	IfErrors abort end<br />
+<br />
+	abort:<br />
+		Abort<br />
+<br />
+	end:<br />
+FunctionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

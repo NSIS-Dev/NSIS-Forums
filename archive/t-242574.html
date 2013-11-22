@@ -1,0 +1,254 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Can't remove folder, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Can't remove folder NSIS Discussion" />
+	
+	<title> Can't remove folder [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Can't remove folder</div>
+<hr />
+<div class="pda"><a href="t-242574.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=242574">Can't remove folder</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Clammerz</div><div class="date">4th April 2006, 14:56</div></div><div class="posttext">I'm creating a installer for a modification to a game which created a program group in the Start Menu.<br />
+<br />
+(Some of you might remember me posting about this issue long ago. Sorry to drag it up again.)<br />
+<br />
+Now I understand that NSIS doesn't support unicode, so I've decided to turn to the System plug-in, and use API functions to remove said shortcuts.<br />
+<br />
+But the folder still remains. I've resorted to using 8.3 filename conventions since I'm not that well educated in using the System plugin to string together elaberate filenames.<br />
+<br />
+Before I go on:<br />
+$SMPROGRAMS I'm using SetShellVarContext all since the game creates items in the All Users group. and I have a check for Admin privledges.<br />
+<br />
+WIND-A~$6 The $6 is just a number that goes from 1-4 to catch the most obvious instances. The long pathname is Wind - a breath of heart - Re***65306;gratitude (the colon being unicode, hence why I have to resort to using 8.3 convention to address it.)<br />
+<br />
+WIND-A~1.LNK 8.3 filename for the following Wind - a breath of heart - Re***65306;gratitude.lnk<br />
+<br />
+This works:<br />
+System::Call &quot;kernel32::RemoveDirectoryW(w '\\?\$SMPROGRAMS\minori\lala' )&quot;<br />
+System::Call &quot;kernel32::RemoveDirectoryW(w '\\?\$SMPROGRAMS\minori\BLAHBL~1' )&quot;<br />
+<br />
+as does this:<br />
+System::Call &quot;kernel32::DeleteFileW(w '$SMPROGRAMS\minori\WIND-A~$6\$2' )&quot;<br />
+$2 being the filename output from a FindFirst search.<br />
+<br />
+And to get rid of the Shortcut containing unicode, this works:<br />
+System::Call &quot;kernel32::DeleteFileW(w '\\?\$SMPROGRAMS\minori\WIND-A~$6\WIND-A~1.LNK' )&quot;<br />
+<br />
+<br />
+But to get rid of the (now) empty folder, this does not work:<br />
+System::Call &quot;kernel32::RemoveDirectoryW(w '\\?\$SMPROGRAMS\minori\WIND-A~$6\' )&quot;<br />
+<br />
+Any advice will be greatly appreciated.<br />
+Thank you very much for your time.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">vinnietran</div><div class="date">4th April 2006, 15:14</div></div><div class="posttext">I ran into similar situation.  For me, I cannot delete the folder because one of my process was holding it for some reason.  I terminated the process, but it did not determinated, therefore, it didn't work.<br />
+<br />
+Good Luck.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">4th April 2006, 18:02</div></div><div class="posttext">Make sure that your uninstaller's working directory is not set to the folder you are trying to delete.<br />
+<br />
+You can add a SetOutPath command just before the folder delete to set the output path to another folder.<br />
+<br />
+Also, are you using the /REBOOTOK flag?<br />
+<br />
+Example:<br />
+<br />
+; This assumes that the folder you are trying to delete is NOT $TEMP...<br />
+SetOutPath &quot;$TEMP&quot;<br />
+RMDir /r /REBOOTOK &quot;C:\path_to_folder&quot;<br />
+<br />
+; at this point, check the reboot flag to determine whether or not to reboot<br />
+IfRebootFlag 0 +2<br />
+MessageBox MB_OK &quot;Some files/folders were in use and will be removed when you restart.&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Clammerz</div><div class="date">5th April 2006, 15:56</div></div><div class="posttext">Comperio, I don't think you understand my situation.<br />
+The whole reason I'm using an API call is because I cannot use NSIS's &quot;RMDir&quot;, because the folder contains a unicode character. Therefore /REBOOTOK isn't much help : (<br />
+<br />
+My SetOuPath isn't the folder I'm trying to delete, but thank you for suggesting.<br />
+<br />
+No processes are holding/using the folder (to my knowledge, after rebooting, shutting down all but core services [even explorer], the folder remains)<br />
+<br />
+Yes I can remove the folder via normal Shell/Command prompt methods.<br />
+<br />
+Thank you for your time thus far.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">5th April 2006, 16:07</div></div><div class="posttext">What if you put a Sleep 1000 before it.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Clammerz</div><div class="date">5th April 2006, 22:16</div></div><div class="posttext">I think I see what you are getting at.<br />
+You mean after deleting the folder contents, to sleep before deleting the folder?<br />
+<br />
+To make sure that wasn't the case, I've tested the code when the folder was already empty.<br />
+If that was not what you were implying, please elaborate, hee hee.<br />
+<br />
+<br />
+Hmm, I'm wondering if using the SHFileOperation will work for me, since it's recursive by nature, AND supports the use of wildcards. (I could put a wildcard in where the unicode character lies.)<br />
+<br />
+The only problem I'm having with this route, is that I cannot get structures working properly : (<br />
+I can't even get the example structures in the System plug-in readme to work.<br />
+<br />
+If someone could give me some pointers where I might be going wrong, I would be very grateful.<br />
+<br />
+Here's the stuff I've tried:<br />
+StrCpy $2 &quot;C:\blah\*.txt&quot;<br />
+System::Call &quot;*(i '$HWNDPARENT', t 'FO_DELETE', t '$2', i 0, i 0, i 0, i 0, i 0 )i.s&quot;<br />
+System::Call &quot;shell32::SHFileOperation(i r0)&quot;<br />
+System::Free $0<br />
+<br />
+Here's the info from the MSDN for SHFileOperation (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/shellcc/platform/shell/reference/functions/shfileoperation.asp) and the info for the struct that needs to be passed to it SHFILEOPSTRUCT (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/shellcc/platform/shell/reference/structures/shfileopstruct.asp)<br />
+<br />
+Thank you very much for your time : )</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">6th April 2006, 04:00</div></div><div class="posttext">Name &quot;Output&quot;<br />
+OutFile &quot;Output.exe&quot;<br />
+<br />
+!define FO_MOVE    0x0001<br />
+!define FO_COPY    0x0002<br />
+!define FO_DELETE  0x0003<br />
+!define FO_RENAME  0x0004<br />
+<br />
+!define FOF_MULTIDESTFILES         0x0001<br />
+!define FOF_CONFIRMMOUSE           0x0002<br />
+!define FOF_SILENT                 0x0004  # don't create progress/report<br />
+!define FOF_RENAMEONCOLLISION      0x0008<br />
+!define FOF_NOCONFIRMATION         0x0010  # Don't prompt the user.<br />
+!define FOF_WANTMAPPINGHANDLE      0x0020  # Fill in SHFILEOPSTRUCT.hNameMappings<br />
+!define FOF_ALLOWUNDO              0x0040<br />
+!define FOF_FILESONLY              0x0080  # on *.*, do only files<br />
+!define FOF_SIMPLEPROGRESS         0x0100  # means don't show names of files<br />
+!define FOF_NOCONFIRMMKDIR         0x0200  # don't confirm making any needed dirs<br />
+!define FOF_NOERRORUI              0x0400  # don't put up error UI<br />
+!define FOF_NOCOPYSECURITYATTRIBS  0x0800  # dont copy NT file Security Attributes<br />
+!define FOF_NORECURSION            0x1000  # don't recurse into directories.<br />
+<br />
+Section<br />
+	StrCpy $1 &quot;C:\blah\*.txt&quot;<br />
+	System::Call &quot;*(i '$HWNDPARENT', i ${FO_DELETE}, t '$1', i 0, i ${FOF_SILENT}|${FOF_NOCONFIRMATION}, i 0, i 0, i 0)i .r0&quot;<br />
+	System::Call &quot;shell32::SHFileOperation(i r0)&quot;<br />
+	System::Free $0<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Clammerz</div><div class="date">6th April 2006, 11:26</div></div><div class="posttext">Wow!<br />
+Thank you so much Instructor. It works perfectly!<br />
+<br />
+I had no idea it was supposed to be used like this, heh.<br />
+Thank you once again.<br />
+I'm very grateful!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">6th April 2006, 12:53</div></div><div class="posttext">Using UNICODE in File/foldernames on Windows? O_o wtf<br />
+its absolutly a DONT</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">1st March 2008, 22:30</div></div><div class="posttext">I have been using the code suggested by Instructor in the same situation as Clammerz had: I need to delete a start menu folder that contains a unicode character. The folder is called &quot;Fate/stay night&quot;, with the forward slash in unicode.<br />
+<br />
+Up until recently Instructor's example has worked just fine, but I cannot get it to work in Windows Vista. FindFirst and FindNext can find the folder name without trouble, but calling SHFileOperation has no effect at all. Can someone think of a reason why?<br />
+<br />
+The MSDN page for SHFileOperation can be found at hxxp://msdn2.microsoft.com/en-us/library/bb762164.aspx</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">2nd March 2008, 09:41</div></div><div class="posttext">I came up with a hacky way to create unicode strings, but seems to work fine.<br />
+<br />
+!macro MakeUnicodePathWithSpecialChar outvar prefix unicodechar suffix<br />
+push $0<br />
+push $1<br />
+StrLen $0 '${prefix}'<br />
+StrLen $1 '${suffix}'<br />
+IntOp $0 $0 * 2<br />
+IntOp $1 $1 + 1 ;\0<br />
+IntOp $1 $1 * 2<br />
+System::Call /NoUnload &quot;*(&amp;w$0 '${prefix}',&amp;i2 ${unicodechar}, &amp;w$1 '${suffix}')i.s&quot;<br />
+Exch 2<br />
+pop $0<br />
+pop $1<br />
+pop ${outvar}<br />
+!macroend<br />
+<br />
+<br />
+!define BasePath &quot;D:\unsorted\dev&quot;<br />
+<br />
+!insertmacro MakeUnicodePathWithSpecialChar $0 &quot;\\?\${BasePath}\foo&quot; 0xFF0F &quot;bar&quot;<br />
+System::Call /NoUnload &quot;kernel32::CreateDirectoryW(i$0,i0)&quot;<br />
+System::Call /NoUnload 'user32::MessageBoxW(i $hwndparent,i $0,w &quot;Will now delete:&quot;,i0)'<br />
+System::Call /NoUnload &quot;kernel32::RemoveDirectoryW(i $0 )&quot;<br />
+System::Free $0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd March 2008, 20:19</div></div><div class="posttext">If you go with the short name solution, you don't even need the System plug-in. RMDir and Delete will be able to find and delete the files by using their short names.<br />
+<br />
+RMDir is even capable of deleting files with Unicode names as long as the directory doesn't have Unicode in it. So if you have the short name of the folder, you can simply use RMDir /r.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">2nd March 2008, 20:58</div></div><div class="posttext">Unfrtunately, the short filename for Fate/stay night ends up as Fate/~1... I tried Anders' solution, and the result is as sad as it is annoying: Vista is able to create/remove a directory called Fate/stay night, but it's not able to remove the garbled version (in English locale) of the Japanese-created folder.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd March 2008, 22:55</div></div><div class="posttext">Then it's probably the FAQ:<br />
+<br />
+http://nsis.sourceforge.net/Shortcuts_removal_fails_on_Windows_Vista</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">3rd March 2008, 00:12</div></div><div class="posttext">Just in case its not the vista all user folder problem, I went all out...<br />
+<br />
+Deletes the folder &quot;foo/bar&quot; (and its contents) in ${BasePath}, UNICODE all the way, and again, works fine on my system<br />
+<br />
+!define BasePath &quot;D:\unsorted\dev&quot;<br />
+!define FindMask &quot;foo*bar&quot;<br />
+Section <br />
+System::Call /NoUnload '*(i,&amp;i8,&amp;i8,&amp;i8,i0,i0,i0,i0,&amp;w260,&amp;w14,&amp;i20)i.r0' ;&amp;i20=dummy data<br />
+System::Call /NoUnload 'kernel32::FindFirstFileW(w &quot;${BasePath}\${FindMask}&quot;,i $0)i.r1'<br />
+IntOp $3 $0 + 44 ;WIN32_FIND_DATA.cFileName<br />
+;System::Call /NoUnload 'user32::MessageBoxW(i $hwndparent,i $3,w &quot;yo&quot;,i0)'<br />
+StrLen $R0 &quot;${BasePath}\&quot;<br />
+IntOp $R0 $R0 * 2<br />
+System::Call /NoUnload 'kernel32::lstrlenW(i $3)i.R1'<br />
+IntOp $R1 $R1 * 2<br />
+System::Call /NoUnload '*(&amp;w$R0 &quot;${BasePath}\&quot;,&amp;i$R1 0,&amp;i4 0)i.r4' ;make &quot;${BasePath}\${FindMask}\0\0&quot; buffer<br />
+System::Call /NoUnload 'kernel32::lstrcatW(i $4,i $3)i.R1'<br />
+;System::Call /NoUnload 'user32::MessageBoxW(i $hwndparent,i $4,w &quot;yo&quot;,i0)'<br />
+System::Call &quot;*(i '$HWNDPARENT', i 0x3,i $4, i 0, i 0x14, i 0, i 0, i 0)i.r9&quot;<br />
+System::Call &quot;shell32::SHFileOperationW(i r9)&quot;<br />
+System::Free $9 ;pSHFILEOPSTRUCT<br />
+System::Free $4 ;SHFILEOPSTRUCT.pFrom buffer<br />
+FindClose $1<br />
+System::Free $0 ;pWIN32_FIND_DATA<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+..and 0 error checking, might want to check the return value of FindFirstFileW and make sure its not -1</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">3rd March 2008, 20:58</div></div><div class="posttext">and the short version <br />
+!define BasePath &quot;D:\unsorted\dev&quot;<br />
+!define FindMask &quot;foo*bar&quot;<br />
+Section<br />
+StrLen $9 &quot;${BasePath}\${FindMask}&quot;<br />
+IntOp $9 $9 * 2<br />
+System::Call /NoUnload '*(&amp;w$9 &quot;${BasePath}\${FindMask}&quot;,&amp;i4 0)i.r4'<br />
+System::Call &quot;*(i '$HWNDPARENT', i 0x3,i $4, i 0, i 0x14, i 0, i 0, i 0)i.r9&quot;<br />
+System::Call &quot;shell32::SHFileOperationW(i r9)&quot;<br />
+System::Free $9 ;pSHFILEOPSTRUCT<br />
+System::Free $4 ;SHFILEOPSTRUCT.pFrom buffer<br />
+SectionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

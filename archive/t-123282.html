@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Determing if .NET Framework is installed, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Determing if .NET Framework is installed NSIS Discussion" />
+	
+	<title> Determing if .NET Framework is installed [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Determing if .NET Framework is installed</div>
+<hr />
+<div class="pda"><a href="t-123282.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=123282">Determing if .NET Framework is installed</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Balder</div><div class="date">30th January 2003, 08:12</div></div><div class="posttext">Greetings to everyone.<br />
+I'm new here and to the NSIS installer (I LOVE it!) so I'm not sure about this, but here it goes..<br />
+I found a post on how to determine in .NET Framework is installed. I changed it some and here is what I've got:<br />
+<br />
+---------------------------------<br />
+Function .onGUIInit<br />
+  Call GotDotNet<br />
+FunctionEnd<br />
+<br />
+Function GotDotNet<br />
+  ClearErrors<br />
+  ReadRegStr $0 HKLM &quot;Software\Microsoft\.NETFramework\policy\v1.0&quot; &quot;3705&quot;<br />
+  IfErrors Check2<br />
+    Goto End<br />
+<br />
+  Check2:<br />
+    ClearErrors<br />
+    ReadRegStr $1 HKLM &quot;Software\Microsoft\.NETFramework\policy\v1.1&quot; &quot;4322&quot;<br />
+    IfErrors Error<br />
+      Goto End<br />
+<br />
+  Error:<br />
+    MessageBox MB_OK|MB_ICONSTOP &quot;Setup could not detect Microsoft .NET Framework on this computer.  $\n    Please install Microsoft .NET Framework and run setup again.&quot;<br />
+      ABORT<br />
+<br />
+  End:<br />
+FunctionEnd<br />
+------------------------------------<br />
+<br />
+This works just fine :)<br />
+But this wont work when the next version of .NET Framework comes out.<br />
+So is there a better way to do this check?<br />
+<br />
+Thx!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">30th January 2003, 10:34</div></div><div class="posttext">You can use EnumRegKey to walk through every key in &quot;Software\Microsoft\.NETFramework\policy\&quot;. I have also found this news group thread: http://groups.google.com/groups?q=detecting+%22microsoft+.net%22&amp;hl=en&amp;lr=&amp;ie=UTF-8&amp;safe=off&amp;selm=uxRIEsa%23BHA.1984%40tkmsftngp04&amp;rnum=1. I am currently checking with the help of TechKid if it works both on 1.0 and 1.1.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">30th January 2003, 10:52</div></div><div class="posttext">Testing failed. 1.1 creates a different uninstall key :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Balder</div><div class="date">30th January 2003, 16:32</div></div><div class="posttext">Thanks for the reply.<br />
+<br />
+I think I found another way that is even easier and should work with the next versions of .NET.<br />
+It looks at the &quot;InstallRoot&quot; instead.<br />
+Works great for me. :-)<br />
+<br />
+Function GotDotNet<br />
+<br />
+  ClearErrors<br />
+<br />
+    ClearErrors<br />
+    ReadRegStr $0 HKLM &quot;Software\Microsoft\.NETFramework&quot; &quot;InstallRoot&quot;<br />
+    IfErrors Error<br />
+      Goto End<br />
+<br />
+  Error:<br />
+    MessageBox MB_OK|MB_ICONSTOP &quot;Setup could not detect Microsoft .NET Framework on this computer.  $\n    Please install Microsoft .NET Framework and run setup again.&quot;<br />
+      ABORT<br />
+<br />
+  End:<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Techkid</div><div class="date">30th January 2003, 19:58</div></div><div class="posttext">I have wrote a solution for you it checks the Uninstall Registery for Microsoft .NET Framework if it exists then it Display it in a MessageBox. I test with 1.0 1.1 and both installed it works on all those plus it work when it not installed it.<br />
+<br />
+Here is the code<br />
+<br />
+Name &quot;.NET Framework Check&quot;<br />
+AllowRootDirInstall true<br />
+OutFile &quot;dotnetCheck.exe&quot;<br />
+Caption &quot;.NET Framework Check &quot;<br />
+ShowInstDetails show<br />
+<br />
+Section<br />
+IntOp $0 0 + 0<br />
+EnumStart:<br />
+	EnumRegKey $R1 HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\&quot; $0<br />
+	IntOp $0 $0 + 1<br />
+	StrCmp $R1 &quot;&quot; EnumEnd<br />
+	ReadRegStr $R2 HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$R1&quot; &quot;DisplayName&quot;<br />
+	StrCpy $R2 $R2 &quot;24&quot; &quot;0&quot;<br />
+	StrCmp $R2 &quot;Microsoft .NET Framework&quot; CheckGUID EnumStart<br />
+<br />
+  	CheckGUID:<br />
+	ReadRegStr $R2 HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$R1&quot; &quot;DisplayName&quot;<br />
+	MessageBox MB_OK &quot;$R2 Installed!&quot;<br />
+	goto EnumStart<br />
+EnumEnd:<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">30th January 2003, 20:37</div></div><div class="posttext">I am sorry, but I have my doubts about this specific piece of code. The display name might be localized for localized versions of .NET framework.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Balder</div><div class="date">30th January 2003, 21:51</div></div><div class="posttext">What happens if you tun this on e.g. XP Lognhorn or Windows 2003 Server where the .NET Framework is integrated in the OS?<br />
+I should think that there would be no uninstallstring...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Techkid</div><div class="date">30th January 2003, 22:44</div></div><div class="posttext">Balder I have been working on a new version that is a lot better than the old previous on, KiCHik broght up the localization issue. It was looked into I came up with new ideas and ran them by Kichik. He thought it would work so I wrote the code. Hes tested it out we see no problems but I am going to let him work with my code a little bit as he want to make it a function that returns a value or not if .NET is installed. <br />
+<br />
+So look forward to a post from Kichik with the code.<br />
+<br />
+Nathan Purciful</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Balder</div><div class="date">30th January 2003, 22:52</div></div><div class="posttext">Thank you so much for the help guys, and I'll be looking forward to try the code when it's finished. :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd February 2003, 16:40</div></div><div class="posttext">There it is:<br />
+<br />
+http://nsis.sourceforge.net/archive/nsisweb.php?page=7&amp;instances=0,44,89</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Balder</div><div class="date">2nd February 2003, 23:05</div></div><div class="posttext">NICE! Thanks! :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

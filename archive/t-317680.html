@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" [BUG] System Plugin issue with SetDetailsPrint lastused, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  [BUG] System Plugin issue with SetDetailsPrint lastused NSIS Discussion" />
+	
+	<title> [BUG] System Plugin issue with SetDetailsPrint lastused [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  [BUG] System Plugin issue with SetDetailsPrint lastused</div>
+<hr />
+<div class="pda"><a href="t-317680.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=317680">[BUG] System Plugin issue with SetDetailsPrint lastused</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">12th March 2010, 23:46</div></div><div class="posttext">First off, I posted a bug report ticket (http://sourceforge.net/tracker/?func=detail&amp;aid=2969695&amp;group_id=22049&amp;atid=373085) already but I decided to also post a copy on the forums to let others know.<br />
+<br />
+In a nutshell if I use the system plugin after calling SetDetailsPrint none, then SetDetailsPrint lastused has no effect.<br />
+<br />
+Here is a sample that reproduces the issue on my system.## Compiled using MakeNSIS v2.46<br />
+<br />
+OutFile &quot;System Plugin - SetDetailsPrint [Bug].exe&quot;<br />
+ShowInstDetails show<br />
+<br />
+Section Main<br />
+<br />
+    DetailPrint &quot;This is displayed&quot; <br />
+<br />
+    Call SetDetailsPrintTest<br />
+    <br />
+    DetailPrint &quot;This should be displayed but dosn't!&quot;<br />
+    <br />
+SectionEnd<br />
+<br />
+Function SetDetailsPrintTest<br />
+    SetDetailsPrint none<br />
+    <br />
+    Push $0<br />
+    System::Alloc 8<br />
+    Pop $0<br />
+    <br />
+    DetailPrint &quot;This is not displayed&quot;<br />
+    <br />
+    System::Free $0<br />
+    <br />
+    ## FIXME This should revert to the default DetailsPrint mode but has no effect<br />
+        SetDetailsPrint lastused<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">13th March 2010, 00:19</div></div><div class="posttext">Here is a macro for a temporary work around.<br />
+<br />
+!macro _SetDetailsPrint _VALUE<br />
+    ## There is a bug that prevents lastused from working on the 2.46 version of NSIS<br />
+    ##   I'm hoping this will be fixed in the next version<br />
+    ##   http://sourceforge.net/tracker/?func=detail&amp;aid=2969695&amp;group_id=22049&amp;atid=373085<br />
+    !if ${_VALUE} == lastused<br />
+        !ifndef NSIS_VERSION_MAJOR &amp; NSIS_VERSION_MINOR<br />
+            !searchparse ${NSIS_VERSION} &quot;v&quot; NSIS_VERSION_MAJOR `.` NSIS_VERSION_MINOR<br />
+        !endif<br />
+        !if ${NSIS_VERSION_MAJOR}.${NSIS_VERSION_MINOR} &gt; 2.46<br />
+            !warning `[BUG WORKAROUND SKIPPED] - If any following &quot;DetailPrint&quot; operations Fail try setting &quot;SetDetailsPrint&quot; manually.`<br />
+            SetDetailsPrint lastused<br />
+        !else<br />
+            !warning `[BUG WORKAROUND APPLIED] - &quot;SetDetailsPrint&quot; set to &quot;both&quot; and not &quot;lastused&quot;`<br />
+            SetDetailsPrint both<br />
+        !endif<br />
+    !else<br />
+        SetDetailsPrint ${_VALUE}<br />
+    !endif<br />
+!macroend<br />
+!define SetDetailsPrint `!insertmacro _SetDetailsPrint`<br />
+<br />
+EXAMPLE${SetDetailsPrint} none<br />
+${SetDetailsPrint} lastused</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">13th March 2010, 01:21</div></div><div class="posttext">This is not specific to the system plugin. <br />
+<br />
+There might be some memory corruption going on that resets the lastused state, or maybe the codepath that handles plugin commands sets the detailprint state.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

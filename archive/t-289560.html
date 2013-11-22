@@ -1,0 +1,218 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Pocket PC Installer - File and Directory creation, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Pocket PC Installer - File and Directory creation NSIS Discussion" />
+	
+	<title> Pocket PC Installer - File and Directory creation [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Pocket PC Installer - File and Directory creation</div>
+<hr />
+<div class="pda"><a href="t-289560.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=289560">Pocket PC Installer - File and Directory creation</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Blankfield</div><div class="date">3rd April 2008, 13:55</div></div><div class="posttext">Hello Forum,<br />
+<br />
+<br />
+Sorry, if this is a post, that was made before, but I still have no solution found for my problem. <br />
+<br />
+I want to write an installer which can copy files from the PC to the PDA. I used the code for copying files, which is published in the wiki, but still having the problem, that the files are created but never filled with the right content.<br />
+<br />
+Here's an extract of me scripting code:<br />
+<br />
+;create the file on the PDA<br />
+System::Call &quot;rapi::CeCreateFile(w '\filename.txt', i 0x80000000|0x40000000, i 0, i 0, i 2, i 0x80, i 0) i .r10&quot;<br />
+ <br />
+  ;Write your data across. Can be done in a loop etc.<br />
+  FileOpen $0 'D:\filename.txt' r<br />
+  MessageBox MB_OK|MB_ICONSTOP '$0'<br />
+ <br />
+  FileRead $0 $1<br />
+ <br />
+  ;Get the length of the string read<br />
+  StrLen $2 $1<br />
+  <br />
+  MessageBox MB_OK|MB_ICONSTOP '$2'<br />
+ <br />
+  ;----------------------<br />
+  ;Dll Call Structure<br />
+  ;<br />
+  ;BOOL CeWriteFile(<br />
+  ;  HANDLE hFile,<br />
+  ;  LPCVOID lpBuffer,<br />
+  ;  DWORD nNumberOfBytesToWrite,<br />
+  ;  LPDWORD lpNumberOfBytesWritten,<br />
+  ;  LPOVERLAPPED lpOverlapped<br />
+  ;);<br />
+  <br />
+  System::Call &quot;rapi::CeWriteFile(i r10., t r1, i r2, i 0, i 0) i .r11&quot;<br />
+<br />
+Does anybody see the error in the code? The file is always created but never filled with the right content. There is a file with name filename.txt with a size of 0Byte. <br />
+The registers in code are filled with the content, I just checked that with the messageboxes, but the file keeps to be empty.<br />
+<br />
+Please help me<br />
+<br />
+<br />
+Thank you</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mauvecloud</div><div class="date">3rd April 2008, 14:29</div></div><div class="posttext">Could be that you're sending a null pointer for lpNumberOfBytesWritten. You might need to change that 4th parameter to &quot;i .r3&quot; for example.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Blankfield</div><div class="date">3rd April 2008, 14:59</div></div><div class="posttext">Thank you for your reply, I tried your suggestion, but the result is still the same. Only a file with 0 Bytes is created.<br />
+<br />
+I had the same idea, that there should be a problem with the pointer in the system call, but I can't find any solution. <br />
+<br />
+Looks like the content is never written to the file.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mauvecloud</div><div class="date">3rd April 2008, 15:06</div></div><div class="posttext">Have you tried checking what it outputs for number of bytes written or calling CeGetLastError?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Blankfield</div><div class="date">3rd April 2008, 15:34</div></div><div class="posttext">Used the following code to get the contents of the registers<br />
+<br />
+[I]MessageBox MB_OK|MB_ICONSTOP '$1'<br />
+MessageBox MB_OK|MB_ICONSTOP '$2'<br />
+  <br />
+System::Call &quot;rapi::CeWriteFile(i r10., t r1, i r2, i 0, i 0) i .r11&quot;<br />
+  <br />
+System::Call &quot;rapi::CeGetLastError() i .r6&quot;<br />
+  <br />
+MessageBox MB_OK|MB_ICONSTOP '$6'[\I]<br />
+<br />
+In the register $1 and $2 the content is ok, but the last ce error is the 87, which stands for wrong parameter.<br />
+So your assumption was correct the parameters are not the right ones.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">3rd April 2008, 21:18</div></div><div class="posttext">You passed NULL for lpNumberOfBytesWritten which doesn't support this according to the documentation. Pass `*i .r3` instead.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Blankfield</div><div class="date">7th April 2008, 12:22</div></div><div class="posttext">Just thought that r2 stands for $2. I wrote the string length in this register. But also with '*i .r3' parameter results in an 87 error. Still the same problem. For better understanding I post the whole code one more time:<br />
+<br />
+Function createSettingsFile<br />
+  ;Init RAPI<br />
+ <br />
+  ;----------------------<br />
+  ;Dll Call Structure<br />
+  ;<br />
+  ;HRESULT CeRapiInit(void);<br />
+  System::Call &quot;rapi::CeRapiInit() i .r0&quot;<br />
+ <br />
+  ;Create the file on the PDA<br />
+ <br />
+  ;----------------------<br />
+  ;Dll Call Structure<br />
+  ;<br />
+  ;HANDLE CeCreateFile(<br />
+  ;  LPCWSTR lpFileName,<br />
+  ;  DWORD dwDesiredAccess,<br />
+  ;  DWORD dwShareMode,<br />
+  ;  LPSECURITY_ATTRIBUTES lpSecurityAttributes,<br />
+  ;  DWORD dwCreationDisposition,<br />
+  ;  DWORD dwFlagsAndAttributes,<br />
+  ;  HANDLE hTemplateFile<br />
+  ;);<br />
+  ;<br />
+  ; Access Mode Values :<br />
+  ;       GENERIC_READ = 0x80000000;<br />
+  ;       GENERIC_WRITE = 0x40000000;<br />
+  ;<br />
+  ; Creation Disposition Value :<br />
+  ; CREATE_NEW = 1;<br />
+  ; CREATE_ALWAYS = 2;<br />
+  ; OPEN_EXISTING = 3;  <br />
+  ;<br />
+  ; Flag and attribute values<br />
+  ; FILE_ATTRIBUTE_NORMAL = 0x80;<br />
+  ; FILE_ATTRIBUTE_DIRECTORY = 0x10;<br />
+  ; FILE_ATTRIBUTE_TEMPORARY = 0x100;<br />
+ <br />
+  System::Call &quot;rapi::CeCreateFile(w '\filename.txt', i 0x80000000|0x40000000, i 0, i 0, i 2, i 0x80, i 0) i .r10&quot;<br />
+ <br />
+  ;Write your data across. Can be done in a loop etc.<br />
+  FileOpen $0 'D:\workspace\filename.txt' r<br />
+  ;MessageBox MB_OK|MB_ICONSTOP '$0'<br />
+  ;IfErrors done<br />
+ <br />
+  FileRead $0 $1<br />
+ <br />
+  ;Get the length of the string read<br />
+  StrLen $2 $1<br />
+  <br />
+  ;MessageBox MB_OK|MB_ICONSTOP '$2'<br />
+ <br />
+  ;----------------------<br />
+  ;Dll Call Structure<br />
+  ;<br />
+  ;BOOL CeWriteFile(<br />
+  ;  HANDLE hFile,<br />
+  ;  LPCVOID lpBuffer,<br />
+  ;  DWORD nNumberOfBytesToWrite,<br />
+  ;  LPDWORD lpNumberOfBytesWritten,<br />
+  ;  LPOVERLAPPED lpOverlapped<br />
+  ;);<br />
+  <br />
+  MessageBox MB_OK|MB_ICONSTOP '$1'<br />
+  MessageBox MB_OK|MB_ICONSTOP '$2'<br />
+  <br />
+  System::Call &quot;rapi::CeWriteFile(i r10., t r1, *i .r3, i 0, i 0) i .r11&quot;<br />
+  <br />
+  System::Call &quot;rapi::CeGetLastError() i .r6&quot;<br />
+  <br />
+  MessageBox MB_OK|MB_ICONSTOP '$6'<br />
+ <br />
+  ;----------------------<br />
+  ;Dll Call Structure<br />
+  ;<br />
+  ;BOOL CeCloseHandle( <br />
+  ;  HANDLE hObject<br />
+  ;); <br />
+ <br />
+  ;Close the file on the PDA<br />
+  System::Call &quot;rapi::CeCloseHandle(i r10) i .r1&quot;<br />
+ <br />
+  ;Close the local file<br />
+  FileClose $0<br />
+ <br />
+  System::Free 0<br />
+FunctionEnd<br />
+<br />
+The example returns me the error 87 in the last message box. Can anybody help me??????<br />
+<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th April 2008, 21:51</div></div><div class="posttext">You still pass 0 as lpNumberOfBytesWritten only now you also pass a pointer instead of the number of bytes to write in nNumberOfBytesToWrite.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Blankfield</div><div class="date">8th April 2008, 08:49</div></div><div class="posttext">Sorry, my fault!!!!<br />
+<br />
+<br />
+Thank you very much, now it is working.<br />
+<br />
+<br />
+For all, who have problems with the example on the homepage, the right call of the ceWriteFile is:<br />
+<br />
+System::Call &quot;rapi::CeWriteFile(i r10., t r1, i r2, *i .r3, i 0) i .r11&quot;<br />
+<br />
+<br />
+Thanks to all, who helped me!!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Prabha</div><div class="date">4th July 2008, 14:04</div></div><div class="posttext">hello <br />
+I am new for this installation process.<br />
+I am using same function for transferring the file to Windows mobile device. It is transferring the file but with few data. Can you please help me out? I think i need to write loop over there while reading the file. <br />
+<br />
+Thank you</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

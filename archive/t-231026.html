@@ -1,0 +1,310 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Installer just quits running?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Installer just quits running? NSIS Discussion" />
+	
+	<title> Installer just quits running? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Installer just quits running?</div>
+<hr />
+<div class="pda"><a href="t-231026.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=231026">Installer just quits running?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">LaneinBC</div><div class="date">15th November 2005, 00:26</div></div><div class="posttext">Has anybody seen this type of problem? What appears to be happening is that while running the executable, it just quits with no error messages at all.<br />
+<br />
+I have traced it down to trying to display an MUI custom user input page with this statement:<br />
+  !insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;GMCEIPAddrGet.Ini&quot;<br />
+<br />
+This is being run from a function that is being called from an MUI user input custom page &quot;Leave&quot; function. Are there any restrictions when writing functions from a custom page &quot;leave&quot; function?<br />
+<br />
+I am using NSIS v2.11.<br />
+<br />
+Thanks for any help or suggestions anybody can provide.<br />
+<br />
+Regards<br />
+Lane</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JasonFriday13</div><div class="date">15th November 2005, 00:51</div></div><div class="posttext">Instead of using the leave function, try the pre function.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LaneinBC</div><div class="date">15th November 2005, 00:54</div></div><div class="posttext">But, what I am trying to do, is to analyse the user's inputs to the custom input page. Based on what the user has entered, I then start doing other stuff.<br />
+<br />
+I read that custom pages don't have a &quot;Pre&quot; callback function?<br />
+<br />
+I'm fairly new to NSIS, so it's all a learning experience for me.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LaneinBC</div><div class="date">15th November 2005, 00:57</div></div><div class="posttext">What I tried, was to comment out the line:<br />
+!insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;GMCEIPAddrGet.Ini&quot;<br />
+and the installer run further, but eventually dies a bit later on. I must be doing something BAD with the script??<br />
+<br />
+What is the easiest way to debug these kinds of faults?<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JasonFriday13</div><div class="date">15th November 2005, 01:09</div></div><div class="posttext">Example:<br />
+<br />
+page custom prefunction &quot;&quot; leavefunction<br />
+<br />
+Function prefunction<br />
+  !insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;GMCEIPAddrGet.Ini&quot;<br />
+FunctionEnd<br />
+<br />
+Function leavefunction <br />
+  !insertmacro MUI_INSTALLOPTIONS_READ $0 &quot;GMCEIPAddrGet.ini&quot; &quot;Field 2&quot; &quot;State&quot;<br />
+!insertmacro MUI_INSTALLOPTIONS_READ $1 &quot;GMCEIPAddrGet.ini&quot; &quot;Field 3&quot; &quot;State&quot;<br />
+<br />
+; the following line compares the variable $0 to 1,<br />
+; if the same, it goes to the next line. If not,<br />
+; goes to nofile.<br />
+strcmp $0 1 +1 nofile<br />
+file &quot;license.txt&quot;<br />
+nofile:<br />
+strcmp $0 1 installfile nofile1<br />
+installfile:<br />
+file &quot;history.txt&quot;<br />
+nofile1:<br />
+FunctionEnd<br />
+<br />
+Edit: please attach a script so I can debug it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LaneinBC</div><div class="date">15th November 2005, 01:17</div></div><div class="posttext">Ok, I tried this. Changed the page line to:<br />
+; Select Firmware Downloads Page:<br />
+Page custom FirmwareDownloadsSelectPage &quot;&quot; FirmwareDownloadsSelect_LeavePage<br />
+<br />
+But when compiling the script, it warns me that the &quot;Leave&quot; function is not used:<br />
+  install function &quot;FirmwareDownloadsSelect_LeavePage&quot; not referenced - zeroing code (488-515) out<br />
+<br />
+I did not think that custom pages could have a &quot;Pre&quot; call-back function as well as a &quot;Leave&quot; call-back function?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JasonFriday13</div><div class="date">15th November 2005, 01:20</div></div><div class="posttext">Duh, I made a stupid mistake. Remove the double quotes in the page command, eg. <br />
+page custom pre leave</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LaneinBC</div><div class="date">15th November 2005, 01:24</div></div><div class="posttext">Yes, this is what I have in the script now.<br />
+I have the &quot;Pre&quot; call-back function&quot; (FirmwareDownloadsSelectPage) and the &quot;Leave&quot; call-back function: FirmwareDownloadsSelect_LeavePage.<br />
+<br />
+This is what is not working. maybe there is a bug in the compiler? I initially tried this with NSIS v2.10, and then upgraded to NSIS v2.11, hoping it was a bug that might have been fixed in the newer release.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JasonFriday13</div><div class="date">15th November 2005, 01:26</div></div><div class="posttext">From earlier post:<br />
+Edit: please attach a script so I can debug it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LaneinBC</div><div class="date">15th November 2005, 01:30</div></div><div class="posttext">Ok, I will try to attach a script that shows the problem tommorrow. (Have to leave right now). Thanks for you help so far.<br />
+<br />
+Lane</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LaneinBC</div><div class="date">15th November 2005, 17:44</div></div><div class="posttext">OK, it I have attached a small NSIS script that show the problem. It looks like you cannot do what I was trying to do; which was to try to display another user input dialog box for the user to enter additional inputs, from a custom page &quot;Leave&quot; call-back function. If I comment out the line:<br />
+<br />
+    InstallOptions::dialog &quot;$PLUGINSDIR\test2.ini&quot;<br />
+    Pop ${TEMP1}<br />
+<br />
+In the function &quot;xxx&quot;, then the script/installer runs OK. If I leave it in, then it quits part way through without properly running to completion.<br />
+<br />
+My assumption is then that you need to perform a &quot;limited&quot; amount of processing in a custom page &quot;Leave&quot; call-back function. (and any called functions from it)<br />
+<br />
+If anybody could compile and run this sample, and let me know if you have the same results.<br />
+<br />
+Thanks<br />
+<br />
+Lane</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LaneinBC</div><div class="date">15th November 2005, 17:47</div></div><div class="posttext">And here is the test.ini file contents:<br />
+<br />
+[Settings]<br />
+NumFields=8<br />
+<br />
+[Field 1]<br />
+Type=GroupBox<br />
+Left=0<br />
+Right=-1<br />
+Top=0<br />
+Bottom=-5<br />
+Text=&quot; This is a group box... &quot;<br />
+<br />
+[Field 2]<br />
+Type=checkbox<br />
+Text=Install support for X<br />
+Left=10<br />
+Right=-10<br />
+Top=17<br />
+Bottom=25<br />
+State=0<br />
+Flags=GROUP<br />
+<br />
+[Field 3]<br />
+Type=checkbox<br />
+Text=Install support for Y<br />
+Left=10<br />
+Right=-10<br />
+Top=30<br />
+Bottom=38<br />
+State=1<br />
+Flags=NOTABSTOP<br />
+<br />
+[Field 4]<br />
+Type=checkbox<br />
+Text=Install support for Z<br />
+Left=10<br />
+Right=-10<br />
+Top=43<br />
+Bottom=51<br />
+State=0<br />
+Flags=NOTABSTOP<br />
+<br />
+[Field 5]<br />
+Type=FileRequest<br />
+State=C:\poop.poop<br />
+Left=10<br />
+Right=-10<br />
+Top=56<br />
+Bottom=68<br />
+Filter=Poop Files|*.poop|All files|*.*<br />
+Flags=GROUP|FILE_MUST_EXIST|FILE_EXPLORER|FILE_HIDEREADONLY<br />
+<br />
+[Field 6]<br />
+Type=DirRequest<br />
+Left=10<br />
+Right=-10<br />
+Top=73<br />
+Bottom=85<br />
+Text=Select a directory...<br />
+State=C:\Program Files\NSIS<br />
+<br />
+[Field 7]<br />
+Type=Label<br />
+Left=10<br />
+Right=-10<br />
+Top=90<br />
+Bottom=98<br />
+Text=This is a label...<br />
+<br />
+[Field 8]<br />
+Type=Text<br />
+Left=10<br />
+Right=-10<br />
+Top=98<br />
+Bottom=120<br />
+State=&quot;Multiline\r\nedit...&quot;<br />
+Flags=MULTILINE|VSCROLL|WANTRETURN</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LaneinBC</div><div class="date">15th November 2005, 17:49</div></div><div class="posttext">And here is the test2.ini file contents:<br />
+<br />
+[Settings]<br />
+NumFields=8<br />
+<br />
+[Field 1]<br />
+Type=GroupBox<br />
+Left=0<br />
+Right=-1<br />
+Top=0<br />
+Bottom=-4<br />
+Text=&quot; This is a group box... &quot;<br />
+<br />
+[Field 2]<br />
+Type=checkbox<br />
+Text=Install support for X2<br />
+Left=10<br />
+Right=-10<br />
+Top=17<br />
+Bottom=25<br />
+State=0<br />
+Flags=GROUP<br />
+<br />
+[Field 3]<br />
+Type=checkbox<br />
+Text=Install support for Y2<br />
+Left=10<br />
+Right=-10<br />
+Top=30<br />
+Bottom=38<br />
+State=1<br />
+Flags=NOTABSTOP<br />
+<br />
+[Field 4]<br />
+Type=checkbox<br />
+Text=Install support for Z2<br />
+Left=10<br />
+Right=-10<br />
+Top=43<br />
+Bottom=51<br />
+State=0<br />
+Flags=NOTABSTOP<br />
+<br />
+[Field 5]<br />
+Type=FileRequest<br />
+State=*.*<br />
+Left=10<br />
+Right=-10<br />
+Top=56<br />
+Bottom=68<br />
+Filter=Poop Files|*.poop|All files|*.*<br />
+Flags=GROUP|FILE_MUST_EXIST|FILE_EXPLORER|FILE_HIDEREADONLY<br />
+<br />
+[Field 6]<br />
+Type=DirRequest<br />
+Left=10<br />
+Right=-10<br />
+Top=73<br />
+Bottom=84<br />
+Text=Select a directory...<br />
+State=C:\Program Files\NSIS<br />
+<br />
+[Field 7]<br />
+Type=Label<br />
+Left=10<br />
+Right=-10<br />
+Top=89<br />
+Bottom=97<br />
+Text=This is a label...<br />
+<br />
+[Field 8]<br />
+Type=Text<br />
+Left=10<br />
+Right=-10<br />
+Top=97<br />
+Bottom=120<br />
+State=&quot;Multiline\r\nedit...&quot;<br />
+Flags=MULTILINE|VSCROLL|WANTRETURN</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">15th November 2005, 17:53</div></div><div class="posttext">Why put it in the Leave function in the first place?<br />
+You just need to use another Page Custom instruction along with your existing one.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LaneinBC</div><div class="date">15th November 2005, 17:56</div></div><div class="posttext">You mean to just use another (or the next one in line) custom page to process and validate the user's input from the previous custom page?<br />
+<br />
+If you do that, won't you have to create another user input page?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LaneinBC</div><div class="date">15th November 2005, 18:07</div></div><div class="posttext">OK, Afrow UK's suggestion works.<br />
+<br />
+If I just use another custom page &quot;normal&quot; call-back function it now works properly.<br />
+<br />
+There must be some restrictions as to what you can do in a &quot;Leave&quot; call-back function for custom pages..<br />
+<br />
+Thanks for you help..!!<br />
+<br />
+Lane</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

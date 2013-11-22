@@ -1,0 +1,112 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" My MySQL registry checker, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  My MySQL registry checker NSIS Discussion" />
+	
+	<title> My MySQL registry checker [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  My MySQL registry checker</div>
+<hr />
+<div class="pda"><a href="t-266938.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=266938">My MySQL registry checker</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">alx5962</div><div class="date">2nd March 2007, 13:30</div></div><div class="posttext">As I didn't found a script on the nsis page to detect MySQL in the registry, I just wrote mine and decided to share it.<br />
+I'm new to NSIS coding so feel free to make a better code ;) <br />
+<br />
+To use it :<br />
+Var $path_result<br />
+Var $version_result<br />
+!insertmacro CheckMySqlReg $path_result $version_result<br />
+DetailPrint &quot;MySQL : located in $path_result with version $version_result&quot;<br />
+<br />
+<br />
+!macro CheckMySqlReg _RESULT _RESULT2<br />
+    Push $0<br />
+    Push $1<br />
+    Push $2<br />
+    Push $R0<br />
+    StrCpy $0 0<br />
+    StrCpy ${_RESULT} &quot;&quot;<br />
+    StrCpy ${_RESULT2} &quot;&quot;<br />
+    loopSqlReg:<br />
+        ClearErrors<br />
+        EnumRegKey $1 HKLM &quot;Software\MYSQL AB&quot; $0<br />
+        StrCmp $1 &quot;&quot; doneSqlReg<br />
+        IntOp $0 $0 + 1<br />
+        StrCpy $2 $1 12<br />
+        StrCmp $2 &quot;MySQL Server&quot; foundSqlReg 0<br />
+        Goto loopSqlReg<br />
+    foundSqlReg:<br />
+        ReadRegStr $R0 HKLM &quot;Software\MYSQL AB\$1&quot; &quot;Location&quot;<br />
+        IfFileExists &quot;$R0\bin\mysql.exe&quot; 0 doneSqlReg<br />
+        StrCpy ${_RESULT} &quot;$R0&quot;<br />
+        ReadRegStr $R0 HKLM &quot;Software\MYSQL AB\$1&quot; &quot;Version&quot;<br />
+        StrCpy ${_RESULT2} &quot;$R0&quot;<br />
+    doneSqlReg:<br />
+    Pop $0<br />
+    Pop $1<br />
+    Pop $2<br />
+    Pop $R0<br />
+!macroend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">2nd March 2007, 17:32</div></div><div class="posttext">It'd be better whenever you want to share NSIS code to post it at wiki (http://nsis.sf.net\Developer_Center). This makes it easier for others to find it.<br />
+A quick look on the code; if you really want to preserve the values of $0, $1, $2, $R0, you should turn upside down when you Pop, see here (http://nsis.sourceforge.net/Pop%2C_Push%2C_Exch..._The_Stack) , also probably you do not need StrCpy ${_RESULT} &quot;&quot; and StrCpy ${_RESULT2} &quot;&quot;, while declared variables $path_result and $version_result are already empty :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">alx5962</div><div class="date">5th March 2007, 07:33</div></div><div class="posttext">thank you for the tip :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fishweasel</div><div class="date">6th March 2007, 11:18</div></div><div class="posttext">I had a similar requirement where i needed to detect MSDE /MSSQL and run the uninstaller path.<br />
+I used registry.nsh plugin to locate the path , <br />
+then using that path, locate and run a substring :<br />
+(extracted code)<br />
+<br />
+!include &quot;registry.nsh&quot;<br />
+<br />
+Function UninstallMSDE<br />
+<br />
+### Get dynamic registry path by searching for MSDE (full name) and store path as $1<br />
+### Using $1 search for uninstall path - store as $R3<br />
+### Execute $R3 (msde uninstall path)<br />
+<br />
+ ${registry::Open} &quot;HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall&quot; &quot;/K=0 /V=0 /S=1 /B=1 /NS='Microsoft SQL Server Desktop Engine'&quot; $0<br />
+	StrCmp $0 0 0 loop<br />
+	MessageBox MB_OK &quot;Error getting MSDE registry entry use Add/Remove programs&quot; IDOK close<br />
+<br />
+	loop:<br />
+	${registry::Find} &quot;$0&quot; $1 $2 $3 $4<br />
+<br />
+	${registry::Open} &quot;HKLM\$1&quot; &quot;/K=0 /V=1 /S=0 /B=1 /NS='UninstallString'&quot; $R6<br />
+	StrCmp $R6 0 0 loop2<br />
+	MessageBox MB_OK &quot;Error getting MSDE Uninstall registry entry use Add/Remove programs&quot; IDOK close<br />
+<br />
+	loop2:<br />
+	${registry::Find} &quot;$R6&quot; $R1 $R2 $R3 $R4<br />
+<br />
+ExecWait $R3<br />
+	close:<br />
+	${registry::Close} &quot;$0&quot;<br />
+	${registry::Unload}<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+It can probably be cleaned up a little - i really only modified the example scripts included in the plugin and cut it. <br />
+<br />
+Unless RW and co see any major problems with the code i shall add it to WiKi later this week.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">6th March 2007, 12:12</div></div><div class="posttext">My opinion is this; contribution should be our duty, this is the way NSIS grows up and spreads all over.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

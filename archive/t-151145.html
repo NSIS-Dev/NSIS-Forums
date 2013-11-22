@@ -1,0 +1,178 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" ExDll example doesn't produce DLL file?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  ExDll example doesn't produce DLL file? NSIS Discussion" />
+	
+	<title> ExDll example doesn't produce DLL file? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  ExDll example doesn't produce DLL file?</div>
+<hr />
+<div class="pda"><a href="t-151145.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=151145">ExDll example doesn't produce DLL file?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">lzandman</div><div class="date">1st October 2003, 19:32</div></div><div class="posttext">Hi,<br />
+<br />
+Since I got a lot of comments about the (big) size of my NSIS plugins created in Delphi, I'm trying to convert them to Visual C++. But when I build the ExDLL C sample DLL it doesn't generate a DLL file. Only an OBJ- and a LIB-file. Does anybody know what I'm doing wrong?<br />
+<br />
+I use Visual C++ .NET 2003 and I loaded the supplied .dsw file. It asks if I want to convert it to the new format. I do this and select &quot;Build ExDLL&quot;. Then I get a 'release' directory, but it doesn't include a DLL file, only some other files.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DrO</div><div class="date">1st October 2003, 19:49</div></div><div class="posttext">have you checked the output path in the project?<br />
+<br />
+the examples in the distro normally will output the plugin into the '\plugins' folder so you will see the obj and lib files in the 'release' folder or whatever it has been called where the source is but the dll will be created elsewhere.<br />
+<br />
+best to check the plugins folder for the file times is what i can suggest<br />
+<br />
+hope that helps<br />
+<br />
+-daz</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lzandman</div><div class="date">1st October 2003, 20:59</div></div><div class="posttext">Originally posted by DrO <br />
+have you checked the output path in the project?<br />
+<br />
+best to check the plugins folder for the file times is what i can suggestYou're right! I feel pretty n00b :)<br />
+<br />
+I didn't check the linker output path, which is set to &quot;../../Plugins/exdll.dll&quot;. The DLL was located in the plugins folder.<br />
+<br />
+Thanx again!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lzandman</div><div class="date">1st October 2003, 23:47</div></div><div class="posttext">I've got a new problem. When I add my own code to the exdll example I get the following errors:<br />
+exdll.obj : error LNK2019: unresolved external symbol _rand referenced in function _GetRandom<br />
+exdll.obj : error LNK2019: unresolved external symbol _srand referenced in function _GetRandom<br />
+exdll.obj : error LNK2019: unresolved external symbol _time referenced in function _GetRandom<br />
+exdll.obj : error LNK2001: unresolved external symbol __fltused<br />
+exdll.obj : error LNK2019: unresolved external symbol __ftol2 referenced in function _GetRandom<br />
+../../Plugins/exdll.dll : fatal error LNK1120: 5 unresolved externals<br />
+I've already looked at MSDN and Google, but couldn't find the solution. It seems there's something wrong with the linked libraries. To make the srand(), rand() and time() functions work I included stdlib.h and time.h, but that didn't solve the problem.<br />
+<br />
+When I create a simple console application my code works perfectly, so the problem must be easily to solve...<br />
+<br />
+Does anybody know what might be the problem? Here's the full source code of my exdll.c file:<br />
+<br />
+#include &lt;windows.h&gt;<br />
+#include &lt;stdlib.h&gt;<br />
+#include &quot;exdll.h&quot;<br />
+#include &quot;time.h&quot;<br />
+<br />
+HINSTANCE g_hInstance;<br />
+<br />
+HWND g_hwndParent;<br />
+<br />
+int myatoi(char *s);<br />
+<br />
+void __declspec(dllexport) GetRandom(HWND hwndParent, int string_size, <br />
+                                     char *variables, stack_t **stacktop)<br />
+{<br />
+  g_hwndParent=hwndParent;<br />
+<br />
+  EXDLL_INIT();<br />
+<br />
+  // do your stuff here<br />
+  {<br />
+	int range;<br />
+	int val;<br />
+	char buf[1024];<br />
+<br />
+	// Pop range from stack<br />
+	popstring(buf);<br />
+	range = myatoi(buf);<br />
+	<br />
+	// Seed the random number generator with the current time<br />
+	srand( (unsigned)time( NULL ) );<br />
+<br />
+	// The following code was taken from this website:<br />
+	// http://www.delorie.com/djgpp/v2faq/faq22_23.html<br />
+	// int random_number =<br />
+	//        low + (double)rand () * (high - low + 1) / RAND_MAX;<br />
+<br />
+	val = ((double) rand() * range / RAND_MAX);<br />
+<br />
+	wsprintf(buf,&quot;%d&quot;,val);<br />
+<br />
+	pushstring(buf);<br />
+  }<br />
+}<br />
+<br />
+<br />
+<br />
+BOOL WINAPI _DllMainCRTStartup(HANDLE hInst, ULONG ul_reason_for_call, LPVOID lpReserved)<br />
+{<br />
+  g_hInstance=hInst;<br />
+	return TRUE;<br />
+}<br />
+<br />
+// This function was copied from AdvSplash plugin<br />
+int myatoi(char *s)<br />
+{<br />
+  unsigned int v=0;<br />
+  if (*s == '0' &amp;&amp; (s[1] == 'x' || s[1] == 'X'))<br />
+  {<br />
+    s+=2;<br />
+    for (;;)<br />
+    {<br />
+      int c=*s++;<br />
+      if (c &gt;= '0' &amp;&amp; c &lt;= '9') c-='0';<br />
+      else if (c &gt;= 'a' &amp;&amp; c &lt;= 'f') c-='a'-10;<br />
+      else if (c &gt;= 'A' &amp;&amp; c &lt;= 'F') c-='A'-10;<br />
+      else break;<br />
+      v&lt;&lt;=4;<br />
+      v+=c;<br />
+    }<br />
+  }<br />
+  else if (*s == '0' &amp;&amp; s[1] &lt;= '7' &amp;&amp; s[1] &gt;= '0')<br />
+  {<br />
+    s++;<br />
+    for (;;)<br />
+    {<br />
+      int c=*s++;<br />
+      if (c &gt;= '0' &amp;&amp; c &lt;= '7') c-='0';<br />
+      else break;<br />
+      v&lt;&lt;=3;<br />
+      v+=c;<br />
+    }<br />
+  }<br />
+  else<br />
+  {<br />
+    int sign=0;<br />
+    if (*s == '-') { s++; sign++; }<br />
+    for (;;)<br />
+    {<br />
+      int c=*s++ - '0';<br />
+      if (c &lt; 0 || c &gt; 9) break;<br />
+      v*=10;<br />
+      v+=c;<br />
+    }<br />
+    if (sign) return -(int) v;<br />
+  }<br />
+  return (int)v;<br />
+}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd October 2003, 12:26</div></div><div class="posttext">It's because the ExDLL project doesn't include default libraries. Add LIBC.LIB to the list of library modules.<br />
+<br />
+Please attach large files next time.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lzandman</div><div class="date">2nd October 2003, 13:30</div></div><div class="posttext">Originally posted by kichik <br />
+It's because the ExDLL project doesn't include default libraries. Add LIBC.LIB to the list of library modules.Thanx, I will try that when I get home.Please attach large files next time.I tried that at first, but the forum didn't accept .c files. I had to press &quot;back&quot; in my browser and I also lost all the text that I had typed. So I added it in-line with the text.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd October 2003, 13:36</div></div><div class="posttext">Rename it to .txt then.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lzandman</div><div class="date">2nd October 2003, 15:33</div></div><div class="posttext">Originally posted by kichik <br />
+Rename it to .txt then. OK OK... I will do that next time :p</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

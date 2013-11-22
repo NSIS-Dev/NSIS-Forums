@@ -1,0 +1,216 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Monitoring clipboard crashes win, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Monitoring clipboard crashes win NSIS Discussion" />
+	
+	<title> Monitoring clipboard crashes win [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Monitoring clipboard crashes win</div>
+<hr />
+<div class="pda"><a href="t-268192.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=268192">Monitoring clipboard crashes win</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Mark Nascimento</div><div class="date">22nd March 2007, 13:27</div></div><div class="posttext">Could you tell me why this script,<br />
+after running about 20 minutes, crashes Windows 98?<br />
+<br />
+If it is running and IÂ´m only browsing internet, it starts<br />
+crashing the systray, then, all windows starts getting slow<br />
+until there is nothig else working.<br />
+<br />
+The script is attached but, if fails, is the same below:<br />
+<br />
+OutFile &quot;Monitorador.exe&quot;<br />
+Name &quot;Monitorador&quot;<br />
+!include WinMessages.nsh<br />
+;LoadLanguageFile &quot;D:\Roteiro\PORTUGUESEBR.NLF&quot;<br />
+;Icon Monitorador.ico<br />
+SilentInstall Silent<br />
+Page Instfiles<br />
+<br />
+<br />
+Section<br />
+############# Allow only one installer instance<br />
+System::Call &quot;kernel32::CreateMutexA(i 0, i 0, t '$(^Name)') i .r0 ?e&quot;<br />
+Pop $R0<br />
+StrCmp $R0 0 DoRunInstall<br />
+Banner::show /NoUnload &quot;O Monitorador jÃ¡ estÃ¡ aberto !&quot; ;ItÂ´s already open !<br />
+Sleep 2000<br />
+Banner::Destroy<br />
+Abort<br />
+DoRunInstall:<br />
+     System::Free $R0     ;Does it help? is not in the original nsi.<br />
+####################################### lower priority          Baixar prioridade<br />
+System::Call &quot;kernel32::GetCurrentProcess() i .s&quot;<br />
+System::Call &quot;kernel32::SetPriorityClass(i s, i 0x00000040)&quot;<br />
+####################################### Indicar que estÃ¡ ligado para o Proxy do Papai (botÃ£o 23)<br />
+WriteIniStr &quot;$exedir\n.ini&quot; &quot;Field 23&quot; Flags Disabled ;report interface that Monitorador is running and disable buton<br />
+####################################### see what is there to not launch on start            VÃª o que estÃ¡ lÃ¡ para nÃ£o lanÃ§ar de arranque.<br />
+Delete &quot;$temp\mt.ini&quot;  ; clear previous use of Monitorador<br />
+WriteIniStr &quot;$temp\mt.ini&quot; 1 2 Ligado ;report interface that Monitorador is running<br />
+System::Call 'user32::OpenClipboard(i 0)'<br />
+System::Call 'user32::GetClipboardData(i 1) t .r0'<br />
+System::Call &quot;user32::CloseClipboard()&quot;<br />
+Pop $0<br />
+WriteIniStr &quot;$temp\mt.ini&quot; 1 1 $0 ;So, Monitorador doesnÂ´t launch TrocarProxy.exe with what was in clipboard<br />
+####################################### start Looping<br />
+loop:<br />
+        System::Free $R0  ;Does it help ? is not in the original nsi.<br />
+        System::Free $0   ;Does it help ? is not in the original nsi.<br />
+ReadIniStr $2 &quot;$temp\mt.ini&quot; 1 2    ;See if the enterface wants to close Monitorador<br />
+StrCmp $2 desligar Fechar           ;See if the enterface wants to close Monitorador<br />
+Sleep 2000<br />
+System::Call 'user32::OpenClipboard(i 0)'<br />
+System::Call 'user32::GetClipboardData(i 1) t .r0'<br />
+System::Call &quot;user32::CloseClipboard()&quot;<br />
+Pop $0<br />
+ReadIniStr $9 &quot;$temp\mt.ini&quot; 1 1   ;see if clipboard changed. If no, loop<br />
+StrCmp $0 $9 loop  ; $9 is the original. see if clipboard changed. If no, loop<br />
+####################################### Agora, ver se o dado HTTP Ã© vÃ¡lido:<br />
+StrCpy $1 $0 7<br />
+StrCmp $1 &quot;http://&quot; 0 naoehttp ;If valid, closes TrocarProxy and reopens it<br />
+fct::fct /WC '#32770' /WT &quot;Proxy do Papai&quot;<br />
+WriteIniStr &quot;$temp\mt.ini&quot; 1 1 $0   ; This data becomes original clipboard.<br />
+WriteINIStr &quot;$exedir\n.ini&quot; &quot;Field 41&quot; Text &quot;Do Monitorador&quot; ;The interface says that was opened by Monitorador<br />
+Exec &quot;$exedir\TrocarProxy.exe&quot;<br />
+GoTo loop<br />
+####################################### see if it is a valid PROXY, by my criteria<br />
+naoehttp:<br />
+StrCpy $1 $0 1 -6<br />
+StrCmp $1 &quot;:&quot; certo1<br />
+StrCpy $1 $0 1 -5<br />
+StrCmp $1 &quot;:&quot; certo1<br />
+StrCpy $1 $0 1 -4<br />
+StrCmp $1 &quot;:&quot; certo1<br />
+StrCpy $1 $0 1 -3<br />
+StrCmp $1 &quot;:&quot; certo1 loop<br />
+certo1:<br />
+StrCpy $1 $0 &quot;&quot; -2<br />
+intop $2 $1 / $1    ;see if is a number<br />
+StrCmp $2 1 0 loop  ;is it a number..  ver se Ã© nÃºmero<br />
+StrCmp $1 80 certo          ;- allowed doors (dezena e unidade.)<br />
+StrCmp $1 28 certo          ;- allowed doors (Centena em diante Ã© irrelevante)<br />
+StrCmp $1 08 certo          ;- allowed doors<br />
+StrCmp $1 50 certo          ;- allowed doors<br />
+StrCmp $1 24 certo          ;- allowed doors<br />
+StrCmp $1 88 certo          ;- allowed doors<br />
+StrCmp $1 27 certo          ;- allowed doors<br />
+GoTo loop<br />
+####################################### Yes, is a valid number. So...<br />
+certo:   ;Right<br />
+####################################### O proxy do Papai JÃ¡ estÃ¡ aberto? ;ClearErrors;Rename &quot;$exedir\TrocarProxy.exe&quot; &quot;$exedir\TrocarProxy.exe&quot; ;IfErrors 0 SemRever;ReadIniStr $2 &quot;$temp\mt.ini&quot; 1 2;StrCmp $2 desligar Fechar<br />
+fct::fct /WC '#32770' /WT &quot;Proxy do Papai&quot; ;Closes Proxy do Papai<br />
+########## Change the proxy            Mudar o proxy<br />
+WriteRegDWORD HKU &quot;.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Internet Settings&quot; &quot;ProxyEnable&quot; 1<br />
+WriteRegDWORD HKLM &quot;Config\0001\Software\Microsoft\windows\CurrentVersion\Internet Settings&quot; &quot;ProxyEnable&quot; 1<br />
+WriteRegDWORD HKCU &quot;Software\Microsoft\Windows\CurrentVersion\Internet Settings&quot; &quot;ProxyEnable&quot; 1<br />
+WriteRegStr HKCU &quot;Software\Microsoft\Windows\CurrentVersion\Internet Settings&quot; &quot;ProxyServer&quot; &quot;$0&quot;<br />
+WriteRegStr HKU &quot;.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Internet Settings&quot; &quot;ProxyServer&quot; &quot;$0&quot;<br />
+########## Adequate interface and launch TrocarProxy.exe             Mudar config da interface para ligar configurado<br />
+WriteIniStr &quot;$exedir\n.ini&quot; &quot;Field 10&quot; &quot;State&quot; 0<br />
+WriteINIStr &quot;$exedir\n.ini&quot; &quot;Field 11&quot; &quot;Flags&quot; &quot;Notify|DISABLED&quot;<br />
+WriteINIStr &quot;$exedir\n.ini&quot; &quot;Field 2&quot; &quot;Flags&quot; &quot;&quot;<br />
+WriteINIStr &quot;$exedir\n.ini&quot; &quot;Field 3&quot; &quot;Flags&quot; &quot;Notify&quot;<br />
+WriteINIStr &quot;$exedir\n.ini&quot; &quot;Field 41&quot; Text &quot;Do Monitorador&quot;<br />
+WriteIniStr &quot;$temp\mt.ini&quot; 1 1 $0   ; becomes clipboard  original.<br />
+Exec &quot;$exedir\TrocarProxy.exe&quot;<br />
+GoTo loop<br />
+<br />
+Fechar:<br />
+Delete &quot;$temp\mt.ini&quot; ;clean last use of Monitorador<br />
+WriteIniStr &quot;$exedir\n.ini&quot; &quot;Field 23&quot; Flags Notify  ;Buton of interface is enabled again<br />
+sectionend<br />
+autoclosewindow true</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">22nd March 2007, 16:48</div></div><div class="posttext">small cleanup and some fixes.<br />
+<br />
+plz test if it works.<br />
+<br />
+compare it with your original script by using winmerge to see the differences.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mark Nascimento</div><div class="date">22nd March 2007, 19:14</div></div><div class="posttext">Thank You.<br />
+I tested but the result is now different.<br />
+After 40 minutes, when I try to open the NisEdit,<br />
+appeared a Windows messagebox saying something<br />
+like this, in english: (my langID is PortuguÃªs, Brasil)<br />
+&quot;There is not enough memory to run this app&quot;<br />
+<br />
+Then, I close all the apps but nothing else could be launched.<br />
+When try to restart computer Start&gt;turn off&gt;restart,<br />
+there was a Windows window that goes:<br />
+&quot;DDE SERVER is not responding&quot;<br />
+&quot;End task - wait - cancel&quot;<br />
+Then, full stop. Press restart. Comes scandisk on next boot.<br />
+<br />
+What could it be?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">23rd March 2007, 10:15</div></div><div class="posttext">Try removing parts of the script to see which exact part of it causes the problems. To make the problem appear faster, drop the Sleep command.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">23rd March 2007, 14:20</div></div><div class="posttext">I might forgot how I did this long ago, but good idea is to copy clipboard data while data are locked (before CloseClipboard). Otherwise handle may be not valid.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mark Nascimento</div><div class="date">23rd March 2007, 18:08</div></div><div class="posttext">IÂ´ll start trying a simple loop with IntOp.<br />
+For now, : I reduced the Sleep from 2000 to 60<br />
+and after about 1 hour (three times, the same behavior)<br />
+Systray and quicklaunch stoped to launch apps. Systray <br />
+is the fist to stop. Then, quickLaunch, then &quot;there is<br />
+not enough memory to run this app. Close some apps...&quot;<br />
+Then, I quicly press ctrl alt del, closed Monitorador,<br />
+and everything became working.<br />
+<br />
+I donÂ´t know, but looks like it is somethig outside the<br />
+loop. At first, I was not using priority but it still<br />
+crashes. <br />
+I also know that nsis is an installer and IÂ´m pushing.<br />
+Thank you for beeing so patient.<br />
+<br />
+Remember IÂ´m using Win98 and the only app beiond windws running is Kaspersky anti hacker and browsing internet.<br />
+Sometimes, office 2000, nisedit, compiling. No music, no games.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mark Nascimento</div><div class="date">6th April 2007, 07:18</div></div><div class="posttext">PLEASE, READ THIS. I think it's relevant.<br />
+<br />
+Well, I have not good news.<br />
+In fact, a simple script that keeps running background,<br />
+after about one hour, starts to crash Win98.<br />
+Today, I was listening to a lot of music in Winamp, <br />
+when Winamp crashes again . Then, I remembered that<br />
+Winamp ALWAYS crashes (itself) after some time, and today,<br />
+it happened about two hours after started.<br />
+I also remembered that Winamp ALWAYS crashes after some time<br />
+since version 3 (I posted it in this forum a long time ago, when I was using a 586, 166MHz).<br />
+<br />
+I'm not a developer and want only to help us.<br />
+For me, looks like there is something not right in the<br />
+structure of Winamp/Nsis.<br />
+<br />
+Winamp v2.x and mediaPlayer (audio-video) don't show problems<br />
+Winamp also frequently stops for a long time or crashes itself when STARTS to read cda. So serious that I don't use Winamp for cda.<br />
+BTW, the only app that crashes W98 that I can remember is 1By1 ( a micro-player free), but can be in few minutes or many hours. No problems with other timers or shedulers.<br />
+<br />
+After all these days, I noticed that the first problem that shows that Win will crash is when a file is not opened by its .exe in Explorer. Then, fastly close my nsis app and Win becomes normal. (my timer or my clipboard monitor).<br />
+<br />
+Thank you for all.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mark Nascimento</div><div class="date">6th April 2007, 07:50</div></div><div class="posttext">I remember that there is an other app that crashes only<br />
+Win98 but never crashes XP. <br />
+Is the &quot;WinBox&quot; that I use to control the users of my server.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th April 2007, 17:11</div></div><div class="posttext">Sounds like your Windows 98 has a greedy firewall or some spyware. Try turning off Kaspersky and running some spyware clean-up.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

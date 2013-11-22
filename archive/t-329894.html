@@ -1,0 +1,261 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" trying to enable IIS with dism.exe within nsis install, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  trying to enable IIS with dism.exe within nsis install NSIS Discussion" />
+	
+	<title> trying to enable IIS with dism.exe within nsis install [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  trying to enable IIS with dism.exe within nsis install</div>
+<hr />
+<div class="pda"><a href="t-329894.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=329894">trying to enable IIS with dism.exe within nsis install</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">dtherrien</div><div class="date">21st April 2011, 14:09</div></div><div class="posttext">Hi <br />
+I am using nsis to do an install on a Windows 7 system. I have lots of the install working, but I can't seem to get this last part working. I need to enable Windows Authentication in IIS. <br />
+<br />
+When I run this command outside of the installer, it works perfectly: <br />
+C:\Windows\system32\dism.exe /online /norestart /logpath:&quot;C:\bwm\log.etw.txt&quot; /enable-feature /ignorecheck /featurename:&quot;IIS-WebServerRole&quot; /featurename:&quot;IIS-WebServer&quot; /featurename:&quot;IIS-Security&quot; /featurename:&quot;IIS-BasicAuthentication&quot; /featurename:&quot;IIS-WindowsAuthentication&quot; /featurename:&quot;IIS-DigestAuthentication<br />
+<br />
+When I put this command into a file called iisconfig.cmd and use the following code within my .nsi file, it does not work. <br />
+file iisconfig.cmd<br />
+ExecCmd::exec /TIMEOUT=40000 '&quot;$INSTDIR\iisconfig.cmd&quot;'<br />
+Pop $0 <br />
+MessageBox MB_OK &quot;Exit code $0&quot;<br />
+<br />
+When I try to execute the command using ExecWait, it fails to se the proper IIS items: <br />
+ExecWait 'cmd /c C:\Windows\system32\dism.exe /online /norestart /logpath:&quot;C:\bwm\log.etw.txt&quot; /enable-feature /ignorecheck /featurename:&quot;IIS-WebServerRole&quot; /featurename:&quot;IIS-WebServer&quot; /featurename:&quot;IIS-Security&quot; /featurename:&quot;IIS-BasicAuthentication&quot; /featurename:&quot;IIS-WindowsAuthentication&quot; /featurename:&quot;IIS-DigestAuthentication&quot;' <br />
+<br />
+I've read many comments about ExecWait not waiting, bit the solutions that were provided did not solve this problem.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">21st April 2011, 15:56</div></div><div class="posttext">Have you disabled file system redirection?<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dtherrien</div><div class="date">21st April 2011, 16:59</div></div><div class="posttext">Hi Stu<br />
+<br />
+I looked into this since I'mnot sure what this means. This is my first time ever using install software on Windows. <br />
+<br />
+I changed all of my script references from C:\Windows to %windir% since that seemed to have something to do with filesystem redirection and my windows IT guy said that I should use %windir%<br />
+<br />
+That did not seem to help. <br />
+<br />
+Why would disabling filesystem redirection help  ? How exactly do I do that ? <br />
+<br />
+Thanks Dave</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">21st April 2011, 17:33</div></div><div class="posttext">Sorry, I meant the macro in x64.nsh: ${DisableX64FSRedirection}. Because NSIS is 32-bit, Windows will redirect it to C:\Windows\SysWOW64 which is probably not where your dism.exe is (assuming it is a 64-bit executable).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dtherrien</div><div class="date">21st April 2011, 18:58</div></div><div class="posttext">Hi Stu - I think you nailed the problem - many thanks ! ! ! I tried running DISM manually in SysWOW64 and System32 and it only runs in  System32. Now how exactly do I Disablex64FSredireciton ? I tried adding it to the top of my script as ${DisableX64FSRedirection} but it failed to compile.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">21st April 2011, 19:36</div></div><div class="posttext">You put it in the section or function that you are calling your app from. It's a run-time call to the Wow64EnableWow64FsRedirection API. It only works for the current thread too so keep that in mind (e.g. sections run in a different thread to the callbacks such as .onInit for example).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dtherrien</div><div class="date">21st April 2011, 21:17</div></div><div class="posttext">thanks Stu,  these are the three lines that I have in my .nsi file - <br />
+<br />
+${DisableX64FSRedirection}<br />
+<br />
+ExecWait 'cmd /c %windir%\system32\dism.exe /online /norestart /logpath:&quot;C:\bwm\log.etw.txt&quot; /enable-feature /ignorecheck /featurename:&quot;IIS-WebServerRole&quot; /featurename:&quot;IIS-WebServer&quot; /featurename:&quot;IIS-Security&quot; /featurename:&quot;IIS-BasicAuthentication&quot; /featurename:&quot;IIS-WindowsAuthentication&quot; /featurename:&quot;IIS-DigestAuthentication&quot;' <br />
+<br />
+${EnableX64FSRedirection}<br />
+<br />
+For some reason, it doesn't compile ? <br />
+Dave</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">22nd April 2011, 06:17</div></div><div class="posttext">You might want to supply us with the compilation error, so we know what to look for.<br />
+<br />
+You need to use $WINDIR, instead of %windir%.  Also you shouldn't just call 'cmd', as that could be anything. You need to execute %comspec%, so like this:<br />
+<br />
+ExpandEnvStrings $0 &quot;%COMSPEC%&quot;<br />
+ExecWait '$0 /foo /bar'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dtherrien</div><div class="date">22nd April 2011, 16:03</div></div><div class="posttext">Hi<br />
+<br />
+Thanks for the suggestions! I am really new to installation software, so I welcome any and all changes you could recommend to this script. I'm basically installing components on a Windows 7 system to connect my php scripts to SQL Server and IIS. <br />
+<br />
+<br />
+The error I got during compilation was <br />
+<br />
+Invalid command: ${DisableX64FSRedirection}<br />
+Error in script<br />
+<br />
+<br />
+Here's my entire nsi file... <br />
+<br />
+<br />
+Function .onInit<br />
+  SetOutPath $TEMP<br />
+  File /oname=spltmp.bmp &quot;ExaGridLogo.bmp&quot;<br />
+  advsplash::show 10 1000 2000 0xFFFFFE $TEMP\spltmp<br />
+  Pop $0 ; $0 has '1' if the user closed the splash screen early,<br />
+         ; '0' if everything closed normally, and '-1' if some error occurred.<br />
+  Delete $TEMP\spltmp.bmp<br />
+FunctionEnd<br />
+<br />
+name &quot;Backup Window Manager 1.0&quot;<br />
+<br />
+# ------------------------------------------------------<br />
+#<br />
+# define installer name<br />
+outFile &quot;BWM_installer.exe&quot;<br />
+ <br />
+# set default install directory<br />
+InstallDir c:\bwm<br />
+ <br />
+# Request application privileges for Windows Vista<br />
+RequestExecutionLevel admin<br />
+<br />
+# --------------------------------------------------------<br />
+#<br />
+# Pages<br />
+<br />
+# Page directory<br />
+Page instfiles<br />
+<br />
+UninstPage uninstConfirm<br />
+UninstPage instfiles<br />
+<br />
+# --------------------------------------------------------<br />
+#<br />
+# default section start<br />
+section<br />
+ <br />
+# define output path<br />
+setOutPath $INSTDIR <br />
+ <br />
+# specify file to go in output path<br />
+<br />
+# --- php ---<br />
+file php-5.3.6-nts-Win32-VC9-x86.msi<br />
+ExecWait '&quot;msiexec.exe&quot; /i &quot;$INSTDIR\php-5.3.6-nts-Win32-VC9-x86.msi&quot; /qn' <br />
+<br />
+# --- Microsoft Visual C++ 2008 Redistributable Package (x86)<br />
+file vcredist_x86.exe<br />
+ExecWait '&quot;$INSTDIR\Vcredist_x86.exe&quot; /q:a /c:msiexec /i &quot;vcredist.msi&quot; /qn /l*v &quot;%temp%\vcredist_x86.log&quot;'<br />
+<br />
+# TODO: may need to support both x86 and x64 in real install!!!<br />
+# --- php Manager for IIS<br />
+file PHPManagerForIIS-1.1.2-x64.msi<br />
+ExecWait '&quot;msiexec.exe&quot; /i &quot;$INSTDIR\PHPManagerForIIS-1.1.2-x64.msi&quot; /qn' <br />
+<br />
+# TODO: may need to support both x86 and x64 in real install!!!<br />
+# --- SQL Server Native Client<br />
+file sqlncli.msi<br />
+ExecWait '&quot;msiexec.exe&quot; /i &quot;$INSTDIR\sqlncli.msi&quot; IACCEPTSQLNCLILICENSETERMS=YES /qn' <br />
+<br />
+# --- sqlsrv_* access to BackupExec SQL Server database from php<br />
+file SQLServerDriverForPHP11.EXE<br />
+ExecWait '&quot;$INSTDIR\SQLServerDriverForPHP11.EXE&quot; /C /T:$INSTDIR /Q' <br />
+<br />
+CopyFiles $INSTDIR\php_sqlsrv_53_nts_vc9.dll &quot;C:\Program Files (x86)\PHP\ext&quot;<br />
+<br />
+# --- overwrite the EDITED php.ini file<br />
+file php.ini<br />
+CopyFiles $INSTDIR\php.ini &quot;C:\Program Files (x86)\PHP&quot;<br />
+<br />
+# --- copy the php_cgi.exe file <br />
+file php-cgi.exe<br />
+CopyFiles $INSTDIR\php-cgi.exe &quot;C:\Program Files (x86)\PHP&quot;<br />
+<br />
+# --- install our own source files<br />
+file /r BWMsource\*.*<br />
+<br />
+# configure IIS - create BWM web site<br />
+ExecWait '%windir%\system32\inetsrv\appcmd.exe add site /name:BackupWindowManager /bindings:http/*:80: /physicalPath:c:\bwm'<br />
+<br />
+# --------------------------------------------------------<br />
+# --- TODO - we need to used DISM to turn on <br />
+#            Windows Authentication so that we can then <br />
+#            enable it later in the script. <br />
+#            THE ExecWait DOESN'T WAIT LIKE IT SHOULD<br />
+#<br />
+<br />
+${DisableX64FSRedirection}<br />
+<br />
+ExecWait 'cmd /c %windir%\system32\dism.exe /online /norestart /logpath:&quot;C:\bwm\log.etw.txt&quot; /enable-feature /ignorecheck /featurename:&quot;IIS-WebServerRole&quot; /featurename:&quot;IIS-WebServer&quot; /featurename:&quot;IIS-Security&quot; /featurename:&quot;IIS-BasicAuthentication&quot; /featurename:&quot;IIS-WindowsAuthentication&quot; /featurename:&quot;IIS-DigestAuthentication&quot;' <br />
+<br />
+${EnableX64FSRedirection}<br />
+#<br />
+# --------------------------------------------------------<br />
+<br />
+<br />
+# configure IIS - enable windowsauthentication<br />
+#                 disable anonymous and digest authentication<br />
+<br />
+ExecWait '%windir%\system32\inetsrv\appcmd.exe set config BackupWindowManager -section:system.webServer/security/authentication/anonymousAuthentication /enabled:False /commit:apphost'<br />
+<br />
+ExecWait '%windir%\system32\inetsrv\appcmd.exe set config BackupWindowManager -section:system.webServer/security/authentication/windowsAuthentication   /enabled:True  /commit:apphost'<br />
+<br />
+ExecWait '%windir%\system32\inetsrv\appcmd.exe set config BackupWindowManager -section:system.webServer/security/authentication/digestAuthentication   /enabled:False  /commit:apphost'<br />
+<br />
+# create IIS - FastCGI process pool<br />
+ExecWait '%windir%\system32\inetsrv\appcmd set config /section:system.webServer/fastCGI /+&quot;[fullPath=c:\Program Files (x86)\PHP\php-cgi.exe]&quot;' <br />
+ExecWait '%windir%\system32\inetsrv\appcmd.exe set config -section:system.webServer/handlers /+&quot;[name=PHP-FastCGI,path=*.php,verb=GET,HEAD,POST,modules=FastCgiModule,scriptProcessor=C:\Program Files (x86)\PHP\php-cgi.exe,resourceType=Either,requireAccess=Script]&quot;' <br />
+<br />
+# -----------------------------------------------------------<br />
+# <br />
+# define uninstaller name<br />
+writeUninstaller $INSTDIR\BWM_uninstaller.exe<br />
+ <br />
+# default section end<br />
+sectionEnd<br />
+<br />
+<br />
+# create a section to define what the uninstaller does.<br />
+# the section will always be named &quot;Uninstall&quot;<br />
+section &quot;Uninstall&quot;<br />
+ <br />
+# Always delete uninstaller first<br />
+delete $INSTDIR\BWM_uninstaller.exe<br />
+ <br />
+ExecWait '&quot;msiexec.exe&quot; /uninstall &quot;$INSTDIR\php-5.3.6-nts-Win32-VC9-x86.msi&quot; /qn'<br />
+<br />
+ExecWait '&quot;msiexec&quot; /uninstall &quot;$INSTDIR\sqlncli.msi&quot; /qn' <br />
+<br />
+ExecWait '&quot;msiexec&quot; /uninstall &quot;$INSTDIR\PHPManagerForIIS-1.1.2-x64.msi&quot; /qn' <br />
+<br />
+ExecWait '&quot;msiexec&quot; /uninstall &quot;vc_red.msi&quot; /qn' <br />
+<br />
+# now delete installed file<br />
+delete $INSTDIR\php-5.3.6-nts-Win32-VC9-x86.msi<br />
+delete $INSTDIR\vcredist_x86.exe<br />
+delete $INSTDIR\SQLServerDriverForPHP11.EXE<br />
+delete $INSTDIR\PHPManagerForIIS-1.1.2-x86.msi<br />
+delete $INSTDIR\PHPManagerForIIS-1.1.2-x64.msi<br />
+delete $INSTDIR\sqlncli.msi<br />
+delete $INSTDIR\php_sqlsrv_*.*<br />
+delete $INSTDIR\php.ini<br />
+delete $INSTDIR\SQLServerDriver*.*<br />
+rmdir $INSTDIR<br />
+sectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">22nd April 2011, 22:52</div></div><div class="posttext">(Please use http://nsis.pastebin.com to paste large amounts of code, or add your script file as an attachment.)<br />
+<br />
+To use the x64 defines, you need to first !include the appropriate nsh file:<br />
+!include x64.nsh</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dtherrien</div><div class="date">25th April 2011, 14:06</div></div><div class="posttext">Hey MSG - thanks for the advice. That solved my problem. Sorry about the long post. I'm new to all of this and did not know better.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

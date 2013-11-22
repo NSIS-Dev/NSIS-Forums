@@ -1,0 +1,158 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" System.dll: FILETIME Convertion, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  System.dll: FILETIME Convertion NSIS Discussion" />
+	
+	<title> System.dll: FILETIME Convertion [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  System.dll: FILETIME Convertion</div>
+<hr />
+<div class="pda"><a href="t-140807.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=140807">System.dll: FILETIME Convertion</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">2nd July 2003, 01:26</div></div><div class="posttext">Could someone help me to figure out the syntax I need to use to get the system time as &quot;filetime&quot; and then convert it to a long (INT64)?<br />
+<br />
+I found the following code in Win32 Dev Help:FILETIME ft;<br />
+SYSTEMTIME st;<br />
+ <br />
+GetLocalTime(&amp;st);<br />
+SystemTimeToFileTime(&amp;st,&amp;ft);<br />
+ Does anyone know how to change the FILETIME to a INT64 and back again at a later stage?<br />
+<br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">2nd July 2003, 03:47</div></div><div class="posttext">Extra information from the help file about the functions and structures they use.<br />
+<br />
+Definitions of structures:<br />
+typedef struct _FILETIME { // ft  <br />
+    DWORD dwLowDateTime; <br />
+    DWORD dwHighDateTime; <br />
+} FILETIME; <br />
+ typedef struct _SYSTEMTIME {  // st  <br />
+    WORD wYear; <br />
+    WORD wMonth; <br />
+    WORD wDayOfWeek; <br />
+    WORD wDay; <br />
+    WORD wHour; <br />
+    WORD wMinute; <br />
+    WORD wSecond; <br />
+    WORD wMilliseconds; <br />
+} SYSTEMTIME;<br />
+Definitions of functions:<br />
+VOID GetLocalTime(<br />
+<br />
+    LPSYSTEMTIME lpSystemTime 	// address of system time structure  <br />
+   ); BOOL SystemTimeToFileTime(<br />
+<br />
+    CONST SYSTEMTIME *lpSystemTime,	// address of system time to convert <br />
+    LPFILETIME lpFileTime 	// address of buffer for converted file time <br />
+   );<br />
+Also in the help file they mention Copy the resulting FILETIME structure to a LARGE_INTEGER structure.<br />
+<br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">brainsucker</div><div class="date">2nd July 2003, 14:15</div></div><div class="posttext">get the latest beta or cvs, look at contrib\system directory.<br />
+You need the sysfunc.nsh, look thru the function systemGetFileSysTime.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">3rd July 2003, 14:14</div></div><div class="posttext">OK so far I've got these functions  System::Call '*(&amp;i2, &amp;i2, &amp;i2, &amp;i2, &amp;i2, &amp;i2, &amp;i2, &amp;i2) i .r1'<br />
+  System::Call '*(&amp;i2, &amp;i2) l .r0'<br />
+  System::Call 'kernel32::GetLocalTime(i) i(r1)'<br />
+  System::Call 'kernel32::SystemTimeToFileTime(i, l) l(r1, r0)'<br />
+  MessageBox MB_OK $0 However when I execute this code it always shows &quot;1508792&quot;, which i think is probably only the HIGH order of the Int64.  How should I modify the function to return the whole Int64 figure?<br />
+<br />
+Vytautas :cry:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">4th July 2003, 04:01</div></div><div class="posttext">After doing some more testing in VC++ i found that &quot;1508792&quot; is the lower order value before it is initialized and it varies from machine to machine.  Could anyone help me sort out the problems with these functions?<br />
+<br />
+Thanks, <br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th July 2003, 17:22</div></div><div class="posttext">Doesn't the smGetFileSysTime macro from System.nsh work for you?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">5th July 2003, 07:26</div></div><div class="posttext">Originally posted by kichik <br />
+Doesn't the smGetFileSysTime macro from System.nsh work for you?  Yes but I would like to get the current system time as FILETIME so that i can compare it, after modification, with the result from smGetFileSysTime.<br />
+<br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th July 2003, 11:29</div></div><div class="posttext">OK, so the problem in the last script is that you're printing out the pointer and not it's content. Include System.nsh and use:<br />
+<br />
+System::Call '*$0${stSYSTEMTIME}(i .r1, i .r2)'<br />
+<br />
+to get the high order DWORD into $2 and the low order DWORD into $1.<br />
+<br />
+BTW, when allocating, why did you define every int to be a short? They should all be 4 bytes ints.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">5th July 2003, 13:39</div></div><div class="posttext">I'm not exacly sure where I am supposed to put this line &quot;System::Call '*$0${stSYSTEMTIME}(i .r1, i .r2)'&quot; and if you are refering to the &quot;&amp;i2&quot; in the definitions I got those from the script on this page. (http://nsis.sourceforge.net/archive/viewpage.php?pageid=284) <br />
+<br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th July 2003, 13:46</div></div><div class="posttext">The *$0 line should come after the call to SystemTimeToFileTime.<br />
+<br />
+The defintion in that page is for SYSTEMTIME structure which uses WORDs and not DWORDS. A DWORDS has 4 bytes, not 2 so the second line in your script should be:<br />
+<br />
+System::Call '*(i, i) l .r0'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">5th July 2003, 14:00</div></div><div class="posttext">Thanks this does seem to work, I'll have to test it further but at least the numbers seem to be changing everytime i run the installer. However is there a way to copy that structure to an INT64 as mentioned in the MS Help file?<br />
+<br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">5th July 2003, 14:33</div></div><div class="posttext">I think the following code achieves what I needed  System::Call '*(stSYSTEMTIME) i .r1'<br />
+  System::Call '*(i, i) l .r0'<br />
+  System::Call 'kernel32::GetLocalTime(i) i(r1)'<br />
+  System::Call 'kernel32::SystemTimeToFileTime(i, l) l(r1, r0)'<br />
+  System::Call '*$0${stSYSTEMTIME}(l .r1)'<br />
+  MessageBox MB_OK &quot;$1&quot; Thanks for all your help kichik and  brainsucker.<br />
+<br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th July 2003, 15:33</div></div><div class="posttext">Both are wrong. It should be:<br />
+<br />
+System::Call '*$0(i .r1, i .r2)'<br />
+<br />
+without the ${stSYSTEMTIME} part that I have forgot to remove.<br />
+<br />
+The complete INT64 is both of the numbers combined ($1 * (2^32) + $2). You can use System::Int64Op to work with this number. But it'll be enough to just compare the two parts alone as done with NSIS's GetFileTime.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">5th July 2003, 16:36</div></div><div class="posttext">Originally posted by kichik <br />
+The complete INT64 is both of the numbers combined ($1 * (2^32) + $2). You can use System::Int64Op to work with this number. Thanks but you mixed up $1 and $2. I think the following code should work  System::Call '*(stSYSTEMTIME) i .r1'<br />
+  System::Call '*(i, i) l .r0'<br />
+  System::Call 'kernel32::GetLocalTime(i) i(r1)'<br />
+  System::Call 'kernel32::SystemTimeToFileTime(i, l) l(r1, r0)'<br />
+  System::Call '*$0(i .r1, i .r2)'<br />
+  System::Int64Op  $2 * 4294967296<br />
+  pop $3<br />
+  System::Int64Op  $3 + $1<br />
+  pop $4<br />
+  MessageBox MB_OK $4 BTW Do I have to use 4294967296 instead of 2^32 since Int64Op did not seem to work with 2^32?<br />
+<br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th July 2003, 16:44</div></div><div class="posttext">Yep, right, this code should work.<br />
+<br />
+Int64Op doesn't support expressions inside expression so you'll have to either use the current method, 0x100000000 or use Int64Op to get the number.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

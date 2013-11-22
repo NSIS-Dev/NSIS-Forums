@@ -1,0 +1,215 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Parameter /? and print out the description, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Parameter /? and print out the description NSIS Discussion" />
+	
+	<title> Parameter /? and print out the description [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Parameter /? and print out the description</div>
+<hr />
+<div class="pda"><a href="t-240746.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=240746">Parameter /? and print out the description</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Speed78</div><div class="date">13th March 2006, 21:27</div></div><div class="posttext">Hi,<br />
+<br />
+my installer supports startup parameters. If someone execute my installer with &quot;/?&quot; then the user should get a parameter description. How can I printout some text if someone execute my installer with the parameter &quot;/?&quot;.<br />
+<br />
+Best regards<br />
+<br />
+Rainer</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dienjd</div><div class="date">13th March 2006, 21:57</div></div><div class="posttext">You can do it using these two functions:<br />
+http://nsis.sourceforge.net/wiki/Get_command_line_parameters<br />
+http://nsis.sourceforge.net/StrStr<br />
+<br />
+Name cmdlinehelp<br />
+Outfile &quot;cmdlinehelp.exe&quot;<br />
+<br />
+Section &quot;&quot;<br />
+SectionEnd<br />
+<br />
+Function .onInit<br />
+ Call GetParameters<br />
+ Pop $0<br />
+ Push $0<br />
+ Push &quot;/?&quot;<br />
+ Call StrStr<br />
+ Pop $1<br />
+ StrCmp $1 &quot;&quot; done 0<br />
+ MessageBox MB_OK &quot;Available parameters are:$\r$\n/a does this$\r$\n/b does that&quot;	<br />
+ done:<br />
+FunctionEnd<br />
+ <br />
+Function GetParameters<br />
+ ; GetParameters<br />
+ ; input, none<br />
+ ; output, top of stack (replaces, with e.g. whatever)<br />
+ ; modifies no other variables.<br />
+ <br />
+  Push $R0<br />
+  Push $R1<br />
+  Push $R2<br />
+  Push $R3<br />
+  <br />
+  StrCpy $R2 1<br />
+  StrLen $R3 $CMDLINE<br />
+  <br />
+  ;Check for quote or space<br />
+  StrCpy $R0 $CMDLINE $R2<br />
+  StrCmp $R0 '&quot;' 0 +3<br />
+    StrCpy $R1 '&quot;'<br />
+    Goto loop<br />
+  StrCpy $R1 &quot; &quot;<br />
+  <br />
+  loop:<br />
+    IntOp $R2 $R2 + 1<br />
+    StrCpy $R0 $CMDLINE 1 $R2<br />
+    StrCmp $R0 $R1 get<br />
+    StrCmp $R2 $R3 get<br />
+    Goto loop<br />
+  <br />
+  get:<br />
+    IntOp $R2 $R2 + 1<br />
+    StrCpy $R0 $CMDLINE 1 $R2<br />
+    StrCmp $R0 &quot; &quot; get<br />
+    StrCpy $R0 $CMDLINE &quot;&quot; $R2<br />
+  <br />
+  Pop $R3<br />
+  Pop $R2<br />
+  Pop $R1<br />
+  Exch $R0<br />
+ <br />
+FunctionEnd<br />
+<br />
+Function StrStr<br />
+/*After this point:<br />
+  ------------------------------------------<br />
+  $R0 = SubString (input)<br />
+  $R1 = String (input)<br />
+  $R2 = SubStringLen (temp)<br />
+  $R3 = StrLen (temp)<br />
+  $R4 = StartCharPos (temp)<br />
+  $R5 = TempStr (temp)*/<br />
+ <br />
+  ;Get input from user<br />
+  Exch $R0<br />
+  Exch<br />
+  Exch $R1<br />
+  Push $R2<br />
+  Push $R3<br />
+  Push $R4<br />
+  Push $R5<br />
+ <br />
+  ;Get &quot;String&quot; and &quot;SubString&quot; length<br />
+  StrLen $R2 $R0<br />
+  StrLen $R3 $R1<br />
+  ;Start &quot;StartCharPos&quot; counter<br />
+  StrCpy $R4 0<br />
+ <br />
+  ;Loop until &quot;SubString&quot; is found or &quot;String&quot; reaches its end<br />
+  loop:<br />
+    ;Remove everything before and after the searched part (&quot;TempStr&quot;)<br />
+    StrCpy $R5 $R1 $R2 $R4<br />
+ <br />
+    ;Compare &quot;TempStr&quot; with &quot;SubString&quot;<br />
+    StrCmp $R5 $R0 done<br />
+    ;If not &quot;SubString&quot;, this could be &quot;String&quot;'s end<br />
+    IntCmp $R4 $R3 done 0 done<br />
+    ;If not, continue the loop<br />
+    IntOp $R4 $R4 + 1<br />
+    Goto loop<br />
+  done:<br />
+ <br />
+/*After this point:<br />
+  ------------------------------------------<br />
+  $R0 = ResultVar (output)*/<br />
+ <br />
+  ;Remove part before &quot;SubString&quot; on &quot;String&quot; (if there has one)<br />
+  StrCpy $R0 $R1 `` $R4<br />
+ <br />
+  ;Return output to user<br />
+  Pop $R5<br />
+  Pop $R4<br />
+  Pop $R3<br />
+  Pop $R2<br />
+  Pop $R1<br />
+  Exch $R0<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Speed78</div><div class="date">13th March 2006, 22:16</div></div><div class="posttext">Hi,<br />
+<br />
+i know this. I want to get the output in the dos box. So the user starts the dos box and enters &quot;mysetup.exe /?&quot; and now he should get the description in the dos box and not in a windows message dialog. Howto do this?<br />
+<br />
+Regards<br />
+<br />
+Rainer</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">{_trueparuex^}</div><div class="date">13th March 2006, 22:55</div></div><div class="posttext">Far as I know, that isn't possible in NSIS not even with a plug-in.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">14th March 2006, 05:48</div></div><div class="posttext">Couple ideas:<br />
+I'm assuming that your app mysetup.exe is a command-line tool of some type?  if so, you might be able to dump the result to a text file and then use a DOS 'TYPE' command to display the results to a window. <br />
+<br />
+However, if mysetup.exe is intended to be a windows app, then I'm not sure that a DOS box is what you'd want.  For that, a scrollable text box might work better--perhaps even a license screen from an installer page.<br />
+<br />
+If you wanted to run the command from Windows (say using a 'run' command), you could use this:cmd /k type c:\path_to\tempfile.dat<br />
+the '/k' tells the command interpreter to keep the window open.  Use '/c' instead to close the window.  (Or, if you make a batch file to run the command, you could add a 'pause' command at the end to give the 'press any key to continue' option, which could then close the window then the user was done reading the info.)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">xilay</div><div class="date">20th March 2006, 16:18</div></div><div class="posttext">Speed78, did you find a soluce? I try to do the same thing, and Comperio soluce open a new dos box...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">20th March 2006, 19:30</div></div><div class="posttext">Something like:Name &quot;Output&quot;<br />
+OutFile &quot;Output.exe&quot;<br />
+<br />
+Section<br />
+	StrCpy $R0 &quot;This example work$\nonly on Windows XP and higher$\n&quot;<br />
+	StrLen $R1 $R0<br />
+<br />
+	System::Call &quot;kernel32::AttachConsole(i -1)i .r0&quot;<br />
+	StrCmp $0 0 end<br />
+	System::Call &quot;kernel32::GetStdHandle(i -11)i .r0&quot;<br />
+	System::Call &quot;*(i 0)i .r1&quot;<br />
+	System::Call &quot;kernel32::WriteConsole(i r0, t R0, i R1, i r1, i 0)&quot;<br />
+	System::Free $1<br />
+	System::Call &quot;kernel32::FreeConsole()&quot;<br />
+<br />
+	end:<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Speed78</div><div class="date">20th March 2006, 20:03</div></div><div class="posttext">Originally posted by xilay <br />
+Speed78, did you find a soluce? I try to do the same thing, and Comperio soluce open a new dos box...  <br />
+<br />
+Hi,<br />
+<br />
+no my only solution is to create a seperate application which do this for me. I unpack it in the temp folder and execute ist with the exec plugin.<br />
+<br />
+Regards<br />
+<br />
+Rainer</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">21st March 2006, 21:35</div></div><div class="posttext">no, that should be possible with NSIS.<br />
+<br />
+i just think you'll need some plugin, or advanced api calls.<br />
+<br />
+you can read command line parameters in .onInit, output the info and then immediatly quit.<br />
+thats no problem, so the GUI will never be loaded.<br />
+<br />
+the problem is to output the information to a console window.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

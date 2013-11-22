@@ -1,0 +1,175 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Comparing version numbers of OCX's?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Comparing version numbers of OCX's? NSIS Discussion" />
+	
+	<title> Comparing version numbers of OCX's? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Comparing version numbers of OCX's?</div>
+<hr />
+<div class="pda"><a href="t-175715.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=175715">Comparing version numbers of OCX's?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">janedoe2003</div><div class="date">7th April 2004, 20:37</div></div><div class="posttext">Hi,<br />
+<br />
+I'm using a 98 host to check whether the user already has a given OCX. If not, I'll just download and register it; If the file is already present, I'll compare its version number with the one given in an INI located on the server : If the OCX on the server is more recent, we download and register; If the one on the host is more recent, we leave it as is, and go to end.<br />
+<br />
+Thing is... it doesn't work. Incidently, the version number of an OCX isn't formatted exactly the same on 98 and W2K, but I suspect the reason why this script doesn't work is that IntCmpU is unable to compare numbers like &quot;1.2.3.4&quot;.<br />
+<br />
+Here's the INI that my NSIS scripts downloads and reads to get the version number of the OCX on the server, before comparing it with the one already on the host:<br />
+<br />
+<br />
+;VERSION.INI<br />
+[mscomctl]<br />
+;BAD? mscomctl.ocx=6.01.9545<br />
+mscomctl.ocx=6.1.95.45<br />
+<br />
+========================<br />
+<br />
+;SETUP.NSI<br />
+<br />
+# Input: $1 = name of file, $2 = full destination path on host, $9 = version or size on www, $3 = URL to path on www<br />
+Function CheckFile<br />
+	IfFileExists $2 checkversion<br />
+		Call Download<br />
+		Goto register<br />
+					<br />
+checkversion:<br />
+	GetDllVersion &quot;$2&quot; $R0 $R1<br />
+	IntOp $R2 $R0 / 0x00010000<br />
+	IntOp $R3 $R0 &amp; 0x0000FFFF<br />
+	IntOp $R4 $R1 / 0x00010000<br />
+	IntOp $R5 $R1 &amp; 0x0000FFFF<br />
+	StrCpy $R8 &quot;$R2.$R3.$R4.$R5&quot;<br />
+<br />
+	;If version on host the same or more recent than one on www, go to end; else, download<br />
+	DetailPrint &quot;www=$9 local=$R8&quot;<br />
+	IntCmpU  $9 $R8  end end 0<br />
+	Call Download<br />
+	Goto register<br />
+<br />
+register:<br />
+	RegDLL &quot;$2&quot;<br />
+					<br />
+end:<br />
+	DetailPrint &quot;File $1 OK&quot;<br />
+FunctionEnd<br />
+<br />
+<br />
+Most likely, I'm not the first one who wants to update the OCX's on a host by first comparing their version numbers against what's on the web server. Anybody has some working code?<br />
+<br />
+Thank you :-)<br />
+JD.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">7th April 2004, 20:47</div></div><div class="posttext">You should compare these number directly (see UpgradeDLL).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">janedoe2003</div><div class="date">8th April 2004, 23:25</div></div><div class="posttext">Thank you, makes sense :-)<br />
+<br />
+Since I'm (obviously) a NSIS newbie, before I spend more time trying to figure out how to do this, has someone already done the reverse of the code in Include\UpgradeDLL.nsh, namely going from a version number in the form &quot;1.2.3.4&quot; to HIWORD and LOWORD, ready for comparison?<br />
+<br />
+Or, alternatively, extracting tokens between two such strings, and comparing them token by token.<br />
+<br />
+The ultimate goal obviously being to determine whether I need to download and upgrade that OCX/DLL or leave it alone if it turns out that the only currently installed is newer.<br />
+<br />
+BTW, for those interested, MS gives history information on OCX's on this page:<br />
+<br />
+DLL Help Database<br />
+http://support.microsoft.com/default.aspx?scid=/servicedesks/fileversion/dllinfo.asp&amp;SD=msd<br />
+<br />
+Thank you<br />
+JD.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">janedoe2003</div><div class="date">9th April 2004, 00:56</div></div><div class="posttext">OK, after more searching in the archives, I located BigMac's excellent StrTok(). Here's some working code to compare two version numbers formatted as &quot;1.2.3.4&quot;. Experienced NSISers, please feel free to simplify, eg. turning it into a loop :-)<br />
+<br />
+<br />
+GetDllVersion &quot;$2&quot; $R0 $R1<br />
+;Extracting version # of $2 and turning into tokens, ie. &quot;1.2.3.4&quot;<br />
+IntOp $R2 $R0 / 0x00010000<br />
+IntOp $R3 $R0 &amp; 0x0000FFFF<br />
+IntOp $R4 $R1 / 0x00010000<br />
+IntOp $R5 $R1 &amp; 0x0000FFFF<br />
+StrCpy $R8 &quot;$R2.$R3.$R4.$R5&quot;<br />
+<br />
+;Same, this time from version info in $9 returned by www server<br />
+Push &quot;$9&quot;<br />
+Push &quot;.&quot;<br />
+Call StrTok<br />
+Pop $R6<br />
+			<br />
+Push &quot;.&quot;<br />
+Call StrTok<br />
+Pop $R7<br />
+		<br />
+Push &quot;.&quot;<br />
+Call StrTok<br />
+Pop $R8<br />
+		<br />
+;4th and last token<br />
+Pop $R9<br />
+<br />
+IntCmpU $R2 $R6 0 download end<br />
+IntCmpU $R3 $R7 0 download end<br />
+IntCmpU $R4 $R8 0 download end<br />
+IntCmpU $R5 $R9 end download end<br />
+<br />
+download:<br />
+DetailPrint &quot;File $2 exists on host but in an older version. Downloading...&quot;<br />
+Call Download<br />
+Goto register<br />
+<br />
+register:<br />
+RegDLL &quot;$2&quot;<br />
+					<br />
+end:<br />
+DetailPrint &quot;File $1 OK&quot;<br />
+<br />
+<br />
+Thank you<br />
+JD.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">9th April 2004, 03:43</div></div><div class="posttext">StrFunc.nsh inside NSIS\Include folder has a better StrTok made by me which is not in the Archive.<br />
+<br />
+To use it, read StrFunc.txt inside the same NSIS\Include folder for instructions to use the command ${StrTok}.<br />
+<br />
+This file has a selection of the best string functions (in my opinion) inside Archive plus the improvement of some.  StrTok fortunately is one of the improved ones.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">janedoe2003</div><div class="date">9th April 2004, 22:09</div></div><div class="posttext">&gt;StrFunc.nsh inside NSIS\Include folder has a better StrTok made by me which is not in the Archive.<br />
+<br />
+Thx for the tip. For those interested, here's how to use Deguix's version:<br />
+<br />
+<br />
+!include &quot;StrFunc.nsh&quot;<br />
+<br />
+outfile &quot;test.exe&quot;<br />
+<br />
+${StrTok}<br />
+<br />
+Section<br />
+	;If looping, don't use $R1, because seems to be used internally by this macro<br />
+	${StrTok} $R2 &quot;1.2.3.4&quot; &quot;.&quot; &quot;1&quot; &quot;1&quot;<br />
+	${StrTok} $R3 &quot;1.2.3.4&quot; &quot;.&quot; &quot;2&quot; &quot;1&quot;<br />
+	${StrTok} $R4 &quot;1.2.3.4&quot; &quot;.&quot; &quot;3&quot; &quot;1&quot;<br />
+	${StrTok} $R5 &quot;1.2.3.4&quot; &quot;.&quot; &quot;4&quot; &quot;1&quot;<br />
+	MessageBox MB_OK &quot;$R2.$R3.$R4.$R5&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+Thank you<br />
+JD.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

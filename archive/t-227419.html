@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Reading lines from a richedit control, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Reading lines from a richedit control NSIS Discussion" />
+	
+	<title> Reading lines from a richedit control [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Reading lines from a richedit control</div>
+<hr />
+<div class="pda"><a href="t-227419.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=227419">Reading lines from a richedit control</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">1st October 2005, 19:55</div></div><div class="posttext">I've been trying to adapt the 'Dump log to file' function ( http://nsis.sourceforge.net/wiki/Dump_log_to_file ) to be able to dump the content of a RichEdit control - without success so far...<br />
+<br />
+There are three basic changes I've made, beside getting the proper window..<br />
+<br />
+GetDlgItem $0 $0 1204   ; 1204 is the correct control in my case<br />
+<br />
+Instead of the line with &quot;${LVM_GETITEMCOUNT}&quot;, I use :<br />
+SendMessage $0 0xBA 0 0 $6  ; 0xBA = EM_GETLINECOUNT<br />
+<br />
+So far so good - I get the correct number of lines in the richedit control in $6.<br />
+<br />
+Instead of the line with &quot;${LVM_GETITEMTEXT}&quot;, I use :<br />
+# 0xC4 = EM_GETLINE<br />
+System::Call &quot;User32::SendMessageA(i, i, i, i) i ($0, 0xc4, $2, r1)&quot;<br />
+<br />
+Followed by the original line :<br />
+System::Call &quot;*$3(&amp;t${NSIS_MAX_STRLEN} .r4)&quot;<br />
+<br />
+And that's where the problem starts... $4, at that point, contains zip, nada, nothing. In the dump log function, this contains the text from the installer log on line $2.<br />
+<br />
+Any thoughts on why this isn't working ? I tried looking up the MSDN info, but as far as I can tell the format is correct ( handle, message, line number, buffer ). Any help would be much appreciated.<br />
+<br />
+If a post with the complete script is required, just let me know.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st October 2005, 21:41</div></div><div class="posttext">That's because you still put the return value in the structure pointed to by $1. That structure points to the buffer pointed to by $3, but it's no longer used by you. Replace r1 with r3 in the SendMessage call you've posted above.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">3rd October 2005, 00:12</div></div><div class="posttext">Hi kichik,<br />
+<br />
+Thank you very much for your reply.  Unfortunately, changing .r1 with .r3 didn't do anything either.  Can't seem to wrap my head around what's happening, exactly...<br />
+<br />
+Here's the important bit of the code, with your change...<br />
+<br />
+# $0 = richedit control's handle<br />
+# get (0xBA) the linecount from the control ($0) and stick in $6<br />
+# 0xBA = EM_GETLINECOUNT<br />
+SendMessage $0 0xBA 0 0 $6<br />
+MessageBox MB_OK &quot;Numlines: $6&quot; ; so far so good<br />
+# allocate a buffer with appropriate size<br />
+System::Alloc ${NSIS_MAX_STRLEN}<br />
+# pointer to that buffer's address into $3<br />
+Pop $3<br />
+# start a line counter at 0 (zero)<br />
+StrCpy $2 0<br />
+# not entirely sure what this line does,<br />
+# but I thought it made a copy of the buffer<br />
+# and put the max string length on the first line<br />
+System::Call &quot;*(i, i, i, i, i, i, i, i, i) i (0, 0, 0, 0, 0, r3, ${NSIS_MAX_STRLEN}) .r1&quot;<br />
+loop:<br />
+  # if the current line is the last, then we're done<br />
+  StrCmp $2 $6 done<br />
+  # From the control ($0) Get (0xC4) the line ($2) into the buffer ($3)<br />
+  # 0xC4 = EM_GETLINE<br />
+  System::Call &quot;User32::SendMessageA(i, i, i, i) i ($0, 0xC4, $2, r3)&quot;<br />
+  # get the data from $3 into $4<br />
+  System::Call &quot;*$3(&amp;t${NSIS_MAX_STRLEN} .r4)&quot;<br />
+  # show the line<br />
+  MessageBox MB_OK &quot;Line: $4&quot; ; $4 is empty :/<br />
+  # increase line counter<br />
+  IntOp $2 $2 + 1<br />
+  # on to the next<br />
+  Goto loop</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">3rd October 2005, 08:29</div></div><div class="posttext"># $R0 = richedit control's handle<br />
+SendMessage $R0 ${EM_GETLINECOUNT} 0 0 $R3<br />
+<br />
+System::Alloc ${NSIS_MAX_STRLEN}<br />
+Pop $R1<br />
+StrCpy $R2 0<br />
+<br />
+loop:<br />
+StrCmp $R2 $R3 free<br />
+System::Call 'kernel32::lstrcpyA(i R1, t ${NSIS_MAX_STRLEN})'<br />
+System::Call 'user32::SendMessageA(i R0, i ${EM_GETLINE}, i R2, i R1) i .R4'<br />
+System::Call '*$R1(&amp;t${NSIS_MAX_STRLEN} .R5)'<br />
+IntOp $R2 $R2 + 1<br />
+StrCpy $R5 $R5 $R4<br />
+MessageBox MB_YESNO &quot;Line: $R5$\n$\nFind next?&quot; IDYES loop<br />
+<br />
+free:<br />
+System::Free $R1</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">3rd October 2005, 09:41</div></div><div class="posttext">That works - thank you very much!<br />
+<br />
+And I can actually almost tell what's going on.<br />
+lstrcpyA is used to put the buffer size into the first word of the buffer, as per the EM_GETLINE spec thing...<br />
+Then the $R2th line from control $R0 is retrieved (EM_GETLINE) into the buffer ($R1), and the result of the operation is put into $R4?<br />
+Then the content of that buffer($R1) is put into a var ($R5).<br />
+So the only bit that confuses me is the StrCpy where you put the result of the GETLINE call at the end of the actual line of content... rather, the reason for doing this.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">3rd October 2005, 12:45</div></div><div class="posttext">Sorry, had not much time for previous reply, so few mistakes appeared:<br />
+<br />
+<br />
+# $R0 = richedit control's handle<br />
+# $R1 = buffer address<br />
+# $R2 = current line number<br />
+# $R3 = sum of lines<br />
+# $R4 = current line lenght<br />
+# $R5 = current line<br />
+<br />
+SendMessage $R0 ${EM_GETLINECOUNT} 0 0 $R3<br />
+<br />
+System::Alloc ${NSIS_MAX_STRLEN}<br />
+Pop $R1<br />
+StrCpy $R2 0<br />
+<br />
+loop:<br />
+StrCmp $R2 $R3 free<br />
+System::Call '*$R1(i ${NSIS_MAX_STRLEN})'<br />
+System::Call 'user32::SendMessageA(i R0, i ${EM_GETLINE}, i R2, i R1) i .R4'<br />
+System::Call '*$R1(&amp;t$R4 .R5)'<br />
+IntOp $R2 $R2 + 1<br />
+MessageBox MB_YESNO &quot;Line: $R5$\n$\nFind next?&quot; IDYES loop<br />
+<br />
+free:<br />
+System::Free $R1</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

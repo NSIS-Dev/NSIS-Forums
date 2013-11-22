@@ -1,0 +1,160 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Register .Net Assembly in Global Assembly Cache, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Register .Net Assembly in Global Assembly Cache NSIS Discussion" />
+	
+	<title> Register .Net Assembly in Global Assembly Cache [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Register .Net Assembly in Global Assembly Cache</div>
+<hr />
+<div class="pda"><a href="t-305741.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=305741">Register .Net Assembly in Global Assembly Cache</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">pljones</div><div class="date">26th April 2009, 14:07</div></div><div class="posttext">Here is a .nsh with some magic inside.<br />
+<br />
+I've established this works on my PC but I'd happily have feedback from others.<br />
+<br />
+What does it do?<br />
+<br />
+It registers and un-registers MSIL Assemblies in the GAC.<br />
+<br />
+How does it do it?<br />
+<br />
+I monitored what gacutil did and tried to replicate it.  Assemblies are copied to &quot;$windir\assembly\&lt;assembly&gt;\&lt;strong_version&gt;\&quot; and an entry added to the Registry (I particularly want feedback on whether that's needed).<br />
+<br />
+What else do I need to know or do?<br />
+<br />
+As a library developer, you will need to use gacutil to get the information (and sign your assemblies) but you can now deploy without additional tools.<br />
+<br />
+<br />
+This is my first time writing stuff for nsis, so comments on coding style gratefully received.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">26th April 2009, 14:13</div></div><div class="posttext">This is clearly not the way to do it<br />
+<br />
+I don't care about .NET myself, so I don't know if there is sample code that already does it, but you really should call the official API with the system plugin, see http://blogs.msdn.com/junfeng/articles/229648.aspx and http://kobyk.wordpress.com/2008/04/12/deploying-the-visual-c-libraries-with-an-nsis-installer/ to maybe get you started</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pljones</div><div class="date">26th April 2009, 14:24</div></div><div class="posttext">If someone would like to translate the C++ into English, I'd be happy to have another go.  I'm not a Windows C++ programmer.  I just want something that works.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">26th April 2009, 16:43</div></div><div class="posttext">you don't need to use C++, you could call the COM like functions with the system plugin. http://nsis.sourceforge.net/WinSxS_QueryAssemblyInfo_to_check_if_assembly_is_installed almost does it, you would have to change it (call CreateAssemblyCache and not QueryAssemblyInfo, passing in a FUSION_INSTALL_REFERENCE struct pointer)<br />
+<br />
+allocate the FUSION_INSTALL_REFERENCE struct with something like System::Call '*(i SIZEINBYTESHERE,i0,g FUSION_REFCOUNT_XXX,w &quot;something&quot;,w &quot;somethingElse&quot;)i.s'<br />
+pop $R1<br />
+<br />
+also note that the COM method index is not 4 like it is in that sample, I could not find a typelib listing on google but I'm thinking its 7<br />
+<br />
+so calling InstallAssembly would look something like:<br />
+System::Call `$R0-&gt;7(i 1,w &quot;\path\to\manifest&quot;,i $R1)i.r0`<br />
+assuming that the IAssemblyCache pointer is in $R0 and FUSION_INSTALL_REFERENCE struct is in $R1<br />
+<br />
+also note that you need to use the real value for FUSION_REFCOUNT_*, not a string, the guids are:<br />
+<br />
+// {8cedc215-ac4b-488b-93c0-a50a49cb2fb8}<br />
+EXTERN_GUID(FUSION_REFCOUNT_UNINSTALL_SUBKEY_GUID, 0x8cedc215, 0xac4b, 0x488b, 0x93, 0xc0, 0xa5, 0x0a, 0x49, 0xcb, 0x2f, 0xb8);<br />
+<br />
+// {b02f9d65-fb77-4f7a-afa5-b391309f11c9}<br />
+EXTERN_GUID(FUSION_REFCOUNT_FILEPATH_GUID, 0xb02f9d65, 0xfb77, 0x4f7a, 0xaf, 0xa5, 0xb3, 0x91, 0x30, 0x9f, 0x11, 0xc9);<br />
+<br />
+// {2ec93463-b0c3-45e1-8364-327e96aea856}<br />
+EXTERN_GUID(FUSION_REFCOUNT_OPAQUE_STRING_GUID, 0x2ec93463, 0xb0c3, 0x45e1, 0x83, 0x64, 0x32, 0x7e, 0x96, 0xae, 0xa8, 0x56);<br />
+ // {25df0fc1-7f97-4070-add7-4b13bbfd7cb8} // this GUID cannot be used for installing into GAC.<br />
+EXTERN_GUID(FUSION_REFCOUNT_MSI_GUID,  0x25df0fc1, 0x7f97, 0x4070, 0xad, 0xd7, 0x4b, 0x13, 0xbb, 0xfd, 0x7c, 0xb8); <br />
+ // {d16d444c-56d8-11d5-882d-0080c847b195}<br />
+EXTERN_GUID(FUSION_REFCOUNT_OSINSTALL_GUID, 0xd16d444c, 0x56d8, 0x11d5, 0x88, 0x2d, 0x00, 0x80, 0xc8, 0x47, 0xb1, 0x95); <br />
+<br />
+which GUID to use, I don't know, if you wanted to use the filepath option, it would look something like:<br />
+<br />
+!define FUSION_REFCOUNT_FILEPATH_GUID {b02f9d65-fb77-4f7a-afa5-b391309f11c9}<br />
+<br />
+<br />
+System::Call '*(i 32 ,i0,g &quot;${FUSION_REFCOUNT_FILEPATH_GUID}&quot;,w &quot;$instdir\yourfile.dll&quot;,w &quot;somethingElse&quot;)i.s'<br />
+pop $R1<br />
+<br />
+as far as SIZEINBYTESHERE goes, I think its 32<br />
+<br />
+edit: I understand that getting the system plugin code working is almost as hard as learing C, but I don't want to deal with .NET so its the best I can do, no complete sample from me, sorry<br />
+<br />
+edit2: but since you probably know C#, the code at the bottom of http://nsis.sourceforge.net/Register_a_managed_.NET_DLL_in_the_GAC looks like maybe something you could use</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pljones</div><div class="date">26th April 2009, 19:05</div></div><div class="posttext">(Why do I get the feeling M$ make it deliberately hard..? :))<br />
+<br />
+Thanks.  I've finally found the doc at M$! :)  I've been searching for ages.<br />
+<br />
+Your http://nsis.sourceforge.net/WinSxS_QueryAssemblyInfo_to_check_if_assembly_is_installed page will be helpful.<br />
+<br />
+I'm trying to keep this &quot;cleanly&quot; inside NSIS, so I'm avoiding calling out to an external program.<br />
+<br />
+So... what do we find?  (Sorry about the long URLs, otherwise it won't display them as I'm too new, I guess...)<br />
+<br />
+Sxs.dll lives in $windir\system32 and has these.  (I checked, it's on my WinXPSP3/.Net3.5 machine.  Is it there on .Net2?)<br />
+<br />
+http://msdn.microsoft.com/en-us/library/aa375127(VS.85).aspx (CreateAssemblyCache) gets an http://msdn.microsoft.com/en-us/library/aa375157(VS.85).aspx (IAssemblyCache) instance.<br />
+<br />
+http://msdn.microsoft.com/en-us/library/aa375162(VS.85).aspx (IAssemblyCache::InstallAssembly) gets passed three things:<br />
+[list=1]<br />
+ flags<br />
+ location of assembly<br />
+ (optional) referrer to assembly<br />
+[/list=1]<br />
+where that last one is http://msdn.microsoft.com/en-us/library/aa375151(VS.85).aspx (FUSION_INSTALL_REFERENCE).  I think I can pass null on initial installation of a shared DLL assembly into the cache.  I guess I'm meant to use it when I install an application that uses a shared DLL assembly (repeating the disk location of the DLL and adding the disk location of the EXE??).<br />
+<br />
+One clueless point: once I have the IAssemblyCache, how do I get the InstallAssembly reference?  You've used 4 (QueryAssemblyInfo) and 2 (Release); how do I check 7 is InstallAssembly?  (If I just count through IUnknown and IAssemblyCache, I reckon it's 6, rather than 7.  Does that mean I have a clue after all? ;)  3 for UninstallAssembly?)<br />
+<br />
+If I can get it working, it should be nicer than what I've got at the moment.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">26th April 2009, 19:57</div></div><div class="posttext">if you want to pass 0 for FUSION_INSTALL_REFERENCE and it works, I'm sure that's fine, I don't even know what its for, maybe for uninstall tracking or something<br />
+<br />
+the vtable offset starts @ 0, I counted to 7 based on https://svn.origo.ethz.ch/scoop/es_scoop_60/framework/file_formats/pe/windows/include/fusion.h Note that MSDN does not display the methods in vtable order on &quot;90%&quot; of the COM interface pages, when they are in order, the table looks different, I have only seen it a couple of times</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pljones</div><div class="date">26th April 2009, 20:42</div></div><div class="posttext">Ah, I see -- a sneaky &quot;CreateAssemblyScavenger&quot; (Reserved for internal use by the fusion technology), which wasn't listed on the page I looked on. OK, thanks - that's helped some more.  I'll start hacking code when I get some time.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pljones</div><div class="date">28th April 2009, 15:35</div></div><div class="posttext">I've tried to replicate your WinSxS QueryAssemblyInfo to check my understanding.  However, it fails EINVALIDARG, so I'm clearly missing something!  Could you have a look at the attached and see if you can explain what's wrong?<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th April 2009, 16:43</div></div><div class="posttext">I'm getting ERROR_SXS_INVALID_ASSEMBLY_IDENTITY_ATTRIBUTE, so 'Accessibility,Version=&quot;2.0.0.0&quot;,Culture=&quot;*&quot;,PublicKeyToken=&quot;b03f5f7f11d50a3a&quot;,processorArchitecture=&quot;MSIL&quot;' is probably wrong, using 'Microsoft.VC80.CRT,version=&quot;8.0.50727.42&quot;,type=&quot;win32&quot;,processorArchitecture=&quot;x86&quot;,publicKeyToken=&quot;1fc8b3b9a1e18e3b&quot;' works fine on my system<br />
+<br />
+It crashes later on when you extract from the struct because you used just a . in some places, when you don't need a param, you MUST specify the type (i,l,etc) so it knows the size and gets the correct offset<br />
+<br />
+last thing, IntCmpU $0 0x80070057 Match NoMatch is broken, remember, IntCmpU  has 3 jumps and my error was 0x800736C1<br />
+<br />
+if you wanted to check errors like that, you should use a switch with the known errors and a default case for the ones you don't handle</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th April 2009, 17:02</div></div><div class="posttext">Its very picky about that stupid string, PublicKeyToken will not work, must be publicKeyToken. no space after &quot;,&quot; so 'foo=&quot;bar&quot;,bar=&quot;baz&quot;' will work, 'foo=&quot;bar&quot;, bar=&quot;baz&quot;' will not etc. But the strings in the registry or from gacutil.exe /lr seems to be in pretty version</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th April 2009, 17:22</div></div><div class="posttext">fighting the system plugin is never fun, maybe you could get it working in C# first, base it on http://blogs.msdn.com/junfeng/articles/229649.aspx or whatever<br />
+<br />
+Or maybe use MSI, its probably a easy thing to do, or maybe thats just the .NET/XML/registry combo bloat hater in me talking</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pljones</div><div class="date">28th April 2009, 19:51</div></div><div class="posttext">OK, I've spotted all the System:: bugs and got it working with your example.<br />
+<br />
+However, this is searching in $windir\WinSxS.  I'm expecting my assemblies to be in $windir\assembly (based on where gacutil puts them), so I don't think it's doing the same thing.<br />
+<br />
+Here's the test code, anyway.<br />
+<br />
+BTW, I never could get &quot;ERROR_SXS_INVALID_ASSEMBLY_IDENTITY_ATTRIBUTE&quot; -- only &quot;EINVALIDARGS&quot;.  Simply changing the assembly name (in my test) from &quot;VC90&quot; to &quot;VC91&quot; caused this.  Am I looking in the wrong place -- is there some extended error information?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pljones</div><div class="date">3rd May 2009, 18:18</div></div><div class="posttext">I've given up on the idea of installing to GAC.  I'm going to try to generate a .Config file that can be used by apps that want to use the .DLLs.  /sigh/ I hate being beaten.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

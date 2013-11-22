@@ -1,0 +1,284 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" User type detection, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  User type detection NSIS Discussion" />
+	
+	<title> User type detection [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  User type detection</div>
+<hr />
+<div class="pda"><a href="t-281745.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=281745">User type detection</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">gberes</div><div class="date">19th November 2007, 07:25</div></div><div class="posttext">Hello<br />
+<br />
+My NSIS script needs to care about what type of user (Administrator and User) tries to install it.<br />
+<br />
+How can i decide about user type, and what else should i modify in my script, to make it user type aware?<br />
+<br />
+My script:<br />
+<br />
+!define DIST_DIR &quot;.\dist&quot;<br />
+!define RESOURCE_DIR &quot;.\resource&quot;<br />
+!define JRE_NAME &quot;jre1.6.0_03&quot;<br />
+!define JRE_ZIP_NAME &quot;${JRE_NAME}.zip&quot;<br />
+!define APP_NAME &quot;MY APP&quot;<br />
+<br />
+Icon &quot;${RESOURCE_DIR}\sample-install.ico&quot;<br />
+UninstallIcon &quot;${RESOURCE_DIR}\sample-uninstall.ico&quot;<br />
+<br />
+; Name of our application<br />
+Name &quot;MY APP&quot;<br />
+<br />
+; The file to write<br />
+OutFile &quot;setup.exe&quot;<br />
+<br />
+; Set the default Installation Directory<br />
+InstallDir &quot;$PROGRAMFILES\${APP_NAME}&quot;<br />
+<br />
+; Set the text which prompts the user to enter the installation directory<br />
+DirText &quot;Please choose a directory to which you'd like to install this application.&quot;<br />
+<br />
+; ----------------------------------------------------------------------------------<br />
+; *************************** SECTION FOR INSTALLING *******************************<br />
+; ----------------------------------------------------------------------------------<br />
+<br />
+Section &quot;&quot; ; A &quot;useful&quot; name is not needed as we are not installing separate components<br />
+<br />
+; Set output path to the installation directory. Also sets the working<br />
+; directory for shortcuts<br />
+SetOutPath $INSTDIR\<br />
+<br />
+File ${DIST_DIR}\myapp.jar<br />
+File .\${JRE_ZIP_NAME}<br />
+ZipDLL::extractall ${JRE_ZIP_NAME} $INSTDIR<br />
+Delete .\${JRE_ZIP_NAME}<br />
+<br />
+WriteUninstaller $INSTDIR\Uninstall.exe<br />
+<br />
+; ///////////////// CREATE SHORT CUTS //////////////////////////////////////<br />
+<br />
+CreateDirectory &quot;$SMPROGRAMS\${APP_NAME}&quot;<br />
+CreateShortCut &quot;$SMPROGRAMS\${APP_NAME}\MY App.lnk&quot; &quot;$INSTDIR\${JRE_NAME}\bin\javaw.exe&quot; &quot;-jar myapp.jar&quot;<br />
+CreateShortCut &quot;$SMPROGRAMS\${APP_NAME}\Uninstall.lnk&quot; &quot;$INSTDIR\Uninstall.exe&quot;<br />
+<br />
+; ///////////////// END CREATING SHORTCUTS //////////////////////////////////<br />
+<br />
+; //////// CREATE REGISTRY KEYS FOR ADD/REMOVE PROGRAMS IN CONTROL PANEL /////////<br />
+<br />
+WriteRegStr HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}&quot; &quot;DisplayName&quot;\<br />
+&quot;${APP_NAME} (remove only)&quot;<br />
+<br />
+WriteRegStr HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}&quot; &quot;UninstallString&quot; \<br />
+&quot;$INSTDIR\Uninstall.exe&quot;<br />
+<br />
+; //////////////////////// END CREATING REGISTRY KEYS ////////////////////////////<br />
+<br />
+MessageBox MB_OK &quot;Installation was successful.&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+; ----------------------------------------------------------------------------------<br />
+; ************************** SECTION FOR UNINSTALLING ******************************<br />
+; ----------------------------------------------------------------------------------<br />
+<br />
+Section &quot;Uninstall&quot;<br />
+; remove all the files and folders<br />
+Delete $INSTDIR\Uninstall.exe ; delete self<br />
+Delete $INSTDIR\myapp.jar<br />
+RMDir /r $INSTDIR\${JRE_NAME}<br />
+<br />
+RMDir $INSTDIR<br />
+<br />
+; now remove all the startmenu links<br />
+Delete &quot;$SMPROGRAMS\${APP_NAME}\MY App.lnk&quot;<br />
+Delete &quot;$SMPROGRAMS\${APP_NAME}\Uninstall.lnk&quot;<br />
+RMDIR &quot;$SMPROGRAMS\${APP_NAME}&quot;<br />
+<br />
+; Now delete registry keys<br />
+DeleteRegKey HKEY_LOCAL_MACHINE &quot;SOFTWARE\${APP_NAME}&quot;<br />
+DeleteRegKey HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}&quot;<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">galevsky</div><div class="date">19th November 2007, 10:26</div></div><div class="posttext">I am using a <br />
+<br />
+Function GetUserType<br />
+    ;UserInfo::GetName ;If you wanna retrieve current login<br />
+    UserInfo::GetAccountType<br />
+FunctionEnd<br />
+<br />
+that I use in my Function CustomizedGUIInit (to check at the beginning, but after language selection done in .onInit)<br />
+<br />
+call GetUserType<br />
+pop $0<br />
+StrCmp $0 &quot;Admin&quot; Admin notAdmin<br />
+notAdmin:<br />
+         MessageBox MB_OK|MB_ICONSTOP &quot;Not enough privileges to run this setup.$\nThis setup is aborted.&quot;<br />
+         abort<br />
+Admin:<br />
+<br />
+<br />
+Gal'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">gberes</div><div class="date">19th November 2007, 16:47</div></div><div class="posttext">Thanks. I also need some conditional execution, but it is not working:<br />
+<br />
+[nsis] Error: command RequestExecutionLevel not valid in Function<br />
+<br />
+Function .onInit<br />
+<br />
+call GetUserType<br />
+pop $0<br />
+StrCmp $0 &quot;Admin&quot; Admin notAdmin<br />
+notAdmin:<br />
+<br />
+RequestExecutionLevel user<br />
+InstallDir &quot;$APPDATA\${APP_NAME}&quot;<br />
+        <br />
+Admin:<br />
+<br />
+RequestExecutionLevel admin<br />
+InstallDir &quot;$PROGRAMFILES\${APP_NAME}&quot;<br />
+<br />
+FunctionEnd<br />
+ <br />
+Function GetUserType<br />
+    ;UserInfo::GetName ;If you wanna retrieve current login<br />
+    UserInfo::GetAccountType<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">galevsky</div><div class="date">19th November 2007, 17:01</div></div><div class="posttext">That function is for Windows Vista. I can read in the manual that it is a routine to tell which level is required -&quot;user&quot; only in your code above- to Vista. I think that you want to set it to &quot;admin&quot;, and I think the error is you should run RequestExecutionLevel outside a function, try it on top of your file, not inside any function.<br />
+<br />
+Gal'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">gberes</div><div class="date">19th November 2007, 17:10</div></div><div class="posttext">Right, but i still need custom RequestExecutionLevel based on the value of GetUserType. Should i remove .oninit, and make condition on top? Is that possible?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">galevsky</div><div class="date">19th November 2007, 17:22</div></div><div class="posttext">Originally posted by gberes <br />
+Right, but i still need custom RequestExecutionLevel based on the value of GetUserType. <br />
+<br />
+?? Why ?? <br />
+<br />
+RequestExecutionLevel =&gt; it is up to you, YOU have to decide which rights your setup exe requires to complete the installation process (and if you wanna write registery keys for any user and so on... you need to be &quot;admin&quot;).<br />
+<br />
+GetUserType, it is a function that give you the current rights  at runtime. This make you the ability to handle manually on XP and others the lack of privileges. But if your installer is dedicated to Vista, you might use RequestExecutionLevel instead since Vista will check for the user rights in its own and ask for admin password prior to launch your installation process.<br />
+<br />
+I am not pretty sure for the Vista view since I am writting an installer for XP/2k and I don't use RequestExecutionLevel at all.<br />
+<br />
+Gal'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">gberes</div><div class="date">19th November 2007, 17:38</div></div><div class="posttext">My application can be installed by two type of account, administrator, and user. <br />
+<br />
+I understand your point, but i still need to perform custom activity by user type, such as install location determination.<br />
+<br />
+Function .onInit<br />
+<br />
+call GetUserType<br />
+pop $0<br />
+StrCmp $0 &quot;Admin&quot; Admin notAdmin<br />
+notAdmin:<br />
+<br />
+InstallDir &quot;$APPDATA\${APP_NAME}&quot;<br />
+        <br />
+Admin:<br />
+<br />
+InstallDir &quot;$PROGRAMFILES\${APP_NAME}&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+That gives this:<br />
+[nsis] Error: command InstallDir not valid in Function</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">19th November 2007, 17:47</div></div><div class="posttext">InstallDir can not be used in a function, but you can set $instdir in .onInit for example<br />
+<br />
+Function .onInit<br />
+StrCmp something blah foo<br />
+user:<br />
+StrCpy $Instdir &quot;c:\foo&quot;<br />
+goto done<br />
+admin:<br />
+StrCpy $Instdir &quot;c:\bar&quot;<br />
+done:<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">galevsky</div><div class="date">19th November 2007, 17:49</div></div><div class="posttext">Yep, the same error, you have to run your InstallDir outside a  function. If you want to do it inside a func, try a StrCpy $INSTDIR &quot;your_path&quot; instead.<br />
+<br />
+To suit your needs, I think the best way for you is to handle manually the privileges control: don't use RequestExecutionLevel (on Vista, you won't have the admin password pop-up... but...) or do it with the lowest privileges =&gt; useless since no password will be asked.<br />
+<br />
+I advise you to manage instead you privileges level with your .onInit func using GetUserType... you can do everything you want, but having privileges escalation thanks to Vista built-in feature. Is that Okay for you ?<br />
+<br />
+Gal'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">gberes</div><div class="date">19th November 2007, 18:19</div></div><div class="posttext">Its ok, thanks. <br />
+One more thing. With the following code, Installation dir is always program files. Why?<br />
+<br />
+SetOutPath $INSTDIR\ // in section<br />
+<br />
+<br />
+Function .onInit<br />
+<br />
+call GetUserType<br />
+pop $0<br />
+StrCmp $0 &quot;Admin&quot; Admin notAdmin<br />
+notAdmin:<br />
+<br />
+StrCpy $INSTDIR &quot;$APPDATA\${APP_NAME}&quot;<br />
+        <br />
+Admin:<br />
+<br />
+StrCpy $INSTDIR &quot;$PROGRAMFILES\${APP_NAME}&quot;<br />
+<br />
+FunctionEnd<br />
+ <br />
+Function GetUserType<br />
+    ;UserInfo::GetName ;If you wanna retrieve current login<br />
+    UserInfo::GetAccountType<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">galevsky</div><div class="date">19th November 2007, 18:25</div></div><div class="posttext">:D <br />
+<br />
+You forgot something....<br />
+<br />
+<br />
+[...]<br />
+notAdmin:<br />
+<br />
+StrCpy $INSTDIR &quot;$APPDATA\${APP_NAME}&quot;<br />
+goto end<br />
+Admin:<br />
+<br />
+StrCpy $INSTDIR &quot;$PROGRAMFILES\${APP_NAME}&quot;<br />
+<br />
+end:<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+Beacuse in case 1.... you also play the case 2.<br />
+<br />
+Gal'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">gberes</div><div class="date">19th November 2007, 18:54</div></div><div class="posttext">gross mistake :D</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

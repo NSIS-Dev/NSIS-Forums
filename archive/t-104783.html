@@ -1,0 +1,128 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" nsis 2.0 alpha 7 bug, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  nsis 2.0 alpha 7 bug NSIS Discussion" />
+	
+	<title> nsis 2.0 alpha 7 bug [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  nsis 2.0 alpha 7 bug</div>
+<hr />
+<div class="pda"><a href="t-104783.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=104783">nsis 2.0 alpha 7 bug</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">cristianadam</div><div class="date">11th September 2002, 23:09</div></div><div class="posttext">Hi all,<br />
+<br />
+On my machine running Windows XP nsis dies when launched.<br />
+<br />
+I've tracked it down to this:<br />
+<br />
+// Added by Ximon Eighteen 5th August 2002<br />
+#ifdef NSIS_CONFIG_PLUGIN_SUPPORT<br />
+void CEXEBuild::build_plugin_table(void)<br />
+{<br />
+  plugin_used = false;<br />
+  uninst_plugin_used = false;<br />
+  char* nsisdir = definedlist.find(&quot;NSISDIR&quot;);<br />
+  if (nsisdir)<br />
+  {<br />
+    char* searchPath = new char [strlen(nsisdir)+6];<br />
+    if (searchPath)<br />
+    {<br />
+      wsprintf(searchPath,&quot;%s\\plugins&quot;,nsisdir);<br />
+      INFO_MSG(&quot;\nProcessing plugin dlls: \&quot;%s\\*.dll\&quot;\n&quot;,searchPath);<br />
+      m_plugins.FindCommands(searchPath,display_info?true:false);<br />
+      delete[] searchPath; // &lt;&lt;&lt;&lt;&lt; THIS IS THE LINE<br />
+    }<br />
+  }<br />
+}<br />
+<br />
+I've seen that operator delete is redefined in ResourceEditor.cpp using malloc/free functions, and no operator new[] and operator delete[] is defined ... this doesn't seem good.<br />
+<br />
+Ofcorse if I undefine the NSIS_CONFIG_PLUGIN_SUPPORT everything seams to be ok.<br />
+<br />
+I'm posting this here because I don't have a sourceforge account, yet.<br />
+<br />
+Best regards,<br />
+Cristian.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">12th September 2002, 00:11</div></div><div class="posttext">Sounds like you may have found whats killing my installation of NSIS at work (my home copy works fine so this has been confusing me)... KiCHiK -- you there (hint hint) ? :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CodeSquid</div><div class="date">12th September 2002, 10:31</div></div><div class="posttext">Ah! The allocated memory is just a little bit too small.<br />
+<br />
+Reason:<br />
+-------<br />
+<br />
+char* searchPath = new char [strlen(nsisdir)+6]; <br />
+...<br />
+wsprintf(searchPath,&quot;%s\\plugins&quot;,nsisdir); <br />
+<br />
+You're copying more bytes then allocated before, thus you overwrite memory that could belong to anything else.<br />
+<br />
+Historical analysis:<br />
+--------------------<br />
+<br />
+Plugins were stored in \bin, but now in \plugins, which is 4 bytes longer. Apparently someone did change the code without checking for sideeffects :eek: Shame on you! :D<br />
+<br />
+Conclusion:<br />
+-----------<br />
+<br />
+The new line should be like this:<br />
+char* searchPath = new char [strlen(nsisdir)+10];<br />
+<br />
+This bug is most likely the reason for all the crashes some people still get. I would advise to check for similar bugs.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">12th September 2002, 10:36</div></div><div class="posttext">Ah not my bug then :P (cool)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">12th September 2002, 11:38</div></div><div class="posttext">kickik made a bugfix in the CVS version a few weeks ago. But he changed it to 9. :igor:<br />
+<br />
+<br />
+// Added by Ximon Eighteen 5th August 2002<br />
+#ifdef NSIS_CONFIG_PLUGIN_SUPPORT<br />
+void CEXEBuild::build_plugin_table(void)<br />
+{<br />
+  plugin_used = false;<br />
+  uninst_plugin_used = false;<br />
+  char* nsisdir = definedlist.find(&quot;NSISDIR&quot;);<br />
+  if (nsisdir)<br />
+  {<br />
+    char* searchPath = new char [strlen(nsisdir)+9];<br />
+    if (searchPath)<br />
+    {<br />
+      wsprintf(searchPath,&quot;%s\\plugins&quot;,nsisdir);<br />
+      INFO_MSG(&quot;\nProcessing plugin dlls: \&quot;%s\\*.dll\&quot;\n&quot;,searchPath);<br />
+      m_plugins.FindCommands(searchPath,display_info?true:false);<br />
+      delete[] searchPath;<br />
+    }<br />
+  }<br />
+}<br />
+<br />
+<br />
+Hmm..which value is the right one?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">12th September 2002, 11:44</div></div><div class="posttext">&quot;%s\\plugins&quot;,nsisdir -- so space required should be strlen(nsisdir)+one for the \\ (which is actually just \) and then 7 for &quot;plugins&quot; and another one for the null terminator..<br />
+i.e. strlen(nsisdir)+9.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">12th September 2002, 11:48</div></div><div class="posttext">It should be nine (\\ - 1, p - 2, l - 3, u - 4, g - 5, i - 6, n - 7, s - 8, \0 - 9). Rainwater made the bug, and eccles fixed it.<br />
+<br />
+And as for the original &quot;solution&quot;, I have checked this when I added it. It does use my new operator even with new[].</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rainwater</div><div class="date">12th September 2002, 12:33</div></div><div class="posttext">&quot;plugins&quot; was &quot;bin&quot; before.  Therefore, when I changed it to plugins, the allocation was incorrect.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

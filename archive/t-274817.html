@@ -1,0 +1,79 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" nsDialogs - resizetofit, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  nsDialogs - resizetofit NSIS Discussion" />
+	
+	<title> nsDialogs - resizetofit [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  nsDialogs - resizetofit</div>
+<hr />
+<div class="pda"><a href="t-274817.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=274817">nsDialogs - resizetofit</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">23rd July 2007, 18:13</div></div><div class="posttext">Hi,<br />
+I've converted some of my pages to nsDialogs. If you look at the examples and have the patience too, it really is good for customizing layouts.:)<br />
+<br />
+What is the correct way to set bitmap size in an nsDialogs function?nsDialogs::CreateItem /NOUNLOAD STATIC ${WS_VISIBLE}|${WS_CHILD}|${WS_CLIPSIBLINGS}|${SS_BITMAP} 0 0 0 109u 193u &quot;&quot;When you change the size, use pixels (p) or percent (%) or units (u), nothing happens.System::Call 'user32::LoadImage(i 0, t r0, i ${IMAGE_BITMAP}, i 164, i 314, i ${LR_LOADFROMFILE}) i.s'Width and height are in pixels. Relative dimensions (percent, units) are not possible. Is there a way to apply &quot;resizetofit&quot;? (For DPI settings that stretch the installer?)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">23rd July 2007, 18:47</div></div><div class="posttext">You can manually retrieve the size of the new control and use the coordinates in LoadImage. That's what InstallOptions does when you the RESIZETOFIT flag. I'll have to add a macro for that in nsDialogs.nsh.System::Alloc 16<br />
+System::Call user32::GetClientRect(i $HWND, isr0)<br />
+System::Call *$0(i,i,i.r1,i.r2)<br />
+System::Free $0<br />
+# $1 and $2 are now width and height</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">23rd July 2007, 19:46</div></div><div class="posttext">I got the gist of it I think, but, say, $IMAGECTL is the new control and is 331u 193u or 497p 314p ... when I insert $1 and $2 in LoadImage, the effect is the same as 0 and 0; that is, the image displays at the original bitmap size, which is not 497x314 pixels (or there would no point in the experiment). The System::Call code is pasted between the new control and LoadImage in the function.<br />
+<br />
+A macro of course would solve it. I can wait that long -- it's not urgent -- and deal with this then, if you want, seeing as nsDialogs is under development.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">23rd July 2007, 19:48</div></div><div class="posttext">A macro would probably contain the above code. So we'd need to debug a bit, if it doesn't work. Do $1 and $2 contain any meaningful values?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">23rd July 2007, 19:56</div></div><div class="posttext">I thought you retrieve the size from the control. I used units or pixels.  nsDialogs::CreateItem /NOUNLOAD STATIC ${WS_VISIBLE}|${WS_CHILD}|${WS_CLIPSIBLINGS}|${SS_BITMAP} 0 0 0 497p 314p &quot;&quot;<br />
+  Pop $IMAGECTL<br />
+  System::Alloc 16<br />
+  System::Call user32::GetClientRect(i $IMAGECTL, isr0)<br />
+  System::Call *$0(i,i,i.r1,i.r2)<br />
+  System::Free $0<br />
+  ; $1 and $2 are now width and height<br />
+  StrCpy $0 $PLUGINSDIR\modern-wizard.bmp<br />
+  System::Call 'user32::LoadImage(i 0, t r0, i ${IMAGE_BITMAP}, i $1, i $2, i ${LR_LOADFROMFILE}) i.s'<br />
+  Pop $IMAGE<br />
+  SendMessage $IMAGECTL ${STM_SETIMAGE} ${IMAGE_BITMAP} $IMAGESo the values are those of the control?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">23rd July 2007, 20:04</div></div><div class="posttext">$1 and $2 should be the pixel width of the control after the call to GetClientRect. What you've used to create the control in the first place shouldn't matter as that's only for an internal conversion of nsDialogs.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">23rd July 2007, 20:13</div></div><div class="posttext">At the moment $1 and $2 have the values 0 and 0. I'm not sure I understand how GetClientRect is supposed to work. Where do the values come from if not from the control?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">23rd July 2007, 20:17</div></div><div class="posttext">The values come from the control, but the units used by nsDialogs don't matter as it's all converted to pixels eventually.<br />
+<br />
+The problem with the code is missing quotes in the call to GetClientRect.System::Call &quot;user32::GetClientRect(i $IMAGECTL, isr0)&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">23rd July 2007, 20:24</div></div><div class="posttext">Congrats! That did it, pixels, units, or whatever. Thanks! Missing quotes, the usual culprit.:)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">25th July 2007, 15:31</div></div><div class="posttext">A macro of course would solve it. I can wait that long -- it's not urgent -- and deal with this then, if you want, seeing as nsDialogs is under development.I didn't mean to suggest it wasn't worth fixing. That was rude. Sorry.:hang:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">25th July 2007, 18:08</div></div><div class="posttext">I didn't think for a second you were suggesting that.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">21st March 2008, 23:52</div></div><div class="posttext">I've added ${NSD_SetStretchedImage} for 2.36.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

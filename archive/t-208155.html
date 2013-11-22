@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Can't obtain control under guest account, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Can't obtain control under guest account NSIS Discussion" />
+	
+	<title> Can't obtain control under guest account [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Can't obtain control under guest account</div>
+<hr />
+<div class="pda"><a href="t-208155.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=208155">Can't obtain control under guest account</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Yurik</div><div class="date">18th February 2005, 11:48</div></div><div class="posttext">I've implemented admin rights checking in .onInit function with the UserInfo plugin. But I don't get control if I run the installation under very restricted Guest account. I've got a message &quot;Access to the specified device, path or file is denied&quot;. So it seems that NSIS tries to access something implicitly (windows temp? appdata?). What minimum rights should user have to allow installer script to get control in .onInit to successfully perform rights thereafter?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th February 2005, 11:55</div></div><div class="posttext">NSIS tries to find a place to place temporary files. But it never shows such an error message. I wonder which of the tests causes Windows to show such an annoying and uncalled for message. Are you running it in a simple Guest user or does it have more restrictions than the default?<br />
+<br />
+BTW, it does start after the annoying error message, right?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yurik</div><div class="date">18th February 2005, 12:05</div></div><div class="posttext">kickik,<br />
+<br />
+it seems that the matter is really caused with lack of rights to windows temp. On my desktop computer guest has rights by default, but as I've discovered, it has no rights to win temp. Having this, only the message mentioned appeared after running installation under guest. Nothing else, installation don't start after this message.<br />
+I've made some experiments and I've got control in .onInit after I grant guest with RW rights to win temp.<br />
+<br />
+So it seems I need to specify in docs that for installed to work correctly, RW rights are required for temporary windows folder for an account under which one runs the installation.<br />
+<br />
+BTW I think it could be of great conveniency if checking user rights is incorporated into NSIS itself. E.g. hooks like functions .adminInit, .guestInit, .powerUserInit, or maybe variable like $RIGHTS which is initialized internally and available in .onInit.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th February 2005, 12:52</div></div><div class="posttext">I've created a guest user and removed its access to its own temporary directory. NSIS then used C:\Windows\Temp and was able to write there. It was not able to create the plug-ins directory because guests can't even delete their own files from that directory. That caused NSIS to show the &quot;unable to initialize plug-ins...&quot; message. I then tried to remove access from C:\Windows\Temp too. That caused NSIS to show the &quot;unable to write to temporary directory message...&quot;, as should. I was not able to reproduce the Windows message and couldn't get NSIS to just exit without any message. Is there anything else you've done that I haven't?<br />
+<br />
+The UserInfo plug-ins is there for checking user rights in the script. I don't see a need to implement it in the installer itself. Simple installers don't need it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th February 2005, 13:41</div></div><div class="posttext">OK, I have fixed plug-ins directory initialization for extremely restricted guest users with no directory listing access to the temporary directory.<br />
+<br />
+I still can't reproduce your issue. Any more details that might help? Would you be able to provide me with remote access with a guest user having the same restrictions?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yurik</div><div class="date">18th February 2005, 13:45</div></div><div class="posttext">kichik,<br />
+<br />
+it seems that the matter is not with NSIS, just simply foolish lack of rights to _run_ setup script (so it is Win message). Trying to reproduce (taking out the rights from guest right now), will write in some minutes.<br />
+<br />
+Dealing rights in installer - simple installations also don't need PRINTHOOD and INTERNET_CACHE variables, but they are introduced. So maybe atleast $USER?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yurik</div><div class="date">18th February 2005, 13:48</div></div><div class="posttext">OK, I've got plugins message, so it's OK now. The only question that remains is can I (and how) customize this message (and other NSIS messages which issuing I can't control) in case I have a need?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th February 2005, 13:53</div></div><div class="posttext">Even if it is just a Windows issue, I don't want Windows to spit off messages during an installation. It's possible to disable them, I just need to know what exactly triggers them. It'd also be for the best if NSIS gave its own message. There already is such a message, but it doesn't show on your guest user for some reason.<br />
+<br />
+All of those weird directory variables came for free with the normal directory variables. Adding access control, which is usually unrequired, will bloat the basic exehead. I prefer keeping it as a plug-in.<br />
+<br />
+The plug-ins message comes from build.cpp:3181 - add_plugins_dir_initializer(). You can not costumize it without changing the source code.<br />
+<br />
+I'd still want to know how you've managed to get that Windows error message so I can get rid of it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th February 2005, 14:25</div></div><div class="posttext">From information provided by Yurik, it turns out the Windows error message was not NSIS related.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

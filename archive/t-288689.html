@@ -1,0 +1,134 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to use the with nsisPatchGen generated files, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to use the with nsisPatchGen generated files NSIS Discussion" />
+	
+	<title> How to use the with nsisPatchGen generated files [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to use the with nsisPatchGen generated files</div>
+<hr />
+<div class="pda"><a href="t-288689.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=288689">How to use the with nsisPatchGen generated files</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Miedon</div><div class="date">18th March 2008, 14:27</div></div><div class="posttext">Hi @ all.<br />
+<br />
+I was in the search of a tool that I could use to easily compare my old project with a updated one and create an patch. So I came over nsisPatchGen.<br />
+Now I managed to run this tool and I got a directory with a complete div of my project. There are all the files &quot;filename.txt.pat&quot; with the div between the files.<br />
+I guess I need to write an installer for my patch now that includes the created *.nsh  file and there I have to call the functions. But whatÂ´s the right way of doing that?<br />
+The main problem is how do I use the ${PATCH_INSTALL_ROOT} and ${PATCH_SOURCE_ROOT} variables? Especially if there are no registry entries for the the stuff I want to patch.<br />
+What is you suggestion what is the best way to go? And please keep in mind that I just started to learn how to use the NSIS installer.<br />
+Thank you IÂ´m looking forward to hearing from you!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th March 2008, 22:18</div></div><div class="posttext">As far as I know, nsisPatchGen should generate both the patch files and the script to install them. Make sure you haven't missed a script file in there.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Miedon</div><div class="date">19th March 2008, 14:23</div></div><div class="posttext">I tried it and like I said it created the patch files and a header file with the required functions to patch my project. <br />
+In this generated header file is a macro (!macro NSISPGPatchFile PATCHDATA SOURCEFILE TEMPFILE) and there are 5 functions:<br />
+Function patchDirectoriesAdded<br />
+Function patchDirectoriesRemoved<br />
+Function patchFilesAdded<br />
+Function patchFilesRemoved<br />
+Function patchFilesModified<br />
+Because I donÂ´t add or remove directories the first to are not necessary.   <br />
+<br />
+In the function patchFilesAdded are two lines for every file that is added.<br />
+<br />
+Function patchFilesAdded<br />
+  SetOutPath &quot;${PATCH_INSTALL_ROOT}\d&quot;<br />
+  File &quot;${PATCH_SOURCE_ROOT}\d\L0M.xml&quot;<br />
+.<br />
+.<br />
+.<br />
+FunctionEnd<br />
+<br />
+<br />
+The next function removes a file:<br />
+<br />
+Function patchFilesRemoved<br />
+  Delete &quot;${PATCH_INSTALL_ROOT}\Z.exe&quot;<br />
+FunctionEnd<br />
+<br />
+<br />
+And the last one uses the macro with every changed file:<br />
+<br />
+Function patchFilesModified<br />
+  InitPluginsDir<br />
+<br />
+  ;Patching &quot;d\RW.xml&quot; using patch file &quot;d\RW.xml.pat&quot;<br />
+  DetailPrint &quot;Patching ${PATCH_INSTALL_ROOT}\d\RW.xml&quot;<br />
+  !insertmacro NSISPGPatchFile &quot;${PATCH_FILES_ROOT}\d\RW.xml.pat&quot; &quot;${PATCH_INSTALL_ROOT}\d\RW.xml&quot; &quot;RW.xml.tmp&quot;<br />
+.<br />
+.<br />
+.<br />
+FunctionEnd<br />
+<br />
+<br />
+The used macro uses VPatch to patch my files.<br />
+<br />
+!macro NSISPGPatchFile PATCHDATA SOURCEFILE TEMPFILE<br />
+  InitPluginsDir<br />
+  File &quot;/oname=$PLUGINSDIR\${TEMPFILE}.patchFile&quot; &quot;${PATCHDATA}&quot;<br />
+  vpatch::vpatchfile &quot;$PLUGINSDIR\${TEMPFILE}.patchFile&quot; &quot;${SOURCEFILE}&quot; &quot;${TEMPFILE}&quot;<br />
+  Pop $1<br />
+  DetailPrint $1<br />
+  StrCpy $1 $1 2<br />
+  StrCmp $1 &quot;OK&quot; +2<br />
+  SetErrors<br />
+  IfFileExists &quot;${TEMPFILE}&quot; +1 +3<br />
+  Delete &quot;${SOURCEFILE}&quot;<br />
+  Rename /REBOOTOK &quot;${TEMPFILE}&quot; &quot;${SOURCEFILE}&quot;<br />
+  Delete &quot;$PLUGINSDIR\${TEMPFILE}.patchFile&quot;<br />
+!macroend<br />
+<br />
+<br />
+ThatÂ´s everything I get. Now if I create an installer and try to include this file I get the error message:<br />
+<br />
+!include: error in script: &quot;Z.nsh&quot; on line 24<br />
+Error in script &quot;C:\...\Z.nsi&quot; on line 26 -- aborting creation process<br />
+<br />
+Line 24 is:<br />
+SetOutPath &quot;${PATCH_INSTALL_ROOT}\d&quot;<br />
+The error is that ${PATCH_INSTALL_ROOT} is unknown. To avoid that error I can create defines for<br />
+${PATCH_INSTALL_ROOT}<br />
+${PATCH_SOURCE_ROOT}<br />
+${PATCH_FILES_ROOT}<br />
+in the header file but I need on different computers   different paths. <br />
+The source and the patch files should be included in the installer and so the path should be clear. The install path should be the path that my project is already installed in. But how can I do that? Thank you.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">viperpiper</div><div class="date">15th May 2008, 00:34</div></div><div class="posttext">From the Readme.txt:<br />
+<br />
+<br />
+The calling script must define the following variables _before_ calling any<br />
+of the patch functions:<br />
+<br />
+The location of &lt;directory2&gt; on the source machine, e.g.<br />
+  <br />
+  !define PATCH_SOURCE_ROOT &quot;newVersion&quot;<br />
+  <br />
+ The location of the *.pat patch files on the source machine (as defined by the optional &lt;patch output directory&gt; command line parameter), e.g.<br />
+ <br />
+  !define PATCH_FILES_ROOT &quot;patchFiles&quot;<br />
+  <br />
+ The directory to which the files will be installed, e.g.<br />
+<br />
+  !define PATCH_INSTALL_ROOT $INSTDIR<br />
+<br />
+<br />
+<br />
+So you define PATCH_SOURCE_ROOT and PATCH_FILES_ROOT to be the appropriate directories on your machine. These defines are only used when creating the installer, so don't matter when the installer is run.<br />
+<br />
+$INSTDIR is a special NSIS define which means the installation directory on the users machine. If you don't store the installation directory in the registry then you will have to let the user pick the installation directory. See the general NSIS help for this.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

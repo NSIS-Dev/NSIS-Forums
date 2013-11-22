@@ -1,0 +1,84 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" getting return string value, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  getting return string value NSIS Discussion" />
+	
+	<title> getting return string value [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  getting return string value</div>
+<hr />
+<div class="pda"><a href="t-294686.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=294686">getting return string value</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">zanz</div><div class="date">17th July 2008, 17:22</div></div><div class="posttext">Hi all,<br />
+<br />
+I'm still very new to NSIS script. I'm trying to convert our installers to NSIS.<br />
+<br />
+I've organized all the common functions into a common header file, which I include in the *.nsi file. <br />
+<br />
+From some functions, I need a string or in return value from header file to the *.nsi file. How can I achieve this? Any hints will be appreciated. Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">17th July 2008, 17:51</div></div><div class="posttext">You basically have to ways to return values for (or pass arguments to) a function, no matter where it's located: Push the value on the stack, so the caller can pop it off the stack after function return or you write the result directly to a user var. The latter case is not a good solution, as variables might be overwritten unexpectedly. I'd use a macro to hide the actual call:<br />
+<br />
+!define MyFunction &quot;!insertmacro _MyFunction&quot;<br />
+<br />
+!macro _MyFunction return_var arg1 arg2 <br />
+  Push &quot;${arg1}&quot;<br />
+  Push &quot;${arg2}&quot;<br />
+  Call _MyFunctionFunc<br />
+  Pop ${return_var}<br />
+!macroend<br />
+<br />
+Function _MyFunctionFunc<br />
+  ; First of all pop two arguments from the stack<br />
+  ; Do some important calculations here<br />
+  ; Finally Push the result onto the stack<br />
+FunctionEnd<br />
+<br />
+You'd call it like that:<br />
+${MyFunction} $0 &quot;This is arg1&quot; &quot;This is arg2&quot;<br />
+DetailPrint &quot;Function returned: $0&quot;<br />
+<br />
+Be aware: <br />
+If you use any user variables ($0 to $9) inside your function, you should save those on the stack first and restore them before your function returns! Otherwise variables get overwritten unexpectedly again...<br />
+<br />
+(Handling arguments/returnvalues *and* the saved vars on the stack at the same time can create some pain though, Exch might help to solve that)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zanz</div><div class="date">18th July 2008, 18:15</div></div><div class="posttext">Thanks LoRd_MuldeR, your answer is really helpful. <br />
+These might be stupid questions, but I need to ask them:<br />
+<br />
+- We can declare a section within a function. If we can, is it a good practice for NSIS script? <br />
+<br />
+- It seems I can organize the installation better if i create multiple install sections in the script. Is it a good practice? <br />
+<br />
+I'd really appreciate any help. Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">18th July 2008, 21:18</div></div><div class="posttext">Enclosing sections in a function would be a bad idea.  The purpose of a function is to be able to re-use code by calling the function more than once.  If you had a section defined in a function, then you'd be adding the section every time.<br />
+<br />
+If you have a need to dynamically add sections, then I'd enclose the definitions inside macros and the use !ifdef or !ifmacdef to determine whether or not to include the section during compile time.<br />
+<br />
+Or, maybe you just need to skip a section during runtime (based on the user's selection or type of environment.)  In that case, then you can define all section at compile time, but then skip over the ones you don't need at runtime.  (You can also make sections hidden if you don't want users to see them.)  Have a look at SectionSetFlags and SectionGetFlags in the docs.  Or consider having the contents in the entire section enclosed in an ${If} block to process only if a certain condition is met.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">19th July 2008, 12:49</div></div><div class="posttext">1. Multiple sections definitely are a good idea<br />
+<br />
+2. You can enable/disable sections at runtime<br />
+<br />
+3. You can create &quot;hidden&quot; sections, so the user won't see those<br />
+<br />
+4. To share a section between several installer use a macro</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

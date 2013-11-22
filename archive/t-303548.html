@@ -1,0 +1,79 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" ExecWait embeeded installation with Adminstartor rights, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  ExecWait embeeded installation with Adminstartor rights NSIS Discussion" />
+	
+	<title> ExecWait embeeded installation with Adminstartor rights [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  ExecWait embeeded installation with Adminstartor rights</div>
+<hr />
+<div class="pda"><a href="t-303548.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=303548">ExecWait embeeded installation with Adminstartor rights</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ksngs78</div><div class="date">27th February 2009, 00:22</div></div><div class="posttext">Hello,<br />
+<br />
+I spent many hours in trying to find solution for following situation. My program doesn't need any &quot;power&quot; rights and is able to work under &quot;normal&quot; user. I wrote installer and use &quot;APPDATA&quot; as directory for installation. But my program uses third party library. Installation program of the library demands admin rights. So I need a way to execute the installer of the library under Administrator in case if the library is not installed. I looked at RunAs plugin but it demands creating of a dialog for inputing User&amp;password. It's not acceptable for security point. Is there any solution for this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">27th February 2009, 00:35</div></div><div class="posttext">what I would do is, in .onInit, check if this library is installed, if its not (and the installer is not running as admin (check with userinfo plugin)), display a messagebox telling the user this and:<br />
+<br />
+a) restart your installer with ExecShell and the runas verb<br />
+or <br />
+b) tell the user to restart your installer as admin<br />
+<br />
+See also:<br />
+http://nsis.sourceforge.net/Driver_installation_and_update<br />
+http://nsis.sourceforge.net/InstDrv_plug-in<br />
+and search the wiki and forum for more info</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ksngs78</div><div class="date">27th February 2009, 00:47</div></div><div class="posttext">Yep. I already implemented checking of admin right and etc.<br />
+1) ExecShell with &quot;runas&quot; has an ability to wait the process until it finishes? I'm not sure that it's possible because ShellExecute (Windows API) doesn't return process handle in this case (When &quot;runas&quot; is used). So WaitForSingleObject won't work.  <br />
+2) If I start my installer as admin the program will be installed for admin user but I need to install it for current user. I mentioned that I use &quot;APPDATA&quot; of current user as destination.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">27th February 2009, 01:08</div></div><div class="posttext">ShellExecuteEx can return the child process handle, nsis does not support it out of the box, but you can call it with the system plugin or UAC::ShellExecWait (uac plugin)<br />
+<br />
+The other option would be to rewrite your installer to use the UAC plugin, this way you can run as admin and still execute nsis code/extract files as the &quot;current&quot; user.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ksngs78</div><div class="date">27th February 2009, 01:17</div></div><div class="posttext">I'm sorry. I mentioned ShellExecuteEx in the previous response. It doesn't return process handle for &quot;runas&quot; processes. ShellExecute doesn't have ability to get Process handle at all. <br />
+<br />
+I tried to move forward with UAC plugin ... but I was confused and didn't understand how execute code/extract files as behalf of current user. Also &quot;APPDATA&quot; points to path of Administrator (not current user) and this is understandable because UAC creates a second process for installer and runs it again. And I get the same result - the program's installed for Admin user :)<br />
+<br />
+BTW, UAC has its Logon dialog and it may confuse &quot;more advanced&quot; users.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">27th February 2009, 01:42</div></div><div class="posttext">ShellExecuteEx with runas does in fact return the process handle, and you can wait on it.<br />
+<br />
+as far as the uac plugin goes, what you are looking for is UAC::ExecCodeSegment, it will execute a nsis function as the user, not the admin<br />
+<br />
+I don't know what login dialog you are talking about, the UAC plugin just does ShellExecuteEx with the runas verb in 99% of system configurations</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ksngs78</div><div class="date">27th February 2009, 01:55</div></div><div class="posttext">Originally posted by Anders <br />
+ShellExecuteEx with runas does in fact return the process handle, and you can wait on it. <br />
+Did you check it? I did. Always when I specify &quot;runas&quot; attribute hProccess has NULL. (WinXP + SP3)<br />
+<br />
+<br />
+as far as the uac plugin goes, what you are looking for is UAC::ExecCodeSegment, it will execute a nsis function as the user, not the admin<br />
+<br />
+I don't know what login dialog you are talking about, the UAC plugin just does ShellExecuteEx with the runas verb in 99% of system configurations  <br />
+UAC plugin has own dialog for login and password. You may find it in the source easily. Also UAC uses CreateProcessWithLogonW to start new process instead of ShellExecuteEx.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">27th February 2009, 02:04</div></div><div class="posttext">I'm the author of the UAC plugin, so I know how it works...<br />
+<br />
+It will use the OS runas unless the major version &gt;= 6 and UAC is off (In this configuration, UAC does not elevate so I have to roll my own solution)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

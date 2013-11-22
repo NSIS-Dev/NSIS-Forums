@@ -1,0 +1,130 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Rebuild a registry key list, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Rebuild a registry key list NSIS Discussion" />
+	
+	<title> Rebuild a registry key list [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Rebuild a registry key list</div>
+<hr />
+<div class="pda"><a href="t-237276.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=237276">Rebuild a registry key list</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">lucian.crisan</div><div class="date">5th February 2006, 21:23</div></div><div class="posttext">Hello guys,<br />
+<br />
+I've wrote an instalation program (with NSIS Installer) for my application in AutoCAD. <br />
+Everything is OK at installation, but for uninstall function i need some help from you.<br />
+I'm a newbie with NSIS language, and i must finish asap my installation pack.<br />
+So, under a key i have a number of string values which follow the rule:<br />
+<br />
+Value name: &quot;index_number&quot;Startup<br />
+Value data: a string which is the path to a specified file<br />
+<br />
+For example:<br />
+1Startup    &quot;d:\Myapp\lisp1.lsp&quot;<br />
+2Startup    &quot;d:\Myapp\lisp2.lsp&quot;<br />
+3Startup    &quot;d:\Myapp\lisp3.lsp&quot;<br />
+4Startup    &quot;d:\Myapp\lisp4.lsp&quot;<br />
+5Startup    &quot;d:\Myapp\lisp5.lsp&quot;<br />
+6Startup    &quot;d:\Myapp\lisp6.lsp&quot;<br />
+NumStartup  &quot;6&quot;<br />
+<br />
+At the end exist a key, named &quot;NumStartup&quot; and its value is equal with a number which reppresent the number of files &quot;loaded&quot; under this key (like an index)<br />
+<br />
+In the time of uninstall, i want to erase for example the fourth key (4Startup    &quot;d:\Myapp\lisp4.lsp&quot;) and to change value of NumStartup from 6 to 5.<br />
+This part i've done, but i need to rebuild the key's value name in ascending order.<br />
+<br />
+The situation appear like follow (after erase of the fourth key):<br />
+<br />
+1Startup    &quot;d:\Myapp\lisp1.lsp&quot;<br />
+2Startup    &quot;d:\Myapp\lisp2.lsp&quot;<br />
+3Startup    &quot;d:\Myapp\lisp3.lsp&quot;<br />
+5Startup    &quot;d:\Myapp\lisp5.lsp&quot;<br />
+6Startup    &quot;d:\Myapp\lisp6.lsp&quot;<br />
+NumStartup  &quot;5&quot;<br />
+<br />
+What i'll need to obtain:<br />
+<br />
+1Startup    &quot;d:\Myapp\lisp1.lsp&quot;<br />
+2Startup    &quot;d:\Myapp\lisp2.lsp&quot;<br />
+3Startup    &quot;d:\Myapp\lisp3.lsp&quot;<br />
+4Startup    &quot;d:\Myapp\lisp5.lsp&quot;<br />
+5Startup    &quot;d:\Myapp\lisp6.lsp&quot;<br />
+NumStartup  &quot;5&quot;<br />
+<br />
+This job, at this moment, i can't handle it; and i'm asking you if anyone can help me (or guide me) to finish up my job.<br />
+<br />
+And another question. I have a key which contain some paths linked with &quot;;&quot; character, like:<br />
+C:\ACADM2000\acadm;C:\ACADM2000\help;C:\ACADM2000\FONTS;D:\My work;<br />
+How can I search for a specified path inside this string, erase it, and rebuild the string without it.<br />
+<br />
+I don't know if i was explicit by I try with an example.<br />
+<br />
+I have this key:<br />
+Value name: ACAD<br />
+Value data: &quot;C:\ACADM2000\acadm;C:\ACADM2000\help;C:\ACADM2000\FONTS;D:\My work;&quot;<br />
+<br />
+I want to search and erase the substring &quot;C:\ACADM2000\help;C:\ACADM2000\FONTS;&quot; from initial string to obtain<br />
+C:\ACADM2000\acadm;D:\My work;<br />
+<br />
+That's all.<br />
+Thanks in forward,<br />
+Lucian :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">{_trueparuex^}</div><div class="date">5th February 2006, 22:52</div></div><div class="posttext">Hmm... let's see...<br />
+<br />
+This code should fix the list order. Push $R0<br />
+ Push $R1<br />
+ Push $R2<br />
+<br />
+  ; Change this to ReadRegDWORD if necessary<br />
+  ReadRegStr $R0 HKCU &quot;Software\Something&quot; &quot;NumStartup&quot;<br />
+<br />
+  StrCpy $R1 0 ; &quot;fix pointer&quot;<br />
+  StrCpy $R2 0 ; pointer<br />
+<br />
+  loop:<br />
+  StrCmp $R2 $R0 end 0<br />
+  IntOp $R1 $R1 + 1<br />
+<br />
+  notfound:<br />
+  ClearErrors ; just to make sure<br />
+  IntOp $R2 $R2 + 1<br />
+  StrCmp $R2 $R0 end 0<br />
+<br />
+  ReadRegStr $R3 HKCU &quot;Software\Something&quot; &quot;$R2Startup&quot;<br />
+  IfErrors notfound 0<br />
+  DeleteRegValue HKCU &quot;Software\Something&quot; &quot;$R2Startup&quot;<br />
+  WriteRegStr HKCU &quot;Software\Something&quot; &quot;$R1Startup&quot; $R3<br />
+  Goto loop<br />
+  <br />
+  end:<br />
+  IntOp $R1 $R1 - 1<br />
+  WriteRegStr HKCU &quot;Software\Something&quot; &quot;NumStartup&quot; $R1<br />
+<br />
+ Pop $R2<br />
+ Pop $R1<br />
+ Pop $R0<br />
+Probably There are easier way to do this, but my brain needs food. :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">6th February 2006, 00:40</div></div><div class="posttext">You might want to check out AfrowUK's NSISArray (http://forums.winamp.com/showthread.php?s=&amp;threadid=222275&amp;highlight=array)  plugin--it would make it easier to switch the order of elements and such without having to make your brain hurt so much! ;) <br />
+<br />
+and for this:<br />
+C:\ACADM2000\acadm;C:\ACADM2000\help;C:\ACADM2000\FONTS;D:\My work;<br />
+How can I search for a specified path inside this string, erase it, and rebuild the string without it.<br />
+<br />
+You should have a look at Instructor's Word/String/File functions (http://forums.winamp.com/showthread.php?s=&amp;threadid=203228).  (BTW: Most of Instructor's functions are included with the latest builds of NSIS--have a look at the help files for for info.)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Patching a previous NSIS installed program?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Patching a previous NSIS installed program? NSIS Discussion" />
+	
+	<title> Patching a previous NSIS installed program? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Patching a previous NSIS installed program?</div>
+<hr />
+<div class="pda"><a href="t-76523.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=76523">Patching a previous NSIS installed program?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Nothus</div><div class="date">19th February 2002, 04:59</div></div><div class="posttext">I wrote a little proggie, and used NSIS to install it.<br />
+<br />
+Now, I'd like to be able to patch my program, and am wondering how to make NSIS make sure that the dir the user is trying to install the patch to - really is where the original proggie is installed.<br />
+<br />
+I very much a n00b when it comes to NSIS, so I can't figure it out.<br />
+<br />
+What I need:<br />
+<br />
+Is there a way for NSIS to do a check for a certain file (in the dir that the user selects) and make sure that file is there (so that I'll know that my proggie is really installed there) and if its not, popup a error box, then kick user back to the DIR selection screen to try again??<br />
+<br />
+Does that make sense?? :)<br />
+<br />
+I'm sure its easy as hell, but I don't know NSIS well.<br />
+<br />
+THX!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rainwater</div><div class="date">19th February 2002, 05:55</div></div><div class="posttext">This comes straight from the docs:<br />
+<br />
+Function .onVerifyInstDir<br />
+    IfFileExists $INSTDIR\Winamp.exe PathGood<br />
+    Abort<br />
+    PathGood<br />
+FunctionEnd<br />
+<br />
+Of course you can add your own messageboxes as needed.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nothus</div><div class="date">19th February 2002, 06:10</div></div><div class="posttext">thx!!<br />
+<br />
+however, one problem - when the error box pops up, you have to hit it<br />
+twice to dismiss it. Not a serious bug, but annoying.<br />
+<br />
+Here is my exact code:<br />
+<br />
+<br />
+Function .onVerifyInstDir <br />
+IfFileExists $INSTDIR\myfile.exe PathGood <br />
+MessageBox MB_OK &quot;Sorry - this is not where myfile is, please try again.&quot;<br />
+PathGood: <br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rainwater</div><div class="date">19th February 2002, 06:20</div></div><div class="posttext">You forgot to put the abort command in your example.  This will keep the install button from being enabled.<br />
+<br />
+There does seem to be a bug however.  The same problem occured when I tested it.  Sounds like onVerifyInstDir is being called twice.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nothus</div><div class="date">19th February 2002, 06:38</div></div><div class="posttext">Ok.<br />
+<br />
+I wanted the Msg box to let users know that they had picked a wrong dir - else just having the install button not work might confuse them.<br />
+<br />
+is there a way to have the msg box AND abort both called? would that fix the bug?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rainwater</div><div class="date">19th February 2002, 07:25</div></div><div class="posttext">Function .onVerifyInstDir <br />
+IfFileExists $INSTDIR\myfile.exe PathGood <br />
+MessageBox MB_OK &quot;Sorry - this is not where myfile is, please try again.&quot; <br />
+Abort<br />
+PathGood: <br />
+FunctionEnd<br />
+<br />
+But the bug is still present (2 msgboxes).  I will take a look and see why onVerifyInstDir is being called twice.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nothus</div><div class="date">19th February 2002, 07:54</div></div><div class="posttext">ok.<br />
+<br />
+Thx for your help! And thanks for checking out this bug. Its not serious, but it is kinda annoying.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">19th February 2002, 11:01</div></div><div class="posttext">Use a structure from RegCode, see:<br />
+<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=70530<br />
+<br />
+Summarized: use .onNextPage to trigger an alternative .onVerifyInstDir that will only be called when clicking &quot;Install&quot; and only once!<br />
+<br />
+A little extract:<br />
+<br />
+Function .onNextPage<br />
+  StrCmp $R9 1 good1<br />
+    StrCmp $R9 2 good2<br />
+      IntOp $R9 $R9 + 1<br />
+      Return<br />
+  good1:<br />
+  ...<br />
+<br />
+  ; alternative .onVerifyInstDir (only triggered when install is hit!)<br />
+  good2:<br />
+  IfFileExists &quot;$INSTDIR&quot; 0 PathGood<br />
+    MessageBox MB_YESNO|MB_ICONQUESTION '&quot;$INSTDIR&quot; allready exists. Continue?$\r$\n$\r$\nIf you continue a backup of existing files will be created during install in:$\r$\n&quot;$INSTDIR\Backup by App&quot;' IDYes PathGood<br />
+    Abort<br />
+  PathGood:<br />
+  IntOp $R9 $R9 + 1<br />
+FunctionEnd<br />
+Be sure to adapt the page numbers to your install!<br />
+<br />
+<br />
+Maybe that's a solution to the problem. It avoids the bug anyway!<br />
+<br />
+Good luck, greetz, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">19th February 2002, 11:03</div></div><div class="posttext">BTW,<br />
+Function .onInit<br />
+  Strcpy $R9 0<br />
+FunctionEndshould also be included of course, but you can find everything in a zip at the url above.<br />
+<br />
+Good luck,<br />
+-Hn3.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

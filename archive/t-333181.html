@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Installer Conditional Issue, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Installer Conditional Issue NSIS Discussion" />
+	
+	<title> Installer Conditional Issue [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Installer Conditional Issue</div>
+<hr />
+<div class="pda"><a href="t-333181.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=333181">Installer Conditional Issue</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">siegeon</div><div class="date">4th August 2011, 15:40</div></div><div class="posttext">I have almost completed our installer update, but there is one portion left, I need to check that the client has the FULL .NET Framework 4.0 installed. However The script I have written attempts to install it every time rather then only when its not present. Without a real time debugger I am a bit helpless to muck my way though, anyone mind taking a look.<br />
+<br />
+The idea is first I will check that NET Framework Setup\NDP\v4\Full exists;<br />
+if yes then first attempt to install it from the included redistribution,<br />
+         otherwise download it from microsoft.  <br />
+<br />
+<br />
+<br />
+Var InstallDotNET<br />
+Var DotNetOnCD<br />
+<br />
+Section &quot;CFO&quot; SEC01<br />
+	  SetOutPath &quot;$INSTDIR&quot;<br />
+	  SetOverwrite ifnewer<br />
+	<br />
+	  ; Begin Check .NET version<br />
+	  StrCpy $InstallDotNET &quot;No&quot;<br />
+	     ReadRegDWORD $0 HKLM &quot;Software\Microsoft\NET Framework Setup\NDP\v4\Full&quot; &quot;Install&quot;<br />
+		 ${if} $0 == &quot;&quot;<br />
+			 StrCpy $InstallDotNET &quot;Yes&quot;<br />
+			 MessageBox MB_OK|MB_ICONINFORMATION &quot;${PRODUCT_NAME} requires that the .NET Framework 4.0 is installed. The latest .NET Framework will be downloaded and installed automatically during installation of ${PRODUCT_NAME}.&quot;<br />
+	         IfFileExists &quot;$EXEDIR\Redist\dotNetFx40_Full_x86_x64.exe&quot; 0 +2<br />
+			 StrCpy $DotNetOnCD &quot;Yes&quot;<br />
+			 Pop $0<br />
+		 ${Else}<br />
+		    StrCpy $InstallDotNet &quot;No&quot;<br />
+			Pop $0<br />
+		  ${EndIf}<br />
+	     <br />
+	<br />
+	  ; Get .NET if required<br />
+	  ${If} $InstallDotNET == &quot;Yes&quot;<br />
+		${AndIf} $DotNetOnCD == &quot;Yes&quot;<br />
+				 MessageBox MB_OK \<br />
+				 &quot;Microsoft .NET 4 is required to run this application. \<br />
+				 Click 'OK' to start the installer for it.&quot;<br />
+			     SetCursor::System WAIT<br />
+		         Exec &quot;$EXEDIR\Redist\dotNetFx40_Full_x86_x64.exe&quot;<br />
+		         SetCursor::System NORMAL<br />
+		${Else}		 <br />
+			SetDetailsView hide<br />
+			inetc::get /caption &quot;Downloading .NET Framework 4.0&quot; /canceltext &quot;Cancel&quot; &quot;http://www.microsoft.com/downloads/info.aspx?na=41&amp;SrcFamilyId=9CFB2D51-5FF4-4491-B0E5-B386F32C0992&amp;SrcDisplayLang=en&amp;u=http%3a%2f%2fdownload.microsoft.com%2fdownload%2f1%2fB%2fE%2f1BE39E79-7E39-46A3-96FF-047F95396215%2fdotNetFx40_Full_setup.exe&quot; &quot;$INSTDIR\dotnetfx.exe&quot; /end<br />
+			Pop $1<br />
+	<br />
+	     ${If} $1 != &quot;OK&quot;<br />
+	           Delete &quot;$INSTDIR\dotnetfx.exe&quot;<br />
+	           Abort &quot;Installation cancelled, ${PRODUCT_NAME} requires the .NET 4.0 Framework&quot;<br />
+	     ${EndIf}<br />
+	<br />
+	     ExecWait &quot;$INSTDIR\dotnetfx.exe&quot;<br />
+	     Delete &quot;$INSTDIR\dotnetfx.exe&quot;<br />
+	<br />
+	     SetDetailsView show<br />
+	  ${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">4th August 2011, 16:26</div></div><div class="posttext">What are those &quot;pop $0&quot; commands for? I don't see you pushing anything, smells like a stack corruption fault waiting to happen.<br />
+<br />
+As for the .NET install always happening, that's because your If statements are wrong. Use this:<br />
+${If} $InstallDotNET == &quot;Yes&quot;<br />
+${AndIf} $DotNetOnCD == &quot;Yes&quot;<br />
+ ; install<br />
+${ElseIf} $InstallDotNET == &quot;Yes&quot;<br />
+ ; download and install<br />
+${EndIf}</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

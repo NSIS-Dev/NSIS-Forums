@@ -1,0 +1,179 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" IsEmptyDir check, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  IsEmptyDir check NSIS Discussion" />
+	
+	<title> IsEmptyDir check [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  IsEmptyDir check</div>
+<hr />
+<div class="pda"><a href="t-354625.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=354625">IsEmptyDir check</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">PoRtAbLe_StEaLtH</div><div class="date">16th January 2013, 11:55</div></div><div class="posttext">Im not an expert .. but find NSIS an intriguing language.<br />
+I love the simplicity, and small overhead.<br />
+<br />
+I discover new things everyday.<br />
+<br />
+For instance.. today.. i learned:<br />
+IfFileExists if used with a wildcard to detect if files exists, will always return true, due to &quot;.&quot;, &quot;..&quot;.<br />
+<br />
+Example:<br />
+IfFileExists `$INSTDIR\Dir\*.*` 0 skip<br />
+     MessageBox MB_OK &quot;Did not skip.&quot;<br />
+skip:<br />
+<br />
+Using Logic:<br />
+${If} ${FileExists} `$INSTDIR\Dir\*.*`<br />
+     MessageBox MB_OK &quot;Did not skip.&quot;<br />
+${EndIf}<br />
+<br />
+Both examples will execute MessageBox, because it will detect &quot;.&quot;, &quot;..&quot;.<br />
+<br />
+I have put together a useful script that will allow both above examples to work.<br />
+<br />
+<br />
+;!include logiclib.nsh<br />
+<br />
+!define IsEmptyDir `&quot;&quot; LL_IsEmptyDir`<br />
+!macro _LL_IsEmptyDir _a _b _t _f<br />
+	!insertmacro _LOGICLIB_TEMP<br />
+	${EmptyDir} `${_b}` $_LOGICLIB_TEMP<br />
+	!insertmacro _= $_LOGICLIB_TEMP 1 `${_t}` `${_f}`<br />
+!macroend<br />
+!macro EmptyDir _DIR _VAR<br />
+	Push ${_DIR}<br />
+	Call EmptyDir<br />
+	Pop ${_VAR}<br />
+!macroend<br />
+!define EmptyDir `!insertmacro EmptyDir`<br />
+Function EmptyDir<br />
+; renamed isempty from:<br />
+; http://nsis.sourceforge.net/Check_if_dir_is_empty<br />
+  # Stack -&gt;                    # Stack: &lt;directory&gt;<br />
+  Exch $0                       # Stack: $0<br />
+  Push $1                       # Stack: $1, $0<br />
+  FindFirst $0 $1 &quot;$0\*.*&quot;<br />
+  strcmp $1 &quot;.&quot; 0 _notempty<br />
+    FindNext $0 $1<br />
+    strcmp $1 &quot;..&quot; 0 _notempty<br />
+      ClearErrors<br />
+      FindNext $0 $1<br />
+      IfErrors 0 _notempty<br />
+        FindClose $0<br />
+        Pop $1                  # Stack: $0<br />
+        StrCpy $0 1<br />
+        Exch $0                 # Stack: 1 (true)<br />
+        goto _end<br />
+     _notempty:<br />
+       FindClose $0<br />
+       ClearErrors<br />
+       Pop $1                   # Stack: $0<br />
+       StrCpy $0 0<br />
+       Exch $0                  # Stack: 0 (false)<br />
+  _end:<br />
+FunctionEnd<br />
+<br />
+<br />
+Now you can do this:<br />
+<br />
+${IfNot} ${IsEmptyDir} `$INSTDIR\Dir`<br />
+     MessageBox MB_OK &quot;Did not skip.&quot;<br />
+${EndIf}<br />
+<br />
+<br />
+im sure the script can be shortened/improved..<br />
+But im not an expert..<br />
+infact.. i would truly love it if someone could improve the &quot;isEmptyDir&quot; script w/ Logic.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">gfm688</div><div class="date">16th January 2013, 13:29</div></div><div class="posttext">System::Call Shlwapi::PathIsDirectoryEmpty(t&quot;$INSTDIR\Dir&quot;)i.r0<br />
+StrCmp $0 1 0 +2<br />
+  MessageBox MB_OK &quot;Directory is empty&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">PoRtAbLe_StEaLtH</div><div class="date">16th January 2013, 13:48</div></div><div class="posttext">System::Call Shlwapi::PathIsDirectoryEmpty(t&quot;$INSTDIR\Dir&quot;)i.r0<br />
+StrCmp $0 1 0 +2<br />
+  MessageBox MB_OK &quot;Directory is empty&quot;<br />
+<br />
+<br />
+Amazing. :up:<br />
+<br />
+all of that code can now be shrunken to this:<br />
+!define IsEmptyDir `&quot;&quot; LL_IsEmptyDir`<br />
+!macro _LL_IsEmptyDir _a _b _t _f<br />
+	!insertmacro _LOGICLIB_TEMP<br />
+	     System::Call Shlwapi::PathIsDirectoryEmpty(t&quot;${_b}&quot;)i.r0 $_LOGICLIB_TEMP<br />
+	!insertmacro _= $_LOGICLIB_TEMP 1 `${_t}` `${_f}`<br />
+!macroend<br />
+<br />
+to call:<br />
+<br />
+;!include LogicLib.nsh<br />
+<br />
+${IfNot} ${IsEmptyDir} `$Dir_to_check`<br />
+     &quot;code to execute&quot;<br />
+${EndIf}<br />
+<br />
+<br />
+Thank you gfm688.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">gfm688</div><div class="date">17th January 2013, 01:28</div></div><div class="posttext">!define IsEmptyDir `&quot;&quot; LL_IsEmptyDir`<br />
+!macro _LL_IsEmptyDir _a _b _t _f<br />
+    !insertmacro _LOGICLIB_TEMP<br />
+    System::Call `Shlwapi::PathIsDirectoryEmpty(t&quot;${_b}&quot;)i.s`<br />
+    Pop $_LOGICLIB_TEMP<br />
+    !insertmacro _= $_LOGICLIB_TEMP 1 `${_t}` `${_f}`<br />
+!macroend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">PoRtAbLe_StEaLtH</div><div class="date">17th January 2013, 05:28</div></div><div class="posttext">!define IsEmptyDir `&quot;&quot; LL_IsEmptyDir`<br />
+!macro _LL_IsEmptyDir _a _b _t _f<br />
+    !insertmacro _LOGICLIB_TEMP<br />
+    System::Call `Shlwapi::PathIsDirectoryEmpty(t&quot;${_b}&quot;)i.s`<br />
+    Pop $_LOGICLIB_TEMP<br />
+    !insertmacro _= $_LOGICLIB_TEMP 1 `${_t}` `${_f}`<br />
+!macroend<br />
+<br />
+how come it works for me without popping?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">17th January 2013, 10:18</div></div><div class="posttext">!define IsEmptyDir `&quot;&quot; LL_IsEmptyDir`<br />
+!macro _LL_IsEmptyDir _a _b _t _f<br />
+    !insertmacro _LOGICLIB_TEMP<br />
+    System::Call `Shlwapi::PathIsDirectoryEmpty(t&quot;${_b}&quot;)i.s`<br />
+    Pop $_LOGICLIB_TEMP<br />
+    !insertmacro _= $_LOGICLIB_TEMP 1 `${_t}` `${_f}`<br />
+!macroend<br />
+<br />
+You should change this code so it compares &lt;&gt; 0, BOOL can be &gt; 1, it usually means success is non-zero...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">PoRtAbLe_StEaLtH</div><div class="date">17th January 2013, 13:23</div></div><div class="posttext">You should change this code so it compares &lt;&gt; 0, BOOL can be &gt; 1, it usually means success is non-zero...<br />
+<br />
+How's this?<br />
+<br />
+<br />
+!define IsEmptyDir `&quot;&quot; LL_IsEmptyDir`<br />
+	!macro _LL_IsEmptyDir _a _b _t _f<br />
+	!insertmacro _LOGICLIB_TEMP<br />
+	     System::Call `Shlwapi::PathIsDirectoryEmpty(t&quot;${_b}&quot;)i.s`<br />
+	Pop $_LOGICLIB_TEMP<br />
+	!insertmacro _&lt;&gt; $_LOGICLIB_TEMP 0 `${_t}` `${_f}`<br />
+!macroend<br />
+<br />
+<br />
+any recommendations for checking stack in a function/macro?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

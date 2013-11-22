@@ -1,0 +1,330 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" dosExecute plugin, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  dosExecute plugin NSIS Discussion" />
+	
+	<title> dosExecute plugin [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  dosExecute plugin</div>
+<hr />
+<div class="pda"><a href="t-181442.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=181442">dosExecute plugin</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">28th May 2004, 10:46</div></div><div class="posttext">2 parameters - program to start and string to use as stdin for program. Plugin creates child process with redirected i/o (pipes). Works in debug mode now - few Windows popup message boxes appears and console application window is visible  - I'll change mode to SH_HIDE and remove messages in next version. Please note following string in execDos.nsi file (see attachment):<br />
+<br />
+<br />
+execDos::execDos &quot;c:\consApp.exe&quot; &quot;test_login$\ntest_pwd$\n&quot;<br />
+<br />
+Test console appl. included - it printfs header and requests for login and password, then exits. Put it to C:\ for tests or change path in first parameter. Plugin also returns program exit code to stack (if finished, waits max 1 sec, probably something like .r0 required to get it, I am not sure :). This may not works with Windows telnet or ftp clients, but with simple console application it was OK.<br />
+<br />
+http://nsis.sourceforge.net/ExecDos_plug-in</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">31st May 2004, 07:47</div></div><div class="posttext">Plugin takes 2 strings from stack (application name and stdin text), creates hidden child process with redirected I/O, writes input string parameter to redirected stdin (pipe buffering works fine) and catches stdout. Returns to stack application' exit code.<br />
+<br />
+Project and binaries attached. To test plugin with you application, change file/path and input string parameter in dosExec.nsi, put dosExec.dll to NSIS\Plugin folder and recompile dosExec.nsi script. Run dosExec.exe (uninstall not required). Sample DOS application included – requests for login and password, then exits, you can see how this works if run app. from console window. To use it for plugin test, put consApp.exe to c:\ or change path in script. <br />
+Build with MS Visual Studio 6, SP 5. Tested on W98 SE – W2K server.<br />
+Please note correct dll and entry point names <br />
+<br />
+    dosExec::dosExec &quot;c:\consApp.exe&quot; &quot;test_login$\ntest_pwd$\n&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">12th January 2005, 19:10</div></div><div class="posttext">Few versions were published in related threads, but it will be better to continue here :) Wording and design was improved in current version.<br />
+Finally this plug-in based on the same system calls as nsExec, but you can also give 'stdin' string (up to 1024 chars) to running application. In most cases this will be authorization login/password pair.<br />
+For example: <br />
+<br />
+execDos::exec &quot;$EXEDIR\consApp.exe&quot; &quot;test_login$\ntest_pwd$\n&quot; &quot;$EXEDIR\execDos.log&quot;<br />
+<br />
+consApp.exe included for test purposes, it sleeps(1 sec) before exit(5), so plug-in text on the top of INSTFILES page becomes visible.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">16th January 2005, 15:04</div></div><div class="posttext">Updated to support long strings - now plug-in allocates string buffers according to incoming string_size parameter. This may be 8k for special NSIS build (1024 otherwise). I guess this is also stack string size.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bdfy</div><div class="date">8th February 2005, 11:17</div></div><div class="posttext">Takhir<br />
+OK, it works , but just like this NSIS standart command...<br />
+<br />
+ExecShell '&quot;$INSTDIR\Res\Campaigns\pbtl.exe&quot; -u resistance.pbo' SW_HIDE<br />
+For example<br />
+<br />
+execDos::exec '&quot;$INSTDIR\Res\Campaigns\pbtl.exe&quot; -u resistance.pbo'<br />
+doesn't match for my script , because I need actions to be sequenced, step-by-step. I have to wait while DOS operation ends. Can you help me ?<br />
+I can easily make it in Inno and IMHO NSIS must have this feature.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">8th February 2005, 11:48</div></div><div class="posttext">Plug-in waits application to close it's stdout (all done), after this waits for exit_code_process (up to 2 sec) and exits after this only. This is &quot;wait&quot; mode I guess. So once again - is pbtl.exe DOS or &quot;windowed&quot; application? In the last case DOS plug-ins is a wrong way.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bdfy</div><div class="date">8th February 2005, 12:25</div></div><div class="posttext">pbtl.exe is DOS-applicattion and it works about 10 sec in my installer.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">9th February 2005, 14:19</div></div><div class="posttext">During email conversation it was found that the main problem is bad plug-in manual (NSIS tradition :) ) So I'd like to explain details:<br />
+1. Only command_line parameter is mandatory, other parameters (timeout, stdin_string and log_file_name) are optional, may by skipped or &quot;&quot;<br />
+   execDos::exec command_line [/TIMEOUT=xxx] [stdin_string] [log_file_name]<br />
+for example<br />
+   execDos::exec &quot;$INSTDIR\my_app.exe&quot;<br />
+(while stdin_string was main idea of this plug-in – user input emulation)<br />
+2. &quot;$EXEDIR\${APP_NAME}.log&quot; log file name in the included script sample require &quot;!define APP_NAME execDos&quot; or something like this (see  execDos.nsi )<br />
+3. Be very careful with bat files - it's DOS window autoclose mode depends on the user's system settings (&quot;Close On Exit&quot; property), I could reproduce situation with installer hanging. nsExec supports /TIMEOUT parameter, while error &quot;timeout&quot; in such situations may looks like &quot;unsuccessful&quot;. May be it is possible to change autoclose parameter for the time when plug-in is running? &quot;cmd.exe /C&quot; works on XP/2K only. Good news - this still works fine with direct call to DOS application (without bat file) ;) .<br />
+I added timeout option to ExecDos plug-in, mainly for possible batch file problems, attached.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bdfy</div><div class="date">9th February 2005, 19:15</div></div><div class="posttext">Takhir<br />
+The problem isn't solved...:( check your mail.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">9th February 2005, 20:44</div></div><div class="posttext">as far is i know, this bat file will autoclose on all systems:<br />
+@echo off<br />
+echo hello world<br />
+cls</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bdfy</div><div class="date">9th February 2005, 23:10</div></div><div class="posttext">Anders<br />
+the problem is not to close...<br />
+the problem is to hide DOS screen while bat file in progress...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">10th February 2005, 07:42</div></div><div class="posttext">This is not plug-in problem :)<br />
+I took bdfy script and did following:<br />
+1. Carefully replaced ExecWait calls with ExecDos. After this all black screens dissapeared.<br />
+2. Added MessageBoxes showing application exit codes.<br />
+3. According to exit codes found and fixed suspicious places in the original code, like this - program extracts file to current SetOutPath dir, but tries to start program from another one<br />
+<br />
+  SetOutPath &quot;$INSTDIR\resistance&quot;<br />
+  File  &quot;Files\bat\Resdelete.bat&quot;<br />
+  ExecWait &quot;$INSTDIR\Resdelete.bat&quot;<br />
+<br />
+Now exit codes of 3 runs are 0, 1 and 1; resistance.pbo file size changed, looks working. Full script sent by email.<br />
+<br />
+2 Anders: XP&amp;2K - no problem, but on Win98 it's a real head pain... In my tests hidden Winoldapps on Win98 remain in Ctrl-Alt-Del list and create problem on next reboot :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bdfy</div><div class="date">10th February 2005, 14:51</div></div><div class="posttext">Takhir<br />
+Thank you very much (ñ):)<br />
+All problems are solved , everything works fine - 10x to Takhir.:beer:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">10th February 2005, 15:21</div></div><div class="posttext">Sorry, Anders, I re-tested on Win98 and found that your code works! No Oldapps in the tasks list. I searched google but not found this decision.. Thanks :)<br />
+bdfy: do not forget to add 'echo off + cls' to your bat files. Application's output still appears in the log file (if set).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Guillaume.L</div><div class="date">17th July 2005, 02:12</div></div><div class="posttext">How do I install your plugin?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">17th July 2005, 06:52</div></div><div class="posttext">1. Download the package http://forums.winamp.com/attachment.php?s=&amp;postid=1587794 (attached to the post above).<br />
+2. Put ExecDos.dll from zip to Program Files\NSIS\Plugins folder on your comp<br />
+3. Read included to zip execdos.nsi for usage sample. The simplest command line (no log file and stdin string):<br />
+<br />
+execDos::exec &quot;path\file&quot; &quot;&quot; &quot;&quot;<br />
+Pop $0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">17th July 2005, 10:57</div></div><div class="posttext">Updated wiki page (http://nsis.sourceforge.net/wiki/ExecDos)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Guillaume.L</div><div class="date">18th July 2005, 22:11</div></div><div class="posttext">Is there a way not to make it hide the dos window if there is one?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">19th July 2005, 06:45</div></div><div class="posttext">Use ExecWait NSIS Instruction (Documentation, 4.9.1.4).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">26th July 2005, 08:41</div></div><div class="posttext">New options (wiki page (http://nsis.sourceforge.net/wiki/ExecDos)):<br />
+ /ASYNC - async application execution. Not waits for process exit, returns control to installer immediately after process launch. New optional 'wait' function to get application exit code (if required). Multithreading worked in my tests, so few DOS application can work at the same time ('exec' returns handle for access to particular process in 'wait' call)<br />
+ /BRAND - branding text instead of &quot;ExecDos plug-in: exe_name&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DarkAvenger</div><div class="date">13th June 2006, 19:19</div></div><div class="posttext">Hi Takhir,<br />
+<br />
+is it possible to add an option to start the program as diferent user - pass username and password of new user as parameters. Something like RunAs dll but incorporated in ExecDos.<br />
+<br />
+Thaks in advanced</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">14th June 2006, 18:18</div></div><div class="posttext">It is possible, but most of used API calls marked in MSDN as NT (XP?) compatible only, so we can lose Win9x this case.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DarkAvenger</div><div class="date">14th June 2006, 19:27</div></div><div class="posttext">Takhir,<br />
+<br />
+thank you for your fast reply... Windows NT/2000/XP/2k3/Vista is ok with me... You can add a new function to the dll with run as functionality without lose existing one that support 9x OS.<br />
+Looking forward for the new version of ExecDos with RunAs ...<br />
+<br />
+Thanks in advanced</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dmccordjr</div><div class="date">22nd June 2006, 17:45</div></div><div class="posttext">Please, I humbly :) request you to Permit a &quot;No&quot; Timeout value for /TIMEOUT or a flag for example<br />
+<br />
+/TIMEOUT=-1 or /NOTIMEOUT Whatever works best for you.<br />
+<br />
+I would like to use this command to Launch Applications. Mainly Java Applications. The Applications Run Indefinitely. <br />
+<br />
+So I need a way to Turn off the time out. The man reason I want to use your tool is the Log to file and the Async. <br />
+<br />
+We tend to use NSIS as a Compiled Batch File for little utilities.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">22nd June 2006, 19:31</div></div><div class="posttext">If not set, timeout is 0xffffff ms = 4 hours. You can define it as 0xffffffff this will be 256 times more. Is this enough?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dmccordjr</div><div class="date">22nd June 2006, 20:29</div></div><div class="posttext">Takir<br />
+<br />
+Wow, :D well that's 42 days, approximately. LOL! That will work. Not quite the same a never. But definitely long enough, I certainly hope our users open and close the app at least once in 1024 hours.<br />
+<br />
+Thanx for the quick response.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">23rd June 2006, 06:40</div></div><div class="posttext">May be you need no-wait application launch, this case use ExecShell (NSIS command) or WinExec (via System plug-in). Both support SW_HIDE parameter and not waits a process exit (and allows installer to finish).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Clammerz</div><div class="date">11th December 2006, 14:15</div></div><div class="posttext">Sorry if I'm bumping the wrong thread, but this was the thread linked to on the Wiki page.<br />
+<br />
+How do you utilize the /TOSTACK option?<br />
+The Wiki page is kinda poorly documented on this feature.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">11th December 2006, 15:15</div></div><div class="posttext">Plug-in pushes to stack as many (not empty) lines as it gets from app's stdout basing on '\n' delimiter (\r char just skipped). Long lines will be truncated on the NSIS line limit (1024-1 for common build). If log defined data go to file as well.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Clammerz</div><div class="date">11th December 2006, 16:39</div></div><div class="posttext">Oh, thank you.<br />
+I was hoping it would work somewhat similar to a 'live output' that the logfile option does.<br />
+Would make it easier to handle live output internally by NSIS rather than reading from the logfile.<br />
+<br />
+I was wondering... Since you have already successfully redirected live output to a logfile, is it possible for you to redirect it to the details box?<br />
+<br />
+I have a external application that needs to run during install. It outputs it's progress as dots:<br />
+&quot;............&quot; and so on, untill it reaches:<br />
+&quot;.............................. DONE.&quot;<br />
+<br />
+ExecToLog is unable to do it. It was discussed allot in this thread:<br />
+http://forums.winamp.com/showthread.php?&amp;threadid=126972<br />
+<br />
+But no solution was found.<br />
+<br />
+If it can't be done, I guess I can resort to /ASYNC, and have a loop reading from the file every 1/2 a second or so..<br />
+<br />
+Thanks for your help thus far.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">11th December 2006, 18:56</div></div><div class="posttext">It is possible, may be I'll add new option next weekend (or you can do this earlier ;) ).<br />
+/async should work for now.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">13th December 2006, 10:00</div></div><div class="posttext">I added /detailed option, while installer' Detailed window sync looks not very good with my test app - pauses and jumps when new items appear...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">thetw</div><div class="date">4th August 2009, 00:02</div></div><div class="posttext">Hello, I'm hoping this is the appropriate thread to ask this question... <br />
+<br />
+I am in the process of converting to the unicode NSIS installer and I am using ExecDos. I had to change several other plugins to get it to work, but ExecDos seems to be okay. Can you tell me whether it is Unicode compliant or it is just lucky that no inputs have broken it yet? If it is not Unicode compliant, is there a recommended solution?<br />
+<br />
+Thanks for your help!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">4th August 2009, 18:09</div></div><div class="posttext">Current version of ExecDos (July 2007) looks multibyte only. Unfortunately I have not NSIS Unicode installed now, so attached variant is 100% not tested. I just replaced char-&gt;TCHAR and added unicode release/debug configurations.<br />
+Just found - last string output /towindow and /tofinc may not work if it is not terminated with '\n' - require some code like this is done for /tostack :(.  And one more - plug-in creates process using Unicode syscall, but I am not sure that catched output from CLI application (redirected to pipes) will be Unicode as well.<br />
+Have fun ;).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">NsisUsernew</div><div class="date">16th November 2009, 09:20</div></div><div class="posttext">hi all,<br />
+<br />
+I am attaching a python executable with NSIS. The runtime prints of python's windows executable is needed to be outputed on the showdetails field of NSIS's Installation Page. We are using ExecDos dll, plugins to display runtime output of python's windows executable (hello.exe). The code snippet is as follows:<br />
+<br />
+ExecDos::exec /NOUNLOAD /ASYNC /DETAILED /TIMEOUT=10000 &quot;hello.exe&quot;<br />
+Pop $0<br />
+ExecDos::wait $0<br />
+<br />
+where hello.exe is window's executable of hello.py,<br />
+hello.py is:<br />
+<br />
+import os, time, sys<br />
+import WConio<br />
+print &quot;something is running .....&quot;<br />
+sys.stdout.flush()<br />
+x = WConio.wherex()<br />
+y = WConio.wherey()<br />
+WConio.gotoxy(x+50,y-1)<br />
+time.sleep(10)<br />
+print &quot;ok&quot;<br />
+sys.stdout.flush()<br />
+<br />
+&quot;Console window&quot; Output of above hello.exe is:<br />
+<br />
+something is running ...... ok<br />
+<br />
+But when hello exe is used in NSIS, the display looks like this:<br />
+<br />
+something is running .......<br />
+ok<br />
+<br />
+My intention is to get the print like as shown for Console window, ie 'ok' on the same line. Can anyone suggest what I am doing wrong? NOTE that when I use the ',' after the first print, the string is buffered even if I do a flush (as sys.stdout.flush()).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">17th November 2009, 06:55</div></div><div class="posttext">gotoxy() sounds like terminal command. First print() sends CR, but after this you move marker back to previous line. None of NSIS plug-ins supports terminal emulation.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">NsisUsernew</div><div class="date">18th November 2009, 16:55</div></div><div class="posttext">Reason of using gotoxy(), is to set the cursor position, as my intention is to print<br />
+Something is running........(sleep for 10, then print)..Ok<br />
+<br />
+using  below code:<br />
+ <br />
+print &quot;Something is running.....&quot;,<br />
+sys.stdout.flush()<br />
+sys.sleep(10)<br />
+print &quot;Ok&quot;<br />
+sys.stdout.flush()<br />
+<br />
+sys.stdout.flush(), is not working with &quot;comma&quot;, it buffers &quot;Something is running.....&quot; with &quot;Ok&quot; string and throw result on showdetails window after 10.<br />
+Can you suggest the way to make flush to work with &quot;,&quot;?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Genjuro</div><div class="date">17th March 2010, 01:44</div></div><div class="posttext">If the parameters of the program has &quot;&quot;, what i do?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">17th March 2010, 14:52</div></div><div class="posttext">NSIS script allows both &quot; and '. So 'notepad.exe &quot;c:\path to file\file name.txt&quot;' is possible.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Plainjay</div><div class="date">28th July 2010, 21:53</div></div><div class="posttext">I'm trying to use ExecDos::wait with logging function.. does it not have the same option? <br />
+<br />
+syntax I'm using ExecDos::wait &quot;C:\program.exe&quot; &quot;&quot; &quot;$EXEDIR\test.log&quot;<br />
+<br />
+ExecWait worked fine but I don't think it'll log to a file like I want.<br />
+Also tried nsExec::ExecToLog but wasn't getting the result I'm looking for...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">29th July 2010, 10:34</div></div><div class="posttext">Check the readme again. Tip: Use Exec not Wait.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">18th January 2011, 17:57</div></div><div class="posttext">I have uploaded a new version of the plug-in.<br />
+<br />
+* Added Unicode build (just noticed there was already a Unicode build in this thread but never mind - this version has been tested at least).<br />
+* Uses new plug-in API (/NOUNLOAD not necessary with /ASYNC).<br />
+* Added /DISABLEFSR switch to disable WOW64 file system redirection on Windows x64 for the internal ExecDos thread (the old version would fail if the executable was in system32).<br />
+<br />
+http://nsis.sourceforge.net/ExecDos_plug-in<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">HaMsTeYr</div><div class="date">5th September 2012, 21:22</div></div><div class="posttext">Afrow, I noticed that the log files are encoded in UTF-8. Is there anyway to change that to UTF16-LE?<br />
+<br />
+I'm writing a piece of code at the moment, and I'm trying to read Unicode characters into the stack, via an external file. I'm using the NSIS Unicode build at the moment.<br />
+<br />
+I have tried executing to function instead of out to log, but it seems that only outputting it out to the log keeps the Unicode characters as they are.<br />
+<br />
+I can think of only a few ways to do this, like a FileRead that works for UTF-8 (Using FileRead screws up the characters, and FileReadUTF16LE is no better.)<br />
+<br />
+Another alternative is to stick of course, with FileReadUTF16LE, but the file has to be encoded in UTF-16 LE as well, if not it also becomes a garbled mess.<br />
+<br />
+I know it may seem like asking for much, but would you happen to know any way around this?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

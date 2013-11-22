@@ -1,0 +1,156 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Save listbox items on page leave, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Save listbox items on page leave NSIS Discussion" />
+	
+	<title> Save listbox items on page leave [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Save listbox items on page leave</div>
+<hr />
+<div class="pda"><a href="t-321694.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=321694">Save listbox items on page leave</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">15th August 2010, 18:12</div></div><div class="posttext">Hi,<br />
+<br />
+what will be the best method to save listbox items on leaving the (custom) page so that they could be restored when the user returns to the page?<br />
+<br />
+Unfortunately NSIS doesn't support arrays (and only for this I don't want to use the array plugin - can only use headers and plugins that are included in the NSIS package!).<br />
+<br />
+Writing to a (temp) file is also unwanted.<br />
+Any other possibility?<br />
+<br />
+Thanks,<br />
+Gunther<br />
+<br />
+BTW: Is there any (understandable) explanation of nsDialogs::GetUserData?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">oldfriend</div><div class="date">15th August 2010, 19:27</div></div><div class="posttext">Hello.<br />
+<br />
+I had the same problem with the saving results of checkboxes. I used successfully global variables.<br />
+http://forums.winamp.com/showthread.php?t=320238</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">15th August 2010, 20:03</div></div><div class="posttext">Hi,<br />
+<br />
+thanks for your reply, but unfortunately it doesn't help me much ..., because if you know the number of elements in advance and you can adress each element then it will be no problem.<br />
+<br />
+But i don't know how many entries an user will add to the listbox.<br />
+I can use ${NSD_LB_GetCount} to get the number but I don't know how to adress and store each entry?<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">15th August 2010, 20:37</div></div><div class="posttext">as far as addressing listboxes, go...<br />
+http://nsis.sourceforge.net/Move_data_between_ListBoxes<br />
+<br />
+as far as storing the values goes... why not just write them out to a flat text file, and read them back in from that?<br />
+there's many alternatives, of course.  If you don't want to use the Array plugin, for example, you could still create a pseudo-array using a string value with a delimiter (|, for example), and use StrTok from the String Functions header to get each one piecewise.  It's more code than just dumping it to a text file but doesn't require file I/O.<br />
+<br />
+as for SetUserData and GetUserData... they allow you to store/restore data (a string, basically) as associated with an hwnd.  They're useful temporary holders, or - for example - storing a URL with an NSD_CreateLink element so that upon code review you can immediately see what URL is associated with that link (and the code handling its OnClick can simply read that value).<br />
+Of course the down side is that once the hwnd is gone (i.e. you leave the page or the element is destroyed by any other means), so is the data - so it's not good for session-wide storage :)<br />
+These macros ease working with those two functions a little:<br />
+http://nsis.sourceforge.net/NsDialogs_UserData</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">15th August 2010, 23:41</div></div><div class="posttext">Animaether,<br />
+<br />
+many thanks for your detailed answer - it really helped me out! :up:<br />
+as far as addressing listboxes, go...<br />
+http://nsis.sourceforge.net/Move_data_between_ListBoxes<br />
+OK, found also a helpful thread in the forum - http://forums.winamp.com/showpost.php?p=2226265&amp;postcount=10<br />
+<br />
+There are two things to take care of:<br />
+<br />
+ set the current selection to each item by using LB_SETCURSEL<br />
+ use the SystemCall instead of SendMessage<br />
+<br />
+I ended up with the following leave function for the page (I am using the Unicode version):<br />
+<br />
+Var CHART_DIR_TMP_FILE<br />
+Function Page_SetConfig_Leave<br />
+	${NSD_LB_GetCount} $ListBox_SetConfig $0<br />
+	${If} $0 &gt; 0<br />
+		ClearErrors<br />
+		FileOpen $R0 $TEMP\ocpn_chart_dirs.tmp w<br />
+		IfErrors done<br />
+		IntOp $0 $0 - 1<br />
+		${For} $1 0 $0<br />
+			SendMessage $ListBox_SetConfig ${LB_SETCURSEL} $1 0<br />
+			System::Call &quot;User32::SendMessage(i $ListBox_SetConfig, i ${LB_GETTEXT}, i $1, t .r2)&quot;<br />
+			;MessageBox MB_OK|MB_ICONEXCLAMATION &quot;Page_SetConfig_Leave$\r$\nLB_GETITEMDATA: $2&quot; ;#DEBUG<br />
+			FileWriteUTF16LE $R0 $2<br />
+			FileWriteUTF16LE $R0 &quot;$\r$\n&quot;<br />
+		${Next}<br />
+		FileClose $R0<br />
+		StrCpy $CHART_DIR_TMP_FILE 1<br />
+	${EndIf}<br />
+	done:<br />
+FunctionEnd<br />
+<br />
+<br />
+as far as storing the values goes... why not just write them out to a flat text file, and read them back in from that?<br />
+As you can see I decided to do so. ;)<br />
+It's by far the easiest way ...<br />
+<br />
+there's many alternatives, of course.  If you don't want to use the Array plugin, for example, you could still create a pseudo-array using a string value with a delimiter (|, for example), and use StrTok from the String Functions header to get each one piecewise.  It's more code than just dumping it to a text file but doesn't require file I/O.<br />
+Didn't checked it, but isn't there a great risk to &quot;conflict&quot; with NSIS_MAX_STRLEN when using a pseudo-array (path strings could be long)?<br />
+<br />
+So the only drawback/ side effect when storing the items to a text file is that I somehow have to delete the file if the user cancels the installation after the file was written (that's what the variable $CHART_DIR_TMP_FILE is for).<br />
+Do you have just another tip how to achieve this best?<br />
+<br />
+as for SetUserData and GetUserData... <br />
+Thanks for the explanation - think I got it now.<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">16th August 2010, 00:29</div></div><div class="posttext">Didn't checked it, but isn't there a great risk to &quot;conflict&quot; with NSIS_MAX_STRLEN when using a pseudo-array (path strings could be long)?<br />
+If you're putting paths into the listbox, then yes - not recommended :)<br />
+For more typical use, it -can- be okay.. but the temp file is the most robust alternative to the Array plugin if you don't need the Array plugin's fancy features :)<br />
+<br />
+So the only drawback/ side effect when storing the items to a text file is that I somehow have to delete the file if the user cancels the installation after the file was written (that's what the variable $CHART_DIR_TMP_FILE is for).<br />
+Do you have just another tip how to achieve this best?<br />
+<br />
+You can always just delete the file when the installer exits.  Presuming you'll have a GUI (not much use for the listboxes in a silent installer), you can use .onGuiEnd.  Otherwise, you can delete it in .onInstSuccess and .onInstFailed.<br />
+<br />
+That said - if you put your temp file into the PluginsDir (InitPluginsDir -&gt; $PLUGINSDIR), then it should automatically get deleted by NSIS (presuming you closed any file handles to the thing) :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">1st September 2010, 10:24</div></div><div class="posttext">Just another question concerning storing variables (in my case path values) in a flat file.<br />
+<br />
+The variables (path values) are generated by scanning the HDD of the user. Every path found (there must exist two specific files) is<br />
+- added to the listbox<br />
+- written to the file<br />
+<br />
+Now the user may select certain list-items. The directories with the respective path values are then deleted.<br />
+<br />
+After they were deleted I need to remove/ delete these path values also<br />
+- from the listbox (no big deal as I get the value from it)<br />
+- from the file<br />
+<br />
+The latter is what I'd like to ask for.<br />
+How to delete certain values from the file?<br />
+<br />
+The values are stored each one in a line followed by $\r$\n.<br />
+<br />
+Thanks<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">1st September 2010, 10:40</div></div><div class="posttext">Have you tried google?<br />
+<br />
+&quot;nsis delete line from file&quot;</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

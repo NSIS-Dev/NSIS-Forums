@@ -1,0 +1,117 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" ${registry::KeyExists} not working, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  ${registry::KeyExists} not working NSIS Discussion" />
+	
+	<title> ${registry::KeyExists} not working [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  ${registry::KeyExists} not working</div>
+<hr />
+<div class="pda"><a href="t-290603.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=290603">${registry::KeyExists} not working</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">cherdeg</div><div class="date">21st April 2008, 09:34</div></div><div class="posttext">Hi all...<br />
+<br />
+I seem to get dumber every day...why wouldn't this work? The goal is to Quit if the file or one of the keys is found and to only install if not. The keys defined do both exist in the testing machine's registry.<br />
+<br />
+!include &quot;Registry.nsh&quot;<br />
+<br />
+	;Check if our Cygwin directory is located on the local machine<br />
+	IfFileExists &quot;$INSTDIR\cygwin.bat&quot; 0 DoInstall<br />
+	MessageBox MB_ICONSTOP &quot;The directory c:\cygwin does already exist. Please first remove any installation of cygwin and then restart this installer...&quot;<br />
+	Quit<br />
+	<br />
+	;Check if the standard Cygwin Registry keys exist (x32)<br />
+	${registry::KeyExists} &quot;HKEY_LOCAL_MACHINE\SOFTWARE\Cygnus Solutions&quot; $R0<br />
+	StrCmp $R0 &quot;0&quot; DoInstall ByeReg	<br />
+	;Check if the standard Cygwin Registry keys exist (x64)<br />
+	${registry::KeyExists} &quot;HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Cygnus Solutions&quot; $R0<br />
+	StrCmp $R0 &quot;0&quot; DoInstall ByeReg	<br />
+	<br />
+	;This is the label to jump to if a registy key is found<br />
+	ByeReg:<br />
+	MessageBox MB_ICONSTOP &quot;RegistryKeys for Cygwin exist on this machine. Please first remove any installation of cygwin and then restart this installer...&quot;<br />
+	Quit<br />
+	<br />
+	;This is the label to jump to if Cygwin is not installed yet.<br />
+	DoInstall:<br />
+	[...]<br />
+<br />
+I can't see any error...but e.g. I have no clue which kind of value $R0 does contain - it doesn't seem to be documented anywhere. At least it would be interesting if it is a string or boolean or integer...to know if I should use StrCmp or IntCmp.<br />
+<br />
+Can anybody help me?<br />
+<br />
+Regards,<br />
+<br />
+Chris</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">21st April 2008, 10:31</div></div><div class="posttext">It returns a string -- in NSIS they are all strings. You can use StrCmp or IntCmp when the docs say the return codes are 0 and -1.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">cherdeg</div><div class="date">21st April 2008, 11:17</div></div><div class="posttext">Okay - strings. Thank you so far. But can you see a problem regarding my code rendering it useless?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">21st April 2008, 11:39</div></div><div class="posttext">Is $INSTDIR set when you want to look for the bat file? a messagebox would confirm that.<br />
+<br />
+What fails? Does it detect when there is no cygwin installation, or does it not detect when there is an installation?<br />
+<br />
+Try using the short aliases for the registry hives HKLM instead of HKEY_LOCAL_MACHINE. The docs aren't clear whether you can use either or both forms.<br />
+<br />
+If those suggestions don't help, see if there is a key value to be read. On my computer there are values in &quot;HKCU\Software\Cygnus Solutions\Cygwin\mounts v2&quot; &quot;cygdrive flags&quot;.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">cherdeg</div><div class="date">21st April 2008, 12:08</div></div><div class="posttext">The &quot;IfFileExists&quot; part works perfectly - no error there. The only problem occurs when trying to check the registry keys...<br />
+<br />
+H E C K ! ! !<br />
+<br />
+...this shitty GOTO-Crap!!! Once again it shit on my head. Nobody with a brain should ever have implemented such a shit into anything!!! Himmelherrgottzack!!!<br />
+<br />
+Sorry, all. That had to get out. My whole weekend was invested in the debugging of this crap. Right now I found it:<br />
+<br />
+All the time I looked onto my code as if it was ca &quot;CASE&quot; statement. But of course it has to be shitty GOTOs.<br />
+<br />
+So nothing of my &quot;${registry::KeyExists}&quot;-code is wrong, it works a suppose. But if the file does not exist, it jumps directly to the DoInstall: and simply skips all of the &quot;${registry::KeyExists}&quot;-code. The right code of course must look like this:<br />
+<br />
+	IfFileExists &quot;$INSTDIR\cygwin.bat&quot; 0 CheckReg<br />
+	MessageBox MB_ICONSTOP &quot;The directory c:\cygwin does already exist.&quot;<br />
+	Quit<br />
+	<br />
+	CheckReg:<br />
+	${registry::KeyExists} &quot;HKEY_LOCAL_MACHINE\SOFTWARE\Cygnus Solutions&quot; $R0<br />
+	StrCmp $R0 &quot;0&quot; ByeReg DoInstall<br />
+	${registry::KeyExists} &quot;HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Cygnus Solutions&quot; $R0<br />
+	StrCmp $R0 &quot;0&quot; ByeReg DoInstall<br />
+	<br />
+	ByeReg:<br />
+	MessageBox MB_ICONSTOP &quot;RegistryKeys for Cygwin exist on this machine.&quot;<br />
+	Quit<br />
+	<br />
+	;This is the label to jump to if Cygwin is not installed yet.<br />
+	DoInstall:<br />
+<br />
+I simply can't jump from the first check to the end but must do all checks sequentially.<br />
+<br />
+My fault, if you see me somewhere, just kick me (I'll wear a t-shirt expressing this).<br />
+<br />
+Regards,<br />
+<br />
+Chris</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">21st April 2008, 12:20</div></div><div class="posttext">The logiclib header has SELECT, and SWITCH CASE statements and many other useful keywords. I don't write any scripts without it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">cherdeg</div><div class="date">21st April 2008, 12:38</div></div><div class="posttext">I'll definiteley have a look at it for the next version of any of my installers. Many thanks for the hint!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

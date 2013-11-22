@@ -1,0 +1,107 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" SetShellVarContext, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  SetShellVarContext NSIS Discussion" />
+	
+	<title> SetShellVarContext [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  SetShellVarContext</div>
+<hr />
+<div class="pda"><a href="t-160235.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=160235">SetShellVarContext</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">katipunero</div><div class="date">17th December 2003, 09:39</div></div><div class="posttext">Hello,<br />
+<br />
+I want to let the user select wether to install the program for the current user only or for all users. I understand that I can use SetShellVarContext to do this. <br />
+<br />
+But I have a problem. Will this also be applicable to ReadRegStr when I read a value in HKCU?<br />
+<br />
+For example,<br />
+<br />
+ReadRegStr $0 HKCU &quot;${SHELLFOLDERS}&quot; &quot;Local Settings&quot;<br />
+<br />
+I need to put some files in a specific shell folder(Local Settings) for each user if the install for all is selected.<br />
+<br />
+If I cannot do this, how can I get the Local Settings folder for each registered user in Windows?<br />
+<br />
+Thanks,<br />
+katips:D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">17th December 2003, 11:18</div></div><div class="posttext">I think that if you wish to write to a reg key which will affect all users you should use the 'HKU' root.  Not 100% certain of this though.<br />
+<br />
+Vytautas :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">17th December 2003, 11:20</div></div><div class="posttext">To save a registry value for all users, use HKLM.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">17th December 2003, 12:49</div></div><div class="posttext">Originally posted by katipunero <br />
+...I can use SetShellVarContext to do this. <br />
+<br />
+But I have a problem. Will this also be applicable to ReadRegStr when I read a value in HKCU?No, it won't. You'll have to write two code paths, one for HKLM and one for HKCU. You can also use a simple macro like:!macro ReadRegStr var key value<br />
+StrCmp $ALLORCURRENT all 0 +3 # replace with real check<br />
+ReadRegStr &quot;${var}&quot; HKLM &quot;${key}&quot; &quot;${value}&quot;<br />
+Goto +2<br />
+ReadRegStr &quot;${var}&quot; HKCU &quot;${key}&quot; &quot;${value}&quot;<br />
+!macroend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">katipunero</div><div class="date">18th December 2003, 01:09</div></div><div class="posttext">If I uses HKLM and look for the &quot;Application Data&quot; folder, ReadRegStr will return something like:<br />
+<br />
+c:\documents and settings\all users\application data...<br />
+<br />
+But this is not what I need. I need the &quot;Application Data&quot; folder for each user. This is used in the program being installed so I am constrained to it. For example, I need:<br />
+<br />
+c:\documents and settings\user0\application data<br />
+c:\documents and settings\user1\application data<br />
+<br />
+Can I know from the registry the shell folders for each user? Or, perhaps, the names of each registered user?<br />
+<br />
+Thanks to all,<br />
+<br />
+katips:D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th December 2003, 01:18</div></div><div class="posttext">You can read HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders\AppData. The best way is actually using the shell functions and a version of NSIS that supports it should be uploaded to CVS tomorrow. For now, you can call it using System.dll or use the registry key (not recommended by Microsoft).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">katipunero</div><div class="date">18th December 2003, 01:51</div></div><div class="posttext">But using ReadRegStr $0 HKCU &quot;${SHELLFOLDERS}&quot; &quot;Local Settings&quot;<br />
+only gives me the shell folder for the current user. I need the shell folder for each users. <br />
+<br />
+Anyway, I will wait until tomorrow for the CVS update. Thanks..<br />
+<br />
+I saw from HKU\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders some values for shell folders. I will investigate about it if this can also help me. <br />
+<br />
+Regards,<br />
+katips:D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">18th December 2003, 09:28</div></div><div class="posttext">http://nsis.sourceforge.net/archive/nsisweb.php?page=72&amp;instances=0,44</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th December 2003, 13:06</div></div><div class="posttext">Oh, you want to enumerate all of the users on the computer... SHGetFolderPath (which is by far not on every system) has an extra parameter hToken which allows you to specify a certain user. You won't be able to do that with today's CVS update. I think it would the easiest if you write a plug-in for this porpuse.<br />
+<br />
+BTW, why put it in each user's folder? If it's for all users, why not put it in the all users' folder? If you want it to be per-user setting, why not just create the folder when the user first uses your program?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">katipunero</div><div class="date">19th December 2003, 00:57</div></div><div class="posttext">Thanks for the help, I will try it...<br />
+<br />
+I am constrained by the program being installed that is why I cannot use the all users' folder even if I want to. <br />
+<br />
+But, I take your suggestion how to make the program works for all users. I think that is the best way to do it. <br />
+<br />
+Regards,<br />
+katips:D</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

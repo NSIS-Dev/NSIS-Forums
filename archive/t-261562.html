@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" HELP! Next a most complex control, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  HELP! Next a most complex control NSIS Discussion" />
+	
+	<title> HELP! Next a most complex control [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  HELP! Next a most complex control</div>
+<hr />
+<div class="pda"><a href="t-261562.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=261562">HELP! Next a most complex control</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">n_baua</div><div class="date">11th December 2006, 14:38</div></div><div class="posttext">Hello,<br />
+<br />
+I am not sure, weather this is possible,<br />
+Please see the attached file for custom page.<br />
+<br />
+I need to check the space availability on the user's PC and want to show the custom page.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">11th December 2006, 14:53</div></div><div class="posttext">Assume that you know how to deal with InstallOptions to create custom pages, for this you'd need to implement at least E.1.4 DriveSpace and E.1.5 GetDrives.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">n_baua</div><div class="date">12th December 2006, 05:09</div></div><div class="posttext">Hi Red Wine,<br />
+I know how to create the custom pages but do not know which control needs to be used with InstallOptions to get the functionality.<br />
+The control you see in the attached image in first post, is just a Photoshop imagination, I am open to any other control(s) too, but need to show drive space availability to users like most of the popular installers does. (For e.g. Visual Studio 2005)<br />
+<br />
+We have around 12GB of movies and illustrations to be copied to user's PC.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bholliger</div><div class="date">12th December 2006, 06:21</div></div><div class="posttext">Hi NBaua!<br />
+<br />
+I think you should have a look at InstallOptionsEx. This plugin offers a ListView control. It might be a solution for you.<br />
+<br />
+http://nsis.sourceforge.net/InstallOption****plug-in<br />
+<br />
+Have a nice day!<br />
+<br />
+Cheers<br />
+<br />
+Bruno</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">n_baua</div><div class="date">12th December 2006, 08:17</div></div><div class="posttext">thanks bholliger,<br />
+I will look in to it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">12th December 2006, 10:21</div></div><div class="posttext">I hope the following minimal example would help you begin.<br />
+You may use the notify flag on the custom page leave function to get the selected drive.<br />
+<br />
+The script:outfile 'customtest.exe'<br />
+<br />
+!define REQUIRED '60000'<br />
+<br />
+!include 'FileFunc.nsh'<br />
+!Include 'MUI.nsh'<br />
+<br />
+!insertmacro GetDrives<br />
+!insertmacro DriveSpace<br />
+<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+page custom CustomCreate<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+Section -<br />
+#######<br />
+SectionEnd<br />
+<br />
+Function CustomCreate<br />
+   Push $1<br />
+   InstallOptions::initDialog /NOUNLOAD '$PLUGINSDIR\custom.ini'<br />
+   Pop $1<br />
+   ReadINIStr $2 &quot;$PLUGINSDIR\custom.ini&quot; &quot;Field 1&quot; &quot;HWND&quot;<br />
+   SetCtlColors $2 0x0000FF 0xFFFFFF<br />
+   CreateFont $3 &quot;Tahoma&quot; 7 800<br />
+   SendMessage $2 ${WM_SETFONT} $3 0<br />
+   InstallOptions::show<br />
+   Pop $1<br />
+FunctionEnd <br />
+<br />
+Function GetDrivesCallBack<br />
+   ${DriveSpace} &quot;$9&quot; &quot;/D=F /S=M&quot; $R0<br />
+   StrCpy $9 $9 1<br />
+   IntCmp '$R0' '${REQUIRED}' +4 +4 0<br />
+   StrCmp '$R2' 'state_ok' +3<br />
+   WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 1' 'State' 'Drive:  $9     \<br />
+   Required Space =  ${REQUIRED} Mbytes      Free Space =  $R0 Mbytes'<br />
+   StrCpy '$R2' 'state_ok'<br />
+   ReadIniStr '$R1' '$PLUGINSDIR\custom.ini' 'Field 1' 'ListItems'<br />
+   StrCmp '$R1' '' 0 addlist<br />
+   WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 1' 'ListItems' 'Drive:  $9     \<br />
+   Required Space =  ${REQUIRED} Mbytes      Free Space =  $R0 Mbytes'<br />
+   goto end<br />
+  addlist:<br />
+   WriteIniStr '$PLUGINSDIR\custom.ini' 'Field 1' 'ListItems' '$R1|Drive:  $9     \<br />
+   Required Space =  ${REQUIRED} Mbytes      Free Space =  $R0 Mbytes'<br />
+  end:<br />
+   Push $0<br />
+FunctionEnd<br />
+<br />
+Function .onInit<br />
+   initpluginsdir<br />
+   file /oname=$PLUGINSDIR\custom.ini custom.ini<br />
+   ${GetDrives} &quot;HDD&quot; GetDrivesCallBack<br />
+FunctionEnd <br />
+The custom.ini[Settings]<br />
+NumFields=1<br />
+<br />
+[Field 1]<br />
+Type=Listbox<br />
+State=<br />
+Left=12<br />
+Right=-11<br />
+Top=12<br />
+Bottom=36<br />
+Flags=<br />
+<br />
+EDIT:<br />
+Added a defined required space and control colors.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">n_baua</div><div class="date">13th December 2006, 03:01</div></div><div class="posttext">Hello Red Wine,<br />
+<br />
+Thanks a lot for such a gr8 HEADSTART for me.<br />
+I was looking almost this.<br />
+Thanks a milllllllllion.<br />
+:up:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">13th December 2006, 09:51</div></div><div class="posttext">You welcome :-)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

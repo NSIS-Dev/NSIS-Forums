@@ -1,0 +1,142 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problems with UpgradeDLL and MSXML4, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problems with UpgradeDLL and MSXML4 NSIS Discussion" />
+	
+	<title> Problems with UpgradeDLL and MSXML4 [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problems with UpgradeDLL and MSXML4</div>
+<hr />
+<div class="pda"><a href="t-235143.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=235143">Problems with UpgradeDLL and MSXML4</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Mikesch</div><div class="date">10th January 2006, 11:31</div></div><div class="posttext">I have problems with the installation of msxml4 using UpgradeDLL.<br />
+<br />
+This code works for MSXML3 but it fails for MSXML4.<br />
+(msxml4.dll will not be registered after this code)<br />
+:rolleyes: <br />
+<br />
+<br />
+!include UpgradeDLL.nsh<br />
+<br />
+!ifndef MSXML_VERSION<br />
+  !define MSXML_VERSION &quot;msxml4&quot;<br />
+!endif<br />
+<br />
+!define REDIST_PATH &quot;Redist\${MSXML_VERSION}&quot;<br />
+!define PRODUCT_EXE &quot;MyApp.exe&quot;<br />
+<br />
+;- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -<br />
+<br />
+Section &quot;-Install ${MSXML_VERSION}&quot;<br />
+<br />
+  MessageBox MB_OK &quot;*** Prepare setup for installing ${MSXML_VERSION} ***&quot;<br />
+  !insertmacro UpgradeDLL &quot;${REDIST_PATH}\${MSXML_VERSION}.dll&quot; &quot;$SYSDIR\${MSXML_VERSION}.dll&quot; &quot;$SYSDIR&quot;<br />
+<br />
+#1      RegDLL &quot;$SYSDIR\${MSXML_VERSION}.dll&quot;<br />
+<br />
+  !define UPGRADEDLL_NOREGISTER<br />
+    !insertmacro UpgradeDLL &quot;${REDIST_PATH}\${MSXML_VERSION}a.dll&quot; &quot;$SYSDIR\${MSXML_VERSION}a.dll&quot; &quot;$SYSDIR&quot;<br />
+    !insertmacro UpgradeDLL &quot;${REDIST_PATH}\${MSXML_VERSION}r.dll&quot; &quot;$SYSDIR\${MSXML_VERSION}r.dll&quot; &quot;$SYSDIR&quot;<br />
+  !undef UPGRADEDLL_NOREGISTER<br />
+<br />
+  ; Only increase DLL count on new installation<br />
+  IfFileExists $INSTDIR\${PRODUCT_EXE} skipAddSharedDLL<br />
+    Push $SYSDIR\${MSXML_VERSION}.dll<br />
+    Call AddSharedDLL<br />
+    Push $SYSDIR\${MSXML_VERSION}a.dll<br />
+    Call AddSharedDLL<br />
+    Push $SYSDIR\${MSXML_VERSION}r.dll<br />
+    Call AddSharedDLL<br />
+  skipAddSharedDLL:<br />
+SectionEnd<br />
+<br />
+;- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -<br />
+<br />
+Section &quot;-un.Uninstall ${MSXML_VERSION}&quot;<br />
+<br />
+  Push $SYSDIR\${MSXML_VERSION}.dll<br />
+  Call un.DecrementSharedDLL<br />
+  Push $SYSDIR\${MSXML_VERSION}a.dll<br />
+  Call un.DecrementSharedDLL<br />
+  Push $SYSDIR\${MSXML_VERSION}r.dll<br />
+  Call un.DecrementSharedDLL<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+<br />
+The msxml files will be copied to system32 but my app fails if it uses xml functionallity.<br />
+<br />
+If I try &quot;regsvr32.exe msxml4.dll&quot; my app works successfully.<br />
+<br />
+Uncommenting comment #1 has the same effect,<br />
+the msxml4.dll will be registered sucessfully.<br />
+<br />
+What is wrong with this code?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mikesch</div><div class="date">10th January 2006, 13:21</div></div><div class="posttext">I found out my problem. :up: <br />
+<br />
+First I have to call the UpgradeDLL macro for the dlls which have not to be registered (msxml4a.dll and msxml4r.dll).<br />
+After this I can call the UpgradeDLL macro for the msxml4.dll. :o <br />
+<br />
+<br />
+!include UpgradeDLL.nsh<br />
+<br />
+!ifndef MSXML_VERSION<br />
+  !define MSXML_VERSION &quot;msxml4&quot;<br />
+!endif<br />
+<br />
+!define REDIST_PATH &quot;Redist\${MSXML_VERSION}&quot;<br />
+<br />
+;- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -<br />
+;<br />
+Section &quot;-Install ${MSXML_VERSION}&quot;<br />
+<br />
+  !echo &quot;*** Prepare setup for installing ${MSXML_VERSION} ***&quot;<br />
+<br />
+  ; upgrade the dll first which have not to be registered<br />
+  !define UPGRADEDLL_NOREGISTER<br />
+    !insertmacro UpgradeDLL &quot;${REDIST_PATH}\${MSXML_VERSION}a.dll&quot; &quot;$SYSDIR\${MSXML_VERSION}a.dll&quot; &quot;$SYSDIR&quot;<br />
+    !insertmacro UpgradeDLL &quot;${REDIST_PATH}\${MSXML_VERSION}r.dll&quot; &quot;$SYSDIR\${MSXML_VERSION}r.dll&quot; &quot;$SYSDIR&quot;<br />
+  !undef UPGRADEDLL_NOREGISTER<br />
+<br />
+  ; upgrade the main xml file<br />
+  !insertmacro UpgradeDLL &quot;${REDIST_PATH}\${MSXML_VERSION}.dll&quot; &quot;$SYSDIR\${MSXML_VERSION}.dll&quot; &quot;$SYSDIR&quot;<br />
+<br />
+  ; Only increase DLL count on new installation<br />
+  IfFileExists $INSTDIR\${PRODUCT_EXE} skipAddSharedDLL<br />
+    Push $SYSDIR\${MSXML_VERSION}.dll<br />
+    Call AddSharedDLL<br />
+    Push $SYSDIR\${MSXML_VERSION}a.dll<br />
+    Call AddSharedDLL<br />
+    Push $SYSDIR\${MSXML_VERSION}r.dll<br />
+    Call AddSharedDLL<br />
+  skipAddSharedDLL:<br />
+SectionEnd<br />
+<br />
+;- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -<br />
+;<br />
+Section &quot;-un.Uninstall ${MSXML_VERSION}&quot;<br />
+<br />
+  Push $SYSDIR\${MSXML_VERSION}.dll<br />
+  Call un.DecrementSharedDLL<br />
+  Push $SYSDIR\${MSXML_VERSION}a.dll<br />
+  Call un.DecrementSharedDLL<br />
+  Push $SYSDIR\${MSXML_VERSION}r.dll<br />
+  Call un.DecrementSharedDLL<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

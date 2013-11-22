@@ -1,0 +1,305 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" get info from update.ini, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  get info from update.ini NSIS Discussion" />
+	
+	<title> get info from update.ini [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  get info from update.ini</div>
+<hr />
+<div class="pda"><a href="t-187782.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=187782">get info from update.ini</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">VegetaSan</div><div class="date">25th July 2004, 22:58</div></div><div class="posttext">hey. I want this function in my installer. But I dont have a clue how to do it.<br />
+<br />
+What I want is that the installer needs to extract update.ini to $INSTSDIR and that it needs to merge his info with os.ini so ... for example:<br />
+<br />
+_______________________________________________________<br />
+<br />
+Update.ini : <br />
+<br />
+<br />
+[Global]<br />
+Password=NSIS<br />
+Nick=NSIS_dude<br />
+Host=mgmservers<br />
+<br />
+<br />
+let's say that this is the contents of update.ini<br />
+<br />
+_______________________________________________________<br />
+<br />
+Os.ini : <br />
+<br />
+<br />
+[Global]<br />
+Password=NSIS_is_cool<br />
+Nick=NSIS_GIRLIE<br />
+Host=source<br />
+Version=1.0<br />
+<br />
+<br />
+and let's say this is Os.ini<br />
+________________________________________________________<br />
+<br />
+<br />
+now .. when the installer is done with extracting update.ini then it needs to overwrite the contents of Os.ini with the contents that update.ini has. So after merging then Os.ini will be like this:<br />
+<br />
+<br />
+[Global]<br />
+Password=NSIS<br />
+Nick=NSIS_dude<br />
+Host=mgmservers<br />
+Version=1.0<br />
+<br />
+<br />
+_______________________________________________________<br />
+<br />
+ok .. now I hope someone can help me with this. thanks.<br />
+<br />
+<br />
+With Regards, VegetaSan</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">VegetaSan</div><div class="date">26th July 2004, 00:34</div></div><div class="posttext">ah sorry never mind .. allready got it .. stupid me &gt;_&lt;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">VegetaSan</div><div class="date">26th July 2004, 11:03</div></div><div class="posttext">ok .lol .. I still got a question. Will this work? <br />
+<br />
+<br />
+ReadINIStr $0 &quot;$INSTSDIR\Update.ini&quot; &quot;*.*&quot; &quot;*.*&quot;<br />
+WriteINIStr &quot;$INSTSDIR\mirc.ini&quot; &quot;*.*&quot; &quot;*.*&quot; &quot;$0&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">26th July 2004, 15:17</div></div><div class="posttext">Uhhmmm no.<br />
+<br />
+I think the only way to do this would be to create a custom function to FileRead along with WriteINIStr. There's no way of using ReadINIStr to read through each key in the update.ini, so we will have to read each line using FileRead.<br />
+<br />
+I will write a function now...<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">atsuk</div><div class="date">26th July 2004, 15:17</div></div><div class="posttext">don't think so. you have to read each entry one by one into the variable, and then write them to another ini. afther all *.* is used with files. &quot;*&quot; means all, and dot between them is just like in file between name and extension, so *.* means all file names with all extensions<br />
+<br />
+edited:<br />
+but Afrow UK managed to reply faster(Y)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">26th July 2004, 16:03</div></div><div class="posttext">Function TrimNewlines<br />
+  Exch $R0<br />
+  Push $R1<br />
+  Push $R2<br />
+  StrCpy $R1 0<br />
+<br />
+ loop:<br />
+  IntOp $R1 $R1 - 1<br />
+  StrCpy $R2 $R0 1 $R1<br />
+  StrCmp $R2 &quot;$\r&quot; loop<br />
+  StrCmp $R2 &quot;$\n&quot; loop<br />
+  <br />
+  IntOp $R1 $R1 + 1<br />
+  IntCmp $R1 0 no_trim_needed<br />
+  StrCpy $R0 $R0 $R1<br />
+<br />
+ no_trim_needed:<br />
+  Pop $R2<br />
+  Pop $R1<br />
+  Exch $R0<br />
+ FunctionEnd<br />
+<br />
+ Function SplitFirstStrPart<br />
+  Exch $R0<br />
+  Push $R1<br />
+  Push $R2<br />
+  StrLen $R1 $R0<br />
+  IntOp $R1 $R1 + 1<br />
+  loop:<br />
+    IntOp $R1 $R1 - 1<br />
+    StrCpy $R2 $R0 1 -$R1<br />
+    StrCmp $R1 0 exit0<br />
+    StrCmp $R2 &quot;=&quot; exit1 loop ; Change &quot; &quot; to &quot;\&quot; if str=dirpath<br />
+  exit0:<br />
+  StrCpy $R1 &quot;&quot;<br />
+  Goto exit2<br />
+  exit1:<br />
+    IntOp $R1 $R1 - 1<br />
+    StrCpy $R2 $R0 &quot;&quot; -$R1<br />
+    IntOp $R1 $R1 + 1<br />
+    StrCpy $R0 $R0 -$R1<br />
+    StrCpy $R1 $R2<br />
+  exit2:<br />
+  Pop $R2<br />
+  Exch $R1 ;rest<br />
+  Exch<br />
+  Exch $R0 ;first<br />
+ FunctionEnd<br />
+<br />
+ Function ReadINIFileKeys<br />
+  Exch $R0 ;INI file to write<br />
+  Exch<br />
+  Exch $R1 ;INI file to read<br />
+  Push $R2<br />
+  Push $R3<br />
+  Push $R4 ;uni var<br />
+  Push $R5 ;uni var<br />
+  Push $R6 ;last INI section<br />
+<br />
+  FileOpen $R2 $R1 r<br />
+<br />
+  Loop:<br />
+   FileRead $R2 $R3<br />
+   IfErrors Exit<br />
+<br />
+   Push $R3<br />
+    Call TrimNewLines<br />
+   Pop $R3<br />
+<br />
+   StrCmp $R3 &quot;&quot; Loop<br />
+<br />
+   StrCpy $R4 $R3 &quot;&quot; -1<br />
+   StrCmp $R4 &quot;]&quot; 0 +6<br />
+   StrCpy $R6 $R3 -1<br />
+   StrLen $R4 $R6<br />
+   IntOp $R4 $R4 - 1<br />
+   StrCpy $R6 $R6 &quot;&quot; -$R4<br />
+  Goto Loop<br />
+<br />
+   Push $R3<br />
+    Call SplitFirstStrPart<br />
+   Pop $R4<br />
+   Pop $R5<br />
+<br />
+   WriteINIStr $R0 $R6 $R4 $R5<br />
+<br />
+   detailprint &quot;$R6 $R4 $R5&quot;<br />
+<br />
+  Goto Loop<br />
+  Exit:<br />
+<br />
+  FileClose $R1<br />
+<br />
+  Pop $R6<br />
+  Pop $R5<br />
+  Pop $R4<br />
+  Pop $R3<br />
+  Pop $R2<br />
+  Pop $R1<br />
+  Pop $R0<br />
+ FunctionEnd<br />
+<br />
+Note that you need all three functions!<br />
+<br />
+Usage:<br />
+Push &quot;update.ini&quot;<br />
+Push &quot;Os.ini&quot;<br />
+Call ReadINIFileKeys<br />
+<br />
+Adding it to archive.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">VegetaSan</div><div class="date">27th July 2004, 14:33</div></div><div class="posttext">cool.. thanks alot Afrow UK ..  you're tha man !! :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">27th July 2004, 16:46</div></div><div class="posttext">Uhm, just noticed an error in the function.<br />
+<br />
+Relace FileClose $R1 with FileClose $R2<br />
+<br />
+Edit: and delete<br />
+detailprint &quot;$R6 $R4 $R5&quot;<br />
+(left in from testing)<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">VegetaSan</div><div class="date">27th July 2004, 16:54</div></div><div class="posttext">dont forget to update it in the archive too</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">27th July 2004, 19:57</div></div><div class="posttext">Oh but of course :)<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AaronLS</div><div class="date">25th March 2008, 20:15</div></div><div class="posttext">This is a great script but I couldn't get it to blank out an ini setting.  I.E. merging in:<br />
+[SomeSection]<br />
+SomeKey=<br />
+<br />
+often produces:<br />
+[SomeSection]<br />
+SomeKey=SomeKey=<br />
+<br />
+It also seems to do strange things with comments sometimes.  For example, if a comment ended with ] I think it treats it like a section name.  So I added a check for lines that start with ; and skip those.<br />
+<br />
+I have added skipping of comments.  I think there might still be bugs if the semicolon is preceded by leading whitespace, but there are many apps that don't allow leading spaces in ini files anyhow.<br />
+<br />
+I updated the script to work with the newer versions of SplitFirstStrPart, because the version used above does not properly parse &quot;BlankValue=&quot;, but the newer version in the wiki does parse it correctly.  All that was needed was a Push &quot;=&quot; for SplitFirstStrPart and renaming TrimNewLines to StrTrimNewLines.<br />
+<br />
+<br />
+Function ReadINIFileKeys<br />
+      Exch $R0 ;INI file to write<br />
+      Exch<br />
+      Exch $R1 ;INI file to read<br />
+      Push $R2<br />
+      Push $R3<br />
+      Push $R4 ;uni var<br />
+      Push $R5 ;uni var<br />
+      Push $R6 ;last INI section<br />
+ <br />
+      FileOpen $R2 $R1 r<br />
+ <br />
+      Loop:<br />
+       FileRead $R2 $R3   ;get next line into R3<br />
+       IfErrors Exit<br />
+ <br />
+       Push $R3<br />
+        Call StrTrimNewLines <br />
+       Pop $R3<br />
+ <br />
+       StrCmp $R3 &quot;&quot; Loop   ;if blank line, skip<br />
+       <br />
+       StrCpy $R4 $R3 1   ;get first char into R4<br />
+       StrCmp $R4 &quot;;&quot; Loop   ;check it for semicolon and skip line if so(ini comment)<br />
+ <br />
+       StrCpy $R4 $R3 &quot;&quot; -1   ;get last char of line into R4<br />
+       StrCmp $R4 &quot;]&quot; 0 +6     ;if last char is ], parse section name, else jump to parse key/value<br />
+       StrCpy $R6 $R3 -1   ;get all except last char<br />
+       StrLen $R4 $R6     ;get str length<br />
+       IntOp $R4 $R4 - 1    ;subtract one from length<br />
+       StrCpy $R6 $R6 &quot;&quot; -$R4   ;copy all but first char to trim leading [, placing the section name in R6<br />
+      Goto Loop<br />
+       <br />
+       Push &quot;=&quot;  ;push delimiting char<br />
+       Push $R3<br />
+        Call SplitFirstStrPart<br />
+       Pop $R4<br />
+       Pop $R5       <br />
+              <br />
+       WriteINIStr $R0 $R6 $R4 $R5      <br />
+ <br />
+      Goto Loop<br />
+      Exit:<br />
+ <br />
+      FileClose $R2<br />
+ <br />
+      Pop $R6<br />
+      Pop $R5<br />
+      Pop $R4<br />
+      Pop $R3<br />
+      Pop $R2<br />
+      Pop $R1<br />
+      Pop $R0<br />
+     FunctionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

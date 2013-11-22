@@ -1,0 +1,221 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" how to choose sm dir, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  how to choose sm dir NSIS Discussion" />
+	
+	<title> how to choose sm dir [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  how to choose sm dir</div>
+<hr />
+<div class="pda"><a href="t-69001.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=69001">how to choose sm dir</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">crish</div><div class="date">17th December 2001, 13:52</div></div><div class="posttext">ok<br />
+<br />
+my selfmade visible required sections works now (wow)<br />
+<br />
+now i want to choose the location in the startmenu after choosing installcomponents<br />
+<br />
+it should be like the components page <br />
+<br />
+on top a free text <br />
+bottom the existing entries in programs<br />
+in a listbox<br />
+<br />
+maybe an optional extra page ?<br />
+<br />
+but it seems hard to code ...<br />
+(for me)<br />
+<br />
+i tried installoptions but dont know how to get the list of the startmenu dirs<br />
+<br />
+is this possible ?<br />
+<br />
+cu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">F. Heidenreich</div><div class="date">17th December 2001, 18:54</div></div><div class="posttext">Hi crish,<br />
+<br />
+here is a little script which shows the dirctories in $SMPROGRAMS in a listbox with InstallOptions:<br />
+<br />
+<br />
+Name &quot;Startmenu Install&quot;<br />
+OutFile &quot;startmenu.exe&quot;<br />
+ShowInstDetails show<br />
+InstallDir $PROGRAMFILES\Startmenu<br />
+DirText &quot;Choose directory&quot;<br />
+ComponentText &quot;Choose components&quot;<br />
+AutoCloseWindow false<br />
+InstType &quot;Typical&quot;<br />
+Section &quot;Required Components&quot;<br />
+  Call RunStartmenuQuery<br />
+SectionEnd<br />
+<br />
+; $8 = DLL<br />
+; $7 = ini<br />
+Function .onInit<br />
+  GetTempFileName $8<br />
+  GetTempFileName $7<br />
+  File /oname=$8 &quot;InstallOptions.dll&quot;<br />
+  File /oname=$7 &quot;startmenu.ini&quot;<br />
+FunctionEnd<br />
+<br />
+; cleanup on exit.<br />
+Function .onInstSuccess<br />
+Call Cleanup<br />
+FunctionEnd<br />
+<br />
+Function .onInstFailed<br />
+Call Cleanup<br />
+FunctionEnd<br />
+<br />
+Function .onUserAbort<br />
+Call Cleanup<br />
+FunctionEnd<br />
+<br />
+Function Cleanup<br />
+  Delete $8<br />
+  Delete $7<br />
+FunctionEnd<br />
+<br />
+Function RunStartmenuQuery<br />
+  Push $7<br />
+<br />
+  FindFirst $R0 $R1 &quot;$SMPROGRAMS\*&quot;<br />
+  loop:<br />
+    StrCmp $R1 &quot;&quot; abort<br />
+    FileOpen $R2 $R1 r<br />
+    StrCmp $R2 &quot;&quot; directory loop<br />
+  directory:<br />
+    StrCmp $R1 &quot;.&quot; next<br />
+    StrCmp $R1 &quot;..&quot; next<br />
+    ReadINIStr $R3 $7 &quot;Field 1&quot; &quot;ListItems&quot;<br />
+    StrCpy $R3 &quot;$R3$R1|&quot;<br />
+    WriteINIStr $7 &quot;Field 1&quot; &quot;ListItems&quot; $R3<br />
+  next:<br />
+    FindNext $R0 $R1<br />
+    Goto loop<br />
+  abort:  <br />
+    CallInstDLL $8 dialog<br />
+  ReadINIStr $R0 $7 &quot;Field 1&quot; State<br />
+  DetailPrint $R0<br />
+FunctionEnd<br />
+<br />
+<br />
+The startmenu.ini looks like this:<br />
+<br />
+[Settings]<br />
+NumFields=1<br />
+Title=Startmenu Install<br />
+BackEnabled=1<br />
+CancelButtonText=Cancel<br />
+NextButtonText=Next &gt;<br />
+BackButtonText=&lt; Back<br />
+<br />
+[Field 1]<br />
+Type=listbox<br />
+text=bla<br />
+left=0<br />
+right=350<br />
+top=0<br />
+bottom=100<br />
+ListItems=<br />
+State=<br />
+<br />
+<br />
+Hope it helps -<br />
+Regards,<br />
+~ Florian</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">crish</div><div class="date">18th December 2001, 08:39</div></div><div class="posttext">:D <br />
+<br />
+ok i'll try this<br />
+<br />
+thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">crish</div><div class="date">18th December 2001, 14:18</div></div><div class="posttext">ok this works fine <br />
+<br />
+but only one<br />
+<br />
+if i try to make this a second time (other dialog)<br />
+<br />
+then the installe crashes<br />
+<br />
+maybe this is because of the early state of the dll ?<br />
+<br />
+or is this a bug in nsis ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">18th December 2001, 20:06</div></div><div class="posttext">In order to make two dialogs you need some more advanced code to drive it. If you want, post your script+.ini files here and we'll help you edit them to work.<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">crish</div><div class="date">19th December 2001, 14:07</div></div><div class="posttext">ok my nsi file :<br />
+<br />
+www.ceor.de/pms_installer.nsi (http://www.ceor.de/pms_installer.nsi)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">F. Heidenreich</div><div class="date">19th December 2001, 17:05</div></div><div class="posttext">Sorry crish, but I couldn't help you without the ini-files you're using ...<br />
+~ Florian</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">crish</div><div class="date">20th December 2001, 13:32</div></div><div class="posttext">the inis (they where ok with the .exe version of installoptions)<br />
+<br />
+startmenu.ini (http://www.ceor.de/startmenu.ini) <br />
+<br />
+RebootOptions.ini (http://www.ceor.de/RebootOptions.ini) <br />
+<br />
+InstallOptions.ini (http://www.ceor.de/InstallOptions.ini)<br />
+<br />
+this is all</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">F. Heidenreich</div><div class="date">20th December 2001, 14:51</div></div><div class="posttext">After two-time-checking your scripts (you know why?) I've found the bug in your pms_installer.nsi<br />
+<br />
+The call to InstallOptions.dll in Function Reboot will fail, because your RebootOptions.ini is based on InstallOptions.exe.<br />
+<br />
+Change the lines Push $TEMP\ui${VER_MAJOR}${VER_MINOR}2.ini<br />
+CallInstDLL $TEMP\InstallOptions.dll dialog to ExecWait '&quot;$TEMP\ui${VER_MAJOR}${VER_MINOR}.exe&quot; $TEMP\ui${VER_MAJOR}${VER_MINOR}2.ini' and your installer works.<br />
+<br />
+~ Florian</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">crish</div><div class="date">20th December 2001, 18:46</div></div><div class="posttext">jap <br />
+will change this to the dll version<br />
+because the exe needs to much time to start ...<br />
+<br />
+u ll see the new inis on the links above<br />
+<br />
+accidently posted the former inis sorry</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">crish</div><div class="date">22nd December 2001, 11:23</div></div><div class="posttext">it works NOW<br />
+<br />
+BUT i think its a fault in the doku or in the dll<br />
+<br />
+State  (optional)<br />
+<br />
+is NOT optional with the state in my ini files it works without it crashes ....<br />
+<br />
+but now i know this and im happy<br />
+<br />
+jetzt kann der wihnachtsmann kommen <br />
+<br />
+cu<br />
+<br />
+and a merry christmas</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

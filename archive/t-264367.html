@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Error Code detection, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Error Code detection NSIS Discussion" />
+	
+	<title> Error Code detection [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Error Code detection</div>
+<hr />
+<div class="pda"><a href="t-264367.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=264367">Error Code detection</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">drod</div><div class="date">25th January 2007, 20:57</div></div><div class="posttext">Hi,<br />
+<br />
+I'm trying to capture any errors my applications may come across, but after searching the forums etc I'm still can't see an explanation.<br />
+<br />
+I can see an error if I do something like:<br />
+<br />
+ClearErrors<br />
+    &lt;try to create file x&gt;<br />
+${If} ${Errors}<br />
+    DetailPrint &quot;Error creating file x&quot;<br />
+${EndIf}<br />
+<br />
+It seems like I can only get an &quot;errorFlag&quot; raised and that I have to know the context of the error; i.e I was trying to create &quot;file x&quot; and it failed.<br />
+<br />
+I'd like to do something like:<br />
+<br />
+ClearErrors<br />
+    &lt;try to create file x&gt;<br />
+    &lt;try to create file y&gt;<br />
+    &lt;try to create file z&gt;<br />
+${If} ${Errors}<br />
+    DetailPrint &quot;Error creating file &lt;name of file&gt;&quot;<br />
+${EndIf}<br />
+<br />
+...but I think I may have to write:<br />
+<br />
+ClearErrors<br />
+    &lt;try to create file x&gt;<br />
+${If} ${Errors}<br />
+    DetailPrint &quot;Error creating file x<br />
+${EndIf}<br />
+ClearErrors<br />
+    &lt;try to create file y&gt;<br />
+${If} ${Errors}<br />
+    DetailPrint &quot;Error creating file y&quot;<br />
+${EndIf}<br />
+ClearErrors<br />
+    &lt;try to create file z&gt;<br />
+${If} ${Errors}<br />
+    DetailPrint &quot;Error creating file z&quot;<br />
+${EndIf}<br />
+<br />
+Is this correct, or am I missing something? Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">25th January 2007, 21:09</div></div><div class="posttext">It's mandatory to ClearErrors just before you're going to perform an action that might set the error flag.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">25th January 2007, 21:12</div></div><div class="posttext">You can wrap it in a macro for easier coding.!macro FileWithTest file<br />
+ClearErrors<br />
+File &quot;${file}&quot;<br />
+${If} ${Errors}<br />
+  DetailPrint &quot;error with ${file}&quot;<br />
+${EndIf}<br />
+!macroend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">drod</div><div class="date">25th January 2007, 21:47</div></div><div class="posttext">Thanks guys. I'd realised I could wrap checks into macros, but I thought there may be a way to be more intelligent by say checking errors status codes returned by each command.<br />
+<br />
+It just seems that it could make the code very bulky if I have to check the status of most of the commands I run.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">25th January 2007, 22:31</div></div><div class="posttext">Thanks guys. I'd realised I could wrap checks into macros, but I thought there may be a way to be more intelligent by say checking errors status codes returned by each command.<br />
+So where is the difference if instead of:<br />
+ClearErrors<br />
+File &lt;try to create file x&gt;<br />
+IfErrors do_this do_that<br />
+<br />
+you were using:<br />
+File &lt;try to create file x&gt; $0 ;return var<br />
+StrCmp $0 &quot;&lt;errorlevel&gt; do_this do_that<br />
+<br />
+It doesn't seem a difference to me :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">drod</div><div class="date">25th January 2007, 23:21</div></div><div class="posttext">Sorry red wine, I don't think I've explained myself well enough at all!<br />
+<br />
+If I was writing a Unix script I'd be able to access the return code in the &quot;$?&quot; variable - this may be say &quot;2&quot; for &quot;no such file&quot;, or &quot;13&quot; for &quot;permission denied&quot; etc. You could pass that info back to the user so they knew the cause of the error.<br />
+<br />
+Unless I'm missing it, I only seem to be able to get a &quot;you had an error&quot; here. I think this means that I have to wrap each call with a &quot;clearErrors/IfError&quot; type block in order to offer a little more info; eg<br />
+<br />
+ClearErrors<br />
+&lt;open file for writing&gt;<br />
+${If} ${Errors}<br />
+DetailPrint &quot;Cannot open file for writing&quot;<br />
+${Else}<br />
+ClearErrors<br />
+&lt;try to write&gt;<br />
+${If} ${Errors}<br />
+DetailPrint &quot;Cannot write to file&quot;<br />
+${Endif}<br />
+${Endif}<br />
+<br />
+Does that make sense?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">26th January 2007, 00:09</div></div><div class="posttext">You're right I guess. I misunderstood.<br />
+I thought we're talking about file extraction, indeed regarding to file extraction doesn't make any noticeable difference.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

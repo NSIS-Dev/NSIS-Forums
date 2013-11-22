@@ -1,0 +1,123 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" UpgradeDLL and dao360.dll, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  UpgradeDLL and dao360.dll NSIS Discussion" />
+	
+	<title> UpgradeDLL and dao360.dll [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  UpgradeDLL and dao360.dll</div>
+<hr />
+<div class="pda"><a href="t-158849.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=158849">UpgradeDLL and dao360.dll</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">blayde</div><div class="date">7th December 2003, 13:05</div></div><div class="posttext">hi,<br />
+<br />
+i'm a bit of a newbie so please excuse me i'f i've missed something obvious :)<br />
+<br />
+i want to install the file 'dao360.dll'.  i do this with UpgradeDLL.  everytime i run my nsis install program it says i have to reboot.  i believe the code is asking this to rename, then register, the dll.  while restarting i get an error roughly saying &quot;couldn't find module temp_path\temp.file\dao360.dll&quot; ( where temp_path is the temp path the file got extracted to, temp.file is the temporary file that got created, and dao360.dll is what the file should be renamed to ).  which doesn't sound like it's even looking in the right place to me.  the UpgradeDLL code looks like it should be looking for temp_path\dao360.dll.  i'm using the latest tested release of NSIS, 2.0b4, and the latest version of UpgradeDLL.<br />
+<br />
+any reasons this error might arise ?<br />
+<br />
+the only possibility i can think of is the macro i use to call UpgradeDLL.  I previously used MS P&amp;DW and in examining that source code and found it handled this one file a little different.  I have tried to take this into account with a custom macro.  dao360.dll is the only file i use this custom macro on.  i think this is probably the source of my error.<br />
+<br />
+<br />
+!macro UpgradeDAODLL LOCALPATH LOCALFILE<br />
+<br />
+    Push $R0      ; Gunna hold DAO dir<br />
+<br />
+    ClearErrors<br />
+    ReadRegStr &quot;$0&quot; &quot;HKLM&quot; &quot;SOFTWARE\Microsoft\Shared Tools\DAO350&quot; &quot;Path&quot;<br />
+    IfErrors er1 er2<br />
+    er1:<br />
+        DetailPrint &quot;Unable to find DAO path.$\nFile ${LOCALFILE} has not been installed !&quot;<br />
+        Goto end<br />
+    er2:<br />
+        ; Please note - this codes assumes the DAO350\Path key points to a file called ( or at least of the same length ) as dao350.dll<br />
+        StrCpy $R0 $0 -10 ; 11 chars is 'dao350.dll' + a '\'<br />
+        !insertmacro UpgradeDLL &quot;${LOCALPATH}\${LOCALFILE}&quot; &quot;$R0\${LOCALFILE}&quot; &quot;$SYSDIR&quot;<br />
+        Goto end<br />
+<br />
+    end:<br />
+    Pop $R0<br />
+<br />
+!macroend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">blayde</div><div class="date">8th December 2003, 07:56</div></div><div class="posttext">fixed a small, probably unrelated bug.<br />
+<br />
+changed<br />
+StrCpy $R0 $0 -10<br />
+to<br />
+StrCpy $R0 $0 -11<br />
+<br />
+I'll have to go offline to continue testing ( dial up connection :( ).  I'll post any results later.<br />
+<br />
+<br />
+<br />
+!macro UpgradeDAODLL LOCALPATH LOCALFILE<br />
+<br />
+    Push $R0      ; Gunna hold DAO dir<br />
+<br />
+    ClearErrors<br />
+    ReadRegStr &quot;$0&quot; &quot;HKLM&quot; &quot;SOFTWARE\Microsoft\Shared Tools\DAO350&quot; &quot;Path&quot;<br />
+    IfErrors er1 er2<br />
+    er1:<br />
+        DetailPrint &quot;Unable to find DAO path.$\nFile ${LOCALFILE} has not been installed !&quot;<br />
+        Goto end<br />
+    er2:<br />
+        ; Please note - this codes assumes the DAO350\Path key points to a file called ( or at least of the same length ) as dao350.dll<br />
+        StrCpy $R0 $0 -11 ; 11 chars is 'dao350.dll' + a ''<br />
+        !insertmacro UpgradeDLL &quot;${LOCALPATH}\${LOCALFILE}&quot; &quot;$R0\${LOCALFILE}&quot; &quot;$SYSDIR&quot;<br />
+        Goto end<br />
+<br />
+    end:<br />
+    Pop $R0<br />
+<br />
+!macroend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th December 2003, 09:49</div></div><div class="posttext">The problem seems to be your usage of $R0. UpgradeDLL uses $R0 too and as the destination file parameter is processed after UpgradeDLL has already changed it, problems are caused. UpgradeDLL was not built to be used with paths containing variables.<br />
+<br />
+For now you should avoid using $R0, $R1, $R2 and $R3 as UpgradeDLL's parameters. We'll see what can be done to improve this.<br />
+<br />
+You should also use the detected DAO directory as TEMPBASEDIR (UpgradeDLL's third parameter). $SYSDIR is used in the example because that's where the example tries to install dllname.dll.<br />
+<br />
+BTW, on my system the key you're trying to read doesn't exist. I only have SOFTWARE\Microsoft\Shared Tools\DAO350.dll. But I probably just don't have the component you're looking for...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">blayde</div><div class="date">8th December 2003, 13:49</div></div><div class="posttext">of course ! i'd forgotten it does that.  and thanks for the tip on the tempdir.<br />
+<br />
+thanks a lot kichik<br />
+<br />
+which os are you running ? every computer i've seen so far has that reg entry.<br />
+<br />
+i saw that some very smart person set up UpgradeDLL to use dynamic, unique, labels ( for GOTOs etc ).  now that NSIS has defineable variable names too, maybe that concept could be extended to variable names.  so that UpgradeDLL ( and other macros ) never have variables that interfere with others.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th December 2003, 14:12</div></div><div class="posttext">Well, assuming it takes variables for runtime script is reasonable... ;)<br />
+<br />
+I'm using XP SP1. No SOFTWARE\Microsoft\Shared Tools\DAO350, just SOFTWARE\Microsoft\Shared Tools\DAO350.dll.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">blayde</div><div class="date">8th December 2003, 14:33</div></div><div class="posttext">thanks a lot kichick.<br />
+<br />
+i'd better alter my setup plan now.  i'm glad i found out that reg entry thing now rather than from a customer.<br />
+<br />
+and your suggest worked ! changed $R0 to $1 makes it work fine.<br />
+<br />
+you have once again proven invaluable.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">24th December 2003, 18:36</div></div><div class="posttext">UpgradeDLL now supports paths that contain variables.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

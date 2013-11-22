@@ -1,0 +1,228 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" huh?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  huh? NSIS Discussion" />
+	
+	<title> huh? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  huh?</div>
+<hr />
+<div class="pda"><a href="t-189336.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=189336">huh?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">dork</div><div class="date">8th August 2004, 20:41</div></div><div class="posttext">I honestly can't understand why in this code:<br />
+<br />
+  ReadRegStr $R0 &quot;HKLM&quot; &quot;SOFTWARE\Microsoft\Updates\Windows 2000\SP5\KB823980&quot; &quot;Type&quot;<br />
+  StrCmp $R0 &quot;Update&quot; UpdateFound UpdateNotFound<br />
+<br />
+  UpdateNotFound:<br />
+  MessageBox MB_OK|MB_ICONQUESTION &quot;not found.. closing.. &quot; IDOK <br />
+  Quit<br />
+<br />
+  UpdateFound:<br />
+  MessageBox MB_OK|MB_ICONQUESTION &quot;result: $R0 &quot; IDOK <br />
+  quit<br />
+<br />
+I see the as result &quot;result: Update&quot; as it should normaly happen but in this<br />
+<br />
+  ReadRegStr $R0 &quot;HKLM&quot; &quot;SOFTWARE\Microsoft\Updates\Windows 2000\SP5\KB823980&quot; &quot;Type&quot;<br />
+  StrCmp $R0 &quot;Update&quot; UpdateFound UpdateNotFound<br />
+<br />
+  UpdateNotFound:<br />
+  DetailPrint &quot;Installing security update..&quot;<br />
+  SetDetailsPrint None<br />
+  SectionIn R0<br />
+<br />
+  SetOutPath &quot;$INSTDIR&quot;<br />
+; some other stuff<br />
+<br />
+  UpdateFound:<br />
+<br />
+it dosen't get me the same result. What the hell I'm doing wrong in code 2? Sorry but this realy pissed me off cos I just can't seem to find the problem..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">8th August 2004, 21:59</div></div><div class="posttext">That's because you didn't put a Goto, Abort, or Quit command before the UpdateFound label on the second case. On the first you did put a Quit command.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dork</div><div class="date">9th August 2004, 15:42</div></div><div class="posttext">I've also tested with<br />
+<br />
+  ReadRegStr $1 &quot;HKLM&quot; &quot;SOFTWARE\Microsoft\Updates\Windows 2000\SP5\KB823980&quot; &quot;Type&quot;<br />
+  StrCmp $1 &quot;Update&quot; UpdateFound<br />
+  Goto UpdateFound<br />
+<br />
+  DetailPrint &quot;Installing security update..&quot;<br />
+  SetDetailsPrint None<br />
+<br />
+  SectionIn RO<br />
+  SetOutPath &quot;$INSTDIR&quot;<br />
+; stuff to do<br />
+<br />
+  UpdateFound:<br />
+<br />
+<br />
+before asking on the forum. But still dosen't seem to be working.. What should I add to &quot;UpdateFound:&quot; to let it continue the process then?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">9th August 2004, 16:29</div></div><div class="posttext">StrCmp $1 &quot;Update&quot; UpdateFound<br />
+Goto UpdateFound<br />
+Is the same as:<br />
+StrCmp $1 &quot;Update&quot; UpdateFound UpdateFoundSo it won't work.<br />
+<br />
+You should put the command Goto right before the label UpdateFound:<br />
+ to go to the end. Like this below:<br />
+<br />
+StrCmp $1 &quot;Update&quot; UpdateFound<br />
+<br />
+  # UpdateNotFound codes<br />
+  <br />
+  Goto UpdateEnd<br />
+  <br />
+UpdateFound:<br />
+<br />
+# UpdateFound codes<br />
+<br />
+UpdateEnd:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dork</div><div class="date">11th August 2004, 16:07</div></div><div class="posttext">Since I don't have something in the UpdateFound: part isn't exactly the same as what I've previously mentioned? Anyway, dosen't seem to be working..<br />
+<br />
+Like this it should be or what?<br />
+<br />
+  Section &quot;KB823980&quot; SecKB823980<br />
+<br />
+  ReadRegStr $1 &quot;HKLM&quot; &quot;SOFTWARE\Microsoft\Updates\Windows 2000\SP5\KB823980&quot; &quot;Type&quot;<br />
+  StrCmp $1 &quot;Update&quot; UpdateFound<br />
+<br />
+  DetailPrint &quot;Installing security update..&quot;<br />
+<br />
+  SectionIn RO<br />
+  SetOutPath &quot;$INSTDIR&quot;<br />
+  File &quot;Windows2000-KB823980-x86-ENU.exe&quot;<br />
+  nsExec::Exec '&quot;Windows2000-KB823980-x86-ENU.exe&quot; -z -u'<br />
+  Delete $OUTDIR\Windows2000-KB823980-x86-ENU.exe<br />
+  SetDetailsPrint None<br />
+  Goto UpdateEnd<br />
+<br />
+  UpdateFound:<br />
+<br />
+  UpdateEnd:<br />
+<br />
+  SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">11th August 2004, 16:16</div></div><div class="posttext">Oh, sorry, my fault. The real code is:<br />
+<br />
+IntCmp $1 &quot;Update&quot; UpdateFound<br />
+<br />
+  # UpdateNotFound codes<br />
+  <br />
+  Goto UpdateEnd<br />
+  <br />
+UpdateFound:<br />
+<br />
+# UpdateFound codes<br />
+<br />
+UpdateEnd:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dork</div><div class="date">12th August 2004, 17:02</div></div><div class="posttext">Still nothing.. any ideea?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">12th August 2004, 17:41</div></div><div class="posttext">Try:<br />
+<br />
+SetCompressor lzma<br />
+XPStyle on<br />
+<br />
+Name &quot;Test&quot;<br />
+OutFile &quot;hi.exe&quot;<br />
+InstallDir $EXEDIR<br />
+ShowInstDetails show<br />
+<br />
+Section &quot;-default&quot;<br />
+ReadRegStr $1 &quot;HKLM&quot; &quot;SOFTWARE\Microsoft\Updates\Windows 2000\SP5\KB823980&quot; &quot;Type&quot;<br />
+StrCmp $1 &quot;Update&quot; UpdateFound NoUpdate<br />
+<br />
+UpdateFound:<br />
+DetailPrint &quot;Installing security update...&quot;<br />
+#SetOutPath &quot;$INSTDIR&quot;<br />
+#File &quot;Windows2000-KB823980-x86-ENU.exe&quot;<br />
+#nsExec::Exec '&quot;Windows2000-KB823980-x86-ENU.exe&quot; -z -u'<br />
+#Delete $OUTDIR\Windows2000-KB823980-x86-ENU.exe<br />
+DetailPrint &quot;you have installed a file!&quot;<br />
+Goto Exit<br />
+<br />
+NoUpdate:<br />
+DetailPrint &quot;No update need&quot;<br />
+<br />
+Exit:<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dork</div><div class="date">13th August 2004, 16:34</div></div><div class="posttext">Errrrmm.. still no. With<br />
+<br />
+Name &quot;windows test&quot;<br />
+OutFile &quot;test.exe&quot;<br />
+Caption &quot;windows test&quot;<br />
+CRCCheck on<br />
+XPStyle on<br />
+<br />
+Function .onInit<br />
+<br />
+  ReadRegStr $R0 &quot;HKLM&quot; &quot;SOFTWARE\Microsoft\Updates\Windows 2000\SP5\KB823980&quot; &quot;Type&quot;<br />
+  MessageBox MB_OK|MB_ICONQUESTION &quot;KB823980 result: $R0 &quot; IDOK <br />
+  quit<br />
+<br />
+FunctionEnd<br />
+<br />
+Section &quot;-boo&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+It works.. look at the image.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">13th August 2004, 17:31</div></div><div class="posttext">But happens when the user don't have the update or the user has a different OS?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dork</div><div class="date">13th August 2004, 20:19</div></div><div class="posttext">It's the same OS and pc.. mine. :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">13th August 2004, 21:19</div></div><div class="posttext">I see the as result &quot;result: Update&quot; as it should normaly happen but in this ... it dosen't get me the same resultProbably for that question the answer would be a &quot;MessageBox&quot; laking in your code. And in all of your other codes you put the MessageBox except that one. What a big &quot;concidence&quot;, isn't it? If this is not the problem, you really didn't explain the true problem.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dork</div><div class="date">14th August 2004, 12:54</div></div><div class="posttext">Umm.. allright, here are the files. First is the test file..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dork</div><div class="date">14th August 2004, 12:55</div></div><div class="posttext">and the second file is the thing I want to do..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">14th August 2004, 15:17</div></div><div class="posttext">I can't understand you. The 2nd code you posted on your first post is the answer to the question.<br />
+<br />
+And second, are you trying to convert &quot;bla.nsi&quot; into &quot;stuff.nsi&quot;?<br />
+<br />
+Explain to me!<br />
+<br />
+W-h-a-t   d-o   y-o-u   w-a-n-t   m-e   t-o   d-o   t-o   h-e-l-p   y-o-u,   m-a-n?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dork</div><div class="date">14th August 2004, 21:05</div></div><div class="posttext">I can't understand why in the bla.nsi (aka the test) I get the correct result but in the stuff.nsi (aka the thing where I want to use that ReadRegStr thing) is not working, as in I'm not getting the same result as in the bla.nsi wich are exactly the same lines. Undestood now?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">14th August 2004, 23:19</div></div><div class="posttext">Where are you putting the MessageBox on your second script when your test didn't work? Did this MessageBox appear or not? What did appear when it gave you error?<br />
+<br />
+(Oh, just change the IntCmp back to StrCmp. At that day, I was about to kick my computer...:()</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dork</div><div class="date">15th August 2004, 07:36</div></div><div class="posttext">Yes, you are correct it dosen't exist there cos is not needed. I can see is not working cos I allways get it clicked via &quot;SectionIn RO&quot; wich is just in the &quot;Update Not Found&quot; part of the code, and in the &quot;Update Found&quot; aprt it should be unchecked. Would you like an screen capture of the result? :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

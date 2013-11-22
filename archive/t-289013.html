@@ -1,0 +1,92 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to use System::Call &quot;rapi::CeRapiInitEx..., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to use System::Call &quot;rapi::CeRapiInitEx... NSIS Discussion" />
+	
+	<title> How to use System::Call &quot;rapi::CeRapiInitEx... [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to use System::Call &quot;rapi::CeRapiInitEx...</div>
+<hr />
+<div class="pda"><a href="t-289013.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=289013">How to use System::Call &quot;rapi::CeRapiInitEx...</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Scrapi</div><div class="date">25th March 2008, 02:45</div></div><div class="posttext">I am trying to detect if a device is connected via activesync by using the System.dl call to CeRapiInitEx. Apparently I do not understand how to allocate memory for the structure required by this function.<br />
+<br />
+The struct is as follows:<br />
+<br />
+public struct RAPIINIT<br />
+{<br />
+    public int cbsize;<br />
+    public IntPtr heRapiInit;<br />
+    public UInt32 hrRapiInit;<br />
+};<br />
+<br />
+HRESULT CeRapiInitEX(RAPIINIT)<br />
+<br />
+Here is my failed attempt so far (any help is appreciated)<br />
+<br />
+  System::Call &quot;*(i 12, i, i) i .s&quot;<br />
+  Pop $1<br />
+  System::Call &quot;rapi::CeRapiInitEX(i r1) i .r0&quot;<br />
+  DetailPrint &quot;CeRapiInitEX Status: $0&quot;<br />
+  DetailPrint &quot;Struct Pointer: $1&quot;<br />
+  System::Call &quot;*$1(i .r2, i .r3, i .r4)&quot;<br />
+  System::Free $1<br />
+  DetailPrint &quot;cbSize: $2&quot;<br />
+  DetailPrint &quot;heRapiInit: $3&quot;<br />
+  DetailPrint &quot;hrRapiInit: $4&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th March 2008, 03:42</div></div><div class="posttext">are you sure its not CeRapiInitEx ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Scrapi</div><div class="date">25th March 2008, 04:03</div></div><div class="posttext">Yes you are correct - it is CeRapiInitEx<br />
+<br />
+Ultimately I want to test the return value for success and then wait for the connection signal from kernel32::WaitForSingleObject</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">25th March 2008, 19:31</div></div><div class="posttext">What exactly doesn't work and how?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Scrapi</div><div class="date">25th March 2008, 20:22</div></div><div class="posttext">I think I've got it figured out. (see below) What I was struggling with were the data types of the components of the struct and the values of the return variables. It seems that all the Microsoft docs assume that the definitions of things like S_OK are universally known. Since I am a noob with RAPI and in the NSIS scriptiong environment I don't have the headers that define S_OK, S_FAIL , etc. I was not sure what to look for in the return variable.<br />
+<br />
+Anywhooo this seems to be working. Thanks for your response.<br />
+<br />
+CheckConnect:<br />
+  MessageBox MB_OK &quot;Put PPC in Cradle&quot;<br />
+  System::Call &quot;*(i 12, i, i) l .s&quot;<br />
+  Pop $1<br />
+  System::Call &quot;rapi::CeRapiInitEx(l r1) i .s&quot;<br />
+  Pop $0<br />
+  DetailPrint &quot;CeRapiInitEx Return Value: $0&quot;<br />
+  DetailPrint &quot;Struct Pointer: $1&quot;<br />
+  System::Call &quot;*$1(i .r2, i .r3, i .r4)&quot;<br />
+  System::Free $1<br />
+  DetailPrint &quot;cbSize: $2&quot;<br />
+  DetailPrint &quot;heRapiInit Handle: $3&quot;<br />
+  DetailPrint &quot;hrRapiInit Return Value: $4&quot;<br />
+  ${If} $4 == 0<br />
+    DetailPrint &quot;Waiting for Signal...&quot;<br />
+    System::Call &quot;Kernel32::WaitForSingleObject(i r3, l 300) i .r5&quot;<br />
+    DetailPrint &quot;WaitForSingleObject Return Value: $5&quot;<br />
+  ${Else}<br />
+    System::Call &quot;rapi::CeRapiUninit() i. s&quot;<br />
+    Pop $1<br />
+    DetailPrint &quot;CeRapiUninit Return Value: $1&quot;<br />
+    Goto CheckConnect<br />
+  ${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th March 2008, 20:34</div></div><div class="posttext">for most symbols like that, just google &quot;define FOOBAR_SYMBOL&quot; if you don't have the MS headers handy</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

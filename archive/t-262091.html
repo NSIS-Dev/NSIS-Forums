@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Help with script, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Help with script NSIS Discussion" />
+	
+	<title> Help with script [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Help with script</div>
+<hr />
+<div class="pda"><a href="t-262091.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=262091">Help with script</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">JediKnight2</div><div class="date">19th December 2006, 17:52</div></div><div class="posttext">OK. I have waded thru the Java detect script and have fixed the script.  It will detect java correctly and prompt to install if needed.  ONE problem remains that I just cant figure out.  If Java is NOT installed or is OLD, the program CORRECTLY prompts to install the Java package, installs it then moves to install the program.  If Java IS installed, however, it DOES skip the java warnings but moves to install java anyway???  Can someone take a look for me.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sag47</div><div class="date">19th December 2006, 18:34</div></div><div class="posttext">Look at your code:<br />
+Function DetectJRE<br />
+  ReadRegStr ${TEMP} HKLM &quot;SOFTWARE\JavaSoft\Java Runtime Environment&quot; &quot;CurrentVersion&quot;<br />
+  ReadRegStr ${TEMP2} HKLM &quot;SOFTWARE\JavaSoft\Java Runtime Environment\${TEMP}&quot; &quot;JavaHome&quot;<br />
+  Goto GetJRE<br />
+ <br />
+ <br />
+GetJRE:<br />
+  IfFileExists &quot;${TEMP2}\bin\java.exe&quot; 0 NoFound<br />
+  StrCpy ${VAL1} ${TEMP} 1<br />
+  StrCpy ${VAL2} ${JRE_VERSION} 1<br />
+  IntCmp ${VAL1} ${VAL2} 0 FoundOld FoundNew<br />
+  StrCpy ${VAL1} ${TEMP} 1 2<br />
+  StrCpy ${VAL2} ${JRE_VERSION} 1 2<br />
+  IntCmp ${VAL1} ${VAL2} FoundNew FoundOld FoundNew <br />
+<br />
+A possible fix: <br />
+Change   IfFileExists &quot;${TEMP2}\bin\java.exe&quot; 0 NoFound to the following.<br />
+<br />
+IfFileExists &quot;${TEMP2}\bin\java.exe&quot; &quot;&quot; NoFound<br />
+<br />
+In another installation I had errors with IfFileExists using a 0 in that blank function field.  Replace it with quotes and let me know how it goes.<br />
+<br />
+In fact I recommend using quotes to show blank fields instead of a 0.  It seemed to cure all my errors<br />
+SAM</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JediKnight2</div><div class="date">19th December 2006, 18:48</div></div><div class="posttext">Nope...that didnt fix it..<br />
+<br />
+I hopefully explained what it was doing correctly...like I said it is detecting that I have the correct JRE version...but it is going into the JRE install anyway..for instance..say I dont have JRE installed it comes up with a screen that tells them no JRE is present...they press next and a window comes up unzipping the JRE and installing it after that is complete it goes to the program install...well right now if the PROPER JRE is found no warning about JRE is shown but it goes straight to the JRE install...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JediKnight2</div><div class="date">19th December 2006, 20:30</div></div><div class="posttext">For some reason I think it is in this section...<br />
+<br />
+Function CheckInstalledJRE<br />
+  Call DetectJRE<br />
+  Pop ${TEMP}<br />
+  StrCmp ${TEMP} &quot;OK&quot; NoDownloadJRE<br />
+  Pop ${TEMP2}<br />
+  StrCmp ${TEMP2} &quot;None&quot; NoFound FoundOld<br />
+  <br />
+FoundOld:<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;jre.ini&quot; &quot;Field 1&quot; &quot;Text&quot; &quot;TGDTJ requires a more recent version of the Java Runtime Environment than the one found on your computer.\nThe installation of JRE ${JRE_VERSION} will start.&quot;<br />
+  !insertmacro MUI_HEADER_TEXT &quot;$(TEXT_JRE_TITLE)&quot; &quot;$(TEXT_JRE_SUBTITLE)&quot;<br />
+  !insertmacro MUI_INSTALLOPTIONS_DISPLAY_RETURN &quot;jre.ini&quot;<br />
+  Goto DownloadJRE<br />
+ <br />
+NoFound:<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;jre.ini&quot; &quot;Field 1&quot; &quot;Text&quot; &quot;No Java Runtime Environment could be found on your computer.\n The installation of JRE v${JRE_VERSION} will start.&quot;<br />
+  !insertmacro MUI_HEADER_TEXT &quot;$(TEXT_JRE_TITLE)&quot; &quot;$(TEXT_JRE_SUBTITLE)&quot;<br />
+  !insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;jre.ini&quot;<br />
+  Goto DownloadJRE<br />
+ <br />
+DownloadJRE:<br />
+  StrCpy ${DOWNLOAD_JRE_FLAG} &quot;Download&quot;<br />
+  Return<br />
+  <br />
+NoDownloadJRE:<br />
+  Pop ${TEMP2}<br />
+  StrCpy ${DOWNLOAD_JRE_FLAG} &quot;NoDownload&quot;<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;jre.ini&quot; &quot;UserDefinedSection&quot; &quot;JREPath&quot; ${TEMP2}<br />
+  Return<br />
+  <br />
+ExitInstall:<br />
+  Quit<br />
+ <br />
+FunctionEnd<br />
+<br />
+<br />
+Mainly under NoDownloadJRE: ...not sure though, because it is correctly going thru the DetectJRE call..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JediKnight2</div><div class="date">19th December 2006, 20:55</div></div><div class="posttext">OK...I think I am making SOME headway...If I set the  NoDownloadJRE: to mimick  the NoFound or FoundOld it works, so that means that the CORRECT answer is given to the install that the install doesn't need a JRE install..problem is in the NoDownloadJRE: part which is <br />
+<br />
+NoDownloadJRE:<br />
+  Pop ${TEMP}<br />
+  StrCpy ${DOWNLOAD_JRE_FLAG} &quot;NoDownload&quot;<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;jre.ini&quot; &quot;UserDefinedSection&quot; &quot;JREPath&quot; ${TEMP2}<br />
+  Return<br />
+<br />
+I need it to say something like, JRE Is installed click next to continue program install instead of going to the JRE install...</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

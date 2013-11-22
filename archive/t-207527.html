@@ -1,0 +1,86 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Need help with System:Call, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Need help with System:Call NSIS Discussion" />
+	
+	<title> Need help with System:Call [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Need help with System:Call</div>
+<hr />
+<div class="pda"><a href="t-207527.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=207527">Need help with System:Call</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">bob32</div><div class="date">11th February 2005, 19:32</div></div><div class="posttext">I am having problems when trying to call a DLL with System::Call.<br />
+I know for certain that the DLL is being loaded when I attempt to call it (I verified that by using FileMon by SysInternals).<br />
+It is the call itself that is failing. I am going crazy trying to figure out what I am doing wrong. The only thing I know for certain is that the DLL *is* in an accessible location and that it is being loaded when I issue the System:Call. Any help would be very appreciated.<br />
+<br />
+Here is the prototype for the DLL Function:<br />
+typedef BOOL (__stdcall *TCC_FN)(DWORD*);<br />
+BOOL __stdcall MyFunc(DWORD *results);<br />
+<br />
+here is the function I wrote:<br />
+;--------------------------------------------------<br />
+SetPluginUnload  alwaysoff<br />
+Function CallMyFunc<br />
+    SetOutPath $PLUGINSDIR<br />
+    System::Call &quot;MyDLL::MyFunc(*i .r1)i.r2&quot;<br />
+    MessageBox MB_OK 'Results: $1'<br />
+    MessageBox MB_OK 'Return Value: $2'<br />
+<br />
+; last plugin call must not have /NOUNLOAD so NSIS will be able to delete<br />
+; the temporary DLL<br />
+    SetPluginUnload manual<br />
+; do nothing (but let the installer unload the System dll)<br />
+    System::Free 0<br />
+FunctionEnd<br />
+;--------------------------------------------------<br />
+The messageboxes that result read as follows:<br />
+Results: 0<br />
+Return Value: error<br />
+<br />
+Valid return values for &quot;Results&quot; ($1) are 0, 1, 2, 4, 8, 16, and 32<br />
+Valid result values for &quot;Return Value&quot; ($2) are 1 and 0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">11th February 2005, 20:07</div></div><div class="posttext">If the DLL is surely loaded but the function is not called, it's probably a name mangling problem. Open your DLL with Dependency Walker (http://www.dependencywalker.com/) and make sure the function is really named MyFunc. I guess it's actually named _MyFunc.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bob32</div><div class="date">11th February 2005, 21:05</div></div><div class="posttext">I can't claim to be 100% sure it's loading. I just know that when the call to System::Call is issued, FileMon shows that my setup is doing /something/ with MyDLL.dll. I interepreted that as loading, but I guess it could be /trying/ to load the dll and failing. Is there any way to know if that's the case?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">11th February 2005, 21:12</div></div><div class="posttext">You can use another SysInternal tool called DebugView. In your plug-in's DllMain use OutputDebugString and use DebugView to see if DllMain is really called.<br />
+<br />
+Have you tried Dependency Walker?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bob32</div><div class="date">12th February 2005, 01:49</div></div><div class="posttext">Okay, I figured it out.<br />
+Posting my solution here in case another bone headed novice does the same thing I was doing.<br />
+Due to my unfamiliarity with the NSIS installer, I was just piecing code together from the samples without a 100% understanding of what it's actually doing. Anyway, I was doing the following<br />
+;---------------------------<br />
+...<br />
+    ReserveFile &quot;MyDLL.DLL&quot;<br />
+...<br />
+    !insertmacro MUI_INSTALLOPTIONS_EXTRACT &quot;MyDLL.DLL&quot;<br />
+...<br />
+;---------------------------<br />
+<br />
+For some reason, extracting my DLL in that manner was causing my DLL to become corrupted (or, for some reason, simply unusable - I haven't had time to fully investigate). Once I changed the code to be a simple<br />
+File MyDLL.DLL<br />
+The function worked perfectly.<br />
+<br />
+Thank you for your help, by the way, kichik.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">12th February 2005, 10:54</div></div><div class="posttext">MUI_INSTALLOPTIONS_EXTRACT treats the extracted file as an INI file and uses WriteINIStr to write something to it. That's why it corrupts DLLs.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

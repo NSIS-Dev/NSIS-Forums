@@ -1,0 +1,320 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Searching for a string in a text file, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Searching for a string in a text file NSIS Discussion" />
+	
+	<title> Searching for a string in a text file [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Searching for a string in a text file</div>
+<hr />
+<div class="pda"><a href="t-243361.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=243361">Searching for a string in a text file</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">13th April 2006, 15:32</div></div><div class="posttext">I'm using stu's FileSearch function to search for a string, but it isn't working. The string is certainly in the file, but it keeps looping. Ideas? Also, does $1 indicate the string was found, or the file was found?<br />
+<br />
+CheckForCircuit:<br />
+    Sleep 5000<br />
+    Push $EXEDIR\temp\tor.log<br />
+    Push &quot;Successfully created a circuit&quot;<br />
+    Call FileSearch<br />
+    Pop $0 #Number of times found throughout<br />
+    Pop $1 #Found at all? yes/no<br />
+    Pop $2 #Number of lines found in<br />
+    StrCmp $1 yes LaunchFF CheckForCircuit</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">13th April 2006, 17:41</div></div><div class="posttext">$1 indicates the string was found.<br />
+Ran it 50 times or so, with sort string, long string, long string with spaces, always fool-proof. :-)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">13th April 2006, 17:49</div></div><div class="posttext">I'll check it out when I can get on my build machine.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">13th April 2006, 20:33</div></div><div class="posttext">Could you post tor.log?<br />
+Function works fine for me.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">14th April 2006, 02:26</div></div><div class="posttext">Here is the file</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">14th April 2006, 02:35</div></div><div class="posttext">perhaps a better explanation is needed.<br />
+<br />
+execdos is writing this tor.exe's output to the log file. And the file keeps getting updated. That is why I have a 5000 delay. Is it not getting read because the file is already open and being appended to?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">galil</div><div class="date">14th April 2006, 03:20</div></div><div class="posttext">Uh, first of all, in the log file you attached there's no such string you were looking for. So no surprise it loops.<br />
+<br />
+And second, to see if the file was opened successfully, in  FileSearch function after the FileOpen command add<br />
+IfErrors 0 +2<br />
+MessageBox MB_OK &quot;FileOpen error!&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">14th April 2006, 04:26</div></div><div class="posttext">yes, i'm aware that isn't the string. i just typed that in. infact it doesn't even find &quot;circuit&quot;.<br />
+<br />
+However you are right. There is a fileopen error! So if it is already open and being appended, what do you suggest? Is there a way to read a file that is already opened and being written to by another program?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">14th April 2006, 09:27</div></div><div class="posttext">check out this example, handles the fileopen case, though, we stop the execution at certain n , because we read and write in a loop. Assuming that other program writes in the file we read the execution is terminated once the file no more updated.<br />
+* there is a strange n of lines shown but I guess it is because of the read/write loop. Anyway the string and n of times found is fool-proof. :-)<br />
+!define STRING 'Successfully created a circuit'<br />
+!define FILE '$EXEDIR\install.log'<br />
+!define TEMPFILE '$TEMP\tmp.log'<br />
+<br />
+outfile 'test.exe'<br />
+ShowInstDetails show<br />
+<br />
+section -<br />
+    strcpy $R1 0 ; needed to stop loop for the example<br />
+_loop:<br />
+   FileOpen $R0 '${FILE}' a<br />
+   FileSeek $R0 0 END<br />
+   FileWrite $R0 'bla bla bla$\r$\n'<br />
+   FileWrite $R0 '${STRING}$\r$\n'<br />
+   FileWrite $R0 'bla bla bla$\r$\n'<br />
+   ; this is only for to stop loop for the example<br />
+   ; in real world the prog who writes on readme.txt<br />
+   ; when is about to finish will write the last record EOF<br />
+   ; so when the prog who reads the tmp.log should stop loop<br />
+   Intop $R1 $R1 + 1<br />
+   intcmp $R1 '9' +2 +2 +1<br />
+   FileWrite $R0 'EOF$\r$\n'<br />
+   fileclose $R0<br />
+   CopyFiles '${FILE}' '${TEMPFILE}'<br />
+<br />
+   Push '${TEMPFILE}'<br />
+   Push '${STRING}'<br />
+   Call FileSearch<br />
+   Pop $0 #Number of times found throughout<br />
+   Pop $1 #Found at all? yes/no<br />
+   Pop $2 #Number of lines found in<br />
+<br />
+   StrCmp $1 yes 0 _end<br />
+   DetailPrint &quot;'${STRING}' was found in the file $0 times on $2 lines.&quot;<br />
+   Push '${TEMPFILE}'<br />
+   Push 'EOF'<br />
+   Call FileSearch<br />
+   Pop $0 #Number of times found throughout<br />
+   Pop $1 #Found at all? yes/no<br />
+   Pop $2 #Number of lines found in<br />
+   StrCmp $1 yes _end<br />
+   goto _loop<br />
+_end:<br />
+   delete ${TEMPFILE}<br />
+sectionend<br />
+don't forget Stu's function search for text in file  (http://nsis.sourceforge.net/Search_for_text_in_file)<br />
+<br />
+* this article entirely edited in order to make more sense. (hopful) :-)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">14th April 2006, 13:37</div></div><div class="posttext">I did try to make my comments more readable and upload here the entire script including Stu's function.<br />
+@ Stu I hope you don't mind. If you do, just remove the link :-)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">14th April 2006, 16:11</div></div><div class="posttext">The problem i'm having is the FileOpen fails. If FileOpen didn't work in stu's FileSearch, I don't think it will work here either.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">14th April 2006, 16:21</div></div><div class="posttext">the above script is full working. why don't you try to customize it according what you want to do?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">14th April 2006, 17:30</div></div><div class="posttext">Stu's script works fine as well. The problem has nothing to do with the script, it is that the file i am trying to open is already opened by execdos and thus locked.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">14th April 2006, 17:32</div></div><div class="posttext">If another process has the file locked then make a copy of it and search that instead (like Red Wine's example shows). It may or may not work but it's worth trying.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">14th April 2006, 17:43</div></div><div class="posttext">I tried copying it a while back. It ends up writing a file fragment.<br />
+<br />
+If it helps the issue, the file that i'm tring to open is originally opened (thus locked?) by ExecDos as it's log file:<br />
+<br />
+ExecDos::exec /NOUNLOAD /ASYNC `&quot;$EXEDIR\tor\tor.exe&quot; -f &quot;$EXEDIR\tor\torrc&quot;` &quot;&quot; &quot;$EXEDIR\temp\tor.log&quot; <br />
+<br />
+So it is inside my program, if i can figure out how to access it. Afrow, any ideas about using a variable as the log file and having that variable written to a file i can open?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">14th April 2006, 17:54</div></div><div class="posttext">I got the point a little late :-)<br />
+Anyway I don't know how the execdos log works but when I'm testing those below they work fine. The problem is that must exists a keyword to the end of the logging. The keyword could be the same with the one you're looking for if you just want to find it one time. If you want to find it n times then must exists a keyword that means end of logging.<br />
+When I run loop_read begins looping, then I run loop_write and they both work fine all the way to the end. For the example I run the logging for specific rounds, and I use as keyword EOF that tells me the logging is finished so terminate the loop_read.!define STRING 'Successfully created a circuit'<br />
+!define FILE '$EXEDIR\install.log'<br />
+<br />
+outfile 'loop_read.exe'<br />
+ShowInstDetails show<br />
+<br />
+section -<br />
+_loop:<br />
+   Push '${FILE}'<br />
+   Push '${STRING}'<br />
+   Call FileSearch<br />
+   Pop $0 #Number of times found throughout<br />
+   Pop $1 #Found at all? yes/no<br />
+   Pop $2 #Number of lines found in<br />
+<br />
+   StrCmp $1 yes 0 _loop<br />
+   DetailPrint &quot;'${STRING}' was found in the file $0 times&quot;<br />
+<br />
+   Push '${FILE}'<br />
+   Push 'EOF'<br />
+   Call FileSearch<br />
+   Pop $0 #Number of times found throughout<br />
+   Pop $1 #Found at all? yes/no<br />
+   Pop $2 #Number of lines found in<br />
+   StrCmp $1 yes _end<br />
+   goto _loop<br />
+_end:<br />
+sectionend<br />
+!define FILE '$EXEDIR\install.log'<br />
+!define STRING 'Successfully created a circuit'<br />
+<br />
+outfile 'loop_write.exe'<br />
+showinstdetails show<br />
+<br />
+section -<br />
+   FileOpen $R0 '${FILE}' a<br />
+_loop:<br />
+   FileSeek $R0 0 END<br />
+   FileWrite $R0 'bla bla bla$\r$\n'<br />
+   FileWrite $R0 'bla bla bla$\r$\n'<br />
+   FileWrite $R0 'bla bla bla$\r$\n'<br />
+   FileWrite $R0 'bla bla bla$\r$\n'<br />
+   <br />
+   Intop $R1 $R1 + 1<br />
+   intcmp $R1 '199' +4 +4 +1<br />
+   FileWrite $R0 '${STRING}$\r$\n'<br />
+   FileWrite $R0 'EOF$\r$\n'<br />
+   goto _end<br />
+   goto _loop<br />
+_end:<br />
+   fileclose $R0<br />
+sectionend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">14th April 2006, 17:57</div></div><div class="posttext">It's a shame ExecDos doesn't support ExecToStack (or similar) like nsExec. Ideally it would push a line of output to the stack as an individual stack item which you could Pop in a loop.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">14th April 2006, 18:04</div></div><div class="posttext">Okay. This is now confusing. I found out the file appears to be share read access supposedly. Here is the code inside execdos:<br />
+<br />
+/* open log file if name is correct */<br />
+	   if(*(ptp-&gt;logFile) != 0 &amp;&amp;<br />
+		   (f = CreateFile(ptp-&gt;logFile, GENERIC_WRITE, FILE_SHARE_READ, NULL,<br />
+         CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE)<br />
+      { rslt = ERR_LOGOPEN; break; }<br />
+<br />
+<br />
+But yet, I cannot use CopyFiles to copy it. That doesn't seem right.<br />
+<br />
+Afrow, instead of using ExecDos to generate the log file, I can have the external program pipe the data to stdout. Can stdout be captured somehow?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">14th April 2006, 18:44</div></div><div class="posttext">SOLUTION FOUND.<br />
+<br />
+If I copy the file, I get a file fragment. And this would normally be no good, except that the reason I think it is a file fragment is because it has no EOF. But that doesn't matter. If I just ignore that it is a fragment and read the file, it totally works. However, I am concerned about how other OSes and file systems will interpret the fragment. Thoughts on this?<br />
+<br />
+So here is the code for all eternity:<br />
+<br />
+LaunchTor:<br />
+		SetOutPath &quot;$EXEDIR&quot;<br />
+		ExecDos::exec /NOUNLOAD /ASYNC `&quot;$EXEDIR\tor\tor.exe&quot; -f &quot;$EXEDIR\tor\torrc&quot;` &quot;&quot; &quot;$EXEDIR\temp\tor.log&quot; <br />
+		Sleep 2000<br />
+		FindProcDLL::FindProc &quot;tor.exe&quot;<br />
+		Pop $R0<br />
+		StrCmp $R0 &quot;0&quot; &quot;&quot; CheckForCircuit ; If tor.exe process is not running, start tor again, else goto LaunchFF<br />
+			Goto LaunchTor<br />
+<br />
+	CheckForCircuit:<br />
+		Sleep 1000<br />
+		CopyFiles $EXEDIR\temp\tor.log $EXEDIR\temp\tor.chk<br />
+		Push $EXEDIR\temp\tor.chk<br />
+		Push &quot;Tor has successfully opened a circuit&quot;<br />
+		Call FileSearch<br />
+		Pop $0 #Number of times found throughout<br />
+		Pop $1 #Found at all? yes/no<br />
+		Pop $2 #Number of lines found in<br />
+		Delete $EXEDIR\temp\tor.chk		<br />
+		StrCmp $1 yes LaunchFF CheckForCircuit</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">14th April 2006, 20:33</div></div><div class="posttext">unless I'm still out of the point, I made it as simple as gets following the above.<br />
+I made a bat file (displays the nsis license), run it with execdos and looking for string &quot;Altered source versions&quot;, so everything works fine at this point. even if you put a pause at the end of the bat loop_read keeps looping untill you kill cmd.exe with task manager, then terminates with success.<br />
+the bat:<br />
+ @echo OFF<br />
+rem name it tor.bat<br />
+ECHO Copyright (C) 1999-2006 Nullsoft, Inc.<br />
+ECHO. <br />
+ECHO This license applies to everything in the NSIS package,<br />
+ECHO except where otherwise noted.<br />
+ECHO. <br />
+ECHO This software is provided 'as-is', without any express or implied warranty.<br />
+ECHO In no event will the authors be held liable for any damages arising from<br />
+ECHO the use of this software. <br />
+ECHO.<br />
+ECHO Permission is granted to anyone to use this software for any purpose, including<br />
+ECHO commercial applications, and to alter it and redistribute it freely, subject<br />
+ECHO to the following restrictions:<br />
+ECHO.<br />
+ECHO 1. The origin of this software must not be misrepresented;<br />
+ECHO you must not claim that you wrote the original software.<br />
+ECHO If you use this software in a product, an acknowledgment in the product<br />
+ECHO documentation would be appreciated but is not required.<br />
+ECHO.<br />
+ECHO 2. Altered source versions must be plainly marked as such,<br />
+ECHO and must not be misrepresented as being the original software.<br />
+ECHO.<br />
+ECHO 3. This notice may not be removed or altered from any source distribution.<br />
+rem pause <br />
+<br />
+the script:<br />
+!define STRING 'Altered source versions'<br />
+!define FILE '$EXEDIR\tor.log'<br />
+<br />
+outfile 'loop_read.exe'<br />
+ShowInstDetails show<br />
+<br />
+section -<br />
+ExecDos::exec /NOUNLOAD /ASYNC `&quot;$EXEDIR\tor.bat&quot; -f &quot;$EXEDIR\torrc&quot;` &quot;&quot; &quot;$EXEDIR\tor.log&quot;<br />
+_loop:<br />
+   Push '${FILE}'<br />
+   Push '${STRING}'<br />
+   Call FileSearch<br />
+   Pop $0 #Number of times found throughout<br />
+   Pop $1 #Found at all? yes/no<br />
+   Pop $2 #Number of lines found in<br />
+<br />
+   StrCmp $1 yes 0 _loop<br />
+   DetailPrint &quot;'${STRING}' was found in the file $0 times&quot;<br />
+sectionend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">14th April 2006, 20:42</div></div><div class="posttext">I think you may be missing the point Red Wine.<br />
+ExecDos keeps the log file in use while it writes to it (/ASYNC) and while it is in use, we can't access it from elsewhere (i.e. in the NSIS script).<br />
+/ASYNC means that it runs as a seperate thread along side our NSIS script.<br />
+For torpark your code will infinately loop until ExecDos has finished.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">14th April 2006, 21:02</div></div><div class="posttext">So, we need a sync access to the log, it's useless if we read it after is created. Am I right?<br />
+I thought we just need to know if tor 'Successfully created a circuit' in order to launch FF, else re-launch tor or do some other action.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">14th April 2006, 22:41</div></div><div class="posttext">Yes. Probably needs to find out when part of the process is complete so that another task can be executed (or perhaps the task can be closed).<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

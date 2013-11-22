@@ -1,0 +1,378 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Help needed on having user pass data to installer, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Help needed on having user pass data to installer NSIS Discussion" />
+	
+	<title> Help needed on having user pass data to installer [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Help needed on having user pass data to installer</div>
+<hr />
+<div class="pda"><a href="t-169949.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=169949">Help needed on having user pass data to installer</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">frenchbenj</div><div class="date">18th February 2004, 21:45</div></div><div class="posttext">Any help/example with this would be super-appreciated...<br />
+<br />
+So I have a function that replaces, during the install, a variable called @IPADDRESS@ with an actual value (e.g. 255.255.255.0). Problem is, right now I am hardcoding the 255.255.255.0 in the function itself.<br />
+<br />
+What I would love to be able to do, is to have a custom screen displayed to the user that asks for that information, stores it into a variable and then passes it to the stringreplace function i have. Below is what i am talking about. I'd like to replace that 255.255.255.0 with a variable coming from the custom screen:<br />
+<br />
+Section &quot;Update Configuration Files&quot;<br />
+  ; Replace IP address with hardcoded value for config.txt<br />
+  Push @IPADDRESS@ #text to be replaced<br />
+  Push &quot;255.255.255.0&quot; #replace with<br />
+  Push all #replace all occurrences<br />
+  Push all #replace all occurrences<br />
+  Push C:\TestInstall\ZipExample2\Config1\config.txt #file to replace in<br />
+  Call AdvReplaceInFile<br />
+SectionEnd  <br />
+<br />
+<br />
+THANKS!!!!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kobus</div><div class="date">18th February 2004, 22:44</div></div><div class="posttext">Hi again,<br />
+<br />
+Use InstallOption (this example is for Modern UI)<br />
+*)NSIS\Contrib\InstallOptions\Readme.html <br />
+*)NSIS\Contrib\Modern UI\Readme.html<br />
+<br />
+<br />
+1) create ini file with description of your dialog:<br />
+[Settings]<br />
+NumFields=1<br />
+<br />
+[Field 1]<br />
+Type=Text<br />
+State=255.255.255.0<br />
+Left=6<br />
+Right=130<br />
+Top=7<br />
+Bottom=202) in your script in .onInit section<br />
+Function .onInit<br />
+  ...<br />
+  InitPluginsDir<br />
+  SetOutPath $PLUGINSDIR<br />
+  !insertmacro MUI_INSTALLOPTIONS_EXTRACT &quot;IniFile&quot;<br />
+  ;optionally - change default value in $0<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;IniFile&quot; &quot;Field 1&quot; &quot;State&quot; &quot;$0&quot;  <br />
+  ...<br />
+FunctionEnd3) in your script among other pages<br />
+Page custom yourPage yourPageValidate4) somewhere in your script <br />
+Function yourPage <br />
+  ...<br />
+ !insertmacro MUI_INSTALLOPTIONS_INITDIALOG &quot;IniFile&quot;<br />
+  ...<br />
+ !insertmacro MUI_INSTALLOPTIONS_SHOW<br />
+  ...<br />
+FunctionEnd5) somewhere in your script <br />
+Function yourPageValidate <br />
+  ...<br />
+  ReadINIStr $0 &quot;$PLUGINSDIR\IniFile&quot; &quot;Settings&quot; &quot;State&quot;<br />
+  StrCmp $0 1  validateAddr<br />
+  Abort <br />
+validateAddr:<br />
+   ;do some validation<br />
+   Abort<br />
+FunctionEnd6) get the value passed by user<br />
+   !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;IniFile&quot; &quot;Field 1&quot; &quot;State&quot; &quot;$0&quot;  <br />
+   MessageBox MB_OK &quot;Value: $0&quot;<br />
+<br />
+<br />
+Uff..., I hope there is no mistake ... ;)<br />
+<br />
+Kobus</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">frenchbenj</div><div class="date">18th February 2004, 22:48</div></div><div class="posttext">thanks! ill try all that</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">frenchbenj</div><div class="date">18th February 2004, 23:06</div></div><div class="posttext">Ok, i know i sound totally clueless with this (maybe it's cause i am...).. I have the following items in my page and function sections. Yet my debug messages are not returning anything...And the custom screen is not displayed when i test the installer...<br />
+<br />
+Page custom configPage &quot;&quot; &quot;Configuration Options&quot;<br />
+<br />
+Function .onInit<br />
+  File /oname=configPage.ini configPage.ini<br />
+FunctionEnd<br />
+<br />
+Function configPage<br />
+   Push $R0<br />
+   InstallOptions::dialog &quot;configPage.ini&quot;<br />
+   MessageBox MB_OK 'The ini file is called &quot;$R0&quot;'<br />
+   Pop $R0<br />
+   ReadINIStr $R1 &quot;configPage.ini&quot; &quot;Field 2&quot; &quot;Machine&quot;<br />
+   MessageBox MB_OK 'The machine name entered was &quot;$R1&quot;'<br />
+   Pop $R1<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kobus</div><div class="date">19th February 2004, 07:05</div></div><div class="posttext">try this ...<br />
+<br />
+Function .onInit<br />
+  InitPluginsDir<br />
+  File /oname=$PLUGINSDIR\configPage.ini &quot;configPage.ini&quot;<br />
+FunctionEnd<br />
+<br />
+Function configPage<br />
+  ...<br />
+  InstallOptions::dialog &quot;$PLUGINSDIR\configPage.ini&quot;<br />
+  ...<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">frenchbenj</div><div class="date">19th February 2004, 14:08</div></div><div class="posttext">I've got the following, but it's not working. The first message box does return the temp location of the ini file, but the second one does not return anything for the &quot;machine&quot;. Am i not doing the pop/push right or something?<br />
+Again, your help is v. much appreciated!<br />
+<br />
+<br />
+Function .onInit<br />
+  File /oname=configPage.ini configPage.ini<br />
+FunctionEnd<br />
+<br />
+Function configurationPage<br />
+   GetTempFileName $R0<br />
+   File /oname=$R0 configPage.ini<br />
+   InstallOptions::dialog $R0<br />
+   MessageBox MB_OK 'The ini file is called &quot;$R0&quot;'<br />
+   ReadINIStr $0 &quot;configPage.ini&quot; &quot;Field 2&quot; &quot;Machine&quot;<br />
+   MessageBox MB_OK 'Machine name is:&quot;$0&quot;'<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kobus</div><div class="date">19th February 2004, 14:11</div></div><div class="posttext">change<br />
+  ReadINIStr $0 &quot;configPage.ini&quot; &quot;Field 2&quot; &quot;Machine&quot;<br />
+to<br />
+  ReadINIStr $0 &quot;configPage.ini&quot; &quot;Field 2&quot; &quot;State&quot;<br />
+<br />
+should work <br />
+Kobus</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">frenchbenj</div><div class="date">19th February 2004, 14:35</div></div><div class="posttext">It still doesn't work. Why would State work better than Machine anyway?<br />
+I really don't see what my problem is, because i'm doing what many posts say i should do, yet it doesn't work...I'm attaching my nsi file, maybe you could take a look at it:<br />
+<br />
+Name &quot;zipexample2&quot;<br />
+OutFile &quot;zipexample2.exe&quot;<br />
+InstallDir C:\TestInstall\ZipExample2<br />
+<br />
+;--------------------------------<br />
+; Pages<br />
+<br />
+Page components<br />
+Page custom configurationPage &quot;&quot; &quot;: Configuration Options&quot;<br />
+Page directory<br />
+Page instfiles<br />
+<br />
+;--------------------------------<br />
+; Sections<br />
+<br />
+Section &quot;Main Install&quot;<br />
+  SetOutPath $INSTDIR<br />
+  File /r &quot;ExeRoot\*.*&quot;<br />
+SectionEnd<br />
+<br />
+Section &quot;Update Configuration Files&quot;<br />
+  ; Replace IP address with hardcoded value for config.txt<br />
+  Push @IPADDRESS@ #text to be replaced<br />
+  Push &quot;255.255.255.0&quot; #replace with<br />
+  Push all #replace all occurrences<br />
+  Push all #replace all occurrences<br />
+  Push C:\TestInstall\ZipExample2\Config1\config.txt #file to replace in<br />
+  Call AdvReplaceInFile<br />
+SectionEnd<br />
+<br />
+<br />
+<br />
+<br />
+;--------------------------------<br />
+; Functions<br />
+<br />
+Function AdvReplaceInFile<br />
+Exch $0 ;file to replace in<br />
+Exch<br />
+Exch $1 ;number to replace after<br />
+Exch<br />
+Exch 2<br />
+Exch $2 ;replace and onwards<br />
+Exch 2<br />
+Exch 3<br />
+Exch $3 ;replace with<br />
+Exch 3<br />
+Exch 4<br />
+Exch $4 ;to replace<br />
+Exch 4<br />
+Push $5 ;minus count<br />
+Push $6 ;universal<br />
+Push $7 ;end string<br />
+Push $8 ;left string<br />
+Push $9 ;right string<br />
+Push $R0 ;file1<br />
+Push $R1 ;file2<br />
+Push $R2 ;read<br />
+Push $R3 ;universal<br />
+Push $R4 ;count (onwards)<br />
+Push $R5 ;count (after)<br />
+Push $R6 ;temp file name<br />
+<br />
+  GetTempFileName $R6<br />
+  FileOpen $R1 $0 r ;file to search in<br />
+  FileOpen $R0 $R6 w ;temp file<br />
+   StrLen $R3 $4<br />
+   StrCpy $R4 -1<br />
+   StrCpy $R5 -1<br />
+<br />
+loop_read:<br />
+ ClearErrors<br />
+ FileRead $R1 $R2 ;read line<br />
+ IfErrors exit<br />
+<br />
+   StrCpy $5 0<br />
+   StrCpy $7 $R2<br />
+<br />
+loop_filter:<br />
+   IntOp $5 $5 - 1<br />
+   StrCpy $6 $7 $R3 $5 ;search<br />
+   StrCmp $6 &quot;&quot; file_write2<br />
+   StrCmp $6 $4 0 loop_filter<br />
+<br />
+ StrCpy $8 $7 $5 ;left part<br />
+ IntOp $6 $5 + $R3<br />
+ StrCpy $9 $7 &quot;&quot; $6 ;right part<br />
+ StrCpy $7 $8$3$9 ;re-join<br />
+<br />
+IntOp $R4 $R4 + 1<br />
+StrCmp $2 all file_write1<br />
+StrCmp $R4 $2 0 file_write2<br />
+IntOp $R4 $R4 - 1<br />
+<br />
+IntOp $R5 $R5 + 1<br />
+StrCmp $1 all file_write1<br />
+StrCmp $R5 $1 0 file_write1<br />
+IntOp $R5 $R5 - 1<br />
+Goto file_write2<br />
+<br />
+file_write1:<br />
+ FileWrite $R0 $7 ;write modified line<br />
+Goto loop_read<br />
+<br />
+file_write2:<br />
+ FileWrite $R0 $R2 ;write unmodified line<br />
+Goto loop_read<br />
+<br />
+exit:<br />
+  FileClose $R0<br />
+  FileClose $R1<br />
+<br />
+   SetDetailsPrint none<br />
+  Delete $0<br />
+  Rename $R6 $0<br />
+  Delete $R6<br />
+   SetDetailsPrint both<br />
+<br />
+Pop $R6<br />
+Pop $R5<br />
+Pop $R4<br />
+Pop $R3<br />
+Pop $R2<br />
+Pop $R1<br />
+Pop $R0<br />
+Pop $9<br />
+Pop $8<br />
+Pop $7<br />
+Pop $6<br />
+Pop $5<br />
+Pop $4<br />
+Pop $3<br />
+Pop $2<br />
+Pop $1<br />
+Pop $0<br />
+FunctionEnd<br />
+<br />
+Function .onInit<br />
+;  InitPluginsDir<br />
+  File /oname=configPage.ini configPage.ini<br />
+FunctionEnd<br />
+<br />
+Function configurationPage<br />
+   GetTempFileName $R0<br />
+   File /oname=$R0 configPage.ini<br />
+   InstallOptions::dialog $R0<br />
+   MessageBox MB_OK 'The ini file is called &quot;$R0&quot;'<br />
+   ReadINIStr $0 &quot;configPage.ini&quot; &quot;Field 3&quot; &quot;State&quot;<br />
+   MessageBox MB_OK 'Machine name is:&quot;$0&quot;'<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kobus</div><div class="date">19th February 2004, 14:38</div></div><div class="posttext">attach your configPage.ini also ...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kobus</div><div class="date">19th February 2004, 14:46</div></div><div class="posttext">this work for me ..., (I've generated some ini file with 3 text fields for testing :) )<br />
+<br />
+Function .onInit<br />
+ ;set output path - in here all files from now goes to user temporary directory<br />
+ SetOutPath $TEMP<br />
+ ;extract configPage.ini to user temporary directory<br />
+ File configPage.ini<br />
+FunctionEnd<br />
+<br />
+Function configurationPage<br />
+ InstallOptions::dialog $TEMP\configPage.ini<br />
+ MessageBox MB_OK 'The ini file is  called &quot;$TEMP\configPage.ini&quot;'<br />
+ ;There is nothing like &quot;Machine&quot; value in configPage.ini<br />
+ ;value of the field is stored in State<br />
+ ReadINIStr $0 &quot;$TEMP\configPage.ini&quot; &quot;Field 3&quot; &quot;State&quot;<br />
+ MessageBox MB_OK 'Machine name is:&quot;$0&quot;'<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">frenchbenj</div><div class="date">19th February 2004, 14:53</div></div><div class="posttext">This is my ini file:<br />
+<br />
+; Ini file generated by the HM NIS Edit IO designer.<br />
+[Settings]<br />
+NumFields=4<br />
+<br />
+[Field 1]<br />
+Type=Groupbox<br />
+Text=Groupbox<br />
+Left=13<br />
+Right=240<br />
+Top=7<br />
+Bottom=100<br />
+<br />
+[Field 2]<br />
+Type=Label<br />
+Text=MachineName<br />
+Left=26<br />
+Right=72<br />
+Top=78<br />
+Bottom=86<br />
+<br />
+[Field 3]<br />
+Type=Text<br />
+Left=87<br />
+Right=211<br />
+Top=76<br />
+Bottom=89<br />
+<br />
+[Field 4]<br />
+Type=Label<br />
+Text=Please enter the following required information. \r\nThe Install will not be successful without it<br />
+Left=49<br />
+Right=222<br />
+Top=19<br />
+Bottom=62</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">frenchbenj</div><div class="date">19th February 2004, 16:38</div></div><div class="posttext">kobus, please help!! :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

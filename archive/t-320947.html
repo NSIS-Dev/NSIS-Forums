@@ -1,0 +1,306 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Adding a virtual directory to IIS7, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Adding a virtual directory to IIS7 NSIS Discussion" />
+	
+	<title> Adding a virtual directory to IIS7 [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Adding a virtual directory to IIS7</div>
+<hr />
+<div class="pda"><a href="t-320947.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=320947">Adding a virtual directory to IIS7</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">dc_dweller</div><div class="date">19th July 2010, 18:44</div></div><div class="posttext">Hi all,<br />
+<br />
+My installer uses a plug-in DLL written in C++ which could add virtual directories to IIS6 and prior without any problems, but the same code does not work with IIS7 (thank you, Microsoft!)<br />
+<br />
+Has anyone here successfully added a virtual directory to IIS7 from a NSIS installer?<br />
+<br />
+Thanks.<br />
+<br />
+-- DC Dweller</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">19th July 2010, 22:22</div></div><div class="posttext">Sorry, can't help you with a plugin.<br />
+But have you tried the IIS6 compatibility components for IIS7?<br />
+http://www.activexperts.com/support/activmonitor/online/ii6metabase/<br />
+<br />
+Maybe you can use your own plugin then.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DO_Visser</div><div class="date">21st July 2010, 08:23</div></div><div class="posttext">I use the following macros, build from pieces from the forums and from the IIS website, to add Virtual Directoriesto IIS 6 and 7.  I have also included  macros to Add Web Service Extensions to both versions should you need it.<br />
+<br />
+<br />
+!Macro CreateVirtualDirectory vDirName vDirPath vDirDefaultDoc<br />
+<br />
+    ;To Run A vbs Script We Need The Windows Scripting Host.<br />
+    Call CheckServiceRunning<br />
+<br />
+    ;Open A vbs Script File For Writing In The Temporaray Directory.<br />
+    DetailPrint &quot;Creating $TEMP\createVDir.vbs&quot;;<br />
+    FileOpen $0 &quot;$TEMP\createVDir.vbs&quot; w<br />
+<br />
+    ;Write The VBScript To Create The Virtual Directory.<br />
+    ;Create A Virtual Dir Named $VDIRNAME Pointing To $INSTDIR\web With Proper Attributes.<br />
+    FileWrite $0 &quot;On Error Resume Next$\n$\n&quot;<br />
+    FileWrite $0 &quot;Set Root = GetObject($\&quot;IIS://LocalHost/W3SVC/1/ROOT$\&quot;)$\n&quot;<br />
+    FileWrite $0 &quot;Set Dir = Root.Create($\&quot;IIsWebVirtualDir$\&quot;, $\&quot;${vDirName}$\&quot;)$\n$\n&quot;<br />
+<br />
+    ;Check If An Error Was Encountered.<br />
+    FileWrite $0 &quot;If (E******mber &lt;&gt; 0) Then$\n&quot;<br />
+    StrCpy $1 $(ERR_VDIREXISTS) ;To substitute a LangString in the vbs copy it before<br />
+    ;FileWrite $0 &quot; MsgBox $\&quot;$1$\&quot;$\n&quot;<br />
+    FileWrite $0 &quot; Wscript.Quit (E******mber)$\n&quot;<br />
+    FileWrite $0 &quot;End If$\n$\n&quot;<br />
+<br />
+    ;Set The Virtual Directory Attributes.<br />
+    FileWrite $0 &quot;Dir.Path = $\&quot;${vDirPath}$\&quot;$\n&quot;<br />
+    FileWrite $0 &quot;Dir.AccessRead = True$\n&quot;<br />
+    FileWrite $0 &quot;Dir.AccessWrite = False$\n&quot;<br />
+    FileWrite $0 &quot;Dir.AccessScript = True$\n&quot;<br />
+<br />
+    FileWrite $0 &quot;Dir.AppFriendlyName = $\&quot;${vDirName}$\&quot;$\n&quot;<br />
+    FileWrite $0 &quot;Dir.EnableDirBrowsing = False$\n&quot;<br />
+    FileWrite $0 &quot;Dir.ContentIndexed = False$\n&quot;<br />
+    FileWrite $0 &quot;Dir.DontLog = True$\n&quot;<br />
+    FileWrite $0 &quot;Dir.EnableDefaultDoc = True$\n&quot;<br />
+    FileWrite $0 &quot;Dir.DefaultDoc = $\&quot;${vDirDefaultDoc}$\&quot;$\n&quot;<br />
+    FileWrite $0 &quot;Dir.AspBufferingOn = True$\n&quot;<br />
+    FileWrite $0 &quot;Dir.AspAllowSessionState = True$\n&quot;<br />
+    FileWrite $0 &quot;Dir.AspSessionTimeout = 30$\n&quot;<br />
+    FileWrite $0 &quot;Dir.AspScriptTimeout = 900$\n&quot;<br />
+<br />
+    ;Save The Changes In The IIS Metabase.<br />
+    FileWrite $0 &quot;Dir.SetInfo$\n$\n&quot;<br />
+<br />
+    FileClose $0<br />
+<br />
+    ;Execute The .vbs Script File.<br />
+    DetailPrint &quot;Executing $TEMP\createVDir.vbs&quot;<br />
+    nsExec::Exec /TIMEOUT=20000 '&quot;$SYSDIR\cscript.exe&quot; &quot;$TEMP\createVDir.vbs&quot;'<br />
+    Delete &quot;$TEMP\createVDir.vbs&quot;<br />
+<br />
+    ;Get The Result From The Stack.<br />
+    Pop $1<br />
+<br />
+    ;If Executed Successfully, &quot;0&quot; Is On The Stack.<br />
+    StrCmp $1 &quot;0&quot; +2<br />
+<br />
+    ;Unsuccessfull.<br />
+    MessageBox MB_OK|MB_ICONINFORMATION &quot;There Was An Error Creating The '${vDirName}' Virual Directory.&quot; 0 0<br />
+<br />
+    ;Successfull.<br />
+    DetailPrint &quot;Virtual Directory '${vDirName}' successfully created.&quot;<br />
+<br />
+!MacroEnd<br />
+<br />
+;Install Web Service Extension Permissions for Windows 2003 IIS 6.0<br />
+;Nothing Will Happen On IIS &lt; 6.0<br />
+!Macro AddWebServiceExtensionIIS6.0 ExtensionPath GroupID AppName<br />
+<br />
+    ;To Run A vbs Script We Need The Windows Scripting Host.<br />
+    Call CheckServiceRunning<br />
+<br />
+    ;Open A vbs Script File For Writing In The Temporaray Directory.<br />
+    DetailPrint &quot;Creating $TEMP\createWSExt.vbs&quot;;<br />
+    FileOpen $0 &quot;$TEMP\createWSExt.vbs&quot; w<br />
+<br />
+    ;Add The Web Service Extension Permissions.<br />
+    FileWrite $0 &quot;Set IIsWebService = GetObject($\&quot;IIS://localhost/W3SVC$\&quot;)$\n&quot;<br />
+    FileWrite $0 &quot;ValueList = IIsWebService.Get($\&quot;WebSvcExtRestrictionList$\&quot;)$\n&quot;<br />
+    FileWrite $0 &quot;ValueCount = UBound(ValueList)$\n&quot;<br />
+    FileWrite $0 &quot;ReDim Preserve ValueList(ValueCount+1)$\n&quot;<br />
+    FileWrite $0 &quot;ValueList(ValueCount+1)= $\&quot;1,${ExtensionPath},1,${GroupID},${AppName}$\&quot;$\n&quot;<br />
+    FileWrite $0 &quot;IIsWebService.Put $\&quot;WebSvcExtRestrictionList$\&quot;, (ValueList)$\n&quot;<br />
+    FileWrite $0 &quot;IIsWebService.Setinfo$\n&quot;<br />
+<br />
+    FileClose $0<br />
+<br />
+    ;Execute The .vbs Script File.<br />
+    DetailPrint &quot;Executing $TEMP\createWSExt.vbs&quot;<br />
+    nsExec::Exec /TIMEOUT=20000 '&quot;$SYSDIR\cscript.exe&quot; &quot;$TEMP\createWSExt.vbs&quot;'<br />
+    Delete &quot;$TEMP\createWSExt.vbs&quot;<br />
+<br />
+    ;Get The Result From The Stack.<br />
+    Pop $1<br />
+<br />
+    ;If Executed Successfully, &quot;0&quot; Is On The Stack.<br />
+    StrCmp $1 &quot;0&quot; +2<br />
+<br />
+    ;Unsuccessfull.<br />
+    MessageBox MB_OK|MB_ICONINFORMATION &quot;There was an error adding the '${AppName}' Web Service Extension Permission.&quot; 0 0<br />
+<br />
+    ;Successfull.<br />
+    DetailPrint &quot;Web Service Extension Permission '${AppName}' auccessfully added.&quot;<br />
+<br />
+!MacroEnd<br />
+<br />
+;Install Web Service Extension Permissions for Windows 2003 IIS 6.0<br />
+;Nothing Will Happen On IIS &lt; 6.0<br />
+!Macro AddWebServiceExtensionIIS7.0 ExtensionPath GroupID AppName<br />
+<br />
+    ;To Run A vbs Script We Need The Windows Scripting Host.<br />
+    Call CheckServiceRunning<br />
+<br />
+    ;Open A vbs Script File For Writing In The Temporaray Directory.<br />
+    DetailPrint &quot;Creating $TEMP\createWSExt.vbs&quot;;<br />
+    FileOpen $0 &quot;$TEMP\createWSExt.vbs&quot; w<br />
+<br />
+    ;Add The Web Service Extension Permissions.<br />
+    FileWrite $0 &quot;On Error Resume Next $\n$\n&quot;<br />
+    FileWrite $0 &quot;Set adminManager = CreateObject($\&quot;Microsoft.ApplicationHost.WritableAdminManager$\&quot;)&quot;<br />
+    FileWrite $0 &quot;adminManager.CommitPath = $\&quot;MACHINE/WEBROOT/APPHOST$\&quot;&quot;<br />
+    FileWrite $0 &quot;Set isapiCgiRestrictionSection = adminManager.GetAdminSection($\&quot;system.webServer/security/isapiCgiRestriction$\&quot;, $\&quot;MACHINE/WEBROOT/APPHOST$\&quot;)&quot;<br />
+    FileWrite $0 &quot;Set isapiCgiRestrictionCollection = isapiCgiRestrictionSection.Collection&quot;<br />
+    FileWrite $0 &quot;Set addElement = isapiCgiRestrictionCollection.CreateNewElement($\&quot;add$\&quot;)&quot;<br />
+    FileWrite $0 &quot;addElement.Properties.Item($\&quot;path$\&quot;).Value = $\&quot;${ExtensionPath}$\&quot;&quot;<br />
+    FileWrite $0 &quot;addElement.Properties.Item($\&quot;allowed$\&quot;).Value = True&quot;<br />
+    FileWrite $0 &quot;addElement.Properties.Item($\&quot;groupId$\&quot;).Value = $\&quot;${GroupID}$\&quot;&quot;<br />
+    FileWrite $0 &quot;addElement.Properties.Item($\&quot;description$\&quot;).Value = $\&quot;${AppName}$\&quot;&quot;<br />
+    FileWrite $0 &quot;isapiCgiRestrictionCollection.AddElement(addElement)&quot;<br />
+    FileWrite $0 &quot;adminManager.CommitChanges()&quot;<br />
+<br />
+    FileClose $0<br />
+<br />
+    ;Execute The .vbs Script File.<br />
+    DetailPrint &quot;Executing $TEMP\createWSExt.vbs&quot;<br />
+    nsExec::Exec /TIMEOUT=20000 '&quot;$SYSDIR\cscript.exe&quot; &quot;$TEMP\createWSExt.vbs&quot;'<br />
+    Delete &quot;$TEMP\createWSExt.vbs&quot;<br />
+<br />
+    ;Get The Result From The Stack.<br />
+    Pop $1<br />
+<br />
+    ;If Executed Successfully, &quot;0&quot; Is On The Stack.<br />
+    StrCmp $1 &quot;0&quot; +2<br />
+<br />
+    ;Unsuccessfull.<br />
+    MessageBox MB_OK|MB_ICONINFORMATION &quot;There was an error adding the '${AppName}' Web Service Extension Permission.&quot; 0 0<br />
+<br />
+    ;Successfull.<br />
+    DetailPrint &quot;Web Service Extension Permission '${AppName}' auccessfully added.&quot;<br />
+<br />
+!MacroEnd<br />
+<br />
+<br />
+!Macro RemoveWebServiceExtensionIIS6.0 AppName<br />
+<br />
+    ;To Run A vbs Script We Need The Windows Scripting Host.<br />
+    Call un.CheckServiceRunning<br />
+<br />
+    ;Open A vbs Script File For Writing In The Temporaray Directory.<br />
+    DetailPrint &quot;Creating $TEMP\deleteWSExt.vbs&quot;;<br />
+    FileOpen $0 &quot;$TEMP\deleteWSExt.vbs&quot; w<br />
+<br />
+    ;Remove The Web Service Extension Permissions.<br />
+    FileWrite $0 &quot;Set IIsWebService = GetObject($\&quot;IIS://localhost/W3SVC$\&quot;)   $\n&quot;<br />
+    FileWrite $0 &quot;ValueList = IIsWebService.Get($\&quot;WebSvcExtRestrictionList$\&quot;)$\n&quot;<br />
+    FileWrite $0 &quot;ReDim NewValueList(UBound(ValueList))                        $\n&quot;<br />
+    FileWrite $0 &quot;NewValueIndex = 0                                            $\n&quot;<br />
+    FileWrite $0 &quot;For ValueIndex = 0 To UBound(ValueList)                      $\n&quot;<br />
+    FileWrite $0 &quot; If InStr(ValueList(ValueIndex),$\&quot;${AppName}$\&quot;) = 0 Then$\n&quot;<br />
+    FileWrite $0 &quot;   NewValueList(NewValueIndex) = ValueList(ValueIndex)       $\n&quot;<br />
+    FileWrite $0 &quot;   NewValueIndex= NewValueIndex + 1                          $\n&quot;<br />
+    FileWrite $0 &quot; End If                                                      $\n&quot;<br />
+    FileWrite $0 &quot;Next                                                         $\n&quot;<br />
+    FileWrite $0 &quot;ReDim Preserve NewValueList((NewValueIndex - 1))             $\n&quot;<br />
+    FileWrite $0 &quot;IIsWebService.Put $\&quot;WebSvcExtRestrictionList$\&quot;, (NewValueList)$\n&quot;<br />
+    FileWrite $0 &quot;IIsWebService.Setinfo                                        $\n&quot;<br />
+<br />
+    FileClose $0<br />
+<br />
+    ;Execute The .vbs Script File.<br />
+    DetailPrint &quot;Executing $TEMP\deleteWSExt.vbs&quot;<br />
+    nsExec::Exec /TIMEOUT=20000 '&quot;$SYSDIR\cscript.exe&quot; &quot;$TEMP\deleteWSExt.vbs&quot;'<br />
+    Delete &quot;$TEMP\deleteWSExt.vbs&quot;<br />
+<br />
+    ;Get The Result From The Stack.<br />
+    Pop $1<br />
+<br />
+    ;If Executed Successfully, &quot;0&quot; Is On The Stack.<br />
+    StrCmp $1 &quot;0&quot; +2<br />
+<br />
+    ;Unsuccessfull.<br />
+    MessageBox MB_OK|MB_ICONINFORMATION &quot;There was an error removing the '${AppName}' Web Service Extension Permission.&quot; 0 0<br />
+<br />
+    ;Successfull.<br />
+    DetailPrint &quot;Web Service Extension Permission '${AppName}' auccessfully removed.&quot;<br />
+<br />
+!MacroEnd<br />
+<br />
+Function CheckServiceRunning<br />
+<br />
+    ;To Run A vbs Script We Need The Windows Scripting Host.<br />
+    services::IsServiceRunning 'winmgmt'<br />
+    Pop $0<br />
+<br />
+    ;Check The Result.<br />
+    StrCmp $0 'Yes' mgmtrunning 0<br />
+<br />
+    ;Start The Windows Scripting Host If It Is Not Already Running.<br />
+    DetailPrint &quot;Starting Windows Scripting Host&quot;<br />
+    services::SendServiceCommand 'start' 'winmgmt'<br />
+    sleep 2000<br />
+<br />
+mgmtrunning:<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sirchris</div><div class="date">25th May 2011, 23:21</div></div><div class="posttext">Unless something else is going wrong, from what I see this script does not work with IIS7.<br />
+<br />
+I get a mesg that it didnt work but i dont see an error, running the .vbs file from elevated command prompt, i get no error either.  there is just nothing created by it.<br />
+<br />
+the script i get is <br />
+<br />
+On Error Resume Next<br />
+<br />
+Set Root = GetObject(&quot;IIS://LocalHost/W3SVC/1/ROOT&quot;)<br />
+Set Dir = Root.Create(&quot;IIsWebVirtualDir&quot;, &quot;ttmobile11&quot;)<br />
+<br />
+If (E******mber &lt;&gt; 0) Then<br />
+ Wscript.Quit (E******mber)<br />
+End If<br />
+<br />
+Dir.Path = &quot;C:\Inetpub\wwwroot\ttMobileWeb11&quot;<br />
+Dir.AccessRead = True<br />
+Dir.AccessWrite = False<br />
+Dir.AccessScript = True<br />
+Dir.AppFriendlyName = &quot;ttmobile11&quot;<br />
+Dir.EnableDirBrowsing = False<br />
+Dir.ContentIndexed = False<br />
+Dir.DontLog = True<br />
+Dir.EnableDefaultDoc = True<br />
+Dir.DefaultDoc = &quot;index.asp&quot;<br />
+Dir.AspBufferingOn = True<br />
+Dir.AspAllowSessionState = True<br />
+Dir.AspSessionTimeout = 30<br />
+Dir.AspScriptTimeout = 900<br />
+Dir.SetInfo<br />
+<br />
+Any ideas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">26th May 2011, 08:28</div></div><div class="posttext">This is NSIS forum, not VB forum -&gt; we cannot help you with VB script if it is wrong.<br />
+Use PasteBin/Attach next time for huge codes.<br />
+Maybe someone with VB skills can help you, ot try to find someone who will code plugin (.dll) for you.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DO_Visser</div><div class="date">26th May 2011, 08:55</div></div><div class="posttext">I have used the attached script to successfully install Virtual Directories on IIS 6, 7 and 7.5. On one or two occasions, I got an error message, but it always created the Virtual Directories. I have not yet figured out why the error occurs even though there seems not to be one. To add the virtual directory as an application or any other IIS settings please look at the Official IIS site (http://www.iis.net/) for script examples.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sirchris</div><div class="date">26th May 2011, 17:46</div></div><div class="posttext">Script you attached appears to be the same script already in this post.  Regardless, it is generating the same error.<br />
+<br />
+I'll peruse the IIS official site to see if I can find anything.<br />
+<br />
+Does anyone else have a working solution? Or know if there needs to be two solutions depending on what IIS version is found?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

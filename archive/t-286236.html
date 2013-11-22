@@ -1,0 +1,101 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Any way to embed metadata in (and later to query) NSIS installers?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Any way to embed metadata in (and later to query) NSIS installers? NSIS Discussion" />
+	
+	<title> Any way to embed metadata in (and later to query) NSIS installers? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Any way to embed metadata in (and later to query) NSIS installers?</div>
+<hr />
+<div class="pda"><a href="t-286236.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=286236">Any way to embed metadata in (and later to query) NSIS installers?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jdpipe</div><div class="date">3rd February 2008, 23:45</div></div><div class="posttext">Hi all<br />
+<br />
+I had an idea for a very simplistic dependency management system (along the lines of RPM/Deb on Linux, but with much less functionality) that would allow my installers to be a bit clever about what other packages they depend on, and to not allow themselves to be uninstalled if dependent packages were present, and to prompt the user to install missing prerequisites, etc.<br />
+<br />
+I'm trying to work out how such a thing could be implemented using NSIS as the basic 'driver' for the packaging itself.<br />
+<br />
+One aspect that came up was the need for whatever 'package manager' there is to 'read' packages and to work out what they are, and what they depend on/conflict with, etc. the package manager would also be in charge of mapping package names to actual server URLs where the packages can be downloaded.<br />
+<br />
+A common aspect of package managers on other platforms is that they keep a record of what files belong to what packages; I was proposing to ignore that side of things, at least for the moment.<br />
+<br />
+So: is there any snippet of code that I could use to read an NSIS .exe file and extract embedded data from it, without actually having to decompress/run the installer?<br />
+<br />
+Has anyone else had any ideas on good ways of managing dependencies using NSIS?<br />
+<br />
+Cheers<br />
+JP</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th February 2008, 22:33</div></div><div class="posttext">If you're already creating a centralized repository containing a list of installed &quot;packages&quot;, I'd recommend against setting it inside an installer. The registry or even a file would be a far better place for that.<br />
+<br />
+But if you really want to, you can use something similar to:<br />
+<br />
+http://nsis.sourceforge.net/ReadCustomerData</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jdpipe</div><div class="date">5th February 2008, 00:28</div></div><div class="posttext">Hi kichik<br />
+<br />
+The idea was that, just as for RPMs, a program of some sort is able to 'read' what an NSIS installer actually does. So when I'm creating my installer, I would embed some metadata in it such as package name, dependencies, conflicts-with, version number, etc. Then, I would write another program, probably in Python or something like that, which would read the installers and create a database. The database could be located on a server, or it could be local on the user's machine.<br />
+<br />
+Now, when I attempted to install one of these packages, I would embed some code that would check for the presence of the package manager on the user's machine. If absent, it would first be installed. Once present, a call would be made to the package manage to make the necessary dependency checks. If dependency checks failed, the package manager would allow the user to authorise it to download the necessary missing packages, before returning to the job of installing the original package. It might also require the user to authorise it to remove conflicting packages.<br />
+<br />
+When the time came to remove a package, another call to the package manager would be made. This time, the package manager would check that there were no packages depending on the package about to be removed. It would allow the user to either remove the dependent packages, or cancel the removal (or force the removal regardless).<br />
+<br />
+Most of the logic of this system would be embedded in the package manager program, which would be independent of any given installer; the installer would simply need to make a call to the appropriate DLL hook in the package manager, and check a response code before proceeding with its normal action.<br />
+<br />
+The thing about embedding 'customer data' is that it allows one to write a program that quickly scans a set of installers and builds up a dependency graph etc. But this is a somewhat separate issue to the main one of creating the package manager. The challenge is perhaps to ensure that there is no possible duplication of or conflicting metadata, eg if the DLL calls don't contain the same information as the 'customer data'.<br />
+<br />
+I'm not convinced that the 'customer data' is the right approach. It'd be nicer if there was some kind of API that allows me to pull out data fields directly from the installer .exe (as declared in the .NSI file by the person who did the packaging, at the time of packaging).<br />
+<br />
+Another approach that might be necessary is to create separate metadata files, and have a lookup system based on the file hash. But I would rather than the packages contained their own metadata.<br />
+<br />
+Wonder if this leads you to any further thoughts or suggestions?<br />
+<br />
+Cheers<br />
+JP</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">PierreRFBarthe</div><div class="date">5th February 2008, 05:22</div></div><div class="posttext">The GIMPVS team does exactly this at http://gimp-vs.sf.net<br />
+<br />
+<br />
+The NSIS installer is modified more and more deeply<br />
+evey day , and we plan to have our own implemented soon.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jdpipe</div><div class="date">5th February 2008, 05:34</div></div><div class="posttext">Hi Pierre<br />
+<br />
+Can you point me to somewhere where there is a discussion of or documentation of what you have implemented? What sort of dependencies have been packaged? Is there a repository of packages?<br />
+<br />
+JP</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th February 2008, 18:28</div></div><div class="posttext">You can also embed resources into the installer. There is no API to extract anything else. You can use 7-zip to extract files if you really want.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jdpipe</div><div class="date">5th February 2008, 23:47</div></div><div class="posttext">Hi Kichik<br />
+<br />
+When you say 'embed resources' I presume you mean the NSIS 'File' directive, right? Is there an API which I can use to extract a specific resource from the NSIS installer, without unpacking the whole thing? What if I use SOLID LZMA compression? There's no way of adding text to the installer 'header' data by any chance?<br />
+<br />
+Cheers<br />
+JP</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th February 2008, 19:40</div></div><div class="posttext">No, by resources I mean Windows resources. You can use Resource Hacker's command line interface to add it to the installer using !packhdr.<br />
+<br />
+For example:<br />
+<br />
+http://nsis.sourceforge.net/Version_Info_Tabsheets_for_NSIS</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

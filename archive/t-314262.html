@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" StrCpy mixes up macro parameter, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  StrCpy mixes up macro parameter NSIS Discussion" />
+	
+	<title> StrCpy mixes up macro parameter [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  StrCpy mixes up macro parameter</div>
+<hr />
+<div class="pda"><a href="t-314262.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=314262">StrCpy mixes up macro parameter</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ChocJunkie</div><div class="date">30th October 2009, 17:03</div></div><div class="posttext">Hi :)<br />
+<br />
+I'm kind of ... stunned. I've got over 3000 lines of NSIS code right now, but now a strange error occurres in the middle of my program - the value of a variable gets replaced. <br />
+Right from the start I've thought, I've mixed up some Pushes and Pops. I've traced the error and limited the code where it occurres.!macro __appendStrToFile _file _mode _string<br />
+Push $0<br />
+Push $1<br />
+Push $2<br />
+<br />
+   <br />
+   MessageBox MB_OK &quot;${_string}&quot;<br />
+   StrCpy $0 &quot;${_file}&quot;<br />
+   MessageBox MB_OK &quot;${_string}&quot;<br />
+   StrCpy $1 &quot;${_mode}&quot;<br />
+   StrCpy $2 &quot;${_string}&quot;<br />
+   Call __appendStrToFile<br />
+<br />
+Exch 3  # stack: 0, 2, 1, return<br />
+Pop $0<br />
+Pop $2<br />
+Pop $1<br />
+!macroend<br />
+I'm calling the macro from inside a function:Function myFunc<br />
+# write comment to file<br />
+   ${AppendStrToFile} ${RB_REG_SCRIPTS} o &quot;; $0 ${LineBreak}${LineBreak}&quot;<br />
+FunctionEnd<br />
+$0 of myFunc is a file name. Lets say it's C:\file.txt. And let's say ${RB_REG_SCRIPTS} is D:\abc.de<br />
+<br />
+The first message box displays:   &quot;; C:\file.txt&quot;<br />
+The second says:  &quot;; D:\abc.de&quot;<br />
+<br />
+I've checked: Only _string changed - all other parameter stay the same ...<br />
+<br />
+As you notice: the semicolon and the space remain, but the file name changed. So, how can it be, that only the value of the variable inside the string changes??<br />
+The real value of ${_string} is 82 or 84 chars long - is that a problem? (But it can be displayed without any problems...)<br />
+<br />
+Thanks! :)<br />
+<br />
+CJ</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">30th October 2009, 19:33</div></div><div class="posttext">If $0 = &quot;C:\file.txt&quot; and ${RB_REG_SCRIPTS} is &quot;D:\abc.de&quot; then when the line<br />
+<br />
+${AppendStrToFile} ${RB_REG_SCRIPTS} o &quot;; $0 ${LineBreak}${LineBreak}&quot;<br />
+<br />
+gets expanded the following will happen:<br />
+<br />
+(a) the first MessageBox MB_OK &quot;${_string}&quot; line will print the string &quot;; $0 ${LineBreak}${LineBreak}&quot; and since $0 = &quot;C:\file.txt&quot; the message box will display &quot;; C:\file.txt&quot; as you expected<br />
+<br />
+(b) the StrCpy $0 &quot;${_file}&quot; line will copy &quot;D:\abc.de&quot; into $0 (so $0 is now &quot;D:\abc.de&quot;)<br />
+<br />
+(c) the second MessageBox MB_OK &quot;${_string}&quot; line will print the string &quot;; $0 ${LineBreak}${LineBreak}&quot; but since $0 now holds &quot;D:\abc.de&quot; the message box will actually display &quot;; D:\abc.de&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">30th October 2009, 19:33</div></div><div class="posttext">Macros are not functions. Whatever is inside a macro is literally inserted in your script whenever you call the macro, and this is done before compiling, so you can't expect $0 inside the macro to be any different from $0 outside the macro. They are, in fact, exactly the same.<br />
+<br />
+So the way you've coded this, your script file (as far as the compiler can see) ends up looking like this:<br />
+<br />
+Function myFunc<br />
+# write comment to file<br />
+Push $0<br />
+Push $1<br />
+Push $2<br />
+<br />
+   <br />
+   MessageBox MB_OK &quot;; $0 ${LineBreak}${LineBreak}&quot;<br />
+   StrCpy $0 &quot;${RB_REG_SCRIPTS}&quot;<br />
+   MessageBox MB_OK &quot;; $0 ${LineBreak}${LineBreak}&quot;<br />
+   StrCpy $1 &quot;o&quot;<br />
+   StrCpy $2 &quot;; $0 ${LineBreak}${LineBreak}&quot;<br />
+   Call __appendStrToFile<br />
+<br />
+Exch 3  # stack: 0, 2, 1, return<br />
+Pop $0<br />
+Pop $2<br />
+Pop $1<br />
+FunctionEnd<br />
+<br />
+As you can see, it's logical for your second messagebox to display a different $0 value. You just changed it, after all!<br />
+<br />
+To avoid this problem, I usually make sure I only push/pop $R0 through $R9 inside my macros, and only use $0 through $9 in the 'regular' script.<br />
+<br />
+<br />
+Edit: Darnit, too slow. :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ChocJunkie</div><div class="date">1st November 2009, 19:48</div></div><div class="posttext">Thank you! :)<br />
+<br />
+I didn't know that ... -.-' ... Kind of stupid from me ... -.-'<br />
+I think I will check my whole code again. ;)<br />
+<br />
+CJ</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

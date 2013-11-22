@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" FileOpen interferes with program, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  FileOpen interferes with program NSIS Discussion" />
+	
+	<title> FileOpen interferes with program [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  FileOpen interferes with program</div>
+<hr />
+<div class="pda"><a href="t-147832.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=147832">FileOpen interferes with program</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">1st September 2003, 20:52</div></div><div class="posttext">i have written a small function for my setup that constantly checks for a failure in a log file a started program gives out <br />
+<br />
+the error line i am looking for looks like this (it always ends with 'i_am_the_federation' &lt;- that is important) and is one of many lines the program attaches to that log:<br />
+<br />
+[     Warning::ST3D_GraphicsEngine::  118@   8699] Storm3D Warning: Sprites\gui_federation.spr: Couldn't find particle sprite node definition 'i_am_the_federation'<br />
+<br />
+<br />
+so here is the function i included in my setup script<br />
+<br />
+start:<br />
+ClearErrors<br />
+FileOpen $0 &quot;log.txt&quot; &quot;r&quot;<br />
+loop:<br />
+sleep 250<br />
+FileRead $0 $2<br />
+StrLen $R0 $2<br />
+IntOp $R1 $R0 - 23<br />
+StrCpy $2 $2 1000 $R1<br />
+IfErrors start<br />
+StrCmp $2 &quot;'i_am_the_federation'$\r$\n&quot; 0 loop<br />
+FileClose $0<br />
+MessageBox MB_OK &quot;error message placeholder&quot;<br />
+;Clear the log<br />
+FileOpen $R3 &quot;log.txt&quot; &quot;w&quot;<br />
+FileClose $R3<br />
+<br />
+<br />
+Ok, the problem is not with the function itself,<br />
+but with the fileopen command.<br />
+the program cannot write to the file<br />
+during the reading time of my setup,<br />
+so the error cannot appear in the log.<br />
+so do you have a suggestion what i could change that the setup<br />
+doesn't block the program to write to the log file?<br />
+<br />
+DOCa Cola</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd September 2003, 08:40</div></div><div class="posttext">NSIS opens files only with read sharing so that weird results won't come out when reading the file. If you want to open it with write sharing too you'd have to use System.dll:<br />
+<br />
+!define GENERIC_READ 0x80000000<br />
+!define GENERIC_WRITE 0x40000000<br />
+!define FILE_SHARE_READ 1<br />
+!define FILE_SHARE_WRITE 2<br />
+<br />
+!define CREATE_NEW 1<br />
+!define CREATE_ALWAYS 2<br />
+!define OPEN_EXISTING 3<br />
+!define OPEN_ALWAYS 4<br />
+<br />
+System::Call &quot;Kernel32::CreateFileA(t 'log.txt', i ${GENERIC_READ}, i ${FILE_SHARE_READ} | ${FILE_SHARE_WRITE}, i 0, i ${OPEN_EXISTING}, i 0, i 0)&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">2nd September 2003, 12:41</div></div><div class="posttext">thx for the quick answer<br />
+no, i don't want to write to the file, just read it...so you say it shouldn't interfere with the program anyway when using FileOpen $0 &quot;log.txt&quot; &quot;r&quot; only?<br />
+i tried you system.dll call but i couldn't find a command list for FILE_SHARE_READ, so i just tried<br />
+<br />
+!define GENERIC_READ 0x80000000<br />
+!define GENERIC_WRITE 0x40000000<br />
+!define FILE_SHARE_READ 1<br />
+!define FILE_SHARE_WRITE 2<br />
+<br />
+!define CREATE_NEW 1<br />
+!define CREATE_ALWAYS 2<br />
+!define OPEN_EXISTING 3<br />
+!define OPEN_ALWAYS 4<br />
+<br />
+Section Test<br />
+start:<br />
+ClearErrors<br />
+System::Call &quot;Kernel32::CreateFileA(t 'log.txt', i ${GENERIC_READ}, \<br />
+i ${FILE_SHARE_READ} | ${FILE_SHARE_WRITE}, i 0, i ${OPEN_EXISTING}, \<br />
+i 0, i 0)&quot;<br />
+loop:<br />
+sleep 250<br />
+FileRead $0 $2<br />
+StrLen $R0 $2<br />
+IntOp $R1 $R0 - 23<br />
+StrCpy $2 $2 1000 $R1<br />
+IfErrors start<br />
+StrCmp $2 &quot;'i_am_the_federation'$\r$\n&quot; 0 loop<br />
+FileClose $0<br />
+MessageBox MB_OK &quot;error message placeholder&quot;<br />
+;Clear the log<br />
+FileOpen $R3 &quot;log.txt&quot; &quot;w&quot;<br />
+FileClose $R3<br />
+SectionEnd<br />
+<br />
+<br />
+DOCa Cola</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd September 2003, 12:56</div></div><div class="posttext">Write sharing means other programs can write to the file while you're reading it. It doesn't mean you want to write to it.<br />
+<br />
+FILE_SHARE_READ is a constant. What do you mean by command list?<br />
+<br />
+I have forgot to mention that the handle to the file is the return value of the system call. Add i .r0 to the end of the system call and the handle will be inserted into $0. Use IntCmp $0 -1 to make sure the file open hasn't failed. After that you can use the file handle just as a file handle FileOpen would have returned.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">2nd September 2003, 13:38</div></div><div class="posttext">ok, i have done that now with the system call, but the problem that it cannot write to the log file during my setup reads it presists, i try to prepare you a ready to use sample...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">2nd September 2003, 14:26</div></div><div class="posttext">ok, here it is, size is 1.6 mb (self extracting 7zip archive)<br />
+http://www.borgcore.de/outerspace/nsis/a2testfiles.exe<br />
+some instructions and info are inside the logfiletest.nsi<br />
+<br />
+DOCa Cola</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd September 2003, 15:04</div></div><div class="posttext">Remove the spaces between ${FILE_SHARE_READ}, | and ${FILE_SHARE_WRITE} and you should be able to write to the file even between CreateFile and FileClose. I hope that's what you meant, I really couldn't understand where the problem was in your program so I've just created my own example.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">2nd September 2003, 15:09</div></div><div class="posttext">thank you! yes, that was what i meant! simply love that installer! i hope installshield/inno/wise setup users realize how much better nsis is<br />
+<br />
+DOCa Cola</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

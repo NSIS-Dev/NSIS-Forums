@@ -1,0 +1,170 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" conditional display of MUI_PAGE_DIRECTORY, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  conditional display of MUI_PAGE_DIRECTORY NSIS Discussion" />
+	
+	<title> conditional display of MUI_PAGE_DIRECTORY [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  conditional display of MUI_PAGE_DIRECTORY</div>
+<hr />
+<div class="pda"><a href="t-200042.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=200042">conditional display of MUI_PAGE_DIRECTORY</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">deritrus</div><div class="date">23rd November 2004, 20:05</div></div><div class="posttext">I'm trying to create an installer (using the Modern UI) that will skip over the MUI_PAGE_DIRECTORY page if the installer detects the software is already installed. The idea is to prevent the same piece of software being installed into two or more different directories. Subsequent reinstallations would overwrite the original without giving the user a chance to alter the installation path.<br />
+<br />
+Here is an outline of the process.<br />
+<br />
+1) The installer is run for the first time. The MUI_PAGE_DIRECTORY appears to let the user (if they wish) to change the default install directory.<br />
+<br />
+2) The software is installed, let's say, to &quot;C:\Program Files\MyApp&quot;.<br />
+<br />
+3) The installer writes a string in the registry &quot;InstallLocation&quot; = &quot;C:\Program Files\MyApp&quot;.<br />
+<br />
+4) The installer finishes successfully. The software is used and provides much joy to the user. Time passes. The user's toenails grow longer.<br />
+<br />
+5) For whatever reason, the installer is run a second time.<br />
+<br />
+6) The installer looks in the registry for the &quot;InstallLocation&quot; string. If it finds it, the installer uses that as $INSTDIR (by way of InstallDirRegKey) and does not display MUI_PAGE_DIRECTORY.<br />
+<br />
+I can't figure out how to write code to skip past the &quot;!insertmacro MUI_PAGE_DIRECTORY&quot; line. Commands like ReadRegStr and StrCmp can only be placed in sections or functions. And the MUI_PAGE_DIRECTORY macro cannot be inserted in a section or a function because the macro contains the PageEx command.<br />
+<br />
+Any ideas how I can accomplish this? Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">23rd November 2004, 20:43</div></div><div class="posttext">!define MUI_PAGE_CUSTOMFUNCTION_SHOW CheckInstDirReg<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+<br />
+Function CheckInstDirReg<br />
+<br />
+  ReadRegStr $R0 HKLM &quot;...Uninstall\MyApp&quot; &quot;InstallLocation&quot;<br />
+  StrCmp $R0 &quot;&quot; +2<br />
+   Abort ## InstallLocation present: Skip directory page!<br />
+<br />
+FunctionEnd<br />
+<br />
+-Stu :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deritrus</div><div class="date">23rd November 2004, 21:13</div></div><div class="posttext">Stu, you're brilliant! I knew it had to be something simple.<br />
+<br />
+One small correction with your code:<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE CheckInstDirReg<br />
+<br />
+Thanks very much for your help!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deritrus</div><div class="date">23rd November 2004, 22:27</div></div><div class="posttext">As a continuation of my efforts, I want to change the text of the Next button on the Welcome page.<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW ChangeButtonText<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipPage<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!insertmacro MUI_PAGE_FINISH<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+Function ChangeButtonText<br />
+  ReadRegStr $R0 HKLM &quot;${REG_UNINST_KEY}&quot; &quot;InstallLocation&quot;<br />
+  StrCmp $R0 &quot;&quot; +2<br />
+  MiscButtonText &quot;&quot; &quot;Install&quot;<br />
+FunctionEnd<br />
+<br />
+Function SkipPage<br />
+  ReadRegStr $R0 HKLM &quot;${REG_UNINST_KEY}&quot; &quot;InstallLocation&quot;<br />
+  StrCmp $R0 &quot;&quot; +2<br />
+  Abort<br />
+FunctionEnd<br />
+<br />
+I thought something like this would be achieved in a &quot;show&quot; function, but the compiler kindly informs me MiscButtonText cannot be in a function. Also, MiscButtonText isn't the ideal solution (even if I could get it to work) since it changes all the Next buttons, and I only want to change the Welcome page. Unfortunately, I can't simply !define MUI_WELCOMEPAGE_BUTTON &quot;Install&quot; ... well, technically I can, but MUI.nsh won't do anything with it :)<br />
+<br />
+Any thoughts? Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">24th November 2004, 14:07</div></div><div class="posttext">Hmm. This would require some modifications to the MUI InstallOptions ini file (ioSpecial.ini).<br />
+<br />
+Something like this should work:!define MUI_PAGE_CUSTOMFUNCTION_SHOW ChangeButtonText<br />
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE ResetButtonText<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+<br />
+Function ChangeButtonText<br />
+  ReadRegStr $R0 HKLM &quot;${REG_UNINST_KEY}&quot; &quot;InstallLocation&quot;<br />
+  StrCmp $R0 &quot;&quot; noChange<br />
+   WriteINIStr &quot;$PLUGINSDIR\ioSpecial.ini&quot; &quot;Settings&quot; &quot;NextButtonText&quot; &quot;Blah! &gt;&quot;<br />
+  noChange:<br />
+FunctionEnd<br />
+<br />
+Function ResetButtonText<br />
+ DeleteINIStr &quot;$PLUGINSDIR\ioSpecial.ini&quot; &quot;Settings&quot; &quot;NextButtonText&quot;<br />
+FunctionEnd<br />
+<br />
+First the NextButtonText is set, and then we must delete the setting (because otherwise the new NextButtonText will be there on the finish page too because the same ioSpecial.ini is used for both Welcome and Finish pages.)<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deritrus</div><div class="date">24th November 2004, 15:14</div></div><div class="posttext">Stu, once again, amazing! From the two snippets of code you have provided me, you've made me really realize how flexible NSIS is!<br />
+<br />
+Again, I had to make one little change to your code by using MUI_PAGE_CUSTOMFUNCTION_PRE instead of MUI_PAGE_CUSTOMFUNCTION_SHOW.<br />
+<br />
+Thanks very much!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deritrus</div><div class="date">25th November 2004, 17:12</div></div><div class="posttext">The saga continues. Now I want to conditionally change the header and subheader on MUI_PAGE_INSTFILES.!define MUI_PAGE_HEADER_TEXT    &quot;Original Header Text&quot;<br />
+!define MUI_PAGE_HEADER_SUBTEXT &quot;Original Subheader Text&quot;<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE ChangeHeaders<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+<br />
+Function ChangeHeaders<br />
+  ReadRegStr $R0 HKLM &quot;${REG_UNINST_KEY}&quot; &quot;InstallLocation&quot;<br />
+  StrCmp $R0 &quot;&quot; NoChange<br />
+; code to change MUI_PAGE_HEADER_TEXT<br />
+; code to change MUI_PAGE_HEADER_SUBTEXT<br />
+  NoChange:<br />
+FunctionEndMUI_PAGE_INSTFILES doesn't appear to use ioSpecial.ini. So I tried something tricky like StrCpy ${MUI_PAGE_HEADER_TEXT} &quot;New Header Text&quot; but, as I expected, the compiler would have none of that. :D<br />
+<br />
+On a similar note, is there any way to redefine a definition at runtime? For example:!define MY_DEFINITIONMY_DEFINITION gets defined at compile time. Is it possible to alter MY_DEFINITION during runtime?<br />
+<br />
+Any ideas? Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">25th November 2004, 17:26</div></div><div class="posttext">Defines are compile time only.<br />
+<br />
+You can set the define to use a variable as its value. You can then change that variable according to any condition you choose.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">25th November 2004, 17:40</div></div><div class="posttext">So what Kichik is saying:<br />
+Var MUIHeaderText<br />
+Var MUIHeaderSubText<br />
+!define MUI_PAGE_HEADER_TEXT    &quot;$MUIHeaderText&quot;<br />
+!define MUI_PAGE_HEADER_SUBTEXT &quot;$MUIHeaderSubText&quot;<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE ChangeHeaders<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+<br />
+Function ChangeHeaders<br />
+  ReadRegStr $R0 HKLM &quot;${REG_UNINST_KEY}&quot; &quot;InstallLocation&quot;<br />
+  StrCmp $R0 &quot;&quot; NoChange<br />
+   StrCpy $MUIHeaderText &quot;My bloomin' heading text!&quot;<br />
+   StrCpy $MUIHeaderSubText &quot;My bloomin' sub-heading text!&quot;<br />
+  NoChange:<br />
+FunctionEnd<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deritrus</div><div class="date">25th November 2004, 18:10</div></div><div class="posttext">kichik and Stu, thanks once more! That did the trick.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">FitzChivalry</div><div class="date">30th November 2004, 16:35</div></div><div class="posttext">Wow! Y'all rock! I'm just reading through the posts before I go search for the answer to the question I have, and I came across this thread. I hadn't even *thought* of eliminating the directory choice screen, but it *totally* makes sense! Thanks, Deritrus, for the great idea! (And Stu and KiCHiK for the technical answers.) My life is getting easier....</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

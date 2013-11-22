@@ -1,0 +1,92 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" DumpLog in Unicode script, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  DumpLog in Unicode script NSIS Discussion" />
+	
+	<title> DumpLog in Unicode script [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  DumpLog in Unicode script</div>
+<hr />
+<div class="pda"><a href="t-324077.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=324077">DumpLog in Unicode script</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">taralex</div><div class="date">15th November 2010, 22:18</div></div><div class="posttext">So I needed to save the log in my unicode in the same way I did in ANSI one. I used the code from nsis web site: <br />
+<br />
+FindWindow $0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+	GetDlgItem $0 $0 1016<br />
+	StrCmp $0 0 exit	<br />
+	SendMessage $0 ${LVM_GETITEMCOUNT} 0 0 $6<br />
+	DetailPrint &quot;Item count: $6&quot;<br />
+	DetailPrint ${NSIS_MAX_STRLEN}<br />
+	System::Alloc ${NSIS_MAX_STRLEN}<br />
+	Pop $3<br />
+	StrCpy $2 0<br />
+	System::Call &quot;*(i, i, i, i, i, i, i, i, i) i \<br />
+	(0, 0, 0, 0, 0, r3, ${NSIS_MAX_STRLEN}) .r1&quot;<br />
+loop: StrCmp $2 $6 done<br />
+	System::Call &quot;User32::SendMessageA(i, i, i, i) i \<br />
+	($0, ${LVM_GETITEMTEXT}, $2, r1)&quot;<br />
+	System::Call &quot;*$3(&amp;t${NSIS_MAX_STRLEN} .r4)&quot;<br />
+	DetailPrint &quot;Here's the string: $4&quot;<br />
+	IntOp $2 $2 + 1<br />
+	Goto loop<br />
+done:	<br />
+	System::Free $1<br />
+	System::Free $3<br />
+exit:<br />
+<br />
+I edited it to the following:<br />
+FindWindow $0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+	GetDlgItem $0 $0 1016<br />
+	StrCmp $0 0 exit	<br />
+	SendMessage $0 ${LVM_GETITEMCOUNT} 0 0 $6<br />
+	DetailPrint &quot;Item count: $6&quot;<br />
+	DetailPrint ${NSIS_MAX_STRLEN}<br />
+	System::StrAlloc ${NSIS_MAX_STRLEN}<br />
+	Pop $3<br />
+	StrCpy $2 0<br />
+	System::Call &quot;*(i, i, i, i, i, i, i, i, i) i \<br />
+	(0, 0, 0, 0, 0, r3, ${NSIS_MAX_STRLEN}) .r1&quot;<br />
+loop: StrCmp $2 $6 done<br />
+	System::Call &quot;User32::SendMessageA(i, i, i, i) i \<br />
+	($0, ${LVM_GETITEMTEXTW}, $2, r1)&quot;<br />
+	System::Call &quot;*$3(&amp;w${NSIS_MAX_STRLEN} .r4)&quot;<br />
+	DetailPrint &quot;Here's the string: $4&quot;<br />
+	IntOp $2 $2 + 1<br />
+	Goto loop<br />
+done:	<br />
+	System::Free $1<br />
+	System::Free $3<br />
+exit:<br />
+<br />
+Surprisingly, the code works. Surprisingly, because I have no idea why if I'm creating the szString member of the structure as type &quot;i&quot;:<br />
+System::Call &quot;*(i, i, i, i, i, i, i, i, i) i \<br />
+	(0, 0, 0, 0, 0, r3, ${NSIS_MAX_STRLEN}) .r1&quot;<br />
+the thing still works. My understanding was that the type should be 'w' or 't'. But alas, specifying any of these types doesn't work at all. Just an empty string is returned...<br />
+Can anyone explain me why?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th November 2010, 22:29</div></div><div class="posttext">Why are you using SendMessageA in the unicode code? <br />
+<br />
+i because t/m/w are special types used by the system plugin (It converts on the fly before calling the requested windows function). i (and p in 2.47) is used for pointers and the LVITEM struct needs a pointer to a string (LPTSTR winapi type)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">taralex</div><div class="date">16th November 2010, 13:13</div></div><div class="posttext">oh, now I see, thank you! I was under the impression that 'i' stands for int and was therefore wondering.<br />
+well the SendMessageA was initially in the code before I started converting to Unicode, it worked, so I never paid attention that it's actually an ANSI function, thanks for pointing out, I'll replace it with SendMessageW.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th November 2010, 13:22</div></div><div class="posttext">It does stand for int, but pointers are the same size as an int (depending on the architecture mind).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

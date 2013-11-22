@@ -1,0 +1,200 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Make window small while copying?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Make window small while copying? NSIS Discussion" />
+	
+	<title> Make window small while copying? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Make window small while copying?</div>
+<hr />
+<div class="pda"><a href="t-155813.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=155813">Make window small while copying?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Wasteland</div><div class="date">11th November 2003, 01:41</div></div><div class="posttext">Is there any way to make the installer window small/smaller while it's copying, and/or move it into a corner, so that users can see the splash screens/screenshots I am displaying in the background while they are waiting?<br />
+  -jimb<br />
+  Cryptic Studios<br />
+  www.cityofheroes.com</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">11th November 2003, 02:04</div></div><div class="posttext">You can reposition the installer using this code: System::Call &quot;User32::SetWindowPos(i, i, i, i, i, i, i) b ($HWNDPARENT, 0, 5, 5, 0, 0, 0x201)&quot; This code repositions the installer 5 pixels lower and 5 pixels to the right of the top left hand corner.  I'm not certain of this but I think that it might be possible to resize the installer window using this function aswell although I would not recommend it.<br />
+<br />
+Vytautas :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wasteland</div><div class="date">11th November 2003, 02:16</div></div><div class="posttext">Thanks!  I'll try that.  The installer is still sorta big... can I use the ChangeUI directive to create a new dialog resource that is a much smaller window, perhaps with only a progress bar visible?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wasteland</div><div class="date">11th November 2003, 03:45</div></div><div class="posttext">Well... for a start, here's what I wrote to move the installer to the lower left or lower right of the screen:<br />
+<br />
+Function repositionWindow<br />
+<br />
+  ; Reposition window<br />
+  ; Create RECT struct<br />
+	; create WIN32_FIND_DATA struct<br />
+	System::Call '*${stRECT} .r1'<br />
+	StrCpy $R1 0<br />
+	; Find Window info<br />
+	System::Call 'User32::GetWindowRect(i, i) i ($HWNDPARENT, r1) .r2'<br />
+	; Get left/top/right/bottom<br />
+	System::Call '*$1${stRECT} (.r2, .r3, .r4, .r5)'<br />
+	System::Free $1<br />
+<br />
+;	MessageBox MB_OK &quot;Got $2 $3 $4 $5&quot;<br />
+	!define SM_CXSCREEN		0<br />
+	!define SM_CYSCREEN		1<br />
+	System::Call &quot;User32::GetSystemMetrics(i) i (${SM_CXSCREEN} ) .r0&quot;<br />
+	System::Call &quot;User32::GetSystemMetrics(i) i (${SM_CYSCREEN} ) .r1&quot;<br />
+;	MessageBox MB_OK &quot;Got $0 $1&quot;<br />
+<br />
+	; Width of screen - window - 10<br />
+	IntOp $2 $4 - $2<br />
+	IntOp $0 $0 - $2<br />
+	IntOp $0 $0 - 10<br />
+	; Height of screen - window - 10<br />
+	IntOp $3 $5 - $3<br />
+	IntOp $1 $1 - $3<br />
+	IntOp $1 $1 - 10<br />
+<br />
+	System::Call &quot;User32::SetWindowPos(i, i, i, i, i, i, i) b ($HWNDPARENT, 0, 10, $1, 0, 0, 0x201)&quot;<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">11th November 2003, 04:04</div></div><div class="posttext">That works quite well except for one problem.  It assumes that the TaskBar is at the bottom of the screen and is only one bar high.  On my system it two bars high and the NSIS buttons get hidden behind it.  Also if the taskbar was on one of the sides it would also move the installer to a wrong place.<br />
+<br />
+I'm not sure which API call you would use but in Delphi you can attain the client area of the screen which does not include the taskbar thus this problem does not occur.<br />
+<br />
+Another way would be to get the position &amp; size of the TaskBar and take that into consideration when working out the position.<br />
+<br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wasteland</div><div class="date">11th November 2003, 04:14</div></div><div class="posttext">Ah!  Forgot about that, thanks!  I'll call the appropriate GetSystemMetrics and fix it.  On my system I don't even have a taskbar on my primary monitor, so I completely forgot about that =).<br />
+<br />
+Looks like the correct call is SystemParametersInfo(SPI_GETWORKAREA, 0, PRECT, 0).  I'll post the final version tomorrow when I get around to finishing it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wasteland</div><div class="date">11th November 2003, 17:49</div></div><div class="posttext">Well, looks like the BgImage plugin hides the taskbar anyway, so I'm going to leave it at the lower left corner while it is copying files.  I'll have to give resizing the window a shot, because when you've got pretty screens in the background, the big installer is sorta annoying (I'm using the MUI interface, maybe I should have stuck with the default little one ;).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wasteland</div><div class="date">12th November 2003, 18:40</div></div><div class="posttext">Turns out BgImage only obscures the TaskBar on WinXP, and once the bgimage goes away, the task bar pops up to obscure the installer once again.  So, here's my final code that gets the work area and places the window in the lower left or lower right of the screen:<br />
+<br />
+<br />
+Function repositionWindow<br />
+<br />
+;	!define SPI_GETWORKAREA             0x0030<br />
+<br />
+	; Reposition window in the lower left<br />
+	; Create RECT struct<br />
+	System::Call &quot;*${stRECT} .r1&quot;<br />
+	; Find Window info for the window we're displaying<br />
+	System::Call &quot;User32::GetWindowRect(i, i) i ($HWNDPARENT, r1) .r2&quot;<br />
+	; Get left/top/right/bottom<br />
+	System::Call &quot;*$1${stRECT} (.r2, .r3, .r4, .r5)&quot;<br />
+<br />
+	; Calculate width/height of our window<br />
+	IntOp $2 $4 - $2 ; $2 now contains the width<br />
+	IntOp $3 $5 - $3 ; $3 now contains the height<br />
+	<br />
+	; Determine the screen work area<br />
+	System::Call &quot;User32::SystemParametersInfo(i, i, i, i) i (${SPI_GETWORKAREA}, 0, r1, 0) .r4&quot; <br />
+	; Get left/top/right/bottom<br />
+	System::Call &quot;*$1${stRECT} (.r4, .r5, .r6, .r7)&quot;<br />
+	<br />
+	System::Free $1<br />
+<br />
+	; Right side of screen - window - 10<br />
+	;IntOp $0 $6 - $2<br />
+	;IntOp $0 $0 - 10<br />
+	; Left side of screen + 10<br />
+	IntOp $0 $4 + 10<br />
+	<br />
+	; Bottom of screen - window - 5<br />
+	IntOp $1 $7 - $3<br />
+	IntOp $1 $1 - 5<br />
+<br />
+	System::Call &quot;User32::SetWindowPos(i, i, i, i, i, i, i) b ($HWNDPARENT, 0, $0, $1, 0, 0, 0x201)&quot;<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">12th November 2003, 18:51</div></div><div class="posttext">Can you create an Archive page for this code?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">soltrain</div><div class="date">4th August 2004, 08:49</div></div><div class="posttext">Thanks a lot for this tip - it works great!<br />
+  <br />
+Now.. How can I recenter the window after sticking it in the corner?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">4th August 2004, 13:47</div></div><div class="posttext">Use the code above, but instead of using the corner values you will need to use ((right side / 2) - (width / 2)) and similar for the other attribute.<br />
+<br />
+Hope this helps you out.<br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">soltrain</div><div class="date">5th August 2004, 04:45</div></div><div class="posttext">Thanks for the quick reply.. but can I ask you to be more specific? Sorry, I'm not very good at programming..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">5th August 2004, 13:30</div></div><div class="posttext">Try this code, (not tested but should work):<br />
+Function repositionWindow<br />
+<br />
+;	!define SPI_GETWORKAREA             0x0030<br />
+<br />
+	; Reposition window in the lower left<br />
+	; Create RECT struct<br />
+	System::Call &quot;*${stRECT} .r1&quot;<br />
+	; Find Window info for the window we're displaying<br />
+	System::Call &quot;User32::GetWindowRect(i, i) i ($HWNDPARENT, r1) .r2&quot;<br />
+	; Get left/top/right/bottom<br />
+	System::Call &quot;*$1${stRECT} (.r2, .r3, .r4, .r5)&quot;<br />
+<br />
+	; Calculate width/height of our window<br />
+	IntOp $2 $4 - $2 ; $2 now contains the width<br />
+	IntOp $3 $5 - $3 ; $3 now contains the height<br />
+	<br />
+	; Determine the screen work area<br />
+	System::Call &quot;User32::SystemParametersInfo(i, i, i, i) i (${SPI_GETWORKAREA}, 0, r1, 0) .r4&quot; <br />
+	; Get left/top/right/bottom<br />
+	System::Call &quot;*$1${stRECT} (.r4, .r5, .r6, .r7)&quot;<br />
+	<br />
+	System::Free $1<br />
+<br />
+	; (Right side of screen / 2) - (window / 2)<br />
+	IntOp $0 $6 / 2<br />
+	IntOp $8 $2 / 2<br />
+	IntOp $0 $0 - $8<br />
+	<br />
+	; (Bottom of screen / 2) - (window / 2)<br />
+	IntOp $1 $7 / 2<br />
+	IntOp $8 $3 / 2<br />
+	IntOp $1 $1 - $8<br />
+	<br />
+	System::Call &quot;User32::SetWindowPos(i, i, i, i, i, i, i) b ($HWNDPARENT, 0, $0, $1, 0, 0, 0x201)&quot;<br />
+<br />
+FunctionEnd <br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">soltrain</div><div class="date">6th August 2004, 00:06</div></div><div class="posttext">sweet! It works perfectly. Thank you very much-</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dRaakje</div><div class="date">6th August 2004, 08:11</div></div><div class="posttext">To get it back in the middle again, it might be easier to just store the position of the window from before you moved it to the corner and then restore to that position.<br />
+<br />
+Remco</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">6th August 2004, 10:57</div></div><div class="posttext">Yes you could do that but then you would have to either create two new variables for this task, which would waiste memmory, or use existing variables which could not be used for other purposes.<br />
+<br />
+Vytautas</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

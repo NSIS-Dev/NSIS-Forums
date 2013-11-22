@@ -1,0 +1,135 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" passing parameters to the installers .exe, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  passing parameters to the installers .exe NSIS Discussion" />
+	
+	<title> passing parameters to the installers .exe [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  passing parameters to the installers .exe</div>
+<hr />
+<div class="pda"><a href="t-280434.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=280434">passing parameters to the installers .exe</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">31st October 2007, 17:08</div></div><div class="posttext">Hi <br />
+<br />
+I want to pass parameters to the installers executable, for example:<br />
+<br />
+<br />
+# define name of installer<br />
+outFile &quot;installer.exe&quot;<br />
+<br />
+# define installation directory<br />
+installDir $DESKTOP<br />
+<br />
+# start default section<br />
+section<br />
+<br />
+    # set the installation directory as the destination for the following actions<br />
+    setOutPath $INSTDIR<br />
+<br />
+    # create the uninstaller<br />
+    writeUninstaller &quot;$INSTDIR\uninstall.exe&quot;<br />
+<br />
+    # create a shortcut named &quot;new shortcut&quot; in the start menu programs directory<br />
+    # point the new shortcut at the program uninstaller<br />
+    createShortCut &quot;$SMPROGRAMS\new shortcut.lnk&quot; &quot;$INSTDIR\uninstall.exe&quot;<br />
+sectionEnd<br />
+<br />
+Function .onInit<br />
+Call GetParameters<br />
+Pop $0<br />
+Pop $1<br />
+MessageBox MB_OK &quot;$0 $1&quot;<br />
+WriteRegStr HKLM &quot;Software\JavaSoft\Prefs\MyApp&quot; &quot;$0&quot; &quot;$1&quot;<br />
+FunctionEnd<br />
+<br />
+Function GetParameters<br />
+<br />
+   Push $R0<br />
+   Push $R1<br />
+   Push $R2<br />
+   Push $R3<br />
+<br />
+   StrCpy $R2 1<br />
+   StrLen $R3 $CMDLINE<br />
+<br />
+   ;Check for quote or space<br />
+   StrCpy $R0 $CMDLINE $R2<br />
+   StrCmp $R0 '&quot;' 0 +3<br />
+     StrCpy $R1 '&quot;'<br />
+     Goto loop<br />
+   StrCpy $R1 &quot; &quot;<br />
+<br />
+   loop:<br />
+     IntOp $R2 $R2 + 1<br />
+     StrCpy $R0 $CMDLINE 1 $R2<br />
+     StrCmp $R0 $R1 get<br />
+     StrCmp $R2 $R3 get<br />
+     Goto loop<br />
+<br />
+   get:<br />
+     IntOp $R2 $R2 + 1<br />
+     StrCpy $R0 $CMDLINE 1 $R2<br />
+     StrCmp $R0 &quot; &quot; get<br />
+     StrCpy $R0 $CMDLINE &quot;&quot; $R2<br />
+<br />
+   Pop $R3<br />
+   Pop $R2<br />
+   Pop $R1<br />
+   Exch $R0<br />
+<br />
+ FunctionEnd<br />
+<br />
+# uninstaller section start<br />
+section &quot;uninstall&quot;<br />
+<br />
+    # first, delete the uninstaller<br />
+    delete &quot;$INSTDIR\uninstall.exe&quot;<br />
+<br />
+    # second, remove the link from the start menu<br />
+    delete &quot;$SMPROGRAMS\new shortcut.lnk&quot;<br />
+<br />
+# uninstaller section end<br />
+sectionEnd<br />
+<br />
+<br />
+I pass in 2 parameters and both parameters are then popped out into registers $0 &amp; $1 which I then display. The problem is when I write to the registry it displays both $0 &amp; $1 in the same 'key' and there is no 'value'.<br />
+<br />
+If I was to hard code it say:<br />
+<br />
+<br />
+WriteRegStr HKLM &quot;Software\JavaSoft\Prefs\zangbezang&quot; &quot;Key&quot; &quot;Value&quot;<br />
+<br />
+<br />
+It works ok. Obviously I am doing something wrong with strings and registry values.<br />
+<br />
+Any ideas?<br />
+<br />
+Cheers</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">31st October 2007, 17:46</div></div><div class="posttext">GetParameters returns all of the parameters in one string. Use the following to get a specific command line parameter:<br />
+<br />
+http://nsis.sourceforge.net/GetONEParameter:_to_get_one_of_the_command_line_parameters<br />
+<br />
+Or split what you already have with WordFind (http://nsis.sourceforge.net/Docs/AppendixE.html#E.3.2).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">31st October 2007, 17:53</div></div><div class="posttext">Or use GetParameters followed by GetOptions, both of which are in FileFunc.nsh<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">31st October 2007, 20:45</div></div><div class="posttext">Thanks guys.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

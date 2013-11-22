@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Driver Pre-Installation Possible?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Driver Pre-Installation Possible? NSIS Discussion" />
+	
+	<title> Driver Pre-Installation Possible? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Driver Pre-Installation Possible?</div>
+<hr />
+<div class="pda"><a href="t-313155.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=313155">Driver Pre-Installation Possible?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">dpekin</div><div class="date">29th September 2009, 23:25</div></div><div class="posttext">Hello,<br />
+<br />
+I have a rather complex driver installation process and I'm wondering if it could be automated through NSIS.<br />
+<br />
+I have a USB device that by default comes up in Windows as a &quot;USB Composite Device&quot; under the USB Serial Bus Controllers node in the device manager.  Thus, Windows already knows about the vendor and hardware ID of the device. <br />
+<br />
+For our software to operate, I need to manually Update the previous &quot;USB Composite Device&quot; driver for this device with a new driver and .inf file.  After updating the driver, the new driver exposes a second USB device that Windows doesn't recognize and a second driver needs to be installed.  This is very tedious for the use since neither driver is signed and he/she is prompted with the &quot;Are you sure you want to install this unsigned driver?&quot; message twice. <br />
+<br />
+Does anyone have any thoughts on whether NSIS is suitable to handle this driver installation process?  Are there any sample scripts that would be a good start?<br />
+<br />
+Thank you.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">30th September 2009, 18:22</div></div><div class="posttext">The driver singing prompts can be disabled..<br />
+<br />
+I don't have an unsigned driver readily available to test this with though.<br />
+<br />
+    ## Disable the Driver Signing Prompt<br />
+        WriteRegDWORD HKCU `Software\Policies\Microsoft\Windows NT\Driver Signing` BehaviorOnFailedVerify 0<br />
+        ExecWait &quot;gpupdate&quot; # Run Microsoft's Group Policy Update utility to force the change.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">30th September 2009, 18:27</div></div><div class="posttext">You can also use the following to install a driver using the inf file.<br />
+<br />
+    ## Install Driver using INF<br />
+        InitPluginsDir<br />
+        ExecWait `rundll32.exe setupapi,InstallHinfSection DefaultInstall 132 &quot;$PLUGINSDIR\UpdateNVidia.inf&quot;`</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">30th September 2009, 20:33</div></div><div class="posttext">There is an article on the NSIS Wiki that also will help.<br />
+<br />
+http://nsis.sourceforge.net/Driver_installation_and_update<br />
+http://nsis.sourceforge.net/Driver_installation_and_update</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dpekin</div><div class="date">2nd October 2009, 01:03</div></div><div class="posttext">Thanks for the input.  That particular approach did not work for me. I was however able to use the sysUpdateDriverForPlugAndPlayDevices(...) system call to force the update of the driver.  I am still not able to hide the unsigned driver warning message.  That is annoying but can be handled in documentation.  Currently, the drivers get installed which is the most important thing.<br />
+<br />
+The current installer works only if the device is plugged in. <br />
+<br />
+I'm wondering if there any way to &quot;pre-install&quot; the drivers so that Windows would choose the drivers I provide rather than the generic &quot;USB Composite Device&quot; driver when it does it's initial New Hardware enumeration.  I'm not familiar enough with Windows driver search and selection method for USB device enumeration to know what is required for this.  Any input would be appreciated.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">3rd October 2009, 16:07</div></div><div class="posttext">If you are referring to preinstalling the driver on the OS, that process is called sysprep.  OEMs and corporations use it to prebuild the windows system then &quot;sysprep&quot; it to act as a new windows install but with all the drivers and programs preinstalled.<br />
+<br />
+A heavenly free utility exists that automates the creation of a windows install CD with this ability.  Even make your own fully automated version of a windows CD.  The program is called nLite and is available at:<br />
+<br />
+http://www.nliteos.com<br />
+http://www.nliteos.com/ <br />
+<br />
+If you need to use vista the program is called vLite:<br />
+<br />
+http://www.vlite.net<br />
+http://www.vlite.net/ <br />
+<br />
+If you want more on the topic, visit:<br />
+http://www.msfn.org/board/nlite-f89.html<br />
+http://www.msfn.org/board/nlite-f89.html</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dpekin</div><div class="date">5th October 2009, 17:41</div></div><div class="posttext">Thanks.  I guess I was not clear.  I certainly don't want to install or reinstall the OS.<br />
+<br />
+I want to run a driver installation program to &quot;pre-install&quot; my drivers.  So, after this so-called pre-installation, when a user plugs in my device into any USB port on his system, Windows will select my driver rather than the default USB Composite Device.<br />
+<br />
+My current solution requires the user to plug in the deivce, then Windows recognizes it as a USB Composite Device, then the user must run my installation to forcibly overwrite the USB Composite Device.  This is not an optimal solution.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">6th October 2009, 07:55</div></div><div class="posttext">Try http://support.microsoft.com/kb/314479 , start at &quot;Existing Windows Installations.&quot;</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

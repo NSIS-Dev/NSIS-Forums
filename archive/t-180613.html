@@ -1,0 +1,149 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Could I Change &quot;CAPTION&quot; at run-time?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Could I Change &quot;CAPTION&quot; at run-time? NSIS Discussion" />
+	
+	<title> Could I Change &quot;CAPTION&quot; at run-time? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Could I Change &quot;CAPTION&quot; at run-time?</div>
+<hr />
+<div class="pda"><a href="t-180613.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=180613">Could I Change &quot;CAPTION&quot; at run-time?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">s793016</div><div class="date">20th May 2004, 13:01</div></div><div class="posttext">Sorry, my English is very very poor.<br />
+<br />
+I want to show &quot;current run windows version&quot; inside &quot;Main Install Window Title&quot;. <br />
+<br />
+Unfortunally, &quot;Caption&quot; &amp; &quot;SubCaption&quot; &amp; &quot;NAME&quot; could not exist inside a function.<br />
+<br />
+I do want to change Main Install Window Title at run-time phase.<br />
+<br />
+Does anyone known any other way to do that?<br />
+<br />
+Thank you very much.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">20th May 2004, 13:11</div></div><div class="posttext">Use the System plug-in to call this API:<br />
+<br />
+http://msdn.microsoft.com/library/default.asp?url=/library/en-us/winui/WinUI/WindowsUserInterface/Windowing/Windows/WindowReference/WindowFunctions/SetWindowText.asp</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">s793016</div><div class="date">20th May 2004, 14:20</div></div><div class="posttext">Thanks for replay. I tried this:<br />
+<br />
+OutFile &quot;NewWinverTest.exe&quot;<br />
+Name &quot;NewWinverTest&quot;<br />
+Caption &quot;New  Winver  Test&quot;<br />
+XPStyle &quot;on&quot;<br />
+<br />
+Section &quot;-bbo&quot; b2<br />
+Sectionin RO<br />
+;<br />
+SectionEnd<br />
+<br />
+Function &quot;.onInit&quot;<br />
+StrCpy $1 &quot;$windir&quot;<br />
+IfFileExists &quot;$1\winver.exe&quot; +2<br />
+ StrCpy $1 &quot;$sysdir&quot;<br />
+GetDllVersion &quot;$1\winver.exe&quot; $R0 $R1<br />
+IntOp $R2 $R0 / 0x00010000<br />
+IntOp $R3 $R0 &amp; 0x0000FFFF<br />
+IntOp $R4 $R1 / 0x00010000<br />
+IntOp $R5 $R1 &amp; 0x0000FFFF<br />
+StrCpy $0 &quot;Ver is $R2.$R3.$R4.$R5&quot;<br />
+System::Call 'USER32::SetWindowTextA(i $HWNDPARENT, *t r0) i r1'<br />
+messagebox mb_ok &quot;Ver = $R2.$R3.$R4.$R5&quot;<br />
+Quit<br />
+FunctionEnd<br />
+<br />
+<br />
+And the Window Caption still not changed. <br />
+<br />
+Is there something wrong from my code?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">s793016</div><div class="date">22nd May 2004, 16:39</div></div><div class="posttext">After a deep search to this forum, I got some poor idea from  this article (http://forums.winamp.com/showthread.php?s=&amp;threadid=135256).<br />
+==<br />
+First part: Main Install Program<br />
+<br />
+Thanks to &quot;rsegal&quot;, it really worked.  And you find it's limit, too.<br />
+<br />
+So I must add pre_page_call to every pages.<br />
+<br />
+Page       license       ResetCaption<br />
+Page       directory     ResetCaption<br />
+Page       components    ResetCaption<br />
+Page       instfiles     ResetCaption<br />
+UninstPage uninstConfirm un.ResetCaption<br />
+UninstPage instfiles     un.ResetCaption<br />
+<br />
+!macro ResetCaption InstPhase<br />
+ Function &quot;${InstPhase}ResetCaption&quot;<br />
+  SendMessage $HWNDPARENT ${WM_SETTEXT} 0 &quot;STR:$RunTimeCaption&quot;<br />
+ FunctionEnd<br />
+!macroend<br />
+<br />
+!insertmacro ResetCaption &quot;&quot;<br />
+!insertmacro ResetCaption &quot;un.&quot;<br />
+<br />
+==<br />
+Second part: MessageBOX<br />
+<br />
+Looks like there is no way to got a HWND with MessageBOX. <br />
+<br />
+So I must use Win32API to handle all MessageBOX through SYSTEM Plug-in.<br />
+<br />
+!include &quot;${NSISDIR}\Contrib\System\System.nsh&quot;<br />
+!include &quot;WinMessages.nsh&quot;<br />
+<br />
+Var MsgButton<br />
+<br />
+!define MessageBOX &quot;!insertmacro MessageBOX&quot;<br />
+<br />
+!macro MessageBox MyButton MyBoxIcon MyContent MyCaption<br />
+ push $1<br />
+ StrCpy $1 '${MyBoxIcon}'<br />
+ StrCmp $1 '' 0 +2<br />
+  StrCpy $1 '${MB_OK}'<br />
+ IntOP $1 ${MyButton} + $1<br />
+ System::Call 'user32::MessageBoxA(i $HWNDPARENT, t &quot;${MyContent}&quot;, t &quot;${MyCaption}&quot;, i &quot;$1&quot;) i .s'<br />
+ pop $MsgButton<br />
+ pop $1<br />
+!macroend<br />
+<br />
+<br />
+Useage: <br />
+${MessageBOX} &quot;Buttons&quot; &quot;icons&quot; &quot;Window Text here&quot; &quot;Window Title hehe&quot;<br />
+<br />
+Return (inside $MsgButton):<br />
+1 = ok<br />
+2 = cancel<br />
+3 = abort<br />
+4 = retry<br />
+5 = ignore<br />
+6 = yes<br />
+7 = no<br />
+<br />
+Ex. changed from NSIS MessageBOX.<br />
+Before: MessageBox MB_OK|MB_ICONEXCLAMATION &quot;$(MSG_POSTINST)&quot;<br />
+After: ${MessageBox} &quot;${MB_OK}&quot; &quot;${MB_ICONEXCLAMATION}&quot; &quot;$(MSG_POSTINST)&quot; &quot;Run-time Caption Here&quot;<br />
+==<br />
+That's all poor idea from me.<br />
+<br />
+If you got a better way to do it, please post it to forum, thank you.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">22nd May 2004, 23:11</div></div><div class="posttext">Remove Icons, rename Buttons to Styles, as you can combine the styles naturally with NSIS MessageBox command, and change position of Caption with Message, as generally messages are big, and you can see where to write the caption.<br />
+<br />
+I should work on doing macros for System plugin calls, but now I'm working on another very special beaulty for NSIS right now... (What's the surprise?)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

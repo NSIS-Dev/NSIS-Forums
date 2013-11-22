@@ -1,0 +1,170 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Execute SQL script with param, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Execute SQL script with param NSIS Discussion" />
+	
+	<title> Execute SQL script with param [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Execute SQL script with param</div>
+<hr />
+<div class="pda"><a href="t-303268.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=303268">Execute SQL script with param</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">franck200</div><div class="date">19th February 2009, 15:53</div></div><div class="posttext">i'm new in nsis  and i want to execute sql script with some parameter.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stonkers</div><div class="date">19th February 2009, 16:25</div></div><div class="posttext">Here's an example of running some SQL Files:<br />
+<br />
+<br />
+OutFile TestSQL.exe<br />
+<br />
+;Backgound Colors<br />
+BGGradient 800080 000000 FFFFFF<br />
+BrandingText &quot; &quot;<br />
+<br />
+;Title Of Your Application<br />
+Name &quot;SQLRelease&quot;<br />
+<br />
+;Included file(s)<br />
+!include servicelib.nsh<br />
+!include filefunc.nsh<br />
+!include Wordfunc.nsh<br />
+!include RecFind.nsh<br />
+<br />
+;Macros<br />
+!insertmacro WordFind<br />
+<br />
+;Output File Name<br />
+OutFile SQLRelease.exe<br />
+<br />
+;The Default Installation Directory<br />
+InstallDir &quot;D:\ReleaseSQL&quot;<br />
+<br />
+;The text to prompt the user to enter a directory<br />
+DirText &quot;Please select the folder below&quot;<br />
+<br />
+<br />
+Section &quot;SQLRelease&quot;<br />
+<br />
+  Delete $INSTDIR\install.log				;Delete the leftover install log if it's there<br />
+<br />
+  LogSet On<br />
+<br />
+  ;Install Files<br />
+  SetOutPath $INSTDIR<br />
+  SetCompress Auto<br />
+  SetOverwrite on<br />
+<br />
+  ;Put the files where we can walk through and run them<br />
+  File /r &quot;.\SQLStuff\*.*&quot;<br />
+<br />
+  ;Logon to sql<br />
+  LogText &quot;Loging on to SQL server&quot;<br />
+  MSSQL_OLEDB::SQL_Logon /NOUNLOAD &quot;machineName&quot; &quot;&quot; &quot;&quot;<br />
+  pop $0<br />
+  IntCmp $0 '0' SQLUp<br />
+  pop $0			;Put error text into $R0<br />
+  Call ReportError		;Report it to the user and abort processing<br />
+<br />
+SQLUp:<br />
+<br />
+  ;Set database we're going to run against<br />
+  MSSQL_OLEDB::SQL_Execute /NOUNLOAD &quot;use MySQLDBName&quot;<br />
+  pop $0<br />
+  IntCmp $0 '0' Connected<br />
+  pop $0			;Put error text into $R0<br />
+  Call ReportError		;Report it to the user and abort processing<br />
+<br />
+Connected:<br />
+<br />
+  ;OK, now start running the scripts that are in each folder<br />
+  Strcpy $2 &quot;$INSTDIR\Tables&quot;<br />
+  Call RunSQLFiles<br />
+<br />
+  Strcpy $2 &quot;$INSTDIR\Stored Procedures&quot;<br />
+  Call RunSQLFiles<br />
+<br />
+  Strcpy $2 &quot;$INSTDIR\Views&quot;<br />
+  Call RunSQLFiles<br />
+<br />
+<br />
+  ;We're done, end connection with DB<br />
+  MSSQL_OLEDB::SQL_Logout<br />
+<br />
+  LogSet Off<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+<br />
+<br />
+Function ReportError<br />
+<br />
+;***********************************************<br />
+;*                                             *<br />
+;*  Function to report errors encountered      *<br />
+;*                                             *<br />
+;*                                             *<br />
+;*  Inputs:                                    *<br />
+;*          $0 - Error                        *<br />
+;*                                             *<br />
+;*  Returns:                                   *<br />
+;*          This function aborts               *<br />
+;***********************************************<br />
+<br />
+  LogText &quot;Release Produced the Following Error:  $0&quot;<br />
+  MSSQL_OLEDB::SQL_Logout			;If we're connected to the DB, disconnect<br />
+  Abort &quot;Threw Error, see Error Log&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+Function RunSQLFiles<br />
+<br />
+;***********************************************<br />
+;*                                             *<br />
+;*  Function to run sql files against db       *<br />
+;*                                             *<br />
+;*                                             *<br />
+;*  Assumed:                                   *<br />
+;*          It is assumed that database is     *<br />
+;*          connected.                         *<br />
+;*  Inputs:                                    *<br />
+;*          $2 - Directory where files are     *<br />
+;*                                             *<br />
+;*  Returns:                                   *<br />
+;*          None                               *<br />
+;***********************************************<br />
+<br />
+  ;Run all SQL Files in passed directory<br />
+  ${RecFindOpen} $2 $R0 $R1<br />
+  ${RecFindFirst}						;Find first item in directory<br />
+  ${WordFind} $R1 &quot;.sql&quot; &quot;*&quot; $R2				;Is it a SQL file?<br />
+  strcmp $R1 $R2 continue					;If WOrdFind returns the string passed, it didn't find any matches, so check next file<br />
+  LogText &quot;Running Script: '$2$R0\$R1'&quot;				;Log that we're running this<br />
+  MSSQL_OLEDB::SQL_ExecuteScript /NOUNLOAD &quot;$2$R0\$R1&quot;		;Run this script against file found ($R0 is &quot;\directory&quot; if it's recursed)<br />
+  pop $0							;Put return code into $0 to check for errors<br />
+  IntCmp $0 '0' continue					;Did this guy throw an error, if not, go get next file to run<br />
+  MSSQL_OLEDB::SQL_GetError /NOUNLOAD				;Get the error from SQL<br />
+  pop $0							;Error code from calling geterror<br />
+  pop $0							;Error text<br />
+  Call ReportError						;Report it to the user and abort processing<br />
+<br />
+continue:<br />
+  ${RecFindNext}						;Get next file (auto loops back to after RecFindFirst)   <br />
+  ${RecFindClose}<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

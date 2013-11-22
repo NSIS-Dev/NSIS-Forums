@@ -1,0 +1,169 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Writing HKCU entries - UAC?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Writing HKCU entries - UAC? NSIS Discussion" />
+	
+	<title> Writing HKCU entries - UAC? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Writing HKCU entries - UAC?</div>
+<hr />
+<div class="pda"><a href="t-334789.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=334789">Writing HKCU entries - UAC?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">highend</div><div class="date">15th September 2011, 18:26</div></div><div class="posttext">Hi,<br />
+<br />
+I'm trying to make Evernote portable with NSIS. I wrote a small script for this purpose.<br />
+<br />
+When Evernote is started it wants to create HKEY_CURRENT_USER\Software\Evernote (with it's settings stored there) but UAC kicks in and asks if the user wants to allow this program to make changes to the system. I don't know why this happens because the current logged in user should always be able to write to his own user registry path.<br />
+<br />
+If I add RequestExecutionLevel user to the script, UAC isn't used but the script seems not be able to import the necessary regfile (Settings [Install].reg) because Evernote thinks it has never been started before (and the regfile contains all necessary entries for it's key).<br />
+<br />
+What am I doing wrong?<br />
+<br />
+The script (atm it contains some lines that I could delete (e.g. for the x64 / x86 stuff, Evernote is only a true 32 bit application):<br />
+<br />
+;---Definitions----<br />
+<br />
+!define SNAME &quot;Evernote&quot;<br />
+<br />
+;----Includes----<br />
+<br />
+!include &quot;LogicLib.nsh&quot;<br />
+!include &quot;Registry.nsh&quot;<br />
+<br />
+;-----Runtime switches----<br />
+CRCCheck off<br />
+AutoCloseWindow True<br />
+SilentInstall silent<br />
+WindowIcon off<br />
+XPSTYLE on<br />
+RequestExecutionLevel user<br />
+<br />
+;-----Set basic information-----<br />
+<br />
+Name &quot;${SNAME}&quot;<br />
+Icon &quot;${SNAME}.ico&quot;<br />
+Caption &quot;${SNAME} Launcher&quot;<br />
+OutFile &quot;..\${SNAME}.exe&quot;<br />
+<br />
+;-----Version Information------<br />
+<br />
+LoadLanguageFile &quot;${NSISDIR}\Contrib\Language files\English.nlf&quot;<br />
+<br />
+VIProductVersion &quot;0.1.0.0&quot;<br />
+VIAddVersionKey /LANG=${LANG_ENGLISH} &quot;ProductName&quot; &quot;Evernote Launcher&quot;<br />
+VIAddVersionKey /LANG=${LANG_ENGLISH} &quot;LegalCopyright&quot; &quot;©2011&quot;<br />
+VIAddVersionKey /LANG=${LANG_ENGLISH} &quot;FileDescription&quot; &quot;Evernote&quot;<br />
+VIAddVersionKey /LANG=${LANG_ENGLISH} &quot;FileVersion&quot; &quot;1.0&quot;<br />
+<br />
+<br />
+Section &quot;Main&quot;<br />
+<br />
+	;---Initialize variables<br />
+	Var /GLOBAL WindowClass<br />
+	Var /GLOBAL AppNameX64<br />
+	Var /GLOBAL AppNameX86<br />
+	Var /GLOBAL BackgroundProcessName<br />
+	Var /GLOBAL OSArchitecture<br />
+	Var /GLOBAL UserName<br />
+<br />
+	;---Populate variables<br />
+	StrCpy $WindowClass &quot;ENMainFrame&quot;<br />
+	StrCpy $AppNameX64 &quot;EvernoteTray.exe&quot;<br />
+	StrCpy $AppNameX86 &quot;EvernoteTray.exe&quot;<br />
+	StrCpy $BackgroundProcessName &quot;EvernoteClipper.exe&quot;<br />
+<br />
+	System::Call &quot;advapi32::GetUserName(t .r0, *i ${NSIS_MAX_STRLEN} r1) i.r2&quot;<br />
+	StrCpy $UserName &quot;$0&quot;<br />
+<br />
+	;---CheckForOSArchitecture<br />
+	IfFileExists &quot;$WINDIR\SysWoW64\*.*&quot; &quot;&quot; +3<br />
+		StrCpy $OSArchitecture &quot;x64&quot;<br />
+		Goto +2<br />
+		StrCpy $OSArchitecture &quot;x86&quot;<br />
+<br />
+	;---CheckForRunningInstance<br />
+	FindWindow $R0 &quot;$WindowClass&quot; &quot;&quot;<br />
+	IntCmp $R0 1 &quot;&quot; +3<br />
+		MessageBox MB_OK|MB_ICONEXCLAMATION &quot;${SNAME} is already running, aborted!&quot;<br />
+		Abort<br />
+<br />
+;-----Saving Local Registration Data------<br />
+<br />
+	${registry::KeyExists} &quot;HKEY_CURRENT_USER\Software\Evernote&quot; $R0<br />
+	${if} $R0 == &quot;0&quot;<br />
+		${registry::SaveKey} &quot;HKEY_CURRENT_USER\Software\Evernote&quot; &quot;$EXEDIR\Data\.LocalSettings.reg&quot; &quot;/G=1&quot; $R0<br />
+		Sleep 250<br />
+	${EndIf}<br />
+<br />
+;-----Importing Regkeys------<br />
+<br />
+	${registry::KeyExists} &quot;HKEY_CURRENT_USER\Software\Evernote&quot; $R0<br />
+	${if} $R0 == &quot;0&quot;<br />
+		DeleteRegKey HKEY_CURRENT_USER &quot;Software\Evernote&quot;<br />
+		Sleep 100<br />
+	${EndIf}<br />
+<br />
+	IfFileExists &quot;$EXEDIR\Data\Settings [Install].reg&quot; &quot;&quot; +3<br />
+		${registry::RestoreKey} &quot;$EXEDIR\Data\Settings [Install].reg&quot; $R0<br />
+		Sleep 250<br />
+<br />
+	${registry::KeyExists} &quot;HKEY_CURRENT_USER\Software\Evernote&quot; $R0<br />
+	${if} $R0 == &quot;0&quot;<br />
+		WriteRegStr HKEY_CURRENT_USER &quot;Software\Evernote\Evernote&quot; &quot;EvernotePath&quot; &quot;$EXEDIR\Data&quot;<br />
+		WriteRegStr HKEY_CURRENT_USER &quot;Software\Evernote\Evernote\AutoUpdate&quot; &quot;AutoUpdateCacheCurrentRN&quot; &quot;$EXEDIR\Data\AutoUpdate\CurrentReleaseNotes.html&quot;<br />
+		WriteRegStr HKEY_CURRENT_USER &quot;Software\Evernote\Evernote\AutoUpdate&quot; &quot;AutoUpdateCacheCurrentXML&quot; &quot;$EXEDIR\Data\AutoUpdate\current.xml&quot;<br />
+		Sleep 100<br />
+	${EndIf}<br />
+<br />
+;-----Launching Application------<br />
+<br />
+	${if} $OSArchitecture == &quot;x64&quot;<br />
+		ExecWait '&quot;$EXEDIR\App\$AppNameX64&quot;'<br />
+	${elseif} $OSArchitecture == &quot;x86&quot;<br />
+		ExecWait '&quot;$EXEDIR\App\$AppNameX86&quot;'<br />
+	${EndIf}<br />
+<br />
+;-----Cleaning up------<br />
+<br />
+	KillProcDLL::KillProc &quot;$BackgroundProcessName&quot;<br />
+	Sleep 100<br />
+<br />
+	${registry::KeyExists} &quot;HKEY_CURRENT_USER\Software\Evernote&quot; $R0<br />
+	${if} $R0 == &quot;0&quot;<br />
+		${registry::SaveKey} &quot;HKEY_CURRENT_USER\Software\Evernote&quot; &quot;$EXEDIR\Data\Settings [Install].reg&quot; &quot;/G=1&quot; $R0<br />
+		Sleep 250<br />
+	${EndIf}<br />
+<br />
+	IfFileExists &quot;$EXEDIR\Data\Settings [Remove].reg&quot; &quot;&quot; +3<br />
+		${registry::RestoreKey} &quot;$EXEDIR\Data\Settings [Remove].reg&quot; $R0<br />
+		Sleep 250<br />
+<br />
+;-----Restoring Local Registration Data------<br />
+<br />
+	IfFileExists &quot;$EXEDIR\Data\.LocalSettings.reg&quot; &quot;&quot; +4<br />
+		${registry::RestoreKey} &quot;$EXEDIR\Data\.LocalSettings.reg&quot; $R0<br />
+		Sleep 250<br />
+		Delete &quot;$EXEDIR\Data\.LocalSettings.reg&quot;<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">highend</div><div class="date">16th September 2011, 01:19</div></div><div class="posttext">Mh, can't find a way to edit my first post :(<br />
+<br />
+It's solved, the original registry plugin isn't able to use restorekey without elevation...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">16th September 2011, 05:42</div></div><div class="posttext">(Next time, please use pastebin or an attachment to share large amounts of code.)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

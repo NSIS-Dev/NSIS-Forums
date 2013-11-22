@@ -1,0 +1,146 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Confused; Script workflow..., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Confused; Script workflow... NSIS Discussion" />
+	
+	<title> Confused; Script workflow... [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Confused; Script workflow...</div>
+<hr />
+<div class="pda"><a href="t-117724.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=117724">Confused; Script workflow...</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Spodletela</div><div class="date">13th December 2002, 09:46</div></div><div class="posttext">I am new to NSIS, but not to programing (and that is quite possible my problem). I am searching for some installer engine that would satisfy my needs and NSIS could be the one, but after checking some example scripts i was confused; how does this thing work? <br />
+<br />
+<br />
+//For instance for licence page<br />
+LicenseText &quot;...&quot;<br />
+LicenseData &quot;Licence.rtf&quot;<br />
+<br />
+<br />
+This two lines somehow (???) affect instalation to show licence page, but wtf triggers it (DoModal for MFC lovers)? I need for instance 2 InstallDir dialogs with second showing data gathered from the first, but after i tryed to set something like...<br />
+<br />
+<br />
+InstallDir &quot;$PROGRAMFILES\Test&quot;<br />
+DirText &quot;bla&quot;<br />
+<br />
+StrCpy ${DATABASEDIR} &quot;$INSTDIR\Data&quot;<br />
+StrCpy $0 $INSTDIR<br />
+<br />
+InstallDir &quot;${DATABASEDIR}&quot;<br />
+DirText &quot;bla&quot;<br />
+<br />
+StrCpy ${DATABASEDIR} $INSTDIR<br />
+StrCpy $INSTDIR $0<br />
+ <br />
+<br />
+... i only get first instalation dir dialog. I just cant figure it out and there is allso no documentation how does it work (docs show how does functions work, but it doesnt show how script flows). I even &quot;attacked&quot; NSIS source code with VC++, but after i encountered that script.cpp &quot;spaghetti&quot; code :D, i lost my will to debug further (did someone developing NSIS ever heard about yacc? Maybe (retorical; it would be really GOOD idea) it wouldnt be bad idea using it, maybe even using allready existing scripts like vbscript (i hate it too, BUT, COM support, api support,...).<br />
+<br />
+Thank you for reading this and even more if you are able to clear my confusion.<br />
+<br />
+Spodletela</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th December 2002, 13:16</div></div><div class="posttext">NSIS scripting language is not exactly linear. You script doesn't say show this page now, extract some files, pop up a message box, show another page, show another page, start copying files, and finally register some DLLs. It has a bit more complex strcture. NSIS controls the showing of the pages according to what you tell it but you don't tell it directly to this now like with MFC and DoModal. You set some settings for NSIS in the script and according to them it decides which pages to show.<br />
+<br />
+NSIS scripts are built from three types of commands:<br />
+1) Compile time commands (!ifdef/!else/!endif/!system/!packhdr)<br />
+2) Installer setting commands - DirText, LicenseText, Page and friends.<br />
+These commands set how the installer will act, how it will look like, silent or verbose, what pages will be shown and the texts in the installer/uninstaller.<br />
+3) Commands used in sections and functions - StrCpy, File, MessageBox and friends.<br />
+These commands are run-time commands which the installer executes. Sections are executed when the installation begins, functions are called either from within section using Call or by the installer if they are callback functions (.onInit for example).<br />
+<br />
+If you want to show two directory selection pages you will have to use the Page command. For example:<br />
+<br />
+Page license<br />
+Page comoponents<br />
+Page directory<br />
+Page directory &quot;&quot; secondDirCallback<br />
+Page instfiles<br />
+<br />
+As you see in the script I told NSIS to call secondDirCallback right after it creats the second directory selection page and right before it shows so you can change the text of the dialog from there to whatever you want to change it to according to the last directory selection page.<br />
+<br />
+Currently you can't tell NSIS directly what title each directory page will have and what text will be displayed on it so you will have to set it manually from this callback function (using GetDlgItem and SendMessage).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Spodletela</div><div class="date">13th December 2002, 14:54</div></div><div class="posttext">and i thought Prolog is annoying :igor:<br />
+<br />
+Well thank you for an answer it did help with deceision that its<br />
+time to write my own installer. NSIS is nice project but (my opinion,<br />
+quite possible i am wrong) i belive it missed point of 3rd party installers - people use them to make their job easyer...<br />
+<br />
+Anyway i will check updates, maybe something changes :up:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th December 2002, 15:09</div></div><div class="posttext">Currently you can't tell NSIS directly what title each directory page will have and what text will be displayed on it so you will have to set it manually from this callback function (using GetDlgItem and SendMessage).<br />
+<br />
+By currently I meant it will be possible soon...<br />
+<br />
+Personally I think NSIS scripting language is very powerful and easy to use. But don't mind me, I am a bit biased because I am one of the developer :D<br />
+Have fun writing your installer...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">13th December 2002, 18:04</div></div><div class="posttext">Originally posted by Spodletela <br />
+people use them to make their job easyer...<br />
+<br />
+I disagree, I think people use them to gain access to a powerful set of tools for performing the task of installing software. NSIS does just that and allows you to pretty much do whatever you want.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Spodletela</div><div class="date">16th December 2002, 12:11</div></div><div class="posttext">What about following concept;<br />
+<br />
+------------------------------------------------------<br />
+[stub]<br />
+// compressed<br />
+[script.txt] //executed by windows scripting host<br />
+[library.dll]<br />
+[other files...]<br />
+------------------------------------------------------<br />
+<br />
+stub unpacks script.txt and library.dll somewhere on disk,<br />
+and runs script that performs installation of other files in <br />
+archive with usage of dynamical loaded library.dll, which is set of functions needed to manipulate with archive or to optimize size just <br />
+functions for extracting and listing archive.<br />
+<br />
+That way, installer would be highly configurable and extendable,<br />
+not to mention it wouldnt be set on some type of scripting language<br />
+as it would be able to use any script that supports scripting host. If language that would be used is not by default supported by wsh, for instance Ruby, it could be easly destributed trough instalation;<br />
+<br />
+------------------------------------------------------<br />
+[stub]<br />
+// compressed<br />
+[script.txt] -&gt; vbscript or jscript<br />
+[library.dll]<br />
+[rubyinstall.exe]<br />
+[script.ruby]<br />
+[other files...]<br />
+------------------------------------------------------<br />
+<br />
+stub starts script.txt, that installs rubyinstall.exe. Then it launches script.ruby and it performs installation of other files.<br />
+<br />
+The only thing left are dialogs; i am not that much in script programing, but i am sure it is possible to implement NSIS like callbacks to undelaying script.<br />
+So; engine that creates dialog from text descriptions like .rc files and message handler that forwards all message calls to script callbacks; easy to use and efficient.<br />
+<br />
+Size of installation (that uses vbscript or javascript) wouldnt differ much from NSIS or quite possible it would be smaller (as script engine wouldnt need to bi distributed with install).<br />
+<br />
+Annoying part is that on windows 95 there is no scripting host by<br />
+default so it would have to be distributed with archive, but, hey,<br />
+who still supports w95 :D Anyway that could be fixed with some<br />
+initialization function exported from library.dll and run by stub that would download wsh from net and install it. Allso installation would have larger (becoase of wsh) memory print, but concerning todays hardware that shouldnt be a problem, even more becoase we are not talking about 100Mb of ram consumption, more about 1Mb...<br />
+<br />
+And word or two about library.dll. It could be just simple dll with exported function, but with usage of com technology programing would be even easyer.<br />
+<br />
+Sunjammer; installer is not *so* hard to program (compression is the most annoying part, but there are nice librarys like ZLib), but it is time consuming, i believe that people use 3rd party installers to spare some time. At least me...<br />
+<br />
+(i hope my english is understendable enough, as it is not my native language)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

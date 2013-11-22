@@ -1,0 +1,177 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" My NSIS check for JRE is broken, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  My NSIS check for JRE is broken NSIS Discussion" />
+	
+	<title> My NSIS check for JRE is broken [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  My NSIS check for JRE is broken</div>
+<hr />
+<div class="pda"><a href="t-323342.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=323342">My NSIS check for JRE is broken</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">JackN</div><div class="date">21st October 2010, 21:58</div></div><div class="posttext">It is probably my code that is broken, but why does this code try to install the jre? I verified that C:\Windows\System32\java.exe does in fact exist, but this code doesn't see it. The method is lifted from http://forums.winamp.com/showthread.php?postid=1955725.<br />
+<br />
+${If} ${FileExists} `$SYSDIR\java.exe`<br />
+	; Skip JRE install<br />
+${Else}<br />
+	${If} ${RunningX64}<br />
+		ExecWait '&quot;jre-6u22-windows-x64.exe&quot;'<br />
+	${Else}<br />
+		ExecWait '&quot;jre-6u22-windows-i586-s.exe&quot;'<br />
+	${EndIf}<br />
+${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">redxii</div><div class="date">21st October 2010, 23:16</div></div><div class="posttext">Are you running the installer on 64-bit Windows? If so $SYSDIR would actually be C:\Windows\SysWOW64, and maybe the 32-bit Java isn't installed but the 64-bit one is in C:\Windows\System32.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">22nd October 2010, 03:14</div></div><div class="posttext">and as you're using the RunningX64 LogicLib extension you probably included x64.nsh which allows you to turn off the redirection that happens when a 32bit app accesses $SYSDIR.<br />
+<br />
+Note that if you're targeting only Vista+, you can alternatively access $WINDIR\SysNative\ (not available on XP unless the user installed an optional (not distributed through Windows Updates) hotfix).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JackN</div><div class="date">22nd October 2010, 13:10</div></div><div class="posttext">This script is targeting XP, Vista, 32 bit, and 64 bit. It does include x64.nsh and is modified based on clues from redxii and Animaether to work for all cases, but it still misbehaves. Is the logic bogus? Is the use of `C:\Windows\System32\java.exe` improper?<br />
+<br />
+; Check for Java Runtime Environment (JRE)<br />
+${If} ${FileExists} `$SYSDIR\java.exe`<br />
+	; Skip JRE install<br />
+${ElseIf} ${FileExists} `C:\Windows\System32\java.exe`<br />
+	; Skip JRE install<br />
+${ElseIf} ${RunningX64}<br />
+	ExecWait '&quot;jre-6u22-windows-x64.exe&quot;'<br />
+${Else}<br />
+	ExecWait '&quot;jre-6u22-windows-i586-s.exe&quot;'<br />
+${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">22nd October 2010, 13:25</div></div><div class="posttext">I'm not sure that logic is entirely correct... (I'm not sure detecting java being installed by checking for java.exe is correct either, but let's run with that...)<br />
+<br />
+<br />
+${Unless} ${FileExists} &quot;$SYSDIR\java.exe&quot;<br />
+  /* perform 32bit install */<br />
+${EndIf}<br />
+${If} ${RunningX64}<br />
+  ${DisableX64FSRedirection}<br />
+  ${Unless} ${FileExists} &quot;$SYSDIR\java.exe&quot;<br />
+    /* perform 64bit install */<br />
+  ${EndIf}<br />
+  ${EnableX64FSRedirection}<br />
+${EndIf}<br />
+<br />
+<br />
+or (Only if you target Vista+, not XP)<br />
+<br />
+${Unless} ${FileExists} &quot;$SYSDIR\java.exe&quot;<br />
+  /* perform 32bit install */<br />
+${EndIf}<br />
+${If} ${RunningX64}<br />
+  ${Unless} ${FileExists} &quot;$WINDIR\SysNative\java.exe&quot;<br />
+    /* perform 64bit install */<br />
+  ${EndIf}<br />
+${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">22nd October 2010, 13:37</div></div><div class="posttext">... (I'm not sure detecting java being installed by checking for java.exe is correct ...)<br />
+On my system (Win 7 Ultimate 32Bit) the detection will succeed (${ElseIf} ${FileExists} `C:\Windows\System32\java.exe`).<br />
+<br />
+Maybe some other/ additional options for detection:<br />
+- Regkey (HKEY_LOCAL_MACHINE\SOFTWARE\JavaSoft), I don't know where it would be on x64 systems<br />
+- &quot;Normally&quot; if JRE is installed it is also added to the path variable<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">22nd October 2010, 14:07</div></div><div class="posttext">Oh I'm sure it works... I'm just saying that I'm not sure it's &quot;correct&quot;... let me choose another word there: &quot;appropriate&quot; :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JackN</div><div class="date">22nd October 2010, 15:31</div></div><div class="posttext">Oh I'm sure it works... I'm just saying that I'm not sure it's &quot;correct&quot;... let me choose another word there: &quot;appropriate&quot; :)<br />
+<br />
+What is the &quot;appropriate&quot; method?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">22nd October 2010, 16:37</div></div><div class="posttext">On Windows, the ARP registry tends to be the most suitable in cases where the vendor doesn't offer any guidelines (and it doesn't look like Oracle/Sun do, except for end-users... click this, open that, look here, click there.. yikes.).<br />
+<br />
+This...<br />
+http://wpkg.org/Java#Java_Runtime_Environment_.28JRE.29_6_Update_10<br />
+...might be a good place to start peeking.<br />
+<br />
+Mind you - I'm not saying that checking for java.exe is wrong.. it's probably perfectly fine and if you don't notice any negative effects, it's a lot simpler than going through the above.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JackN</div><div class="date">22nd October 2010, 19:26</div></div><div class="posttext">What is incorrect with my logic? Also: it looks like what you suggest below (in the first if block) will want to reinstall the jre if java.exe is in Windows\System32 on a 64 bit machine.<br />
+<br />
+I'm not sure that logic is entirely correct... (I'm not sure detecting java being installed by checking for java.exe is correct either, but let's run with that...)<br />
+<br />
+<br />
+${Unless} ${FileExists} &quot;$SYSDIR\java.exe&quot;<br />
+  /* perform 32bit install */<br />
+${EndIf}<br />
+${If} ${RunningX64}<br />
+  ${DisableX64FSRedirection}<br />
+  ${Unless} ${FileExists} &quot;$SYSDIR\java.exe&quot;<br />
+    /* perform 64bit install */<br />
+  ${EndIf}<br />
+  ${EnableX64FSRedirection}<br />
+${EndIf}<br />
+<br />
+<br />
+or (Only if you target Vista+, not XP)<br />
+<br />
+${Unless} ${FileExists} &quot;$SYSDIR\java.exe&quot;<br />
+  /* perform 32bit install */<br />
+${EndIf}<br />
+${If} ${RunningX64}<br />
+  ${Unless} ${FileExists} &quot;$WINDIR\SysNative\java.exe&quot;<br />
+    /* perform 64bit install */<br />
+  ${EndIf}<br />
+${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">22nd October 2010, 20:04</div></div><div class="posttext">Also: it looks like what you suggest below (in the first if block) will want to reinstall the jre if java.exe is in Windows\System32 on a 64 bit machine.<br />
+Nope.. note that I use ${Unless}, not ${If}.  Although I messed up and used closing ${EndIf} statements when they should be ${EndUnless}.  Can't edit post anymore.. bugger :)<br />
+<br />
+So basically it says this: -Unless- $SYSDIR\java.exe exists, install JAVA.<br />
+<br />
+What is incorrect with my logic?<br />
+The logic in your post says this in a 64bit environment...<br />
+If $SYSDIR\java.exe, which is redirected to $WINDIR\SysWoW64\java.exe, exists -&gt; Skip the install.<br />
+Otherwise if C:\Windows\System32\java.exe, which is also redirected.. to C:\Windows\SysWoW64\java.exe, exists -&gt; skip the install<br />
+<br />
+So basically, the filesystem redirection is what was mucking up the logic in your post.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JackN</div><div class="date">22nd October 2010, 20:45</div></div><div class="posttext">This is what actually worked on a Vista-64 with javaw.exe in C:\Windows\System32\<br />
+<br />
+${If} ${RunningX64} <br />
+	${DisableX64FSRedirection} <br />
+	${Unless} ${FileExists} &quot;$SYSDIR\javaw.exe&quot; <br />
+		ExecWait '&quot;jre-6u22-windows-x64.exe&quot;'<br />
+	${EndUnless} <br />
+	${EnableX64FSRedirection} <br />
+${Else}  <br />
+	${Unless} ${FileExists} &quot;$SYSDIR\javaw.exe&quot; <br />
+		ExecWait '&quot;jre-6u22-windows-i586-s.exe&quot;'<br />
+	${EndUnless} <br />
+${EndIf}  <br />
+<br />
+The original suggestion without the RunningX64/Else tried to install the 32 bit jre.<br />
+I suppose I'll find some combinations that break this logic but should be able to figure those out.<br />
+Thanks a million.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">redxii</div><div class="date">24th October 2010, 11:23</div></div><div class="posttext">Sounds easier to just use an exe wrapper for your program that will automatically redirect the user to DL Java if they haven't already installed it; like Launch4J.<br />
+<br />
+I'm not really sure since I haven't voluntarily used or installed Java for quite a while but it shouldn't matter what bit of Java launches the program standing alone. It's just that in a 32-bit browser/application you can only load the 32-bit version of Java and with a 64-bit browser/application you can only load the 64-bit version of Java. The 64-bit version of Java doesn't include 32-bit support.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" SectionSetFlags bits, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  SectionSetFlags bits NSIS Discussion" />
+	
+	<title> SectionSetFlags bits [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  SectionSetFlags bits</div>
+<hr />
+<div class="pda"><a href="t-85650.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=85650">SectionSetFlags bits</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Schultz</div><div class="date">23rd April 2002, 13:24</div></div><div class="posttext">I read the documentation and tried playing around with it.. but i am failing to grasps how to actually modify the bits to Select/Deselect make Read-only / Non-read only. Could anyone explain to me how these work exactly? thanks..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">23rd April 2002, 19:35</div></div><div class="posttext">This will set the second section as currently enabled:<br />
+<br />
+  SectionGetFlags 1 $R0<br />
+  IntOp $R0 $R0 | 0x80000000<br />
+  SectionSetFlags 1 $R0<br />
+<br />
+<br />
+This will set the second section as always disabled:<br />
+<br />
+  SectionSetFlags 1 0x40000000<br />
+<br />
+<br />
+This will set the second section as always enabled:<br />
+<br />
+  SectionSetFlags 1 0xC0000000<br />
+<br />
+<br />
+This will set the second section as enabled in the first 2 install types, and currently enabled:<br />
+<br />
+  SectionSetFlags 1 0x80000003<br />
+<br />
+<br />
+<br />
+Etc...<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Schultz</div><div class="date">24th April 2002, 15:25</div></div><div class="posttext">Ok now i am not sure about how to test and see if a section is enabled or not.. would you use the AND operade like<br />
+SectionGetFlags 1 $R0<br />
+IntOp $R1 $R0 &amp; 0x80000000<br />
+and then do a test like this to see if its valid or not..? or am i way off bases and totaly failing to understand how it works..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">24th April 2002, 20:42</div></div><div class="posttext">Yep you got it ...<br />
+IntOp $R1 $R0 &amp; 0x80000000<br />
+IntCmp $R1 0 SectionNotEnabled<br />
+  DetailPrint &quot;Section is enabled&quot;<br />
+SectionNotEnabled:<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Schultz</div><div class="date">25th April 2002, 11:24</div></div><div class="posttext">Justin, <br />
+   I think i am getting it.. I am using this as a test script.. would this be the best way to work with it.? I am using 0x00000000 to make a Selection Disabled correct method right? here is the script<br />
+<br />
+Name &quot;test&quot;<br />
+OutFile &quot;test.exe&quot;<br />
+Caption &quot;NSIS Testing Script&quot;<br />
+ShowInstDetails show<br />
+ComponentText &quot;Testing&quot;<br />
+<br />
+Section &quot;crap&quot;<br />
+   GetDLLVersion $SYSDIR\DVobSub.ax $3 $4<br />
+   GetDLLVersion &quot;C:\Windows\System\DVobSub.ax&quot; $1 $2<br />
+   DetailPrint &quot;$3 $4, $1 $2&quot;<br />
+   IntOp $0 $3 &amp; $4<br />
+   IntOp $5 $3 | $4<br />
+   DetailPrint &quot;$0, $5&quot;<br />
+   IntOp $0 $1 &amp; $2<br />
+   IntOp $5 $1 | $2<br />
+   DetailPrint &quot;$0, $5&quot;<br />
+   SectionEnd<br />
+<br />
+Section &quot;VobSub for DirectShow&quot;<br />
+DetailPrint &quot;Blah Blah&quot; <br />
+SectionEnd<br />
+<br />
+Section &quot;Section 3&quot;<br />
+   DetailPrint &quot;Blah Blah 2&quot;<br />
+SectionEnd<br />
+<br />
+Section &quot;SubMux&quot;<br />
+   DetailPrint &quot;Blah Blah 3&quot;<br />
+SectionEnd<br />
+<br />
+Function .onSelChange<br />
+   ;This does the check to see if the user (de)selected the SubMux and skips rest if not enabled<br />
+   SectionGetFlags 3 $R1<br />
+   IntOp $R2 $R1 &amp; 0x80000000<br />
+   IntCmp $R2 0 Done<br />
+<br />
+   SectionGetFlags 1 $R1<br />
+   IntOp $R2 $R1 &amp; 0x80000000<br />
+   IntCmp $R2 0 NotEnabled<br />
+      Goto Done<br />
+   NotEnabled:<br />
+      MessageBox MB_YESNO &quot;Submux needs VobSub for DirectShow installed to function properly would you like to also install VobSub for DirectShow?&quot; IDNO DontInstall<br />
+         SectionSetFlags 1 0x80000000<br />
+         Goto Done<br />
+      DontInstall:<br />
+         SectionSetFlags 3 0x0000000<br />
+   Done:<br />
+FunctionEnd<br />
+<br />
+<br />
+thanks for all this added stuff in this release.. Love it now you can make dependances and change stuff at runtime.. ;o) Keep up the great work.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

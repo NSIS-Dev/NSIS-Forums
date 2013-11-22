@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Game installation and DirectX, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Game installation and DirectX NSIS Discussion" />
+	
+	<title> Game installation and DirectX [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Game installation and DirectX</div>
+<hr />
+<div class="pda"><a href="t-134762.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=134762">Game installation and DirectX</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Stuart Middleto</div><div class="date">8th May 2003, 19:46</div></div><div class="posttext">Hi All,<br />
+<br />
+Im thinking of using NSIS for installation of our latest game for PC. Has anyone had any experience checking DirectX versions from NSIS? I am planning on creating a dll to do the job because of the need to call a couple of functions inside the dsetup.dll redist.<br />
+<br />
+If anyone has done this before let me know, it would save me some time<br />
+<br />
+Thanks<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">8th May 2003, 20:00</div></div><div class="posttext">It's stored in a registry key:<br />
+<br />
+HKLM, SOFTWARE\Microsoft\DirectX, Version</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Stuart Middleto</div><div class="date">8th May 2003, 20:18</div></div><div class="posttext">Thanks Joost,<br />
+<br />
+Do you know from what version it was set in the Reg? I suppose if its not there I can run DX81 setup anyway, wont hurt  <br />
+ :) <br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th May 2003, 20:28</div></div><div class="posttext">You can call DirectXSetupGetVersion using System.dll:<br />
+<br />
+System::Alloc 4<br />
+Pop $0<br />
+System::Alloc 4<br />
+Pop $1<br />
+System::Call &quot;dsetup::DirectXSetupGetVersion(i, i) i (r0, r1) .r2&quot;<br />
+IntCmp $2 0 error<br />
+<br />
+System::Call &quot;*$0(&amp;i4 .r2)&quot;<br />
+System::Call &quot;*$1(&amp;i4 .r3)&quot;<br />
+<br />
+DetailPrint &quot;$2.$3&quot;<br />
+Goto done<br />
+<br />
+error:<br />
+  MessageBox MB_OK &quot;can't get dx version&quot;<br />
+done:<br />
+  System::Free $0<br />
+  System::Free $1<br />
+<br />
+I have not tested this because I don't have DirectX SDK, nor DSetup.dll, but it should work if the documentation is right.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th May 2003, 20:32</div></div><div class="posttext">Just got DX9 redist and it works. You'll have to parse the numbers a bit with IntOp but that shouldn't be too hard.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">9th May 2003, 06:30</div></div><div class="posttext">hm, nice, how to get the direct setup to run with the DirectXSetup function and return a value?<br />
+<br />
+DOCa Cola</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th May 2003, 12:31</div></div><div class="posttext">!define DSETUPERR_SUCCESS           0<br />
+!define DSETUPERR_SUCCESS_RESTART   1<br />
+!define DSETUP_DDRAWDRV             0x00000008<br />
+!define DSETUP_DSOUNDDRV            0x00000010<br />
+!define DSETUP_DXCORE               0x00010000<br />
+!define DSETUP_DIRECTX              0x00010018<br />
+<br />
+Section &quot;Install DirectX&quot;<br />
+  System::Call 'DSetup::DirectXSetup(i, t, i) i \<br />
+    ($HWNDPARENT, &quot;$TEMP\dxSetupFiles&quot;, ${DSETUP_DIRECTX}) .r0'<br />
+  StrCmp $0 ${DSETUPERR_SUCCESS} done<br />
+  StrCmp $0 ${DSETUPERR_SUCCESS_RESTART} 0 error<br />
+    SetRebootFlag true<br />
+    Goto done<br />
+<br />
+error:<br />
+  MessageBox MB_OK &quot;error $0&quot;<br />
+done:<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">9th May 2003, 14:11</div></div><div class="posttext">hm, i replaced the &quot;$TEMP\dxSetupFiles&quot; with &quot;G:\Setup\DirectX&quot; (for testing purposes) were the dxsetup.exe is located and put the dsetup.dll for testing in the folder with the output of my installer, but the $0 is always &quot;error&quot; after executing (messagebox gives out &quot;error error&quot;)<br />
+<br />
+DOCa Cola</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th May 2003, 14:16</div></div><div class="posttext">All of the DirectX disribution files, including DSetup.dll should be in one folder. System.dll should be able to find DSetup.dll so you'll need to set the working directory to the directory where the setup files are using SetOutPath.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">9th May 2003, 14:59</div></div><div class="posttext">Hm, i did that, i took the folder from the redist and SetOutPath to it's directory (where the dxsetup.exe, dsetup.dll and so on is located). maybe u want to take a look at the script..but i didn't changed that much...<br />
+<br />
+DOCa Cola</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th May 2003, 15:17</div></div><div class="posttext">Are you sure DSetup.dll is in &quot;G:\Setup\DirectX&quot; and not &quot;G:\Setup\DirectX\DirectX9&quot;?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">9th May 2003, 15:53</div></div><div class="posttext">yep, version readout works with no problems...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th May 2003, 16:19</div></div><div class="posttext">This function has both Unicode and MBCS version it seems... Pretty obvious by the fact it accepts a string but the documentation said nothing about it, heh :)<br />
+<br />
+Anyway, just add A (DirectXSetupA) after the function name - it works for me (reinstalled DX9.0a :))<br />
+<br />
+Here's a list of return values:<br />
+<br />
+#define DSETUPERR_SUCCESS_RESTART        1<br />
+#define DSETUPERR_SUCCESS                0<br />
+#define DSETUPERR_BADWINDOWSVERSION     -1<br />
+#define DSETUPERR_SOURCEFILENOTFOUND    -2<br />
+#define DSETUPERR_BADSOURCESIZE         -3<br />
+#define DSETUPERR_BADSOURCETIME         -4<br />
+#define DSETUPERR_NOCOPY                -5<br />
+#define DSETUPERR_OUTOFDISKSPACE        -6<br />
+#define DSETUPERR_CANTFINDINF           -7<br />
+#define DSETUPERR_CANTFINDDIR           -8<br />
+#define DSETUPERR_INTERNAL              -9<br />
+#define DSETUPERR_NTWITHNO3D            -10  /* REM: obsolete, you'll never see this */<br />
+#define DSETUPERR_UNKNOWNOS             -11<br />
+#define DSETUPERR_USERHITCANCEL         -12<br />
+#define DSETUPERR_NOTPREINSTALLEDONNT   -13</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">9th May 2003, 16:35</div></div><div class="posttext">ah! thx! that worked</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">11th May 2003, 20:57</div></div><div class="posttext">If you get a finished script that's working well, can you please post it in The Archive (http://nsis.sourceforge.net/archive/) so everyone can learn how to install DirectX games with NSIS?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" InstallOptions checkbox state determined at runtime, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  InstallOptions checkbox state determined at runtime NSIS Discussion" />
+	
+	<title> InstallOptions checkbox state determined at runtime [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  InstallOptions checkbox state determined at runtime</div>
+<hr />
+<div class="pda"><a href="t-135234.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=135234">InstallOptions checkbox state determined at runtime</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">hstanciu</div><div class="date">13th May 2003, 12:03</div></div><div class="posttext">Hello<br />
+<br />
+In uninstall section I added a custom dialog that contains checkbox with section desired to uninstall. I want to disable some of checkbox corresponding to not installed kits.<br />
+<br />
+How did I tried to do this:<br />
+<br />
+I had an uninstall function,<br />
+un.hello that is the creation function for the custom page.<br />
+<br />
+!insertmacro MUI_HEADER_TEXT &quot;$(un.TEXT_IO_TITLE)&quot; &quot;$(un.TEXT_IO_SUBTITLE)&quot;<br />
+!insertmacro MUI_INSTALLOPTIONS_INITDIALOG &quot;ioFile.ini&quot;<br />
+;Check if JDK installed -----------------------<br />
+....<br />
+;If not installed enable the checkbox (initial Flags=DISABLED for all checkbox)<br />
+!insertmacro MUI_INSTALLOPTIONS_WRITE &quot;ioFile.ini&quot; &quot;Field 8&quot; &quot;Flags&quot; &quot;&quot;<br />
+<br />
+The problem is that all the checkbox remain disabled, as default. <br />
+<br />
+<br />
+Questions:<br />
+1. Could I dinamically change the INI file? How?<br />
+2. I also tried to use:<br />
+    GetDlgItem $R9 $R8 1208 ;1200 + Field number - 1<br />
+    <br />
+    ;$R9 contains the HWND of the first field<br />
+    SendMessage $R9 ${BM_SETCHECK} &quot;1&quot; 0<br />
+<br />
+That menas to send the message BM_SETCHECK to check box to enable it,<br />
+but this message is not present in WinMessages.nsh. The message has the 0xF1 value, so I tried with <br />
+    SendMessage $R9 &quot;241&quot; &quot;1&quot; 0,<br />
+but no result. Any idea?<br />
+<br />
+Thanx,<br />
+H</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hstanciu</div><div class="date">13th May 2003, 12:46</div></div><div class="posttext">If I click the back button and next then, the checkbox appear enabled.<br />
+I tried to put the code that enables the checkbox on un.onInint after<br />
+!insertmacro MUI_INSTALLOPTIONS_EXTRACT &quot;ioFile.ini&quot;	but it did not worked.<br />
+<br />
+A rough solution might be to insert a custom dialog a very short period of time, to write in INI and then display mypage. This is not very nice. Any other idea?<br />
+<br />
+H</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">13th May 2003, 17:38</div></div><div class="posttext">You need to write to the ini file before the IO page shows. You are currently writing to it after the user leaves the page.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hstanciu</div><div class="date">14th May 2003, 06:15</div></div><div class="posttext">That is the point! I have a custom page <br />
+UninstPage custom un.Hello un.leaveComponents<br />
+The creation function is un.Hello, I added the ioFile.ini with ReserveFile to the kit. The file is extracted in <br />
+un.onInit (!insertmacro MUI_INSTALLOPTIONS_EXTRACT &quot;ioFile.ini&quot;	)<br />
+and in un.hello (the creation function of the page) I wrote:<br />
+<br />
+ !insertmacro MUI_HEADER_TEXT &quot;$(un.TEXT_IO_TITLE)&quot; &quot;$(un.TEXT_IO_SUBTITLE)&quot;<br />
+	!insertmacro MUI_INSTALLOPTIONS_INITDIALOG &quot;ioFile.ini&quot;<br />
+.....<br />
+<br />
+	!insertmacro MUI_INSTALLOPTIONS_WRITE &quot;ioFile.ini&quot; &quot;Field 8&quot; &quot;Flags&quot; &quot; &quot;<br />
+	!insertmacro MUI_INSTALLOPTIONS_WRITE &quot;ioFile.ini&quot; &quot;Field 13&quot; &quot;Flags&quot; &quot; &quot;<br />
+.....<br />
+<br />
+	!insertmacro MUI_INSTALLOPTIONS_SHOW<br />
+<br />
+But nothing happens. As I said, inside the same <br />
+        !insertmacro MUI_INSTALLOPTIONS_INITDIALOG &quot;ioFile.ini&quot;<br />
+	!insertmacro MUI_INSTALLOPTIONS_SHOW<br />
+pair, I treieed to send a message BM_SETCHECK (0xF1) with<br />
+WPARAM=BST_CHECKED (0x1) and then a WM_PAINT message to the parent window, but apparently it dosen't worked.<br />
+<br />
+Thank you for your response.<br />
+Other ideas?:)<br />
+<br />
+H</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">14th May 2003, 11:31</div></div><div class="posttext">You need to write to the INI file before the InstallOptions dialog initializes (before !insertmacro MUI_INSTALLOPTIONS_INITDIALOG &quot;ioFile.ini&quot;).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hstanciu</div><div class="date">14th May 2003, 13:23</div></div><div class="posttext">OK! It worked. I believed that the role of <br />
+!insertmacro MUI_INSTALLOPTIONS_INITDIALOG &quot;ioFile.ini&quot; <br />
+..... <br />
+!insertmacro MUI_INSTALLOPTIONS_SHOW <br />
+was to define the graphical interface.<br />
+<br />
+Anyway it worked, thanx!<br />
+<br />
+H</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

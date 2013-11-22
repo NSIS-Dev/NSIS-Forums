@@ -1,0 +1,113 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Pre-populate an INI, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Pre-populate an INI NSIS Discussion" />
+	
+	<title> Pre-populate an INI [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Pre-populate an INI</div>
+<hr />
+<div class="pda"><a href="t-255004.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=255004">Pre-populate an INI</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">GarBear</div><div class="date">7th September 2006, 00:48</div></div><div class="posttext">Description:<br />
+Using a custom page - i.e. somepage.ini - with a text box that is pre-populate with information from an INI or registry key string var.  I have not yet found an example of how to do this.<br />
+<br />
+Eventually it would be nice to populate the Field with an array of strings.  If someone has an example of this it would be usefull.<br />
+<br />
+What I am looking for is an example of a function that will push the text string var into a custom page during the install - i.e. post compile time.<br />
+<br />
+Expectation:<br />
+I would expect that the user will not need to type in the required data.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dandaman32</div><div class="date">7th September 2006, 07:29</div></div><div class="posttext">Use ReadINIStr to get the values you need, then use the macro MUI_INSTALLOPTIONS_WRITE to write in the values.<br />
+<br />
+Very offtopic: how many people do you guys know that hang out in this forum that would actually click this ad (http://twx.2mdn.net/viewad/1252729/ParentsC_728x90_disc_b_EXT_fries3.gif)? lol<br />
+<br />
+-dandaman32</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GarBear</div><div class="date">8th September 2006, 19:20</div></div><div class="posttext">Thanks Dan;<br />
+<br />
+I ended up doing just that.  I created a var and associated it with the registry key. I have provided a copy of my source code to show anyone who sees this later how to do the same thing. I am using XPUI (Experience UI) but you can use MUI or any other one that supports the write function.<br />
+<br />
+;Create an .onInit function that checks to see if populated and if not interjects CompanyData as the default ODBC instance.<br />
+<br />
+<br />
+Function .onInit<br />
+	ReadRegStr $TSWODBCData HKEY_LOCAL_MACHINE &quot;Software\Company\General&quot; &quot;ODBCConnection&quot;<br />
+	ReadRegStr $CommonDesktop HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders&quot; &quot;Common Desktop&quot;<br />
+	StrCmp $CompanyODBCData &quot;&quot; NoODBC ODBCExists<br />
+	NoODBC:<br />
+	StrCpy $CompanyODBCData &quot;CompanyData&quot;<br />
+	ODBCExists:<br />
+FunctionEnd<br />
+<br />
+<br />
+; Add a new custom page below &quot;!insertmacro XPUI_PAGE_COMPONENTS&quot;<br />
+<br />
+<br />
+	Page custom &quot;ODBC_Connection&quot; &quot;GatherODBC&quot;<br />
+<br />
+; Add a function to extract, then populate(write) my custom field from the var above and then display the CompanyDataODBC.ini file.<br />
+<br />
+<br />
+Function ODBC_Connection<br />
+<br />
+	!insertmacro XPUI_INSTALLOPTIONS_EXTRACT &quot;CompanyDataODBC.ini&quot;<br />
+	!insertmacro XPUI_INSTALLOPTIONS_WRITE &quot;CompanyDataODBC.ini&quot; &quot;Field 3&quot; &quot;State&quot; &quot;$CompanyODBCData&quot;<br />
+	!insertmacro XPUI_INSTALLOPTIONS_DISPLAY &quot;CompanyDataODBC.ini&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+; Finally I capture the input with another function and update the registry key for future use.<br />
+<br />
+<br />
+Function GatherODBC<br />
+	!insertmacro XPUI_INSTALLOPTIONS_READ $0 &quot;CompanyDataODBC.ini&quot; &quot;Field 3&quot; &quot;State&quot;<br />
+		StrCpy $ODBCName &quot;$0&quot;<br />
+		WriteRegStr HKEY_LOCAL_MACHINE &quot;Software\Company\General&quot; &quot;ODBCConnection&quot; &quot;$ODBCName&quot;<br />
+FunctionEnd<br />
+<br />
+; OH and here is a copy of the CompanyDataODBC.ini file.<br />
+<br />
+<br />
+[Settings]<br />
+NumFields=3<br />
+<br />
+[Field 1]<br />
+Type=Label<br />
+Text=This is the ODBC Name used locally on this computer. It links directly to the Database on the Microsoft SQL Server. If you have not already created an ODBC connection, please do so before continuing the installation.<br />
+Left=27<br />
+Right=231<br />
+Top=22<br />
+Bottom=57<br />
+<br />
+[Field 2]<br />
+Type=Label<br />
+Text=Open Database Connectivity (ODBC) Name:<br />
+Left=9<br />
+Right=157<br />
+Top=6<br />
+Bottom=14<br />
+<br />
+[Field 3]<br />
+Type=Text<br />
+State=TSWData<br />
+Left=43<br />
+Right=167<br />
+Top=68<br />
+Bottom=81</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

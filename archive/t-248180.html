@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Find process associated with window, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Find process associated with window NSIS Discussion" />
+	
+	<title> Find process associated with window [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Find process associated with window</div>
+<hr />
+<div class="pda"><a href="t-248180.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=248180">Find process associated with window</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Wabiloo</div><div class="date">8th June 2006, 15:05</div></div><div class="posttext">Is there any way in NSIS to find out the ProcessID (and/or ProcessName) associated with a particular window returned by FindWindow?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">8th June 2006, 15:13</div></div><div class="posttext">If you use the system plugin to call FindWindowEx (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/winui/winui/windowsuserinterface/windowing/windows/windowreference/windowfunctions/findwindowex.asp) you will get a handle to your window and then you can use GetWindowThreadProcessId (http://msdn.microsoft.com/library/en-us/winui/winui/windowsuserinterface/windowing/windows/windowreference/windowfunctions/getwindowthreadprocessid.asp?frame=true) to get the thread and/or process ID that created the window or GetWindowModuleFilename (http://msdn.microsoft.com/library/en-us/winui/winui/windowsuserinterface/windowing/windows/windowreference/windowfunctions/getwindowmodulefilename.asp) to get the filename of the process that created the window.<br />
+Hope this helps<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wabiloo</div><div class="date">8th June 2006, 17:18</div></div><div class="posttext">Thanks CancerFace,<br />
+<br />
+I've tried to do that with some success, however, I'm getting stuck with something weird.<br />
+<br />
+The following section loops through all the windows, and lists the window title, window handle, class name, filename, thread id and process id.<br />
+Title, handle and thread id are working perfectly.<br />
+For some reason I fail to understand though, I get no process id (it returns 0 every time) and the filename is rather random (most of the time it returns the filename of the installer itself).<br />
+<br />
+<br />
+Section &quot;ListWindowsInfo&quot;<br />
+<br />
+  FileOpen $8 &quot;c:\temp\windowslist.txt&quot; &quot;w&quot;<br />
+  SetPluginUnload alwaysoff<br />
+  System::Get &quot;(i.r1, i) iss&quot;<br />
+  Pop $R0<br />
+  System::Call &quot;user32::EnumWindows(k R0, i) i.s&quot;<br />
+  <br />
+  loop:<br />
+    Pop $0<br />
+    StrCmp $0 &quot;callback1&quot; 0 done<br />
+    System::Call &quot;user32::GetWindowText(ir1,t.r2,i${NSIS_MAX_STRLEN})&quot;<br />
+    System::Call &quot;user32::GetClassName(ir1,t.r3,i${NSIS_MAX_STRLEN})&quot;<br />
+    System::Call &quot;user32::GetWindowModuleFileName(ir1,t.r6,i${NSIS_MAX_STRLEN})&quot;<br />
+    System::Call &quot;user32::GetWindowThreadProcessId(ir1,i.r7) i .r9&quot;<br />
+    <br />
+    IntFmt $4 &quot;0x%X&quot; $1<br />
+    FileWrite $8 &quot;$1 / $4 - [$3] $2$\r$\n&quot;<br />
+    FileWrite $8 &quot;   $1 --&gt;&gt; FileName: $6$\r$\n&quot;<br />
+    FileWrite $8 &quot;   $1 --&gt;&gt; Thread: $9$\r$\n&quot;<br />
+    FileWrite $8 &quot;   $1 --&gt;&gt; Process: $7$\r$\n&quot;		<br />
+    <br />
+    Push 1 # callback's return value<br />
+    System::Call &quot;$R0&quot;<br />
+    Goto loop<br />
+	<br />
+  done:<br />
+    SetPluginUnload manual<br />
+	<br />
+  System::Free $R0<br />
+  FileClose $8<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+I'm a bit lost...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">9th June 2006, 00:26</div></div><div class="posttext">Strange, although the threads are picked it seems that the process is always 0. However the filename is not always the name of the NSIS script, there are some instances of comctl32.dll. I have no clue why!<br />
+The only thing I managed to dig out is this:<br />
+GetWindowModuleFileName returns the name of a EXE or DLL that created a window. Be forewarned though; this API only works on HWNDs created by the process that called the API. This means it’s only of use for windows that your program created or within a systemwide hook procedure.<br />
+and I wonder if this is the reason for the above behavior<br />
+<br />
+You may want to try CreateToolhelp32Snapshot (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/perfmon/base/createtoolhelp32snapshot.asp) to get a snapshot of all the processes then use Module32First (http://msdn.microsoft.com/library/en-us/perfmon/base/module32first.asp)/Module32Next (http://msdn.microsoft.com/library/en-us/perfmon/base/module32next.asp) to get the filename and path of the module associated with a certain window, based on its process ID ...<br />
+<br />
+I know, it is too complicated :)<br />
+<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wabiloo</div><div class="date">9th June 2006, 13:12</div></div><div class="posttext">Originally posted by CancerFace <br />
+Strange, although the threads are picked it seems that the process is always 0.<br />
+<br />
+I found that one, I should have used a pointer:<br />
+System::Call &quot;user32::GetWindowThreadProcessId(ir1,*i.r7) i .r9&quot;<br />
+<br />
+<br />
+However the filename is not always the name of the NSIS script, there are some instances of comctl32.dll. I have no clue why!<br />
+The only thing I managed to dig out is this:<br />
+and I wonder if this is the reason for the above behavior<br />
+<br />
+<br />
+I read the same thing and will have to agree with you on that one.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mr Inches</div><div class="date">9th June 2006, 17:01</div></div><div class="posttext">You can use GetModuleFileNameEx to get the executable name for a process other than yours. This could explain why you keep getting the installer's executable name. This function is only supported on Windows NT or later and you need the PSAPI library (see below).<br />
+<br />
+The ToolHelper functions are only viable under Windows 98/95. They were removed in NT and later, replaced with PSAPI functions/libraries. NT does not have the PSAPI library included by default, you can copy the PSAPI.DLL from Windows XP into a directory on the path and use it if you want, otherwise grab the installer from Microsoft.<br />
+<br />
+I am not very familiar with the thread-to-window association stuff, sorry I can't help with that yet.<br />
+<br />
+Duncan</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">10th June 2006, 10:46</div></div><div class="posttext">That's a good idea Mr Inches :)<br />
+I think this should work:<br />
+Section &quot;ListWindowsInfo&quot;<br />
+<br />
+  FileOpen $8 &quot;c:\tempwindowslist.txt&quot; &quot;w&quot;<br />
+  SetPluginUnload alwaysoff<br />
+  System::Get &quot;(i.r1, i) iss&quot;<br />
+  Pop $R0<br />
+  System::Call &quot;user32::EnumWindows(k R0, i) i.s&quot;<br />
+  <br />
+  loop:<br />
+    Pop $0<br />
+    StrCmp $0 &quot;callback1&quot; 0 done<br />
+    System::Call 'user32::GetWindowText(ir1,t.r2,i${NSIS_MAX_STRLEN})i.R6'<br />
+    System::Call 'user32::GetClassName(ir1,t.r3,i${NSIS_MAX_STRLEN})i.R6'<br />
+    System::Call 'user32::GetWindowThreadProcessId(ir1,*i.r7)i.r9'<br />
+    System::Call 'kernel32::OpenProcess(i 0x1F0FFF,i0,ir7)i.R9'<br />
+    System::Call 'Psapi::GetModuleFileNameExA(iR9,in,t.R8,i${NSIS_MAX_STRLEN})i.R6'<br />
+    System::Call 'kernel32::CloseHandle(iR9)i.R6'<br />
+    IntFmt $4 &quot;0x%X&quot; $1<br />
+    FileWrite $8 &quot;$1 / $4 - [$3] $2$\r$\n&quot;<br />
+    FileWrite $8 &quot;   $1 --&gt;&gt; Thread: $9$\r$\n&quot;<br />
+    FileWrite $8 &quot;   $1 --&gt;&gt; Process: $7$\r$\n&quot;        <br />
+    FileWrite $8 &quot;   $1 --&gt;&gt; FileName: $R8$\r$\n&quot;<br />
+<br />
+<br />
+    Push 1 # callback's return value<br />
+    System::Call &quot;$R0&quot;<br />
+    Goto loop<br />
+    <br />
+  done:<br />
+    SetPluginUnload manual<br />
+    <br />
+  System::Free $R0<br />
+  FileClose $8<br />
+You get the window name that you're after, the Process ID of the process that created it and the filename of the executable responsible for that process ...<br />
+CF</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

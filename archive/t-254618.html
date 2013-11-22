@@ -1,0 +1,123 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Secret Keyboard Input, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Secret Keyboard Input NSIS Discussion" />
+	
+	<title> Secret Keyboard Input [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Secret Keyboard Input</div>
+<hr />
+<div class="pda"><a href="t-254618.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=254618">Secret Keyboard Input</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">2nd September 2006, 05:59</div></div><div class="posttext">I have a program that installs with non-visible UI. I am always debugging it because it runs from a USB device, and on different OSes.<br />
+<br />
+I would like to be able to add a string or hotkey combo that would allow me to set a flag. This flag causes a message boxes to pop up at each different section. <br />
+<br />
+I have everything set up except for the ability to silently capture this keyboard input. Anyone have any ideas? Let us say that I want to put it in while the splash screen is up, or during the first 5 seconds of the program, etc.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd September 2006, 12:40</div></div><div class="posttext">You can have it passed on as a command line switch. Use GetOptions (http://nsis.sourceforge.net/Docs/AppendixE.html#E.1.12) to retrieve it from the command line.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">2nd September 2006, 18:20</div></div><div class="posttext">Having some trouble with it.<br />
+<br />
+After the Function .onInit but before Section &quot;Main&quot; I placed the example code:<br />
+<br />
+Section &quot;Test&quot;<br />
+	${GetOptions} &quot;/S /T&quot; &quot;/T&quot;  $R0<br />
+<br />
+	IfErrors 0 +2<br />
+	MessageBox MB_OK &quot;Not found&quot; IDOK +2<br />
+	MessageBox MB_OK &quot;Found&quot;<br />
+SectionEnd<br />
+<br />
+and at the end of the file I placed the code for the function GetOptions<br />
+<br />
+<br />
+Function GetOptions<br />
+	!define GetOptions `!insertmacro GetOptionsCall`<br />
+ <br />
+	!macro GetOptionsCall _PARAMETERS _OPTION _RESULT<br />
+		Push `${_PARAMETERS}`<br />
+		Push `${_OPTION}`<br />
+		Call GetOptions<br />
+		Pop ${_RESULT}<br />
+	!macroend<br />
+ <br />
+	Exch $1<br />
+	Exch<br />
+	Exch $0<br />
+	Exch<br />
+...<br />
+<br />
+...<br />
+        Pop $2<br />
+	Pop $1<br />
+	Exch $0<br />
+FunctionEnd<br />
+<br />
+I did this just to test the workings of it. Well it doesn't work. Compile error:<br />
+<br />
+Section: &quot;Test&quot;<br />
+Invalid command: ${GetOptions}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd September 2006, 18:32</div></div><div class="posttext">That's not the correct usage. The top of that documentation section (http://nsis.sourceforge.net/Docs/AppendixE.html#E.2.1) shows the correct usage. You must first include TextFunc.nsh, then !insertmacro GetOptions and only then you can use the function. There's no need to copy the function code to your script.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">2nd September 2006, 19:55</div></div><div class="posttext">I think you mean !include &quot;FileFunc.nsh&quot;<br />
+<br />
+Okay, I've got it running, but it is still confusing.<br />
+<br />
+I just want it to check if i added &quot;/debug&quot; to the end.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">2nd September 2006, 19:57</div></div><div class="posttext">I'm using:<br />
+<br />
+${GetOptions} &quot;/debug&quot; &quot;/&quot; $R0<br />
+MessageBox MB_OK &quot;r0= $R0&quot;	<br />
+<br />
+<br />
+yet <br />
+<br />
+$R0 = null value, instead of &quot;debug&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd September 2006, 20:04</div></div><div class="posttext">How is it not working? Does it simply ignore /debug? Is it the same code as above? If so, replace &quot;/S /T&quot; with $CMDLINE.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">2nd September 2006, 20:08</div></div><div class="posttext">Section &quot;Test&quot;<br />
+	ClearErrors<br />
+	${GetOptions} $CMDLINE &quot;/&quot; $R0<br />
+	MessageBox MB_OK &quot;r0= $R0&quot;	<br />
+SectionEnd<br />
+<br />
+at the command line i enter &quot;program.exe /debug&quot; and the popup box returns &quot;r0=&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">torpark</div><div class="date">2nd September 2006, 20:12</div></div><div class="posttext">Okay, I've changed the code to just use GetParameters instead, since there will only be one switch.<br />
+<br />
+Section &quot;Test&quot;<br />
+	ClearErrors<br />
+	${GetParameters} $DEBUG<br />
+	MessageBox MB_OK &quot;debug= $DEBUG&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd September 2006, 20:14</div></div><div class="posttext">${GetParameters} $1<br />
+DetailPrint $1<br />
+${GetOptions} $1 &quot;/debug=&quot; $0<br />
+DetailPrint $0installer.exe /debug=yes</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

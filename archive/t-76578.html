@@ -1,0 +1,103 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Improved UpgradeDLL macro, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Improved UpgradeDLL macro NSIS Discussion" />
+	
+	<title> Improved UpgradeDLL macro [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Improved UpgradeDLL macro</div>
+<hr />
+<div class="pda"><a href="t-76578.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=76578">Improved UpgradeDLL macro</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">CodeSquid</div><div class="date">19th February 2002, 17:28</div></div><div class="posttext">The improved UpgradeDLL macro can upgrades DLLs that are in use.<br />
+<br />
+!macro UpgradeDLL<br />
+  Exch $0<br />
+  Push $1<br />
+  Push $2<br />
+  Push $3<br />
+  Push $4<br />
+  Push $5<br />
+  ClearErrors<br />
+  GetDLLVersionLocal ${DLL_NAME} $1 $2<br />
+  GetDLLVersion $0 $3 $4<br />
+  IfErrors upgrade_${DLL_NAME}<br />
+    IntCmpU $1 $3 noupgrade_${DLL_NAME} noupgrade_${DLL_NAME} upgrade_${DLL_NAME}<br />
+    IntCmpU $2 $4 noupgrade_${DLL_NAME} noupgrade_${DLL_NAME}<br />
+  upgrade_${DLL_NAME}:<br />
+   GetTempFileName $5<br />
+   File /oname=$5 ${DLL_NAME}<br />
+    UnRegDLL $0<br />
+    delete /REBOOTOK $0 <br />
+    rename /REBOOTOK $5 $0 <br />
+   IfRebootFlag regreboot regnoreboot<br />
+   regreboot:<br />
+    WriteRegStr HKLM Software\Microsoft\Windows\CurrentVersion\RunOnce $0 &quot;$SYSDIR\regsvr32 /s $0&quot;<br />
+    goto regrebootfinish<br />
+   regnoreboot:<br />
+    RegDLL $0<br />
+   regrebootfinish:<br />
+  noupgrade_${DLL_NAME}:<br />
+  Pop $5<br />
+  Pop $4<br />
+  Pop $3<br />
+  Pop $2<br />
+  Pop $1<br />
+  Pop $0<br />
+  !undef DLL_NAME<br />
+!macroend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Bugge T. Jensen</div><div class="date">28th February 2002, 19:47</div></div><div class="posttext">Be aware theres a bug in this macro.<br />
+<br />
+You will never execute<br />
+IntCmpU $2 $4 noupgrade_${DLL_NAME} <br />
+<br />
+Se my fix elsewhere in the forum</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mmullikin</div><div class="date">27th March 2002, 00:29</div></div><div class="posttext">Beyond the issue reported by B. Jensen there is an additional bug in your code for Windows 9X users (not sure about NT/2000/XP). The code:<br />
+<br />
+delete /REBOOTOK $0 <br />
+rename /REBOOTOK $5 $0 <br />
+<br />
+does not produce desired results when the files are in use and need to be manipulated during reboot. On Win 9X systems NSIS uses the WININIT.INI file to do this. In the above sequence, somehow (NSIS bug?) the rename code gets put in BEFORE the delete code and the DLL is therefore missing when the boot is complete. To fix, just skip the delete command and let the rename take care of it.<br />
+<br />
+Regards,<br />
+<br />
+mmullikin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mingfa</div><div class="date">27th May 2002, 22:01</div></div><div class="posttext">As mmullikin said, there is a bug in the following code on win9x<br />
+<br />
+delete /REBOOTOK $0 <br />
+rename /REBOOTOK $5 $0 <br />
+<br />
+However, mmullikin's suggestion that only using the second line doesn't work on my test either.<br />
+<br />
+Could anyone provide me the UpgradeDLL which can work on win9x?<br />
+I mean it can upgrade dll being used on win9x.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CodeSquid</div><div class="date">28th May 2002, 09:53</div></div><div class="posttext">What about the following workaround? <br />
+Detect the Windows version in the script and if it's Win9x use<br />
+rename /REBOOTOK $5 $0 <br />
+delete /REBOOTOK $0<br />
+else use<br />
+delete /REBOOTOK $0 <br />
+rename /REBOOTOK $5 $0 <br />
+<br />
+However, I've not tesed it!! Use at own risk.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

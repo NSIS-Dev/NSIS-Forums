@@ -1,0 +1,138 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Dynamic InstallDirRegKey, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Dynamic InstallDirRegKey NSIS Discussion" />
+	
+	<title> Dynamic InstallDirRegKey [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Dynamic InstallDirRegKey</div>
+<hr />
+<div class="pda"><a href="t-198989.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=198989">Dynamic InstallDirRegKey</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">progoth</div><div class="date">11th November 2004, 16:52</div></div><div class="posttext">I really can't figure this out, and it seems like it would be a simple straightforward thing...<br />
+<br />
+I want to set the InstallDir dynamically, or something achieving that effect, but I can't figure out how to do it.  If the program's never been installed, I want to read a different key and make that the default install directory...if it doesn't exist then I have a default place to put it.  However, once PRODUCT_DIR_REGKEY has been set, I want all future installs to use that and not go through looking for the other key.<br />
+<br />
+I thought the solution for this would be to create PRODUCT_DIR_REGKEY if it doesn't already exist in .onInit.  However, apparently that key is read before .onInit is called, because it has no effect unless I quit the installer and run it again.<br />
+<br />
+I hope I've made sense, I can clarify as needed.<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">11th November 2004, 17:42</div></div><div class="posttext">Rather than using InstallDirRegKey just do it all using Read/WriteRegStr<br />
+<br />
+<br />
+InstallDir &quot;C:\myapp&quot;<br />
+<br />
+Function .onInit<br />
+ Push $R0<br />
+ ReadRegStr $R0 HKCU &quot;Software\myapp1&quot; &quot;InstallDir&quot;<br />
+  StrCmp $R0 &quot;&quot; 0 +3<br />
+ ReadRegStr $R0 HKCU &quot;Software\myapp2&quot; &quot;Blah&quot;<br />
+  StrCmp $R0 &quot;&quot; +2<br />
+  StrCpy $INSTDIR $R0<br />
+ Pop $R0<br />
+FunctionEnd<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">progoth</div><div class="date">11th November 2004, 17:52</div></div><div class="posttext">Sorry, I didn't really mention that what I'm trying to do is set the default install location that is presented to the user during the install.  I can't figure out how to do it dynamically at install time.  As far as I know you can't change InstallDir or InstallDirRegKey at install time, so the only way I can think of to change the default install location is by changing the value of the key at PRODUCT_DIR_REGKEY.  But that doesn't work, as the value is read BEFORE .onInit.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Dyflmez</div><div class="date">24th January 2005, 18:51</div></div><div class="posttext">Ok. Why is it so hard to set the Install Dir?<br />
+Evey other install program out there can do it, so why can't NSIS?<br />
+<br />
+This is my code, I keep getting the same error :<br />
+Usage: ReadRegStr $(user_var: output) rootkey subkey entry<br />
+   root_key=(HKCR|HKLM|HKCU|HKU|HKCC|HKDD|HKPD)<br />
+Error in script &quot;D:\Install Files\Essensuals\NSIS\WorkDir\DC_Map.nsi&quot; on line 54 -- aborting creation process<br />
+Name &quot;${PRODUCT_NAME} ${PRODUCT_VERSION}&quot;<br />
+OutFile &quot;DCMap.exe&quot;<br />
+InstallDir &quot;$InstalDir\\Mods\\DC_Final\\Archives\\BF1942\\levels&quot;<br />
+ShowInstDetails show<br />
+ShowUnInstDetails show<br />
+<br />
+<br />
+Function .onInit<br />
+  !insertmacro MUI_LANGDLL_DISPLAY<br />
+  ReadRegStr $InstalDir HKLM &quot;SOFTWARE\\EA GAMES\\Battlefield 1942&quot; &quot;GAMEDIR&quot;<br />
+  StrCpy $INSTDIR &quot;$InstalDir\\Mods\\DC_Final\\Archives\\BF1942\\levels&quot;<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Dkom</div><div class="date">24th January 2005, 19:52</div></div><div class="posttext">Try this code <br />
+<br />
+!define GAME_KEY &quot;SOFTWARE\EA GAMES\Battlefield 1942&quot;<br />
+Name &quot;${PRODUCT_NAME} ${PRODUCT_VERSION}&quot; <br />
+OutFile &quot;DCMap.exe&quot; <br />
+InstallDir &quot;C:\\Games (or other default dir)\Mods\DC_Final\Archives\BF1942\levels&quot; <br />
+ShowInstDetails show <br />
+ShowUnInstDetails show <br />
+<br />
+Function .onInit <br />
+  !insertmacro MUI_LANGDLL_DISPLAY <br />
+ClearErrors<br />
+  ReadRegStr $0 HKLM &quot;${GAME_KEY}&quot; &quot;GAMEDIR&quot; <br />
+IfErrors +2<br />
+  StrCpy $INSTDIR &quot;$0\Mods\DC_Final\Archives\BF1942\levels&quot; <br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">24th January 2005, 21:01</div></div><div class="posttext">Your code doesn't work because you are using an undefined variable: $InstalDir<br />
+You should use a ready-defined variable like $R0.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Dkom</div><div class="date">25th January 2005, 16:17</div></div><div class="posttext">2 Afrow UK (your post from  11-11-2004):<br />
+<br />
+But if $R0 ends with exe name, how to trim last part of string until \.<br />
+For example if I read ReadRegStr $R0 HKCU &quot;Software\myapp1&quot; &quot;InstallDir&quot; - I get C:\SomeDir\SomeProg.exe<br />
+And when I read ReadRegStr $R0 HKCU &quot;Software\myapp2&quot; &quot;Blah&quot;<br />
+I get C:\AnotherDir\AnotherProg.exe<br />
+I don't now number of letters, so I can't use &quot;StrCpy<br />
+user_var(destination) str [maxlen] [start_offset]&quot;<br />
+How to convert this variables to C:\SomeDir\ and C:\AnotherDir\ ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Dyflmez</div><div class="date">25th January 2005, 20:31</div></div><div class="posttext">Dkom thanks man that worked.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">superwan</div><div class="date">25th January 2005, 21:42</div></div><div class="posttext">okay, I'm gonna try it for me...<br />
+that's what I too wanted to do...<br />
+<br />
+but if somebody could explain why the installdirregkey does not change my instdir... :D<br />
+<br />
+I'm sure I'm somewhere wrong, but don't know where...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">26th January 2005, 10:59</div></div><div class="posttext">Originally posted by Dkom <br />
+2 Afrow UK (your post from  11-11-2004):<br />
+<br />
+But if $R0 ends with exe name, how to trim last part of string until \.<br />
+For example if I read ReadRegStr $R0 HKCU &quot;Software\myapp1&quot; &quot;InstallDir&quot; - I get C:\SomeDir\SomeProg.exe<br />
+And when I read ReadRegStr $R0 HKCU &quot;Software\myapp2&quot; &quot;Blah&quot;<br />
+I get C:\AnotherDir\AnotherProg.exe<br />
+I don't now number of letters, so I can't use &quot;StrCpy<br />
+user_var(destination) str [maxlen] [start_offset]&quot;<br />
+How to convert this variables to C:\SomeDir\ and C:\AnotherDir\ ? <br />
+<br />
+GetParent function:<br />
+http://nsis.sourceforge.net/archive/nsisweb.php?page=213&amp;instances=0,11,211<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

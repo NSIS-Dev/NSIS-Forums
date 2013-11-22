@@ -1,0 +1,103 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" mysql query and return value reaction, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  mysql query and return value reaction NSIS Discussion" />
+	
+	<title> mysql query and return value reaction [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  mysql query and return value reaction</div>
+<hr />
+<div class="pda"><a href="t-184350.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=184350">mysql query and return value reaction</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Mosestycoon</div><div class="date">23rd June 2004, 22:17</div></div><div class="posttext">Dear Friends:<br />
+<br />
+I started creating a plug-in to my application. It should install a webapplication into the local webspace. Like most webapplications this is based on PHP and MySQL.<br />
+<br />
+The webapplication should use its own database user, so I need to get the credentials for the root user (user with global rights on the database) and use this informations to create the new database and a new user with password.<br />
+<br />
+To solve this problem, I created a CustomPage where all these values must be filled by the user. I get all values back and pipe them into the following lines:<br />
+<br />
+  nsExec::Exec '$INSTDIR\DB\MySQL4\bin\mysql -u $R0 -proot -e &quot;CREATE DATABASE $R2&quot;' <br />
+<br />
+with $R0 = root username<br />
+and  $R2 = name of the database<br />
+<br />
+As you can see in this line, -proot symbolises the parameter -p (switch for password entry) and a symbolic password root. And her I have my first problem:<br />
+<br />
+If a user has no password set for his root user, neither the password nor the switch -p must be set. The CustomPage (custom.ini) is already prepared to serve a variable $R1 which could be placed as -p$R1, but mysql would react with an error if you trigger it with -p and provide no password. So I think the -p must be copied into $R0. How can I achieve this?<br />
+<br />
+And another question. If the user enters a wrong password mysql will return an error. Can this error be used (or captured) to return e.g. a MessageBox and switch back to the CustomPage again...?<br />
+<br />
+I hope somebody has a solution for me.<br />
+<br />
+Chris</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mosestycoon</div><div class="date">24th June 2004, 00:12</div></div><div class="posttext">Ok meantime I solved problem one, to differ between an existing and a non-existent password with the following code:<br />
+  ;  -----  ask for MySQL root credentials<br />
+  ;         field 2=root user<br />
+  ReadINIStr $R0 &quot;$PLUGINSDIR\\mysql.ini&quot; &quot;Field 2&quot; &quot;State&quot;<br />
+  ;         field 3=password for root user<br />
+  ReadINIStr $R1 &quot;$PLUGINSDIR\\mysql.ini&quot; &quot;Field 3&quot; &quot;State&quot;<br />
+  ;  -----  ask for creating a new MySQL User<br />
+  ;         field 11=database<br />
+  ReadINIStr $R2 &quot;$PLUGINSDIR\\mysql.ini&quot; &quot;Field 11&quot; &quot;State&quot;<br />
+  ;  -----  field 12=new database user<br />
+  ReadINIStr $R3 &quot;$PLUGINSDIR\\mysql.ini&quot; &quot;Field 12&quot; &quot;State&quot;<br />
+  ;  -----  field 13=password for new database user<br />
+  ReadINIStr $R4 &quot;$PLUGINSDIR\\mysql.ini&quot; &quot;Field 13&quot; &quot;State&quot; <br />
+<br />
+<br />
+  ;  -----  use the informations above to create the database <br />
+  StrCmp $R1 &quot;&quot; EmptyPwd notEmptyPwd<br />
+  EmptyPwd:<br />
+  <br />
+  ;  -----  if no password is given<br />
+  ;<br />
+  nsExec::ExecToLog '$INSTDIR\\DB\\MySQL4\\bin\\mysql -u $R0 -e &quot;CREATE DATABASE $R2&quot;'<br />
+  nsExec::ExecToLog '$INSTDIR\\DB\\MySQL4\\bin\\mysql -u $R0 -e &quot;GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, INDEX, ALTER, CREATE TEMPORARY TABLES ON $R2.* TO $\\'$R3$\\'@$\\'localhost$\\' IDENTIFIED BY $\\'$R4$\\'&quot;'<br />
+  <br />
+  goto PwdDone<br />
+<br />
+  notEmptyPwd:<br />
+  ;  -----  if the passwd field is filled...<br />
+  ;<br />
+  nsExec::ExecToLog '$INSTDIR\\DB\\MySQL4\\bin\\mysql -u $R0 -p$R1 -e &quot;CREATE DATABASE $R2&quot;'<br />
+  nsExec::ExecToLog '$INSTDIR\\DB\\MySQL4\\bin\\mysql -u $R0 -p$R1 -e &quot;GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, INDEX, ALTER, CREATE TEMPORARY TABLES ON $R2.* TO $\\'$R3$\\'@$\\'localhost$\\' IDENTIFIED BY $\\'$R4$\\'&quot;'<br />
+  <br />
+  PwdDone:<br />
+<br />
+But there is still the problem, that the installer will finish even if the mysql database returns an error.<br />
+<br />
+Any idea to solve this?<br />
+Chris</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">24th June 2004, 08:41</div></div><div class="posttext">What about mysql stdout parsing?<br />
+nsExec:<br />
+    if (log &amp; 2) pushstring(szUnusedBuf);<br />
+    if (log &amp; 1 &amp;&amp; *szUnusedBuf) LogMessage(szUnusedBuf);<br />
+    pushstring(szRet);<br />
+<br />
+And BTW it is possible to prepare and use stdin string for DOS processes http://forums.winamp.com/showthread.php?s=&amp;threadid=181442&amp;highlight=dos+plugin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mosestycoon</div><div class="date">24th June 2004, 19:46</div></div><div class="posttext">Thx for your reply Takhir -<br />
+<br />
+How do I use this? After the part I posted, there has to be this &quot;see what mysql gives back&quot; part. but I am a non-programmer living from snippets and manuals to achieve my goals ;-)<br />
+<br />
+Thx<br />
+Chris</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

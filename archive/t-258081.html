@@ -1,0 +1,107 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Add 30 days to current date ?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Add 30 days to current date ? NSIS Discussion" />
+	
+	<title> Add 30 days to current date ? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Add 30 days to current date ?</div>
+<hr />
+<div class="pda"><a href="t-258081.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=258081">Add 30 days to current date ?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Defcon0</div><div class="date">22nd October 2006, 15:45</div></div><div class="posttext">Hello,<br />
+<br />
+I want to write the current date into an ini-file but 30 days later. With GetTime I already got the date but how can I count 30 days on ?<br />
+<br />
+How can I realize that with NSIS ?<br />
+<br />
+Thanks in forward.<br />
+<br />
+Bye Defcon0.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">22nd October 2006, 20:18</div></div><div class="posttext">My way that I like to do is by using the Math plug-in (http://nsis.sourceforge.net/Math_plug-in) date &amp; time functions. First convert the current time to seconds, then use another function to add 30 days in seconds to it, then convert it back to a date.<br />
+<br />
+I'll prepare the message with the code solution with this.<br />
+<br />
+This is the test script I prepared:<br />
+<br />
+OutFile Test.exe<br />
+<br />
+Section<br />
+  ;Math plug-in time functions initialization<br />
+  ;============================================<br />
+<br />
+  Math::Script /NOUNLOAD `IsLeapYear(a, b,c) (#[mdf(a/4.0,c) == 0, #[mdf(a/100.0,c) &gt; 0, b = 1, #[mdf(a/400.0,c) == 0, b = 1, b = 0]],b = 0];b)`<br />
+  Math::Script /NOUNLOAD `MinToSec(a) (a*60)`<br />
+  Math::Script /NOUNLOAD `HourToSec(a) (a*MinToSec(60))`<br />
+  Math::Script /NOUNLOAD `DayToSec(a) (a*HourToSec(24))`<br />
+  Math::Script /NOUNLOAD `MonthToSec(a,b, c) (a--;c=a*DayToSec(31);#[a&gt;=1,#[IsLeapYear(b)==1,c-=DayToSec(2),c-=DayToSec(3)]];#[a&gt;=3, c-=DayToSec(1)];#[a&gt;=5, c-=DayToSec(1)];#[a&gt;=8, c-=DayToSec(1)];#[a&gt;=10, c-=DayToSec(1)];#[a&gt;11, c=0];c)`<br />
+  Math::Script /NOUNLOAD `YearToSec(a,b, c) (c=0;#{++b&lt;=a,#[IsLeapYear(a-1),c+=DayToSec(366),c+=DayToSec(365)]};c)`<br />
+<br />
+  Math::Script /NOUNLOAD `DateToSec(a,b,c,d,e,f,g, h) (h=YearToSec(g, a)+MonthToSec(f, a)+DayToSec(e-1)+HourToSec(b)+MinToSec(c)+d;h)`<br />
+<br />
+  Math::Script /NOUNLOAD `SecToYear(a,b,&amp;c, d) (d=b;#{*c=#[IsLeapYear(d),DayToSec(366),DayToSec(365)];a&gt;=*c,a-=*c;d++};*c=a;d)`<br />
+  Math::Script /NOUNLOAD `SecToMonth(a,b,&amp;c, d,e) (d=0; e={31,28,31,30,31,30,31,31,30,31,30,31,0};#{#[d&gt;=12,*c=a+1;d=-1,*c=e[d]*DayToSec(1)];#[(d==1)&amp;&amp;(IsLeapYear(b)),*c+=DayToSec(1)];a&gt;=*c,a-=*c;d++};*c=a;++d)`<br />
+  Math::Script /NOUNLOAD `SecToDay(a,&amp;b) (*b=a%DayToSec(1); a=a/DayToSec(1))`<br />
+  Math::Script /NOUNLOAD `SecToHour(a,&amp;b) (*b=a%HourToSec(1); a=a/HourToSec(1))`<br />
+  Math::Script /NOUNLOAD `SecToMin(a,&amp;b) (*b=a%MinToSec(1); a=a/MinToSec(1))`<br />
+<br />
+  Math::Script /NOUNLOAD `SecToDate(a,b,&amp;c,&amp;d,&amp;e,&amp;f,&amp;g,&amp;h, i) (*h=SecToYear(a,b,i);a=i;*g=SecToMonth(a,b,i);a=i;*f=SecToDay(a,i)+1;a=i;*c=SecToHour(a,i);a=i;*d=SecToMin(a,*e))`<br />
+<br />
+  ;Call those functions<br />
+  ;======================<br />
+<br />
+  ;Parameters (push last parameter from math function first)<br />
+  Push &quot;2006&quot; ;Year<br />
+  Push &quot;1&quot; ;Month<br />
+  Push &quot;1&quot; ;Day<br />
+  Push &quot;0&quot; ;Second<br />
+  Push &quot;0&quot; ;Minute<br />
+  Push &quot;0&quot; ;Hour<br />
+  Push &quot;2006&quot; ;InitYear (year at which the counting of seconds start)<br />
+  Math::Script /NOUNLOAD `NS=DateToSec(NS,NS,NS,NS,NS,NS,NS)`<br />
+; Pop $0 ;Seconds<br />
+  <br />
+; Push $0 ;Seconds<br />
+  Push &quot;30&quot; ;Days to add<br />
+  Math::Script /NOUNLOAD `NS=DayToSec(NS) + NS`<br />
+  Pop $0 ;Resulting seconds<br />
+  <br />
+  Push &quot;2006&quot; ;InitYear<br />
+  Push $0 ;Seconds<br />
+  Math::Script /NOUNLOAD `SecToDate(NS,NS,NS,NS,NS,NS,NS,NS)`<br />
+  Pop $1 ;Hour<br />
+  Pop $2 ;Minute<br />
+  Pop $3 ;Second<br />
+  Pop $4 ;Day<br />
+  Pop $5 ;Month<br />
+  Pop $6 ;Year<br />
+<br />
+  DetailPrint &quot;$1:$2:$3 $4/$5/$6&quot;<br />
+SectionEnd<br />
+<br />
+[EDIT #2]Fixed a little mistake in expressing the years (different &quot;InitYear&quot; values).[/EDIT #2]</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Defcon0</div><div class="date">22nd October 2006, 20:51</div></div><div class="posttext">That would be great. Thanks.<br />
+But please make a new reply so that I get an email notification.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">22nd October 2006, 20:53</div></div><div class="posttext">Done. Code is in my first post.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Defcon0</div><div class="date">22nd October 2006, 20:53</div></div><div class="posttext">OK. Thanks. I'll test it</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

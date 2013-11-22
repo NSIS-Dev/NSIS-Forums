@@ -1,0 +1,113 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" HWND of Destination folder, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  HWND of Destination folder NSIS Discussion" />
+	
+	<title> HWND of Destination folder [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  HWND of Destination folder</div>
+<hr />
+<div class="pda"><a href="t-328754.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=328754">HWND of Destination folder</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">lloydtech</div><div class="date">22nd March 2011, 07:07</div></div><div class="posttext">Hi,<br />
+<br />
+I want to make sure that the user is installing to an empty folder. For that I would like to check whether the &quot;Destination folder&quot; is empty or not when the user changes the path. For this, how can I get the HWND of the &quot;Destination folder&quot; text box? or is there a better way to solve this?<br />
+<br />
+Thanks,<br />
+  Lloyd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">22nd March 2011, 07:13</div></div><div class="posttext">Use winspy to get the control ID, then call GetDlgItem to get the HWND for that ID.<br />
+<br />
+http://www.catch22.net/software/winspy</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lloydtech</div><div class="date">22nd March 2011, 07:55</div></div><div class="posttext">Section &quot;MainSection&quot; SEC01<br />
+  SetOutPath &quot;$INSTDIR&quot;<br />
+  <br />
+  GetDlgItem $DestFolderText $HWNDPARENT  1019 <br />
+  MessageBox MB_OK &quot;$DestFolderText&quot;<br />
+  ${NSD_OnChange} $DestFolderText ConfigInstallPathChange<br />
+<br />
+<br />
+<br />
+At first, I wrote this code in &quot;main section&quot;.Then I understood that the code in main section is executed only when we click &quot;Install&quot; button. The I moved the code to &quot;OnInit&quot; section. Then also &quot;GetDlgItem&quot; sets zero in &quot;DestFolderText&quot; variable. What is the right place to write &quot;GetDlgItem&quot; ?<br />
+<br />
+The control id returned by WinSpy is 3FB, so I converted it into decimal, ie 1019.<br />
+<br />
+Thanks a lot,<br />
+  Lloyd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">22nd March 2011, 13:42</div></div><div class="posttext">You can only get the HWND for an existing control, so you cannot GetDlgItem in .onInit or in a section. You need to use the SHOW function of the directory page.<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW YourFunction<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+<br />
+function YourFunction<br />
+GetDlgItem $DestFolderText $HWNDPARENT  1019<br />
+functionend<br />
+<br />
+or something like that.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lloydtech</div><div class="date">24th March 2011, 10:56</div></div><div class="posttext">This is how my code look like<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW DirDlgShow<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+<br />
+Function DirDlgShow<br />
+  GetDlgItem $0 $HWNDPARENT  1019 <br />
+  ${NSD_OnChange} $0 ConfigInstallPathChange<br />
+FunctionEnd<br />
+<br />
+<br />
+Here &quot;GetDlgItem&quot; returns &quot;0&quot; in $0. Further reading the documentation, I feel that FindWindow has to be used first to get the HANDLE of &quot;MUI_PAGE_DIRECTORY&quot;, then we need to use &quot;GetDlgItem&quot; to get handle of the &quot;text box&quot;. The I modified the code as given below<br />
+<br />
+Function DirDlgShow<br />
+  FindWindow $0 &quot;#32770&quot; <br />
+  GetDlgItem $1 $0 1019<br />
+FunctionEnd<br />
+<br />
+Here FindWindow returns some valid code, but the &quot;GetDlgItem&quot; returns &quot;0&quot; in $1 again. What is the right way to get the handle of the text box in directory selection box?<br />
+<br />
+Thanks a lot,<br />
+  Lloyd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">24th March 2011, 11:12</div></div><div class="posttext">The description for FindWindow shows the correct usage to get the handle of the inner window.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lloydtech</div><div class="date">24th March 2011, 11:19</div></div><div class="posttext">Yes, I have tried <br />
+<br />
+  FindWindow $0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+<br />
+without any success!<br />
+<br />
+Thanks,<br />
+  Lloyd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">24th March 2011, 12:12</div></div><div class="posttext">If your installer uses a DIRECTORY page to let the user select a directory and you want to ensure that the user has selected an empty directory surely you could just use a &quot;leave&quot; function for the DIRECTORY page?<br />
+<br />
+If the selected directory is not empty then display a suitable message and use an Abort command in the &quot;leave&quot; function to keep the user at the DIRECTORY page.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lloydtech</div><div class="date">24th March 2011, 12:43</div></div><div class="posttext">Thanks, this is a simple and elegant solution...<br />
+<br />
+Lloyd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

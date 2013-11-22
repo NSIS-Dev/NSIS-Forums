@@ -1,0 +1,103 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Allow simple user to overwrite files, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Allow simple user to overwrite files NSIS Discussion" />
+	
+	<title> Allow simple user to overwrite files [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Allow simple user to overwrite files</div>
+<hr />
+<div class="pda"><a href="t-227698.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=227698">Allow simple user to overwrite files</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Nicolas Cuny</div><div class="date">5th October 2005, 12:29</div></div><div class="posttext">Hello,<br />
+<br />
+I would like to know if there is some way (in NSIS or other) to allow simple Windows users (non-admin) to overwrite files created by an admin.<br />
+<br />
+Scenario :<br />
+<br />
+An admin installs my application for every user. The data is huge (700 MB) and can not be duplicated for each user. But still i would like every user to be able to update data (which means overwriting files created during installation).<br />
+<br />
+Solutions :<br />
+<br />
+- changing the rights on each file, or<br />
+- creating the files in a special place where everyone can overwrite them<br />
+<br />
+But i don't know how to do that ! If you think it is impossible please say so. Thank you for your answers :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th October 2005, 13:58</div></div><div class="posttext">You can use the AccessControl plug-in (http://nsis.sourceforge.net/wiki/AccessControl_plugin) to set the access rights to those files, or you can modify your program to look for those files in a user's private folder first. $APPDATA is usually used for this (see MSDN (http://msdn.microsoft.com/library/en-us/dnw2kcli/html/w2kcli_chapter4.asp)).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nicolas Cuny</div><div class="date">5th October 2005, 15:12</div></div><div class="posttext">Hi kichik,<br />
+<br />
+I tried to store data files in $APPDATA after a &quot;SetShellVarContext all&quot; but according to my tests simple users still have no right to overwrite them (when installed by an administrator).<br />
+<br />
+The AccessControl plug-in looks promising though ... Thank you very much !</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th October 2005, 15:16</div></div><div class="posttext">The idea was not to use this for all users, but to use this for each user. It's not a change that needs to be done in the installer, but rather in the program itself. The program needs to look for its files in the Application Data folder, and only then in the program folder. This way, the user can create his/her own configuration without affecting all of the other users and without any special permissions.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nicolas Cuny</div><div class="date">5th October 2005, 15:33</div></div><div class="posttext">I understand that. My case is a special one because the application is shipped with an automatic updater that not only adds data files (several hundred MB of pdf, rtf, jpg ...) but also overwrites some program files (.exe and .swf).<br />
+<br />
+Putting data files in each user's $APPDATA would mean duplicating hundreds of MB.<br />
+<br />
+Now you will say : &quot;Updating such an app should be the administrator's job !&quot; and i couldn't agree more but our client has a weird setup of TabletPC given to employees all other the country, never coming back, and a strong security policy which forbids giving employees the administrator password.<br />
+<br />
+I will try the AccessControl plug-in right now ... Thanks again.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nicolas Cuny</div><div class="date">7th October 2005, 11:13</div></div><div class="posttext">Ok ! AccessControl is working for me ... this is what i did to grant full control to any user on a file :<br />
+AccessControl::GrantOnFile &quot;$MYFILE&quot; &quot;(S-1-5-32-545)&quot; &quot;FullAccess&quot;<br />
+<br />
+I also found about the CACLS command which displays and changes rights on files. It can work recursively and does not require NSIS so i would rather use that cause i need this fonctionnality anytime - not only when installing.<br />
+<br />
+The drawback is that when i try these commands :<br />
+<br />
+cacls myfile.xml /E /G (S-1-5-32-545):F<br />
+cacls myfile.xml /E /G BUILTIN\USERS:F<br />
+i receive an error message saying that the mapping the account names and the security identifiers has not been done. But if i try<br />
+<br />
+cacls myfile.xml /E /G BUILTIN\Utilisateurs:F<br />
+it works ! (utilisateurs being the french for users)<br />
+<br />
+Does anyone have a clue about that ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th October 2005, 12:43</div></div><div class="posttext">As the group name is translatable, you should use the well known SID (http://msdn.microsoft.com/library/en-us/secauthz/security/well_known_sids.asp) S-1-5-32-545 (http://support.microsoft.com/default.aspx?scid=KB;en-us;163846).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nicolas Cuny</div><div class="date">7th October 2005, 14:03</div></div><div class="posttext">Originally posted by kichik <br />
+As the group name is translatable, you should use the well known SID (http://msdn.microsoft.com/library/en-us/secauthz/security/well_known_sids.asp) S-1-5-32-545 (http://support.microsoft.com/default.aspx?scid=KB;en-us;163846). <br />
+Well, as i have already stated, i did try these commands :cacls myfile.xml /E /G (S-1-5-32-545):F<br />
+cacls myfile.xml /E /G S-1-5-32-545:F<br />
+Is there something wrong with the syntax ? or maybe i didn't understand your answer ? Whenever i try these commands, i get Windows Error 1132 (http://searchwin2000.techtarget.com/sDefinition/0,,sid1_gci990463_top1,00.html) : &quot;No mapping between account names and security IDs was done.&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th October 2005, 14:11</div></div><div class="posttext">Sorry, missed the first one line. Maybe CACLS doesn't support SIDs? Seems very unlikely.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nicolas Cuny</div><div class="date">7th October 2005, 15:32</div></div><div class="posttext">I discovered SetACL (http://setacl.sourceforge.net/) which is a nice GPL tool that performs the same tasks as CACLS but seems to be more convenient, has an ActiveX Control version and supports SIDs.<br />
+SetACL<br />
+    -on &quot;C:\Program Files\My Software&quot;<br />
+    -ot file<br />
+    -actn ace<br />
+    -ace &quot;n:S-1-1-0;p:full;s:y&quot;<br />
+n:S-1-1-0 means that we are setting permissions for everyone<br />
+p:full means that the permission granted is full control<br />
+s:y means that the trustee is a SID<br />
+<br />
+Now some ExecWait in my script and it should be great !</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

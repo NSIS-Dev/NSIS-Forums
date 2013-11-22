@@ -1,0 +1,217 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" newbie: MUI_CUSTOMFUNCTION_ABORT, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  newbie: MUI_CUSTOMFUNCTION_ABORT NSIS Discussion" />
+	
+	<title> newbie: MUI_CUSTOMFUNCTION_ABORT [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  newbie: MUI_CUSTOMFUNCTION_ABORT</div>
+<hr />
+<div class="pda"><a href="t-218565.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=218565">newbie: MUI_CUSTOMFUNCTION_ABORT</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jameshcunningha</div><div class="date">10th June 2005, 19:06</div></div><div class="posttext">This question is comparable to one that I asked a few weeks ago, but is more concise.  I hope that someone can help me, and if so, thank you.<br />
+<br />
+I'm using MUI.  I've defined a custom page that reads from an INI file, to determine whether tar is located in the chosen directory.<br />
+<br />
+My problem is that when the user clicks &quot;cancel&quot; on the custom page, the installation won't stop unless the condition is met that tar is located in the chosen directory.  As I've done it below - defining a MUI_CUSTOMFUNCTION_ABORT funtion that just issues a &quot;quit&quot; command - the installation won't abort until the user clicks &quot;next&quot;.<br />
+<br />
+Here're (what I think are) the relevant code snippets:<br />
+<br />
+<br />
+!define MUI_CUSTOMFUNCTION_ABORT &quot;FunctionName&quot;<br />
+...<br />
+Page custom FindingTarPage<br />
+Page components<br />
+Page instfiles<br />
+...<br />
+Function FindingTarPage<br />
+    !insertmacro MUI_HEADER_TEXT &quot;$(FINDTAR_TITLE)&quot; &quot;$(FINDTAR_SUBTITLE)&quot;<br />
+    !insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;FindTar&quot;<br />
+    !insertmacro MUI_INSTALLOPTIONS_READ $locOfTar &quot;FindTar&quot; &quot;Field 2&quot; &quot;State&quot;<br />
+    IfFileExists $locOfTar\tar.exe +3 0<br />
+    MessageBox MB_OKCANCEL &quot;tar.exe is not present in that directory.  Try again, or press cancel to exit the installer.&quot; IDOK -4 IDCANCEL 0<br />
+    Quit<br />
+FunctionEnd<br />
+<br />
+Function FunctionName<br />
+	Quit<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jameshcunningha</div><div class="date">10th June 2005, 19:07</div></div><div class="posttext">To clarify: What I'd like to know is whether there's some way for me to modify, directly, what events occur when the user hits &quot;next&quot; or &quot;cancel&quot; on a custom page.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ZmAn3</div><div class="date">10th June 2005, 21:37</div></div><div class="posttext">you could upon fail change the next button text to exit so when they hit next which is now labeled exit the installer quits</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">NHOCSUNG</div><div class="date">11th June 2005, 00:21</div></div><div class="posttext">The MUI_CUSTOMFUNCTION_ABORT execute after click Cancel button and YES to exit...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">NHOCSUNG</div><div class="date">11th June 2005, 00:35</div></div><div class="posttext">there many way to cancel during installation...but i found one way to make it work!<br />
+<br />
+I modify MUI <br />
+<br />
+!macro MUI_ABORTWARNING<br />
+<br />
+  !ifdef MUI_FINISHPAGE_ABORTWARNINGCHECK<br />
+    StrCmp $MUI_NOABORTWARNING &quot;1&quot; mui.quit<br />
+  !endif<br />
+  <br />
+  !ifdef MUI_ABORT_DURING_INSTALL<br />
+    StrCmp $MUI_ABORT_DURING_INSTALL &quot;&quot; mui.before_installing<br />
+      StrCpy $MUI_ABORT_DURING_INSTALL 1<br />
+      Abort<br />
+    mui.before_installing:<br />
+    MessageBox MB_YESNO|MB_ICONEXCLAMATION &quot;${MUI_ABORTWARNING_TEXT}&quot; IDYES mui.quit<br />
+<br />
+    Abort<br />
+<br />
+  !else<br />
+    MessageBox MB_YESNO|MB_ICONEXCLAMATION &quot;${MUI_ABORTWARNING_TEXT}&quot; IDYES mui.quit<br />
+<br />
+    Abort<br />
+  !endif<br />
+  <br />
+    mui.quit:<br />
+!macroend<br />
+<br />
+this macro so simple<br />
+<br />
+  !macro _RunCmd _Cmd<br />
+    !verbose push<br />
+    !verbose 3<br />
+<br />
+    ${If} $MUI_ABORT_DURING_INSTALL == 1<br />
+      ${If} ${Cmd} `MessageBox MB_YESNO|MB_ICONEXCLAMATION &quot;${MUI_ABORTWARNING_TEXT}&quot; IDYES`<br />
+        Call DumpLog<br />
+        Abort<br />
+      ${EndIf}<br />
+      StrCpy $MUI_ABORT_DURING_INSTALL &quot;0&quot;<br />
+    ${EndIf}<br />
+<br />
+    ${_Cmd}<br />
+<br />
+    !verbose pop<br />
+  !macroend<br />
+  !define RunCmd `!insertmacro _RunCmd`<br />
+<br />
+here an example<br />
+<br />
+Section &quot;&quot;<br />
+  StrCpy $MUI_ABORT_DURING_INSTALL &quot;0&quot;<br />
+  ${RunCmd} 'File &quot;COM Explorer\comexp.exe&quot;'<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">NHOCSUNG</div><div class="date">24th July 2005, 00:50</div></div><div class="posttext">why nobody say nothing to func ??? <br />
+<br />
+anyway i just found a very cool thing combine with my old function ... my installer have 3 install pages run First page install files, 2nd page create shortcuts and 3rd page create reg keys. it's so cool <br />
+<br />
+i replace my macro ${RunCmd} with 3 macros<br />
+<br />
+!macro _File _Argu<br />
+    !verbose push<br />
+    !verbose 3<br />
+<br />
+    ${If} $MUI_ABORT_DURING_INSTALL == 1<br />
+      ${If} ${Cmd} `MessageBox MB_YESNO|MB_ICONEXCLAMATION &quot;${MUI_ABORTWARNING_TEXT}&quot; IDYES`<br />
+        ;Call DumpLog<br />
+        Abort<br />
+      ${EndIf}<br />
+      StrCpy $MUI_ABORT_DURING_INSTALL &quot;0&quot;<br />
+    ${EndIf}<br />
+    <br />
+    ${If} $MUI_INSTALLPAGE_RUN == 1<br />
+      ${_Argu}<br />
+    ${EndIf}<br />
+<br />
+    !verbose pop<br />
+  !macroend<br />
+  !define File `!insertmacro _File`<br />
+  <br />
+  !macro _Icon _Argu<br />
+    !verbose push<br />
+    !verbose 3<br />
+<br />
+    ${If} $MUI_ABORT_DURING_INSTALL == 1<br />
+      ${If} ${Cmd} `MessageBox MB_YESNO|MB_ICONEXCLAMATION &quot;${MUI_ABORTWARNING_TEXT}&quot; IDYES`<br />
+        ;Call DumpLog<br />
+        Abort<br />
+      ${EndIf}<br />
+      StrCpy $MUI_ABORT_DURING_INSTALL &quot;0&quot;<br />
+    ${EndIf}<br />
+<br />
+    ${If} $MUI_INSTALLPAGE_RUN == 2<br />
+      ${_Argu}<br />
+    ${EndIf}<br />
+<br />
+    !verbose pop<br />
+  !macroend<br />
+  !define Icon `!insertmacro _Icon`<br />
+  <br />
+  !macro _Reg _Argu<br />
+    !verbose push<br />
+    !verbose 3<br />
+<br />
+    ${If} $MUI_ABORT_DURING_INSTALL == 1<br />
+      ${If} ${Cmd} `MessageBox MB_YESNO|MB_ICONEXCLAMATION &quot;${MUI_ABORTWARNING_TEXT}&quot; IDYES`<br />
+        ;Call DumpLog<br />
+        Abort<br />
+      ${EndIf}<br />
+      StrCpy $MUI_ABORT_DURING_INSTALL &quot;0&quot;<br />
+    ${EndIf}<br />
+<br />
+    ${If} $MUI_INSTALLPAGE_RUN == 3<br />
+      ${_Argu}<br />
+    ${EndIf}<br />
+<br />
+    !verbose pop<br />
+  !macroend<br />
+  !define Reg `!insertmacro _Reg`<br />
+<br />
+declare 2 var MUI_INSTALLPAGE_RUN, MUI_ABORT_DURING_INSTALL of course.<br />
+Here sample how to use my macros:<br />
+Var MUI_ABORT_DURING_INSTALL<br />
+Var MUI_INSTALLPAGE_RUN<br />
+<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+<br />
+<br />
+Section &quot;&quot;<br />
+  GetDlgItem $R1 $HWNDPARENT 2  ;Enable Cancel Button<br />
+  EnableWindow $R1 1<br />
+  StrCpy $MUI_ABORT_DURING_INSTALL 0<br />
+  IntOp $MUI_INSTALLPAGE_RUN $MUI_INSTALLPAGE_RUN + 1<br />
+<br />
+  ${File} 'File &quot;History.txt&quot;'<br />
+  ${File} 'File &quot;autorun.ldr&quot;'<br />
+  ${File} 'File &quot;APMUtils.dll&quot;'<br />
+  ${File} 'File &quot;APMHelp.chm&quot;'<br />
+<br />
+  ${Icon} '!insertmacro MUI_STARTMENU_WRITE_BEGIN Application'<br />
+  ${Icon} 'CreateDirectory &quot;$SMPROGRAMS\$ICONS_GROUP&quot;'<br />
+  ${Icon} 'CreateShortCut &quot;$SMPROGRAMS\$ICONS_GROUP\Virtual Drive Manager.lnk&quot; &quot;$INSTDIR\VrDrvMan.exe&quot;'<br />
+  ${Icon} 'CreateShortCut &quot;$SMPROGRAMS\$ICONS_GROUP\AutoPlay Menu Builder.lnk&quot; &quot;$INSTDIR\APMBuilder.exe&quot;'<br />
+  ${Icon} 'CreateShortCut &quot;$SMPROGRAMS\$ICONS_GROUP\Uninstall.lnk&quot; &quot;$INSTDIR\Uninstall.exe&quot;'<br />
+  ${Icon} '!insertmacro MUI_STARTMENU_WRITE_END'<br />
+<br />
+  ${Reg} 'WriteRegStr HKLM &quot;SOFTWARE\Classes\.apm&quot; &quot;&quot; &quot;apmbldfile&quot;'<br />
+  ${Reg} 'WriteRegStr HKLM &quot;SOFTWARE\Classes\apmbldfile&quot; &quot;&quot; &quot;AutoPlay Menu Data&quot;'<br />
+  ${Reg} 'WriteRegStr HKLM &quot;SOFTWARE\Classes\apmbldfile\DefaultIcon&quot; &quot;&quot; &quot;$INSTDIR\APMBuilder.exe,1&quot;'<br />
+  ${Reg} `WriteRegStr HKLM &quot;SOFTWARE\Classes\apmbldfile\Shell\Open\command&quot; &quot;&quot; '&quot;$INSTDIR\APMBuilder.exe&quot; &quot;%1&quot;'`<br />
+SectionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

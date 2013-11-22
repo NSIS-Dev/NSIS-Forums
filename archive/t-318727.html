@@ -1,0 +1,106 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" RegisterPluginCallback - Delphi, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  RegisterPluginCallback - Delphi NSIS Discussion" />
+	
+	<title> RegisterPluginCallback - Delphi [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  RegisterPluginCallback - Delphi</div>
+<hr />
+<div class="pda"><a href="t-318727.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=318727">RegisterPluginCallback - Delphi</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">prion</div><div class="date">27th April 2010, 23:10</div></div><div class="posttext">Hi,<br />
+<br />
+I'm looking for an example or a reference on how to use the RegisterPluginCallback with delphi. I had a look at several plugins developed in delphi but couldn't find anyone using the new plugin api and the RegisterPluginCallback.<br />
+I would guess the callback works like passing the RegisterPluginCallback a pointer to a function so nsis can call it back, but the RegisterPluginCallback expects 2 integers (unknow and uknown2) and I can't really figure out what exactly to pass there.<br />
+So it would be great if you guys could perhaps give me a short example or point me to a reference explaining what nsis expects when using this function.<br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th April 2010, 01:38</div></div><div class="posttext">int (NSISCALL *RegisterPluginCallback)(HMODULE, NSISPLUGINCALLBACK); // returns 0 on success, 1 if already registered and &lt; 0 on errors<br />
+<br />
+so, it takes the HMODULE aka HINSTANCE of your dll and a function pointer. NSISPLUGINCALLBACK is currently: typedef UINT_PTR (*NSISPLUGINCALLBACK)(enum NSPIM);<br />
+<br />
+so, a __cdecl function that (currently) has a single int parameter and returns a uintptr_t (return 0/NULL)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">prion</div><div class="date">28th April 2010, 08:57</div></div><div class="posttext">Thanks for your reply.<br />
+<br />
+RegisterPluginCallback now succeeds, but the installer crashes right after calling the InitPlugin function of my plugin. Could you please have a look at the code below, maybe you see what I'm doing wrong.<br />
+<br />
+<br />
+Plugin Code:<br />
+function NSISCallback(const NSPIM: Integer): Integer; cdecl;<br />
+begin<br />
+  ShowMessage('NSISCallback ' + IntToStr(NSPIM));<br />
+  Result := 0;<br />
+end;<br />
+<br />
+procedure InitPlugin(const hwndParent: HWND; const string_size: integer;<br />
+  const variables: PChar; const stacktop: pointer;<br />
+  const extraparameters: pointer = nil); cdecl;<br />
+var<br />
+  iResult: Integer;<br />
+begin<br />
+  Init(hwndParent, string_size, variables, stacktop, extraparameters);<br />
+  iResult := TRegisterPluginCallback(extrap.RegisterPluginCallback)(HINSTANCE,<br />
+    Integer(@NSISCallback));<br />
+  ShowMessage('RegisterPluginCallback ' + IntToStr(iResult));<br />
+end;<br />
+the above ShowMessage shows that RegisterPluginCallback results in 0.<br />
+<br />
+<br />
+NSIS Code:<br />
+  nsTEST::InitPlugin<br />
+  MessageBox MB_OK &quot;1&quot;<br />
+the above MessageBox never pops up, instead the installer crashes.<br />
+<br />
+<br />
+Thanks.<br />
+<br />
+edit: formatting.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th April 2010, 21:08</div></div><div class="posttext">What is HINSTANCE there? Does not look like a variable to me. You get the correct HINSTANCE in DllMain.<br />
+<br />
+Another possible problem is Integer(@NSISCallback), maybe it should not be a @ (pointer?) Delphi supports asm IIRC, so try something like:<br />
+__asm push DWORD PTR 0;<br />
+__asm call Integer(@NSISCallback);<br />
+<br />
+<br />
+And what is TRegisterPluginCallback? Some kind of cast? I have not used Delphi in years so I don't remember anything other than the basics.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">prion</div><div class="date">28th April 2010, 23:04</div></div><div class="posttext">I finally found the solution. It's the declaration of RegisterPluginCallback in the NSIS Delphi header (nsis.pas) which is as follows:<br />
+<br />
+TRegisterPluginCallback = function (const unknow: Integer; const uknown2: Integer): Integer; cdecl;<br />
+<br />
+After your reply I had another look at the problem and declared my own RegisterPluginCallback (didn't want to modify nsis.pas). Since I don't usually use cdecl I accidently declared it as stdcall and that's actually it. I tried running my plugin and it works when using stdcall instead of cdecl:<br />
+<br />
+TRegisterPluginCallback = function (const unknow: Integer; const uknown2: Integer): Integer; stdcall;<br />
+<br />
+So like that nothing crashes, my plugin stays loaded and the callback function is called when closing the installer.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th April 2010, 23:22</div></div><div class="posttext">Thanks, I updated nsis.pas so it will be fixed in the next release.<br />
+<br />
+If you look at https://nsis.svn.sourceforge.net/svnroot/nsis/NSIS/trunk/Source/exehead/api.h (should be used as reference for other languages) you see that it is indeed stdcall</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">prion</div><div class="date">29th April 2010, 09:02</div></div><div class="posttext">Just tried your changes in nsis.pas and it's working fine.<br />
+<br />
+And for anyone looking for a delphi example on how to use the new plugin api (like I was originally) I've attached a quick example.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

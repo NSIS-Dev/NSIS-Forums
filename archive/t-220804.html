@@ -1,0 +1,404 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Windows XP Home vs Windows XP Pro, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Windows XP Home vs Windows XP Pro NSIS Discussion" />
+	
+	<title> Windows XP Home vs Windows XP Pro [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Windows XP Home vs Windows XP Pro</div>
+<hr />
+<div class="pda"><a href="t-220804.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=220804">Windows XP Home vs Windows XP Pro</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">6th July 2005, 16:50</div></div><div class="posttext">How do I detect if the OS is XP Pro vs XP Home.  If it is Home, I plan on rejecting the installer, throwing an error and if its pro, to allow it.  i got a script that detects 95,98,etc, but i like to know pro/home of xp.<br />
+<br />
+thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">6th July 2005, 18:15</div></div><div class="posttext">You must do some calls with the system plugin,<br />
+first determine if the os is xp (with code you already have, or by calling GetVersion or GetVersionEx)<br />
+then if the os is xp (&gt;= 5.1) then call GetVersionEx again, but this time with the OSVERSIONINFOEX struct, then check the wSuiteMask member for the VER_SUITE_PERSONAL bit<br />
+<br />
+You could also use this (http://www.naughter.com/dtwinver.html) class if you want to create a plugin instead of using the system plugin<br />
+<br />
+ref:<br />
+http://msdn.microsoft.com/library/default.asp?url=/library/en-us/sysinfo/base/getversionex.asp<br />
+http://msdn.microsoft.com/library/default.asp?url=/library/en-us/sysinfo/base/osversioninfoex_str.asp</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">6th July 2005, 20:02</div></div><div class="posttext">pardon my ignorance, but i am still quite new to NSIS.  How do I do this?  this is what i use right now.<br />
+<br />
+<br />
+ GetWindowsVersion<br />
+;<br />
+; Based on Yazno's function, http://yazno.***********/powerpimpit/<br />
+; Updated by Joost Verburg<br />
+;<br />
+; Returns on top of stack<br />
+;<br />
+; Windows Version (95, 98, ME, NT x.x, 2000, XP, 2003)<br />
+; or<br />
+; '' (Unknown Windows Version)<br />
+;<br />
+; Usage:<br />
+;   Call GetWindowsVersion<br />
+;   Pop $R0<br />
+;   ; at this point $R0 is &quot;NT 4.0&quot; or whatnot<br />
+<br />
+Function GetWindowsVersion<br />
+<br />
+  Push $R0<br />
+  Push $R1<br />
+<br />
+  ClearErrors<br />
+<br />
+  ReadRegStr $R0 HKLM \<br />
+  &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion&quot; CurrentVersion<br />
+<br />
+  IfErrors 0 lbl_winnt<br />
+<br />
+  ; we are not NT<br />
+  ReadRegStr $R0 HKLM \<br />
+  &quot;SOFTWARE\Microsoft\Windows\CurrentVersion&quot; VersionNumber<br />
+<br />
+  StrCpy $R1 $R0 1<br />
+  StrCmp $R1 '4' 0 lbl_error<br />
+<br />
+  StrCpy $R1 $R0 3<br />
+<br />
+  StrCmp $R1 '4.0' lbl_win32_95<br />
+  StrCmp $R1 '4.9' lbl_win32_ME lbl_win32_98<br />
+<br />
+  lbl_win32_95:<br />
+    StrCpy $R0 '95'<br />
+    MessageBox MB_OK|MB_ICONSTOP &quot;Windows 95 is not supported by the  software.  $\n$\nPlease call 1-800- for additional support options.&quot; IDOK<br />
+    Quit<br />
+  Goto lbl_done<br />
+<br />
+  lbl_win32_98:<br />
+    StrCpy $R0 '98'<br />
+    MessageBox MB_OK|MB_ICONSTOP &quot;Windows 98 is not supported by the  software.  $\n$\nPlease call 1-800-) for additional support options.&quot; IDOK<br />
+    Quit<br />
+  Goto lbl_done<br />
+<br />
+  lbl_win32_ME:<br />
+    StrCpy $R0 'ME'<br />
+    MessageBox MB_OK|MB_ICONSTOP &quot;Windows Millennium Edition is not supported by the  software.  $\n$\nPlease call 1-800- for additional support options.&quot; IDOK<br />
+    Quit<br />
+  Goto lbl_done<br />
+<br />
+  lbl_winnt:<br />
+<br />
+  StrCpy $R1 $R0 1<br />
+<br />
+  StrCmp $R1 '3' lbl_winnt_x<br />
+  StrCmp $R1 '4' lbl_winnt_x<br />
+<br />
+  StrCpy $R1 $R0 3<br />
+<br />
+  StrCmp $R1 '5.0' lbl_winnt_2000<br />
+  StrCmp $R1 '5.1' lbl_winnt_XP<br />
+  StrCmp $R1 '5.2' lbl_winnt_2003 lbl_error<br />
+<br />
+  lbl_winnt_x:<br />
+    StrCpy $R0 &quot;NT $R0&quot; 6<br />
+    MessageBox MB_OK|MB_ICONSTOP &quot;Windows NT is not supported by the  software.  $\n$\nPlease call 1-800- for additional support options.&quot; IDOK<br />
+    Quit<br />
+  Goto lbl_done<br />
+<br />
+  lbl_winnt_2000:<br />
+    Strcpy $R0 '2000'<br />
+  Goto lbl_done<br />
+<br />
+  lbl_winnt_XP:<br />
+    Strcpy $R0 'XP'<br />
+    ;; TODO:  Detect Home and Professional Editions, abort on home<br />
+    ;; MessageBox MB_OK|MB_ICONSTOP &quot;Windows XP Home Edition is not supported by the  software.  $\n$\nPlease switch to Windows XP Professional or call  for additional support options.&quot;<br />
+    ;; Quit<br />
+  Goto lbl_done<br />
+<br />
+  lbl_winnt_2003:<br />
+    Strcpy $R0 '2003'<br />
+  Goto lbl_done<br />
+<br />
+  lbl_error:<br />
+    Strcpy $R0 ''<br />
+  lbl_done:<br />
+<br />
+  Pop $R1<br />
+  Exch $R0<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">11th July 2005, 19:51</div></div><div class="posttext">I know i make use of System::Call Kernel32::getversionex but i dont get how i get the suite out of it, nor do i get the call itself using the system plugin.  please clarify, sorry for asking such a silly question, but i dont get it</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">flizebogen</div><div class="date">12th July 2005, 07:43</div></div><div class="posttext">In the german press was an interesting article of how to convert a home edition to a pro edition. The article said the following Registry Key determines the kind of edition:<br />
+<br />
+HKLM\SYSTEM\ControlSet001\Control\ProductOptions\ProductSuite<br />
+<br />
+If the Value is &quot;Personal&quot; than it's the home otherwise its the pro edition.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">12th July 2005, 13:31</div></div><div class="posttext">Wunderbar, tausend dank!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">12th July 2005, 13:58</div></div><div class="posttext">Nice find.<br />
+You can then change the NSIS GetWindowsVersion function.<br />
+<br />
+Change:<br />
+   lbl_winnt_XP:<br />
+     Strcpy $R0 'XP'<br />
+   Goto lbl_done<br />
+To:<br />
+   lbl_winnt_XP:<br />
+     ReadRegStr $R0 HKLM &quot;SYSTEM\ControlSet001\Control\ProductOptions&quot; ProductSuite<br />
+     StrCmp $R0 'personal' 0 +3<br />
+     Strcpy $R0 'XP Home'<br />
+   Goto lbl_done<br />
+     Strcpy $R0 'XP Pro'<br />
+   Goto lbl_done<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">12th July 2005, 15:36</div></div><div class="posttext">i dont have XP Home here in the office, but i imagine the StrCmp is NOT case sensitive?  if it is, i think it should be 'Personal' but i am not sure.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">12th July 2005, 15:53</div></div><div class="posttext">Nope, it's case insensitive.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">14th July 2005, 01:19</div></div><div class="posttext">Ok...Doesnt work because of this it is a reg_multi_sz<br />
+<br />
+<br />
+Windows Registry Editor Version 5.00<br />
+<br />
+[HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\ProductOptions]<br />
+&quot;ProductType&quot;=&quot;WinNT&quot;<br />
+&quot;ProductSuite&quot;=hex(7):50,00,65,00,72,00,73,00,6f,00,6e,00,61,00,6c,00,00,00,00,\<br />
+  00<br />
+<br />
+<br />
+any ideas?<br />
+<br />
+<br />
+lbl_winnt_XP:<br />
+     ReadRegStr $R5 HKLM &quot;SYSTEM\ControlSet001\Control\ProductOptions&quot; ProductSuite<br />
+     MessageBox MB_OK &quot;Suite: $R5&quot; IDOK<br />
+;     StrCmp $R5 'Personal' home_error lbl_done</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">14th July 2005, 17:51</div></div><div class="posttext">I think ReadRegDWORD will work instead.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">14th July 2005, 19:33</div></div><div class="posttext">I dont have home in the office so i cant check it here, but i dont think that would work.  I found this on the wiki http://nsis.sourceforge.net/wiki/REG_MULTI_SZ_Reader but its quite complex and it has a lot of functionality i dont need.  i just need the string returned so i can do a strcmp.  <br />
+<br />
+thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">14th July 2005, 20:07</div></div><div class="posttext">Haven't tested this, but it should work.<br />
+<br />
+<br />
+!define HKEY_CLASSES_ROOT        0x80000000<br />
+!define HKEY_CURRENT_USER        0x80000001<br />
+!define HKEY_LOCAL_MACHINE       0x80000002<br />
+!define HKEY_USERS               0x80000003<br />
+!define HKEY_PERFORMANCE_DATA    0x80000004<br />
+!define HKEY_PERFORMANCE_TEXT    0x80000050<br />
+!define HKEY_PERFORMANCE_NLSTEXT 0x80000060<br />
+!define HKEY_CURRENT_CONFIG      0x80000005<br />
+!define HKEY_DYN_DATA            0x80000006<br />
+ <br />
+!define KEY_QUERY_VALUE          0x0001<br />
+!define KEY_ENUMERATE_SUB_KEYS   0x0008<br />
+ <br />
+!define REG_NONE                 0<br />
+!define REG_SZ                   1<br />
+!define REG_EXPAND_SZ            2<br />
+!define REG_BINARY               3<br />
+!define REG_DWORD                4<br />
+!define REG_DWORD_LITTLE_ENDIAN  4<br />
+!define REG_DWORD_BIG_ENDIAN     5<br />
+!define REG_LINK                 6<br />
+!define REG_MULTI_SZ             7<br />
+ <br />
+!define RegOpenKeyEx     &quot;Advapi32::RegOpenKeyExA(i, t, i, i, i) i&quot;<br />
+!define RegQueryValueEx  &quot;Advapi32::RegQueryValueExA(i, t, i, i, i, i) i&quot;<br />
+!define RegCloseKey      &quot;Advapi32::RegCloseKeyA(i) i&quot;<br />
+<br />
+!define ReadRegMultiSz &quot;!insertmacro ReadRegMultiSz&quot;<br />
+<br />
+!macro ReadRegMultiSz VAR ROOT_KEY SUB_KEY VALUE<br />
+ Push &quot;${ROOT_KEY}&quot;<br />
+ Push &quot;${SUB_KEY}&quot;<br />
+ Push &quot;${VALUE}&quot;<br />
+  Call ReadRegMultiSz<br />
+ Pop &quot;${Var}&quot;<br />
+!macroend<br />
+<br />
+Function ReadRegMultiSz<br />
+Exch $R0<br />
+Exch<br />
+Exch $R1<br />
+Exch 2<br />
+Exch $R2<br />
+Exch 2<br />
+Push $0<br />
+Push $1<br />
+Push $2<br />
+Push $3<br />
+  StrCpy $0 &quot;&quot;<br />
+  StrCpy $1 &quot;&quot;<br />
+  StrCpy $2 &quot;&quot;<br />
+  StrCpy $3 &quot;&quot;<br />
+  SetPluginUnload alwaysoff<br />
+  System::Call &quot;*(i) i (0) .r0&quot;<br />
+  System::Call &quot;*(i) i (0) .r1&quot;<br />
+  System::Call &quot;*(i) i (0) .r2&quot;<br />
+  System::Call &quot;${RegOpenKeyEx}($R2, '$R1', \<br />
+    0, ${KEY_QUERY_VALUE}|${KEY_ENUMERATE_SUB_KEYS}, r0) .r3&quot;<br />
+ <br />
+  StrCmp $3 0 goon<br />
+    DetailPrint &quot;Can't open registry key! ($3)&quot;<br />
+    Goto done<br />
+goon:<br />
+ <br />
+  System::Call &quot;*$0(&amp;i4 .r4)&quot;<br />
+  System::Call &quot;${RegQueryValueEx}(r4, '$R0', 0, r1, 0, r2) .r3&quot;<br />
+ <br />
+  StrCmp $3 0 read<br />
+    DetailPrint &quot;Can't query registry value! ($3)&quot;<br />
+    Goto done<br />
+ <br />
+read:<br />
+ <br />
+  System::Call &quot;*$1(&amp;i4 .r3)&quot;<br />
+ <br />
+  StrCmp $3 ${REG_MULTI_SZ} multisz<br />
+    DetailPrint &quot;Registry value no SZ_MULTI_SZ! ($3)&quot;<br />
+    Goto done<br />
+ <br />
+multisz:<br />
+ <br />
+  System::Call &quot;*$2(&amp;i4 .r3)&quot;<br />
+ <br />
+  StrCmp $3 0 0 multiszalloc<br />
+    DetailPrint &quot;Registry value empty! ($3)&quot;<br />
+    Goto done<br />
+ <br />
+multiszalloc:<br />
+ <br />
+  System::Free $1<br />
+  System::Alloc $3<br />
+  Pop $1<br />
+ <br />
+  StrCmp $1 0 0 multiszget<br />
+    DetailPrint &quot;Can't allocate enough memory! ($3)&quot;<br />
+    Goto done<br />
+ <br />
+multiszget:<br />
+ <br />
+  System::Call &quot;${RegQueryValueEx}(r4, '${VALUE}', 0, 0, r1, r2) .r3&quot;<br />
+ <br />
+  StrCmp $3 0 multiszprocess<br />
+    DetailPrint &quot;Can't query registry value! ($3)[2]&quot;<br />
+    Goto done<br />
+ <br />
+multiszprocess:<br />
+ <br />
+  StrCpy $4 $1<br />
+ <br />
+  loop:<br />
+ <br />
+    System::Call &quot;*$4(&amp;t${NSIS_MAX_STRLEN} .r3)&quot;<br />
+    StrCmp $3 &quot;&quot; done<br />
+    StrLen $5 $3<br />
+    IntOp $4 $4 + $5<br />
+    IntOp $4 $4 + 1<br />
+    Goto loop<br />
+ <br />
+done:<br />
+ <br />
+  System::Free $2<br />
+  System::Free $1<br />
+ <br />
+  StrCmp $0 0 noClose<br />
+    System::Call &quot;${RegCloseKey}(r0)&quot;<br />
+ <br />
+noClose:<br />
+ <br />
+  SetPluginUnload manual<br />
+  System::Free $0<br />
+  StrCpy $R0 $3<br />
+<br />
+Pop $3<br />
+Pop $2<br />
+Pop $1<br />
+Pop $0<br />
+Pop $R2<br />
+Pop $R1<br />
+Exch $R0<br />
+FunctionEnd<br />
+<br />
+<br />
+You might want to put it all in a seperate .nsh file and !include it.<br />
+<br />
+Usage:<br />
+${ReadRegMultiSz} $R0 HKLM &quot;Software\Blah&quot; &quot;BlahBlah&quot;<br />
+<br />
+You should try ReadRegStr and only if that fails, call this function (e.g. IfErrors is set - make sure to use ClearErrors before hand).<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">15th July 2005, 01:24</div></div><div class="posttext">hmm we're getting warmer<br />
+<br />
+1 warning:<br />
+  unknown variable/constant &quot;{VALUE}&quot; detected, ignoring (registry.nsh:100)<br />
+<br />
+;;;line 100 below label<br />
+multiszget:<br />
+<br />
+  System::Call &quot;${RegQueryValueEx}(r4, '${VALUE}', 0, 0, r1, r2) .r3&quot;<br />
+<br />
+this is how i called it, maybe thats why<br />
+<br />
+lbl_winnt_XP:<br />
+     ${ReadRegMultiSz} $R5 HKLM &quot;SYSTEM\ControlSet001\Control\ProductOptions&quot; &quot;ProductSuite&quot;<br />
+     StrCmp $R5 'Personal' home_error lbl_done</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">15th July 2005, 08:25</div></div><div class="posttext">Sorry, missed a replacement.<br />
+In the code above, ${VALUE} should be $R0<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">16th July 2005, 03:39</div></div><div class="posttext">I apologise for not getting back sooner, I was unable to get to a test computer with home edition (apparently ms wont allow you to change the null sring to Personal if i use professional (odd as it should be the other way around).  <br />
+<br />
+However, my installer still allowed me to install on a home install.  everything else works fine except for home.  i reckon this shouldnt be a problem as i can just leave it as is.<br />
+<br />
+in an earlier post in this thread someone mentions using the system call to kernel32, maybe thats the best way, as it uses a function that does just that instead? but i dont know how to make use of that function, esp in my function i currently use.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">anna123</div><div class="date">7th April 2006, 20:56</div></div><div class="posttext">how to diff b/w win2003 and win2003R2</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

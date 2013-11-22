@@ -1,0 +1,184 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" INI File, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  INI File NSIS Discussion" />
+	
+	<title> INI File [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  INI File</div>
+<hr />
+<div class="pda"><a href="t-310019.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=310019">INI File</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Mia128</div><div class="date">14th August 2009, 21:37</div></div><div class="posttext">Hello everyone. <br />
+<br />
+Someone can guide me in the following? <br />
+<br />
+I have a custom page with three text fields empty. What I do is that the next button is enabled only when these fields are left empty. <br />
+<br />
+I am looking for how to do something similar to an onchange to validate at this time but I can not find it. <br />
+<br />
+Since already I thank you very much. <br />
+<br />
+<br />
+My ini file <br />
+<br />
+[Settings]<br />
+NumFields=6<br />
+NextEnabled=NO<br />
+<br />
+[Field 1]<br />
+Type=Label<br />
+Text=IP o Host de la base de datos de Cronos<br />
+Left=18<br />
+Right=174<br />
+Top=24<br />
+Bottom=36<br />
+<br />
+[Field 2]<br />
+Type=Label<br />
+Text=UbicaciÃ³n de la base de datos de Cronos(cronos.fdb)<br />
+Left=18<br />
+Right=275<br />
+Top=60<br />
+Bottom=70<br />
+<br />
+[Field 3]<br />
+Type=Label<br />
+Text=Nombre de estaciÃ³n local<br />
+Left=18<br />
+Right=278<br />
+Top=97<br />
+Bottom=105<br />
+<br />
+[Field 4]<br />
+Type=Text<br />
+Left=18<br />
+Right=297<br />
+Top=38<br />
+Bottom=51<br />
+Flags=<br />
+<br />
+<br />
+[Field 5]<br />
+Type=Text<br />
+Left=18<br />
+Right=297<br />
+Top=74<br />
+Bottom=87<br />
+Flags=<br />
+<br />
+[Field 6]<br />
+Type=Text<br />
+Left=18<br />
+Right=297<br />
+Top=110<br />
+Bottom=123<br />
+Flags=</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CrushBug</div><div class="date">18th August 2009, 20:43</div></div><div class="posttext">I think you would need to catch the empty fields in the 'leave' event on that custom page and call Abort.<br />
+<br />
+It would be better to do this through nsDialogs as it has the exact functionality you are looking for. Check out the &quot;\Examples\nsDialogs\example.nsi&quot; file in your NSIS install folder.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">f0rt</div><div class="date">18th August 2009, 23:15</div></div><div class="posttext">I agree nsDialogs is the way to go. So I would do something like the following:<br />
+<br />
+<br />
+!include &quot;LogicLib.nsh&quot;<br />
+!include &quot;WinMessages.nsh&quot;<br />
+!include &quot;nsDialogs.nsh&quot;<br />
+<br />
+Name &quot;dialog&quot;<br />
+OutFile &quot;dialog.exe&quot;<br />
+<br />
+Page custom nsConfigDialog<br />
+Page instfiles<br />
+<br />
+XPStyle on<br />
+<br />
+Var FIELD1<br />
+Var FIELD2<br />
+Var FIELD3<br />
+<br />
+Function .onInit<br />
+   InitPluginsDir<br />
+FunctionEnd<br />
+<br />
+Function nsConfigDialog<br />
+   ; 1018 = resource identifier for child rectangle<br />
+   nsDialogs::Create 1018<br />
+   Pop $0<br />
+<br />
+   ; Create labels<br />
+   ${NSD_CreateLabel} 18u 24u 156u 12u &quot;IP o Host de la base de datos de Cronos&quot;<br />
+   Pop $0<br />
+   ${NSD_CreateLabel} 18u 60u 257u 10u &quot;UbicaciÃ³n de la base de datos de Cronos(cronos.fdb)&quot;<br />
+   Pop $0<br />
+   ${NSD_CreateLabel} 18u 97u 260u 8u &quot;Nombre de estaciÃ³n loca&quot;<br />
+   Pop $0<br />
+<br />
+   ; Create edit fields<br />
+   ${NSD_CreateText} 18u 38u 279u 13u &quot;&quot;<br />
+   Pop $FIELD1<br />
+   ${NSD_CreateText} 18u 74u 279u 13u &quot;&quot;<br />
+   Pop $FIELD2<br />
+   ${NSD_CreateText} 18u 110u 279u 13u &quot;&quot;<br />
+   Pop $FIELD3<br />
+<br />
+   ; Register callback function to be notified regarding any change<br />
+   ; of the edit fields<br />
+   GetFunctionAddress $0 OnChange<br />
+   nsDialogs::OnChange $FIELD1 $0<br />
+   nsDialogs::OnChange $FIELD2 $0<br />
+   nsDialogs::OnChange $FIELD3 $0<br />
+<br />
+   ; Disable Install button by default<br />
+   GetDlgItem $0 $HWNDPARENT 1<br />
+   EnableWindow $0 0<br />
+<br />
+   nsDialogs::Show<br />
+FunctionEnd<br />
+<br />
+Function OnChange<br />
+   Exch $0 ; HWND<br />
+   Push $1<br />
+   Push $2<br />
+   Push $3<br />
+<br />
+   ; Read contents of edit fields<br />
+   ${NSD_GetText} $FIELD1 $1<br />
+   ${NSD_GetText} $FIELD2 $2<br />
+   ${NSD_GetText} $FIELD3 $3<br />
+<br />
+   GetDlgItem $0 $HWNDPARENT 1<br />
+   ${If} $1 != &quot;&quot;<br />
+   ${AndIf} $2 != &quot;&quot;<br />
+   ${AndIf} $3 != &quot;&quot;<br />
+      ; Enable Install button<br />
+      EnableWindow $0 1<br />
+   ${Else}<br />
+      ; Disable Install button<br />
+      EnableWindow $0 0<br />
+   ${EndIf}<br />
+<br />
+   Pop $3   <br />
+   Pop $2<br />
+   Pop $1<br />
+   Pop $0<br />
+FunctionEnd<br />
+<br />
+Section<br />
+SectionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

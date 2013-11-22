@@ -1,0 +1,177 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problem with EnumRegValue, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problem with EnumRegValue NSIS Discussion" />
+	
+	<title> Problem with EnumRegValue [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problem with EnumRegValue</div>
+<hr />
+<div class="pda"><a href="t-212246.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=212246">Problem with EnumRegValue</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">4th April 2005, 11:32</div></div><div class="posttext">Hi,<br />
+<br />
+by testing my solution for the issue with library.nsh (http://forums.winamp.com/showthread.php?s=&amp;threadid=211446) I found another one:<br />
+<br />
+Please correct me if I'm wrong:<br />
+<br />
+EnumRegValue maybe has an error by design. The example in NSIS documentation (2.06) shows that comparing the result to &quot;&quot; can be used as abort criteria for the loop. In reality those empty &quot;registry variable names&quot; are allowed and regularly used. So a key where such a &quot;default value&quot; is set will not be traversed by that EnumRegValue-loop.<br />
+<br />
+I don't know whether the empty variable name is always the first one (last EnumRegValue parameter=0) in the loop. <br />
+<br />
+I know that there probably is a workaround using ReadRegStr and checking the error flag.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th April 2005, 18:30</div></div><div class="posttext">Please submit a bug report (http://sourceforge.net/tracker/?atid=373085&amp;group_id=22049&amp;func=browse).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">7th April 2005, 19:43</div></div><div class="posttext">done (http://sourceforge.net/tracker/index.php?func=detail&amp;aid=1178756&amp;group_id=22049&amp;atid=373085)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bluenet</div><div class="date">8th April 2005, 03:55</div></div><div class="posttext">Hi stb, you can use this macro to get the number of value<br />
+<br />
+!define RegOpenKey     &quot;Advapi32::RegOpenKey(i, t, i) i&quot;<br />
+!define RegCloseKey      &quot;Advapi32::RegCloseKey(i) i&quot;<br />
+!define RegQueryInfoKey      &quot;Advapi32::RegQueryInfoKey(i, t, i, i, i, i, i, i, i, i, i, i) i&quot;<br />
+!define HKEY_CLASSES_ROOT           0x80000000<br />
+!define HKEY_CURRENT_USER           0x80000001<br />
+!define HKEY_LOCAL_MACHINE          0x80000002<br />
+!define HKEY_USERS                  0x80000003<br />
+!define HKEY_PERFORMANCE_DATA       0x80000004<br />
+<br />
+!macro GetRegValueNum OUTPUT ROOT KEY<br />
+	Push `${KEY}`<br />
+	Push `${ROOT}`<br />
+	Push $R0<br />
+	Push $R1<br />
+	Exch 2<br />
+	Exch<br />
+	Exch 3<br />
+	Exch<br />
+	System::Call /NOUNLOAD &quot;*(i 0) i .R0&quot;<br />
+	System::Call /NOUNLOAD &quot;${RegOpenKey}(s, s, R0)&quot;<br />
+	Push $R0<br />
+	System::Call /NOUNLOAD &quot;*$R0(&amp;i4 .R0)&quot;<br />
+	System::Call /NOUNLOAD &quot;*(i 0) i .R1&quot;<br />
+	System::Call /NOUNLOAD &quot;${RegQueryInfoKey}(R0, i 0, 0, 0, 0, 0, 0, R1, 0, 0, 0, 0)&quot;<br />
+	System::Call /NOUNLOAD &quot;*$R1(i .s)&quot;<br />
+	System::Free /NOUNLOAD $R1<br />
+	System::Call /NOUNLOAD &quot;${RegCloseKey}(R0)&quot;<br />
+	Exch<br />
+	Pop $R0<br />
+	System::Free $R0<br />
+	Exch<br />
+	Pop $R1<br />
+	Exch<br />
+	Pop $R0<br />
+	Pop ${OUTPUT}<br />
+!macroend<br />
+<br />
+And using like this:<br />
+!insertmacro GetRegValueNum $0 ${HKCU} Key<br />
+${For} $1 0 $0<br />
+;do something<br />
+${Next}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">8th April 2005, 09:34</div></div><div class="posttext">Thanks for the macro, bluenet! There are two things:<br />
+<br />
+1. If the key does not exist the error flag should be set and the macro should skip the remaining lines and return 0.<br />
+2. I think this should be an internal NSIS command and the example for EnumRegValue should use this new internal command (perhaps named &quot;RegValueCount&quot;) instead of &quot;&quot; as stop criteria.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bluenet</div><div class="date">9th April 2005, 03:22</div></div><div class="posttext">And a &quot;RegKeyCount&quot;? QueryRegKeyInfo may be better.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bd2005</div><div class="date">9th April 2005, 08:07</div></div><div class="posttext">This looks interesting, I have a need to use something like this.<br />
+<br />
+How do I run this macro ... just exactly what does it do?<br />
+<br />
+Nsis tells me missing section and missing output file?<br />
+<br />
+Thks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">9th April 2005, 09:11</div></div><div class="posttext">compare this code to the example from manual (4.9.2.6)<br />
+<br />
+<br />
+!insertmacro GetRegValueNum $3 HKLM Software\Microsoft\Windows\CurrentVersion<br />
+StrCpy $0 0<br />
+loop:<br />
+  IntCmp $3 $0 done<br />
+  EnumRegValue $1 HKLM <br />
+Software\Microsoft\Windows\CurrentVersion $0<br />
+  IntOp $0 $0 + 1<br />
+  ReadRegStr $2 HKLM Software\Microsoft\Windows\CurrentVersion $1<br />
+  MessageBox MB_YESNO|MB_ICONQUESTION &quot;$1 = $2$\n$\nMore?&quot; IDYES loop<br />
+done:<br />
+ <br />
+(not tested yet)<br />
+<br />
+You have to include the !macro part (!defines and !macro...!macroend) somewhere into your script and then you can insert the code lines above in a section/function. Please look at other examples and the nice NSIS manual for basics.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bluenet</div><div class="date">9th April 2005, 15:50</div></div><div class="posttext">If using LogicLib it simple like this<br />
+<br />
+<br />
+!include LogicLib.nsh<br />
+<br />
+!define RegOpenKey &quot;Advapi32::RegOpenKey(i, t, i) i&quot;<br />
+!define RegCloseKey &quot;Advapi32::RegCloseKey(i) i&quot;<br />
+!define RegQueryInfoKey &quot;Advapi32::RegQueryInfoKey(i, t, i, i, i, i, i, i, i, i, i, i) i&quot;<br />
+!define HKCR 0x80000000<br />
+!define HKCU 0x80000001<br />
+!define HKLM 0x80000002<br />
+!define HKU 0x80000003<br />
+!define HKPD 0x80000004<br />
+<br />
+!macro GetRegValueNum OUTPUT ROOT KEY<br />
+Push `${KEY}`<br />
+Push `${ROOT}`<br />
+Push $R0<br />
+Push $R1<br />
+Exch 2<br />
+Exch<br />
+Exch 3<br />
+Exch<br />
+System::Call /NOUNLOAD &quot;*(i 0) i .R0&quot;<br />
+System::Call /NOUNLOAD &quot;${RegOpenKey}(s, s, R0)&quot;<br />
+Push $R0<br />
+System::Call /NOUNLOAD &quot;*$R0(&amp;i4 .R0)&quot;<br />
+System::Call /NOUNLOAD &quot;*(i 0) i .R1&quot;<br />
+System::Call /NOUNLOAD &quot;${RegQueryInfoKey}(R0, i 0, 0, 0, 0, 0, 0, R1, 0, 0, 0, 0)&quot;<br />
+System::Call /NOUNLOAD &quot;*$R1(i .s)&quot;<br />
+System::Free /NOUNLOAD $R1<br />
+System::Call /NOUNLOAD &quot;${RegCloseKey}(R0)&quot;<br />
+Exch<br />
+Pop $R0<br />
+System::Free $R0<br />
+Exch<br />
+Pop $R1<br />
+Exch<br />
+Pop $R0<br />
+Pop ${OUTPUT}<br />
+!macroend<br />
+<br />
+!insertmacro GetRegValueNum $0 ${HKLM} &quot;SOFTWARE\Microsoft\Windows\CurrentVersion&quot;<br />
+${For} $1 0 $0<br />
+EnumRegValue $2 HKLM &quot;SOFTWARE\Microsoft\Windows\CurrentVersion&quot; $1<br />
+DetailPrint $2<br />
+${Next}<br />
+<br />
+<br />
+This code will list all value under HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion.<br />
+Note that you should use ${HKLM} instead of HKLM in this macro</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

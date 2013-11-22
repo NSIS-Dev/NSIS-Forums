@@ -1,0 +1,159 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Not able to delete ENV variable &amp; its value, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Not able to delete ENV variable &amp; its value NSIS Discussion" />
+	
+	<title> Not able to delete ENV variable &amp; its value [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Not able to delete ENV variable &amp; its value</div>
+<hr />
+<div class="pda"><a href="t-321336.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=321336">Not able to delete ENV variable &amp; its value</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">nv_rajanikanth</div><div class="date">2nd August 2010, 11:53</div></div><div class="posttext">Hi<br />
+<br />
+Using installer i am successfully adding the ENV variable. but not able to delete it.<br />
+please let me know if anything chage is required in the following code to make this working fine.(giving parital code)<br />
+<br />
+Var /GLOBAL AcsRoot<br />
+<br />
+Function .onInit<br />
+   StrCpy $AcsRoot &quot;C:\Rajani\home\Administrator&quot;<br />
+FunctionEnd<br />
+;-----in install----<br />
+  Push &quot;ACS_ROOT&quot;<br />
+  Push $AcsRoot<br />
+  Call AddToEnvVar<br />
+;-----------------<br />
+<br />
+<br />
+;-------in uninstall--<br />
+  Push &quot;ACS_ROOT_DIR&quot;<br />
+  Push $AcsRootDir<br />
+  Call un.RemoveFromEnvVar<br />
+;-------------------<br />
+<br />
+<br />
+<br />
+<br />
+Function un.RemoveFromEnvVar<br />
+ <br />
+  Exch $1 ; $1 has environment variable value<br />
+  Exch<br />
+  Exch $0 ; $0 has environment variable name<br />
+ <br />
+  DetailPrint &quot;Removing $1 from $0&quot;<br />
+  Push $2<br />
+  Push $3<br />
+  Push $4<br />
+  Push $5<br />
+  Push $6<br />
+  Push $7<br />
+ <br />
+  IntFmt $7 &quot;%c&quot; 26 # DOS EOF<br />
+   ;DetailPrint &quot;Print 10&quot;<br />
+  Call un.IsNT<br />
+  Pop $2<br />
+  StrCmp $2 1 unRemoveFromEnvVar_NT<br />
+    ; Not on NT<br />
+    StrCpy $2 $WINDIR 2<br />
+  ;DetailPrint &quot;Print 11&quot;<br />
+    FileOpen $2 &quot;$2\autoexec.bat&quot; r<br />
+    GetTempFileName $5<br />
+    FileOpen $3 $5 w<br />
+    GetFullPathName /SHORT $1 $1<br />
+    StrCpy $1 &quot;SET $0=%$0%;$1&quot;<br />
+    Goto unRemoveFromEnvVar_dosLoop<br />
+ <br />
+    unRemoveFromEnvVar_dosLoop:<br />
+  ;DetailPrint &quot;Print 12&quot;<br />
+      FileRead $2 $4<br />
+      StrCpy $6 $4 1 -1 # read last char<br />
+      StrCmp $6 $7 0 +2 # if DOS EOF<br />
+        StrCpy $4 $4 -1 # remove DOS EOF so we can compare<br />
+      StrCmp $4 &quot;$1$\r$\n&quot; unRemoveFromEnvVar_dosLoopRemoveLine<br />
+      StrCmp $4 &quot;$1$\n&quot; unRemoveFromEnvVar_dosLoopRemoveLine<br />
+      StrCmp $4 &quot;$1&quot; unRemoveFromEnvVar_dosLoopRemoveLine<br />
+      StrCmp $4 &quot;&quot; unRemoveFromEnvVar_dosLoopEnd<br />
+      FileWrite $3 $4<br />
+      Goto unRemoveFromEnvVar_dosLoop<br />
+      unRemoveFromEnvVar_dosLoopRemoveLine:<br />
+  ;DetailPrint &quot;Print 13&quot;<br />
+        SetRebootFlag true<br />
+        Goto unRemoveFromEnvVar_dosLoop<br />
+ <br />
+    unRemoveFromEnvVar_dosLoopEnd:<br />
+  ;DetailPrint &quot;Print 14&quot;<br />
+      FileClose $3<br />
+      FileClose $2<br />
+      StrCpy $2 $WINDIR 2<br />
+      Delete &quot;$2\autoexec.bat&quot;<br />
+      CopyFiles /SILENT $5 &quot;$2\autoexec.bat&quot;<br />
+      Delete $5<br />
+      Goto unRemoveFromEnvVar_done<br />
+ <br />
+  unRemoveFromEnvVar_NT:<br />
+  ;DetailPrint &quot;Print 15&quot;<br />
+    ReadRegStr $2 HKLM &quot;SYSTEM\CurrentControlSet\Control\Session Manager\Environment&quot; $0<br />
+;DetailPrint $2<br />
+    StrCpy $6 $2 1 -1 # copy last char<br />
+;DetailPrint $6<br />
+    StrCmp $6 &quot;;&quot; +2 # if last char != ;<br />
+      StrCpy $2 &quot;$2;&quot; # append ;<br />
+    Push $2<br />
+    Push &quot;$1;&quot;<br />
+    Call un.StrStr ; Find `$1;` in $2<br />
+    Pop $3 ; pos of our dir<br />
+    StrCmp $3 &quot;&quot; unRemoveFromEnvVar_done<br />
+      ; else, it is in path<br />
+      # $1 - path to add<br />
+      # $2 - path var<br />
+      StrLen $4 &quot;$1;&quot;<br />
+      StrLen $5 $3<br />
+      StrCpy $6 $2 -$5 # $6 is now the part before the path to remove<br />
+      StrCpy $7 $3 &quot;&quot; $4 # $7 is now the part after the path to remove<br />
+      StrCpy $4 $6$7<br />
+ <br />
+      StrCpy $6 $4 1 -1 # copy last char<br />
+      StrCmp $6 &quot;;&quot; 0 +2 # if last char == ;<br />
+      StrCpy $4 $4 -1 # remove last char<br />
+ <br />
+      WriteRegExpandStr HKLM &quot;SYSTEM\CurrentControlSet\Control\Session Manager\Environment&quot; $0 $4<br />
+   ;DetailPrint &quot;Print 16&quot;<br />
+      ; delete reg value if null<br />
+      StrCmp $4 &quot;&quot; 0 +2 # if null delete reg<br />
+      DeleteRegValue HKLM &quot;SYSTEM\CurrentControlSet\Control\Session Manager\Environment&quot; $0<br />
+ <br />
+      ;SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 &quot;STR:Environment&quot; /TIMEOUT=5000<br />
+ <br />
+  unRemoveFromEnvVar_done:<br />
+  ;DetailPrint &quot;Print 17&quot;<br />
+    Pop $7<br />
+    Pop $6<br />
+    Pop $5<br />
+    Pop $4<br />
+    Pop $3<br />
+    Pop $2<br />
+    Pop $1<br />
+    Pop $0<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">2nd August 2010, 12:31</div></div><div class="posttext">Please use pastebin or an attached nsi file for sharing large amounts of code.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">redxii</div><div class="date">2nd August 2010, 19:14</div></div><div class="posttext">Try EnvVarUpdate.nsh<br />
+<br />
+http://nsis.sourceforge.net/Environmental_Variables:_append%2C_prepend%2C_and_remove_entries#Examples</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

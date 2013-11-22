@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Wait for a process to end I didn't start?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Wait for a process to end I didn't start? NSIS Discussion" />
+	
+	<title> Wait for a process to end I didn't start? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Wait for a process to end I didn't start?</div>
+<hr />
+<div class="pda"><a href="t-227855.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=227855">Wait for a process to end I didn't start?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">MichaelFlya</div><div class="date">7th October 2005, 09:36</div></div><div class="posttext">Simple and short. How do I get the installer<br />
+to wait on a process to end I didn't start?<br />
+<br />
+I need something like &quot;ExecWait&quot; for a process, yet the<br />
+process isn't executed by my installer. I need to pause<br />
+the installer without a messagebox until the process I<br />
+choose isn't running any longer. I keep coming across<br />
+a dead link within a recurring solution in threads posted<br />
+by Kichik. Here is a link to one of those threads below.<br />
+<br />
+Thread:<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=125550&amp;highlight=execwait+installshield<br />
+<br />
+Dead link:<br />
+http://unattended.sourceforge.net/installers.html<br />
+<br />
+-MichaelFlya-</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">7th October 2005, 10:26</div></div><div class="posttext">For apps with window:<br />
+<br />
+!macro TerminateApp<br />
+<br />
+    StrLen $5 &quot;${PROG_NAME}&quot;<br />
+    IntOp $5 $5 + 1 ; terminating 0 for caption to compare<br />
+<br />
+restart:<br />
+    StrCpy $0 &quot;0&quot;<br />
+<br />
+loop:<br />
+;    FindWindow $0 '' '' 0 $0<br />
+    FindWindow $0 'WindowsForms10.Window.8.app1' '' 0 $0<br />
+    IntCmp $0 0 done<br />
+    System::Call 'user32.dll::GetWindowText(i r0, t .r4, i r5) i .r2'<br />
+    StrCmp $4 &quot;${PROG_NAME}&quot; 0 loop<br />
+    System::Call 'user32.dll::GetWindowThreadProcessId(i r0, *i .r1)'<br />
+    System::Call 'kernel32.dll::OpenProcess(i 0x00100000, i 0, i r1) i .r2'<br />
+    SendMessage $0 0x0010 0 0 /TIMEOUT=2000<br />
+    System::Call 'kernel32.dll::WaitForSingleObject(i r2, i 3000) i .r3'<br />
+    IntCmp $3 0 done<br />
+    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION &quot;Installer cannot terminate \<br />
+      running ${APP_NAME}.$\nClose Application and re-run Installer.&quot; IDOK restart<br />
+    Quit<br />
+  done:<br />
+<br />
+!macroend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MichaelFlya</div><div class="date">7th October 2005, 10:58</div></div><div class="posttext">Ok I start up the process &quot;notepad.exe&quot; after<br />
+which I start up my installer and hit install.<br />
+<br />
+Now if the code works correctly the installation<br />
+should pause with the loading bar not moving till<br />
+I close notepad. How do I insert this in the script<br />
+correctly and properly?<br />
+<br />
+-MichaelFlya-</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">KenA</div><div class="date">7th October 2005, 11:05</div></div><div class="posttext">Originally posted by MichaelFlya <br />
+Simple and short. How do I get the installer<br />
+to wait on a process to end I didn't start?<br />
+<br />
+I need something like &quot;ExecWait&quot; for a process, yet the<br />
+process isn't executed by my installer. I need to pause<br />
+the installer without a messagebox until the process I<br />
+choose isn't running any longer. I keep coming across<br />
+a dead link within a recurring solution in threads posted<br />
+by Kichik. Here is a link to one of those threads below.<br />
+<br />
+Thread:<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=125550&amp;highlight=execwait+installshield<br />
+<br />
+Dead link:<br />
+http://unattended.sourceforge.net/installers.html<br />
+<br />
+-MichaelFlya- <br />
+Hi Michael,<br />
+<br />
+for processes that don't include a window, you should use the FindProcDLL plug-ins - I never remember if all those plug-in I use are in the standard NSIS install, sorry - in a loop and exit the loop if the process is not found. <br />
+<br />
+I'd also advise you to use a sleep instruction in your loop, or else you might peg the processor if your loop is tight. :)<br />
+<br />
+KenA</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">7th October 2005, 11:24</div></div><div class="posttext">Notepad window class name is 'Notepad' (for FindWindow).<br />
+For this specific window class you can skip 4 lines of window caption check out (2 lines at the beginning and GetWindowText+StrCmp in the loop). And &quot; - Notepad&quot; text is lang dependant and appears at the end of caption (like IE does). Please note 2000 and 3000 msec timeouts in the code. Usage:<br />
+<br />
+  !insertmacro TerminateApp</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MichaelFlya</div><div class="date">7th October 2005, 11:30</div></div><div class="posttext">Well, KenA has a good solution it seems.<br />
+Using the plugin found at this link:<br />
+http://nsis.sourceforge.net/wiki/Find_Process_By_Name<br />
+<br />
+<br />
+Plus using the code below. Which did the trick.<br />
+<br />
+<br />
+<br />
+Section &quot;Test&quot;<br />
+Loop:<br />
+    FindProcDLL::FindProc &quot;notepad.exe&quot;<br />
+StrCmp $R0 0 0 +2<br />
+;MessageBox MB_OK &quot;The number is $R0 meaning it is not found.&quot;<br />
+Goto Done<br />
+StrCmp $R0 1 0 +2<br />
+;MessageBox MB_OK &quot;The number is $R0 meaning it is found.&quot;<br />
+Goto Loop<br />
+Done:<br />
+SectionEnd<br />
+<br />
+Thanks !!<br />
+<br />
+<br />
+-MichaelFlya-</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

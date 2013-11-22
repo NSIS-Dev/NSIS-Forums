@@ -1,0 +1,175 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" any way too do a '!if ${FOO} == 1'?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  any way too do a '!if ${FOO} == 1'? NSIS Discussion" />
+	
+	<title> any way too do a '!if ${FOO} == 1'? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  any way too do a '!if ${FOO} == 1'?</div>
+<hr />
+<div class="pda"><a href="t-125177.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=125177">any way too do a '!if ${FOO} == 1'?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">PhracturedBlue</div><div class="date">15th February 2003, 23:17</div></div><div class="posttext">I am using NSIS to write an installer for the upcoming release of The Ur-Quan Masters<br />
+  http://sc2.sf.net<br />
+<br />
+And I'm pretty much done.  However, I'd like the installer to be very easy to configure, and as such would really like to be able to do something like:<br />
+<br />
+!define FOO 1 ;Set FOO to 2, 1, or 0 depending on option<br />
+!if ${FOO} == 2<br />
+  !define BAR &quot;SOME_REALLY_CONVOLUTED_STRING&quot;<br />
+!elseif ${FOO} == 1<br />
+  !define BAR &quot;SOME_OTHER_REALLY_CONVOLUTED_STRING&quot;<br />
+!else<br />
+  !define BAR &quot;SOME_THIRD_REALLY_CONVOLUTED_STRING&quot;<br />
+!endif<br />
+<br />
+<br />
+I realize that for 2 options, I could do:<br />
+<br />
+!define FOO 1 ;Comment this line if you don't want FOO<br />
+!ifdef ${FOO}<br />
+  !define BAR &quot;SOME_REALLY_CONVOLUTED_STRING&quot;<br />
+!else<br />
+  !define BAR &quot;SOME_OTHER_REALLY_CONVOLUTED_STRING&quot;<br />
+  !define FOO 0<br />
+!endif<br />
+<br />
+<br />
+(Note that I need to define FOO, since I use it later in the installer)<br />
+Which works (and is how I'm doinng it now), but is somewhat confusing for the users, and doesn't allow for more than 2 options<br />
+<br />
+Is there any more elegant way to do what I need?<br />
+(We are usiing 2.0b1)<br />
+(BTW:  Thank you for NSIS!  It is a wonderful project)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">PhracturedBlue</div><div class="date">15th February 2003, 23:20</div></div><div class="posttext">I should also mention that I've tried using IntCmp in a .onInit, but that requires thatI set  the variable as $0-$9 (or $R0-$R9), or push it  onto the stack, neither of which is really a viable option, since I have lots of variabbles I need to do this for.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">15th February 2003, 23:45</div></div><div class="posttext">well, your using the same &quot;BAR&quot; to define diferent strings...<br />
+.... try use the other &quot;cmp&quot; like StrCmp... for example:<br />
+<br />
+Function GetWinVer<br />
+Push $R0<br />
+Push $R1<br />
+ReadRegStr $R0 HKLM &quot;SOFTWARE\Microsoft\Windows\CurrentVersion&quot; VersionNumber<br />
+ReadRegStr $R1 HKLM &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion&quot; CurrentVersion<br />
+StrCmp $R0 '4.00.950' Win95 NotWin95/NT3<br />
+StrCmp $R1 '3.51.1057' WinNT3 NotWin95/NT3<br />
+Win95:<br />
+SectionSetFlags ${descSQ} 16<br />
+WinNT3:<br />
+SectionSetFlags ${descSQ} 16<br />
+NotWin95/NT3:<br />
+FunctionEnd<br />
+<br />
+Function GetIEVer<br />
+Push $R0<br />
+Push $R1<br />
+Push $1<br />
+GetDllVersion &quot;$SYSDIR\mshtml.dll&quot; $R0 $R1<br />
+IntOp $1 $R0 / 0x00010000 ;Necesitas el primer dígito/We only need the first digit<br />
+IntCmp $1 ${IEver} SameVer BadVer GoodVer ;Debe ser 5 o superior la versión<br />
+BadVer:<br />
+MessageBox MB_YESNO|MB_ICONSTOP &quot;No version support&quot; IDYES GoodVer<br />
+Abort<br />
+SameVer:<br />
+GoodVer:<br />
+FunctionEnd<br />
+<br />
+<br />
+Hope this help you! :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">virtlink</div><div class="date">16th February 2003, 10:28</div></div><div class="posttext">I think that many people would like it to see !elseif added to NSIS. And it would take NSIS again one step closer to a 'real' scriptiong or programming language.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">PhracturedBlue</div><div class="date">16th February 2003, 12:13</div></div><div class="posttext">Using StrCmp doesn't buy me anything over an IntCmp in this case, and isn't very conveneient since this check is done in several places (this indicates that I'd need to do the compare in a function call, which I thought about, but it seems kinda silly to do a compare in the installer, when the actual string can be defined at compile-time instead).<br />
+<br />
+Anyhow, I have a workable solution for now, and I really do appreciate all the nifty features in NSIS.<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">16th February 2003, 13:43</div></div><div class="posttext">Originally posted by virtlink <br />
+I think that many people would like it to see !elseif added to NSIS. And it would take NSIS again one step closer to a 'real' scriptiong or programming language. <br />
+Use &quot;!else ifdef&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">PhracturedBlue</div><div class="date">16th February 2003, 21:18</div></div><div class="posttext">Originally posted by Joost Verburg <br />
+Use &quot;!else ifdef&quot;  <br />
+<br />
+That isn't quite the same as<br />
+!if<br />
+!elif<br />
+!endif<br />
+<br />
+Which is what I'd like to see (and I imagine what virtlink was talking about)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">16th February 2003, 21:28</div></div><div class="posttext">!if something = somethingelse is not supported. You'll have to do with !ifdef, !else ifdef, and !endif for now. Instead of giving a value for your define make use of two different define names.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">eccles</div><div class="date">17th February 2003, 23:56</div></div><div class="posttext">This just occured to me but I've not tried it...!define FOO 1 ;Set FOO to 2, 1, or 0 depending on option<br />
+<br />
+...<br />
+<br />
+!define FOO${FOO}<br />
+<br />
+!ifdef ${FOO2}<br />
+  !define BAR &quot;SOME_REALLY_CONVOLUTED_STRING&quot;<br />
+!else ifdef ${FOO1}<br />
+  !define BAR &quot;SOME_OTHER_REALLY_CONVOLUTED_STRING&quot;<br />
+!else<br />
+  !define BAR &quot;SOME_THIRD_REALLY_CONVOLUTED_STRING&quot;<br />
+!endif<br />
+ <br />
+hth!<br />
+<br />
+Dave.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">PhracturedBlue</div><div class="date">18th February 2003, 03:44</div></div><div class="posttext">Very cool!  i just tried this, and it works great. (of course you shouldn't have the '${' and '}' on the !ifdef lines (I screwed up the original proto code too)), so it looks more like:<br />
+<br />
+!define FOO 1 ;Set FOO to 2, 1, or 0 depending on option<br />
+<br />
+...<br />
+<br />
+!define FOO${FOO}<br />
+<br />
+!ifdef FOO2<br />
+  !define BAR &quot;SOME_REALLY_CONVOLUTED_STRING&quot;<br />
+!else ifdef FOO1<br />
+  !define BAR &quot;SOME_OTHER_REALLY_CONVOLUTED_STRING&quot;<br />
+!else<br />
+  !define BAR &quot;SOME_THIRD_REALLY_CONVOLUTED_STRING&quot;<br />
+!endif<br />
+<br />
+<br />
+But it does exactly what  I need!<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">eccles</div><div class="date">18th February 2003, 08:18</div></div><div class="posttext">Ar yes you're right.  Like I said, I hadn't tried it :) <br />
+<br />
+Glad I could help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th February 2003, 15:54</div></div><div class="posttext">Good idea eccles! :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">18th February 2003, 21:17</div></div><div class="posttext">works for me too :p</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

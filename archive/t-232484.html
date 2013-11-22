@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" exec multi-arg command doesn't work??, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  exec multi-arg command doesn't work?? NSIS Discussion" />
+	
+	<title> exec multi-arg command doesn't work?? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  exec multi-arg command doesn't work??</div>
+<hr />
+<div class="pda"><a href="t-232484.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=232484">exec multi-arg command doesn't work??</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">lostcable</div><div class="date">4th December 2005, 05:48</div></div><div class="posttext">If the user sets the checkbox on a component, then I want my installer to unzip a file.<br />
+<br />
+The files and directories exist as follows:<br />
+C:\test\test_script.nsi<br />
+C:\test\install_dir<br />
+C:\test\install_dir\WINDOWS\unzip.exe<br />
+C:\test\install_dir\WINDOWS\myzipfile.zip<br />
+<br />
+In my .nsi file, I have<br />
+<br />
+SectionGroup /e &quot;!Add-On Files&quot; AddOnSection<br />
+!define SOURCE_DIR &quot;install_dir&quot;<br />
+<br />
+Section &quot;UnZip&quot; UnzipSection<br />
+Exec '&quot;${SOURCE_DIR}\WINDOWS\unzip.exe&quot; ${SOURCE_DIR}\WINDOWS\myzipfile.zip -d $INSTDIR'<br />
+SectionEnd<br />
+<br />
+; Additional sections not included for brevity<br />
+SectionGroupEnd<br />
+<br />
+During install, the command window disappears as soon as it pops up.  Therefore, I cannot read the error message.  I also tried the batch file method but I got the same result.<br />
+<br />
+I followed the NSIS user manual which instructs the use of quotes when executing a command with parameters.  I searched this forum, googled all day for help, but came up empty.<br />
+<br />
+As a sanity check, I have tried <br />
+Exec &quot;${SOURCE_DIR}\WINDOWS\unzip.exe&quot;<br />
+and that works fine.<br />
+<br />
+Any help would be appreciated.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">4th December 2005, 11:45</div></div><div class="posttext">1. First of all I am not sure in your idea of ZIP usage - NSIS has possibilities for files decompression (both single exe and multi-file package). Lzma compression looks better then zip for me. And Windows Setup API includes ZIP decompression option &quot;SetupDecompressOrCopyFile&quot;.<br />
+2. You can redirect process output to file using &gt;file as last parameter.<br />
+3. SOURCE_PATH in your script defines relative path, this is why it might work for program start and failed as a parameter. Full path or <br />
+SetOutPath &quot;$EXEDIR&quot;<br />
+Exec '&quot;${SOURCE_DIR}\WINDOWS\unzip.exe&quot; &quot;${SOURCE_DIR}\WINDOWS\myzipfile.zip&quot; -d &quot;$INSTDIR&quot;'<br />
+may help your script to work properly. Please note quotes in my sample - this si really good thing for DOS command lines if you want application to get correct parameters (argv, argc).<br />
+4. If you still  want to use Exec command, you can also read code samples with COMSPEC env. var. (use forum search please), you can also find samples how to auto-close DOS window and to redirect output. <br />
+5. BTW DOS window during installation looks not-professional, and this is why 2 plug-ins exist upon the times: nsExec (included to NSIS distribution, it's Readme in Contrib submenu) and ExecDos (http://nsis.sourceforge.net/ExecDos), both support output redirection.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lostcable</div><div class="date">5th December 2005, 20:45</div></div><div class="posttext">Thanks Takhir!  I am new to NSIS and appreciate your help.<br />
+<br />
+1. How do I call a Windows Setup function from my .nsi file?<br />
+2. I followed proven instructions from another thread on this forum but for some reason, it didn't work for me.  Here is what I have:<br />
+<br />
+SetOutPath &quot;$EXEDIR&quot;<br />
+ExpandEnvStrings $1 %COMSPEC%<br />
+nsExec::Exec '&quot;$1&quot; /C &quot;${SOURCE_DIR}\WINDOWS\unzip.exe&quot; &quot;${SOURCE_DIR}\WINDOWS\CYGWIN_INSTALL.zip&quot; -d &quot;$INSTDIR&quot; &gt; &quot;$INSTDIR\install.log&quot;' $0<br />
+<br />
+Please help me figure out what is wrong with the above.<br />
+3. Yes, the added quotes fixed the problem.<br />
+4&amp;5. Yes, I used nsExec::Exec and it looks professional now.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">6th December 2005, 14:22</div></div><div class="posttext">1. Win API functions are available using System plug-in (Readme included to distribution).<br />
+2. You can skip comspec /c when using nsExec (not tested)<br />
+nsExec::Exec '&quot;${SOURCE_DIR}\WINDOWS\unzip.exe&quot; &quot;${SOURCE_DIR}\WINDOWS\CYGWIN_INSTALL.zip&quot; -d &quot;$INSTDIR&quot; &gt; &quot;$INSTDIR\install.log&quot;'<br />
+Good idea is to use full paths for executable and parameters.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lostcable</div><div class="date">6th December 2005, 16:41</div></div><div class="posttext">Okay, I have switched to using full paths.<br />
+<br />
+!define SOURCE_DIR &quot;C:\Program Files\NSIS\Examples\Test\install_dir&quot;<br />
+<br />
+1. System::Call 'kernel32::SetupDecompressOrCopyFile(&quot;${SOURCE_DIR}\WINDOWS\CYGWIN_INSTALL.zip&quot;, &quot;$INSTDIR\CYGWIN_INSTALL.zip&quot;, FILE_COMPRESSION_MSZIP)'<br />
+--It didn't copy the file.<br />
+<br />
+2. nsExec::ExecToLog '&quot;${SOURCE_DIR}\WINDOWS\unzip.exe&quot; &quot;${SOURCE_DIR}\WINDOWS\CYGWIN_INSTALL.zip&quot; -d &quot;$INSTDIR&quot; &gt; &quot;$INSTDIR\install.log&quot;'<br />
+--Removed comspec but it still doesn't work.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">6th December 2005, 17:40</div></div><div class="posttext">OK, I tested and this works on my comp:<br />
+!define APP_NAME &quot;wz_test&quot;<br />
+Name &quot;${APP_NAME}&quot;<br />
+OutFile &quot;${APP_NAME}.exe&quot;<br />
+Section &quot;Dummy Section&quot; SecDummy<br />
+<br />
+  ExecDos::exec '&quot;$EXEDIR\wzunzip.exe&quot; -o nas.zip &quot;$EXEDIR\out\&quot;'<br />
+  Pop $0<br />
+  MessageBox MB_OK &quot;$0&quot;<br />
+<br />
+SectionEnd<br />
+You can use nsExec in the same manner.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

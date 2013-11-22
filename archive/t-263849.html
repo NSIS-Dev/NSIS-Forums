@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" .net again, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  .net again NSIS Discussion" />
+	
+	<title> .net again [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  .net again</div>
+<hr />
+<div class="pda"><a href="t-263849.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=263849">.net again</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">kulakshay</div><div class="date">17th January 2007, 10:13</div></div><div class="posttext">Hi,<br />
+<br />
+if i unistall .net manually from Add/remove programs it do not remove the registry entries ...!!<br />
+<br />
+isDotNetInstalled function shows  .net is installed in this case...!!<br />
+<br />
+what if somebody manually uninstall .net ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">n_baua</div><div class="date">18th January 2007, 07:07</div></div><div class="posttext">Hi,<br />
+This code is bit lengthier, However putting it in a text file messes it up.<br />
+I am not sure if you are using the same, but this works for me even if the .Net (2.0) uninstalled from control panel.<br />
+<br />
+CODE<br />
+;----------------------------------------------------------<br />
+<br />
+;Set .Net Framework version re-distributable has and to be checked for<br />
+	!define DOT_MAJOR &quot;2&quot;<br />
+	!define DOT_MINOR &quot;0&quot;<br />
+	!define DOT_MINOR_MINOR &quot;50727&quot;<br />
+<br />
+;----------------------------------------------------------<br />
+<br />
+;This is a custom function required for checking the presence of the installed .Net framework.<br />
+;If the required .Net framework version not found it will launch the .Net framework MSI.<br />
+Function CheckDotNetFramework<br />
+<br />
+   Push $0<br />
+   Push $1<br />
+   Push $2<br />
+   Push $3<br />
+   Push $4<br />
+   Push $5<br />
+   <br />
+  StrCpy $0 &quot;0&quot;<br />
+  StrCpy $1 &quot;SOFTWARE\Microsoft\.NETFramework&quot; ;registry entry to look in.<br />
+  StrCpy $2 0<br />
+ <br />
+  StartEnum:<br />
+    ;Enumerate the versions installed.<br />
+    EnumRegKey $3 HKLM &quot;$1\policy&quot; $2<br />
+    <br />
+    ;If we don't find any versions installed, it's not here.<br />
+    StrCmp $3 &quot;&quot; noDotNet notEmpty<br />
+    <br />
+    ;We found something.<br />
+    notEmpty:<br />
+      ;Find out if the RegKey starts with 'v'.  <br />
+      ;If it doesn't, goto the next key.<br />
+      StrCpy $4 $3 1 0<br />
+      StrCmp $4 &quot;v&quot; +1 goNext<br />
+      StrCpy $4 $3 1 1<br />
+      <br />
+      ;It starts with 'v'.  Now check to see how the installed major version<br />
+      ;relates to our required major version.<br />
+      ;If it's equal check the minor version, if it's greater, <br />
+      ;we found a good RegKey.<br />
+      IntCmp $4 ${DOT_MAJOR} +1 goNext yesDotNetReg<br />
+      ;Check the minor version.  If it's equal or greater to our requested <br />
+      ;version then we're good.<br />
+      StrCpy $4 $3 1 3<br />
+      IntCmp $4 ${DOT_MINOR} +1 goNext yesDotNetReg<br />
+      <br />
+      ;detect sub-version - e.g. 2.0.50727<br />
+      ;takes a value of the registry subkey - it contains the small version number<br />
+      EnumRegValue $5 HKLM &quot;$1\policy\$3&quot; 0<br />
+       <br />
+      IntCmpU $5 ${DOT_MINOR_MINOR} yesDotNetReg goNext yesDotNetReg<br />
+ <br />
+    goNext:<br />
+      ;Go to the next RegKey.<br />
+      IntOp $2 $2 + 1<br />
+      goto StartEnum<br />
+ <br />
+  yesDotNetReg: <br />
+    ;Now that we've found a good RegKey, let's make sure it's actually<br />
+    ;installed by getting the install path and checking to see if the <br />
+    ;mscorlib.dll exists.<br />
+    EnumRegValue $2 HKLM &quot;$1\policy\$3&quot; 0<br />
+    ;$2 should equal whatever comes after the major and minor versions <br />
+    ;(ie, v1.1.4322)<br />
+    StrCmp $2 &quot;&quot; noDotNet<br />
+    ReadRegStr $4 HKLM $1 &quot;InstallRoot&quot;<br />
+    ;Hopefully the install root isn't empty.<br />
+    StrCmp $4 &quot;&quot; noDotNet<br />
+    ;build the actual directory path to mscorlib.dll.<br />
+    StrCpy $4 &quot;$4$3.$2\mscorlib.dll&quot;<br />
+    IfFileExists $4 yesDotNet noDotNet<br />
+ <br />
+  noDotNet:<br />
+    ;Nope, something went wrong along the way.  Looks like the <br />
+    ;proper .NETFramework isn't installed.  <br />
+    <br />
+    ;Un comment the following line to make this function throw a message box right away <br />
+   ; MessageBox MB_OK &quot;You must have v${DOT_MAJOR}.${DOT_MINOR}.${DOT_MINOR_MINOR} or greater of the .NETFramework installed.  Aborting!&quot;<br />
+   Call &quot;InstallDotNetFramework&quot;<br />
+   ; Abort<br />
+     StrCpy $0 0<br />
+     Goto done<br />
+     <br />
+     yesDotNet:<br />
+    ;Everything checks out.  Go on with the rest of the installation.<br />
+    ;MessageBox MB_OK &quot;You have v${DOT_MAJOR}.${DOT_MINOR}.${DOT_MINOR_MINOR} or greater of the .NETFramework installed.&quot;<br />
+    DetailPrint &quot;Found .Net Framework v${DOT_MAJOR}.${DOT_MINOR}.${DOT_MINOR_MINOR} Installed, Skipping Installation.&quot;<br />
+<br />
+	FileOpen $9 &quot;$WINDIR\Temp\ASA_Install.log&quot; a<br />
+	FileSeek $9 0 END<br />
+	FileWrite $9 &quot;$\r$\nÂ»Found .Net Framework v${DOT_MAJOR}.${DOT_MINOR}.${DOT_MINOR_MINOR} Installed, Skipping Installation.&quot;<br />
+	FileClose $9<br />
+<br />
+    StrCpy $0 1<br />
+ <br />
+   done:<br />
+     Pop $4<br />
+     Pop $3<br />
+     Pop $2<br />
+     Pop $1<br />
+     Exch $0<br />
+<br />
+FunctionEnd<br />
+;----------------------------------------------------------</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

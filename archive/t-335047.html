@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Debugging advice, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Debugging advice NSIS Discussion" />
+	
+	<title> Debugging advice [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Debugging advice</div>
+<hr />
+<div class="pda"><a href="t-335047.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=335047">Debugging advice</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">21st September 2011, 16:53</div></div><div class="posttext">i'm suffering over a problem occuring with my script and i'm having a difficult time pinpointing it. what this script does is locating and copying some files and using textreplace. in most cases it works without problems, but when a large number of files is involved (in my case 2530) the installer will freeze. to make things worse this does not happen always, just occasionally.<br />
+<br />
+i'm looking for some hints on how to find the bug. i've already disabled various parts of the script, but without gaining any knowledge. all i can say is, this happens when working with a lot of files and i believe i did not have this problem when using other (slower) functions to replace text or to locate files. is there anything wrong with my textreplace calls? can they be optimized? any other tips on how to narrowing down the problem?<br />
+<br />
+any help is greatly appreciated.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">{_trueparuex^}</div><div class="date">21st September 2011, 20:44</div></div><div class="posttext">In cases like this I usually just add some messgeboxes to the code to find the point where things go wrong, but in this case Nsisdbg plug-in (http://nsis.sourceforge.net/Nsisdbg_plug-in) is probably much better choice.<br />
+<br />
+With Nsisdbg plug-in use the nsisdbg::sendtolog call to track the progress of your script.<br />
+<br />
+Edit: I just realized that the Nsisdbg plug-in download link is is dead. I uploaded the plug-in on my site (http://koti.mbnet.fi/vaultec/files/miscellaneous/NSIS-Debugger.7z).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">22nd September 2011, 08:25</div></div><div class="posttext">i shall also note that i only get those problems on windows 7 (both 32 and 64 bit), not on windows xp.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">22nd September 2011, 17:02</div></div><div class="posttext">thanks {_trueparuex^}, i actually tried all of this before - to no success. as i suspect the number of files to be responsible, i wonder if this could be a memory issue. i do have 8gb ram and enough space on all drives, so that should not be the case. i'm also not exceeding the string-length (i'm using the large string build), so i wonder where else i can look. what puzzles me, why does it work on xp in a virtual machine (with 2gb ram)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">30th September 2011, 10:24</div></div><div class="posttext">it appears i could find the problem in my script, so i wanted to resolve it in case someone runs into similar problems.<br />
+<br />
+the problem appeared (occasionally, only on windows vista or later) when setting the outdir when the path existed already<br />
+SetOutPath &quot;$MyTempDir\fonts&quot;<br />
+a simple IfFileExists fixed the issue, but i changed the code to this<br />
+IfFileExists &quot;$MyTempDir\fonts\*.*&quot; +2<br />
+CreateDirectory &quot;$MyTempDir\fonts&quot;<br />
+in the following a couple of files were copied, so i didn't really need SetOutPath and changed it to CreateDirectory. for reasons unknown, it was IfFileExists that made the difference!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">30th September 2011, 20:03</div></div><div class="posttext">i continue to have this bug at a later point. again it's caused by a simple copy operation, just this time i can't figure out when and why it's happening (again it happens occasionally and only on vista/win7.) i have a test scenario which helps me testing this on 312 examples, but the result continue to be entirely random, though certain test-files tend to trigger the bug more often.<br />
+<br />
+the line in question is this:<br />
+CopyFiles /SILENT &quot;$EXEDIR\ape\addborder.ape&quot; &quot;$MyTempDir\ape\addborder.ape&quot;<br />
+the source-file is located in $PROGRAMFILES and is a dll with a different file-extension. the problem appears on elevated and usermode installers.<br />
+<br />
+any clues, cause i'm clueless!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">1st October 2011, 19:01</div></div><div class="posttext">here are a couple of things i tried<br />
+<br />
+1. extract the file from the installer rather than copying it -&gt; works<br />
+2. copying the file using the full path as on my system -&gt; works<br />
+3. checking if the source-file and the target-folder exist -&gt; yes<br />
+4. checking if $EXEDIR is correct -&gt; yes<br />
+<br />
+$EXEDIR = C:\Program Files (x86)\whyEye.org\PimpBot\ape<br />
+<br />
+CopyFile &quot;$EXEDIR\ape\addborder.ape&quot; &quot;$MyTempDir\ape\addborder&quot; -&gt; crashes installer<br />
+CopyFile &quot;C:\Program Files (x86)\whyEye.org\PimpBot\ape\addborder.ape&quot; &quot;$MyTempDir\ape\addborder&quot; -&gt; works<br />
+<br />
+i'm clueless, please please help me!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">1st October 2011, 20:45</div></div><div class="posttext">What if you call API directly, instead of CopyFiles?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">1st October 2011, 22:22</div></div><div class="posttext">i tried StdUtils (http://nsis.sourceforge.net/StdUtils_plug-in), which also results in a crash</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">2nd October 2011, 07:46</div></div><div class="posttext">Just a random thought: Have you tried this on other PCs? Win Vista/7 are very clunky with file copying. It's possible that bad RAM or a bad HDD causes it to blow.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">2nd October 2011, 09:44</div></div><div class="posttext">i asked some friends to test it, but they didn't get any problems (well, i'd love to test it myself). i replaced my ram since this first came up and i tried various disks including ssd, harddrives and ramdisk (hence i'm using $MyTempDir instead of $PLUGINSDIR). i have another windows 7 (32-bit) running in a virtual machine (same problem) and also windows xp (where i NEVER get this problem.) i'm going to install windows 7 on vmware on my laptop and see what happens..<br />
+<br />
+further, i've tested various nsis builds (standard and longstr)<br />
+<br />
+it's interesting that there have been reports regarding CopyFiles and windows 7 on this forum, though i didn't find a case that really crashes the installer.<br />
+<br />
+having found the exact line where this problem occurs, i wonder if it could still be caused by something else. not sure what i should be looking for.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">2nd October 2011, 11:35</div></div><div class="posttext">same thing on the other computer :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">3rd October 2011, 05:51</div></div><div class="posttext">$EXEDIR = C:\Program Files (x86)\whyEye.org\PimpBot\ape<br />
+<br />
+CopyFile &quot;$EXEDIR\ape\addborder.ape&quot; &quot;$MyTempDir\ape\addborder&quot; -&gt; crashes installer<br />
+CopyFile &quot;C:\Program Files (x86)\whyEye.org\PimpBot\ape\addborder.ape&quot; &quot;$MyTempDir\ape\addborder&quot; -&gt; works<br />
+<br />
+It shouldn't lead to a crash, but if $EXEDIR already has a trailing 'ape', your copyfile command is wrong.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">3rd October 2011, 09:07</div></div><div class="posttext">It shouldn't lead to a crash, but if $EXEDIR already has a trailing 'ape', your copyfile command is wrong.<br />
+<br />
+just a typo in the post<br />
+<br />
+anyway, i've figured out a workaround so i'm not going to break my head over this one. thanks for all the advice!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">{_trueparuex^}</div><div class="date">3rd October 2011, 20:06</div></div><div class="posttext">I think you have a heap corruption issue here. The crash.log shows it crashes in ntdll.dll with memory access violation which I think is probably result of heap corruption. If this is the case you probably also get crashes with exception code 0xc0000374 (STATUS_HEAP_CORRUPTION). And the cause for heap corruption would be most likely a third party plug-in. :blah:<br />
+<br />
+PaR</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">3rd October 2011, 22:09</div></div><div class="posttext">I think you have a heap corruption issue here. The crash.log shows it crashes in ntdll.dll with memory access violation which I think is probably result of heap corruption. If this is the case you probably also get crashes with exception code 0xc0000374 (STATUS_HEAP_CORRUPTION). And the cause for heap corruption would be most likely a third party plug-in. :blah:<br />
+<br />
+PaR<br />
+<br />
+hmm, so it's probably TextReplace as i've assumed before. i don't want to go back, as this plugin performs MUCH better than any functions or macros i've used before. i tried contacting instructor before to ask if he plans a unicode build, but i never heard from him since. so if plugin causes the crach (i don't want to blame the plugin, but i'm pretty sure it's causing this) it's probably never going to get fixed.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">5th October 2011, 13:06</div></div><div class="posttext">i commented out the two plugins in question each at a time (TextReplace (http://nsis.sourceforge.net/TextReplace_plugin) and Locate (http://nsis.sourceforge.net/Locate_plugin)) and it appears that either the locate plugin is buggy or my code using it produces the bug (will look into it!) in either case, the installer didn't crash once in 2,500 test runs.<br />
+<br />
+the only let down is this: what happens if it's to blame on the plugin. it appears it's no longer maintained by the author :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DrO</div><div class="date">5th October 2011, 13:18</div></div><div class="posttext">the only let down is this: what happens if it's to blame on the plugin. it appears it's no longer maintained by the author :(as the source is provided, you'd need to find someone to update / fix it for you or learn how to do it :)<br />
+<br />
+-daz</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">5th October 2011, 13:36</div></div><div class="posttext">as the source is provided, you'd need to find someone to update / fix it for you or learn how to do it :)<br />
+<br />
+you mean as a warm up for my go at avs 3.0? ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DrO</div><div class="date">5th October 2011, 13:37</div></div><div class="posttext">something like that though i'd prefer a milkdrop 3 which supports avs presets :p<br />
+<br />
+-daz</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

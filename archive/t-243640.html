@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Add Icons to a custom Page, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Add Icons to a custom Page NSIS Discussion" />
+	
+	<title> Add Icons to a custom Page [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Add Icons to a custom Page</div>
+<hr />
+<div class="pda"><a href="t-243640.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=243640">Add Icons to a custom Page</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">16th April 2006, 17:25</div></div><div class="posttext">I have created a custom page (for InstallOptionsEx) that contains among other things two fields for images/icons. I have also added two different icons in my file using a small script that injects the second icon to the header then compresses it with upx (using the --compress-icons=0 flag)<br />
+In other words in my NSIS file I have<br />
+!define MUI_UI &quot;src\custom_header.exe&quot;<br />
+!define MUI_ICON &quot;icons\FirstIcon.ico&quot;<br />
+!packhdr &quot;$%TEMP%\exehead.dat&quot; 'header.cmd'<br />
+and header.cmd is<br />
+&quot;%ProgramFiles%\Resource Hacker\ResHacker.exe&quot; -add &quot;%TEMP%\exehead.dat&quot;, &quot;%TEMP%\exehead.dat&quot;, &quot;%~dps0icons\SecondIcon.ico&quot; , ICONGROUP,104,<br />
+upx --best --compress-icons=0 &quot;%TEMP%\exehead.dat&quot;<br />
+Once I initiallize the page both images show FirstIcon.ico.<br />
+<br />
+If I change my .ini file that generates the page, so that it points to the exe containing the icons then I get two different icons on the page, but SecondIcon.ico is displayed as if it was 32x32 extraploated to 128x128.<br />
+<br />
+Is there a way to change any of the images on the page before displaying it? I am not sure how to use, say, {STM_SETICON} or something similar.Something like this:<br />
+InstallOptionsEx::initDialog /NOUNLOAD &quot;$PLUGINSDIR\${IniFileName}&quot;<br />
+Pop $R1<br />
+GetDlgItem $0 $R1 1202<br />
+SendMessage $0 ${STM_SETICON} ?? ??<br />
+I played around with the ?? using the icon index in my file etc but couldn't get it to work ...<br />
+<br />
+I found a thread that suggested (for a different issue though) to use a system call to LoadIcon, but then I am not sure how to pass the information to the SendMessage command ...<br />
+<br />
+:( <br />
+Any ideas?<br />
+<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th April 2006, 18:29</div></div><div class="posttext">Not tested, but should work.<br />
+<br />
+<br />
+!define IMAGE_ICON      1<br />
+!define LR_LOADFROMFILE 0x10<br />
+<br />
+...<br />
+<br />
+Pop $R1<br />
+<br />
+System::Call `user32::LoadImage(, t &quot;$PLUGINSDIR\SecondIcon.ico&quot;, i ${IMAGE_ICON}, , , i ${LR_LOADFROMFILE}) i.R0`<br />
+GetDlgItem $R2 $R1 1202<br />
+SendMessage $R2 ${STM_SETICON} $R0 0<br />
+<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">16th April 2006, 18:44</div></div><div class="posttext">Thanks for the info Afrow UK :)<br />
+I had seen in this (http://forums.winamp.com/showthread.php?s=&amp;threadid=234789&amp;highlight=SendMessage) thread a similar example but I was trying to get the ico from within my installer, without extracting it. Since it already is allocated as a resource, isn't there a way to tell the window to use that specific resource instead of another one?<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">16th April 2006, 19:22</div></div><div class="posttext">I think what I am looking for is something like this:<br />
+InstallOptionsEx::initDialog /NOUNLOAD &quot;$PLUGINSDIR\${IniFileName}&quot;<br />
+Pop $R1<br />
+GetDlgItem $0 $R1 1202<br />
+System::Call 'kernel32::GetModuleFileNameA(i 0, t .R0, i 1024) i r1'<br />
+System::Call 'kernel32::GetModuleHandleA(t R0)i .r2'<br />
+System::Call `user32::LoadImage(i r2, t &quot;1&quot;, i ${IMAGE_ICON}, , , ) i.R0`<br />
+SendMessage $0 ${STM_SETICON} $R0 0<br />
+InstallOptionsEx::Showwhich does not work since according to this (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/winui/winui/windowsuserinterface/resources/introductiontoresources/resourcereference/resourcefunctions/loadimage.asp) MSDN page<br />
+If the image resource is to be loaded by ordinal, use the MAKEINTRESOURCE macro to convert the image ordinal into a form that can be passed to the LoadImage function....<br />
+<br />
+:igor:<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">16th April 2006, 20:17</div></div><div class="posttext">Got it :)<br />
+!define LR_SHARED	0x8000<br />
+define IMAGE_ICON	1<br />
+InstallOptionsEx::initDialog /NOUNLOAD &quot;$PLUGINSDIR\${IniFileName}&quot;<br />
+Pop $R1<br />
+GetDlgItem $0 $R1 1202<br />
+System::Call 'kernel32::GetModuleFileNameA(i 0, t .R0, i 1024) i r1'<br />
+System::Call 'kernel32::GetModuleHandleA(t R0)i .r2'<br />
+System::Call `user32::LoadImage(i r2, i 104, i ${IMAGE_ICON}, , , i ${LR_SHARED}) i.R0`<br />
+SendMessage $0 ${STM_SETICON} $R0 0<br />
+InstallOptionsEx::ShowNote that 104 is the resource ID that I am using for the second icon inside my installer<br />
+<br />
+CF</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

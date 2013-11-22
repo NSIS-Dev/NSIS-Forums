@@ -1,0 +1,175 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Detect if Dll is wrong version, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Detect if Dll is wrong version NSIS Discussion" />
+	
+	<title> Detect if Dll is wrong version [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Detect if Dll is wrong version</div>
+<hr />
+<div class="pda"><a href="t-267895.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=267895">Detect if Dll is wrong version</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">vomba</div><div class="date">16th March 2007, 19:35</div></div><div class="posttext">Hi,<br />
+<br />
+I have a software that depends on dbghelp.dll to work properly.<br />
+<br />
+I've found out that on previous operating system, that dll wasn't available (Win98). So I've written a routine that see if the dll is available and if it's not, it download it from my server and put it in the installation direction.<br />
+<br />
+The problem I have run into is that on Windows 2000, the debghelp.com is there but do not support the MiniDumpWriteDump function.<br />
+<br />
+How can I verify if that function is supported so that I can download the dll if it's not?<br />
+<br />
+Here's how I detect if the dll is available:<br />
+<br />
+    System::Call 'kernel32::LoadLibrary(t &quot;dbghelp.dll&quot;) i .r1'<br />
+    IntCmp $1 0 NoFoundIt NoFoundIt FoundIt<br />
+<br />
+Can anyone help me?<br />
+<br />
+Thanks,<br />
+<br />
+Karl</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">17th March 2007, 11:10</div></div><div class="posttext">; ################################################################<br />
+; output on stack (get with pop):<br />
+; &quot;0&quot;: WFP not available, error calling WFP, file not existing or file not protected<br />
+; &quot;1&quot;: WFP enabled and protecting the file and file exists<br />
+; example: !insertmacro FileProtectedByWfp &quot;c:\windows\system32\kernel32.dll&quot; DetailPrint<br />
+;          Pop $0 ; get result<br />
+; attention: LOGLINE must not be an Rx register, you can use &quot;;&quot; to disable logging<br />
+!macro FileProtectedByWfp FILENAME LOGLINE<br />
+  !define Index_FileProtectedByWfp 'FileProtectedByWfp_Line${__LINE__}'<br />
+  Push $R0<br />
+  Push $R1<br />
+  Push $R2<br />
+  Push $R3<br />
+  ; we must copy ${FILENAME} to register first (think about calling this macro with argument $R0)<br />
+  StrCpy $R1 &quot;${FILENAME}&quot; ; copy file name to $R1<br />
+  StrCpy $R0 &quot;0&quot; ; init return value<br />
+  IfFileExists &quot;$R1&quot; 0 ${Index_FileProtectedByWfp}-missing<br />
+  System::Call `sfc::SfcIsFileProtected(i, w) i(0,R1).R2 ? e`<br />
+  Pop $R3 ; dll error code<br />
+  StrCmp $R2 &quot;error&quot; ${Index_FileProtectedByWfp}-callerror<br />
+  ; sfc is running (windows 2000 and newer)<br />
+  StrCmp $R2 &quot;0&quot; 0 ${Index_FileProtectedByWfp}-fileprotected<br />
+  ; check getlasterror<br />
+  StrCmp $R3 &quot;2&quot; ${Index_FileProtectedByWfp}-notprotected<br />
+  ; function could be called but unknown dll error occured (failed)<br />
+  ${LOGLINE} &quot;FileProtectedByWFP: unknown error $R3 calling SfcIsFileProtected for $R1&quot;<br />
+  ; debug MessageBox MB_OK &quot;FileProtectedByWFP: unknown error $R3 calling SfcIsFileProtected for $R1&quot;<br />
+  goto ${Index_FileProtectedByWfp}-finish<br />
+${Index_FileProtectedByWfp}-notprotected:<br />
+  ${LOGLINE} &quot;FileProtectedByWFP: file $R1 is not protected&quot;<br />
+  ; debug MessageBox MB_OK &quot;FileProtectedByWFP: file $R1 is not protected&quot;<br />
+  goto ${Index_FileProtectedByWfp}-finish<br />
+${Index_FileProtectedByWfp}-fileprotected:<br />
+  ${LOGLINE} &quot;FileProtectedByWFP: file $R1 is protected&quot;<br />
+  ; debug MessageBox MB_OK &quot;FileProtectedByWFP: file $R1 is protected&quot;<br />
+  StrCpy $R0 &quot;1&quot; ; file $R1 is protected!<br />
+  goto ${Index_FileProtectedByWfp}-finish<br />
+${Index_FileProtectedByWfp}-missing:<br />
+  ${LOGLINE} &quot;FileProtectedByWFP: file $R1 not found&quot;<br />
+  ; debug MessageBox MB_OK &quot;FileProtectedByWFP: file $R1 not found&quot;<br />
+  StrCpy $R0 &quot;0&quot;<br />
+  goto ${Index_FileProtectedByWfp}-finish<br />
+${Index_FileProtectedByWfp}-callerror:<br />
+  ${LOGLINE} &quot;FileProtectedByWFP: error $R3 calling SfcIsFileProtected for $R1&quot;<br />
+  ; debug MessageBox MB_OK &quot;FileProtectedByWFP: error $R3 calling SfcIsFileProtected for $R1&quot;<br />
+  StrCpy $R0 &quot;0&quot;<br />
+  goto ${Index_FileProtectedByWfp}-finish<br />
+${Index_FileProtectedByWfp}-finish:<br />
+  Pop $R3<br />
+  Pop $R2<br />
+  Pop $R1<br />
+  Exch $R0  <br />
+  !undef Index_FileProtectedByWfp<br />
+!macroend<br />
+<br />
+; ################################################################<br />
+; example: !insertmacro CheckFileVersionUpToDate &quot;local\mydll.dll&quot; &quot;$SYSDIR\mydll.dll&quot; &quot;;&quot;<br />
+;          Pop $0  ; getresult <br />
+; returns 2 if the file is up to date (or a even newer version is already installed)<br />
+; returns 1 if the file is not up to date but cannot be updated due to Windows File Protection<br />
+; returns 0 if the file is missing or not up to date and can/should be updated<br />
+;<br />
+; you can use &quot;;&quot; for LOGLINE for no logging or some other command displaying or logging details<br />
+!macro CheckFileVersionUpToDate LOCALFILE TARGETFILE LOGLINE<br />
+  !define Index_CheckFileVersionUpToDate 'CheckFileVersionUpToDate_Line${__LINE__}'<br />
+  Push $R0 ; result<br />
+  Push $R1 <br />
+  Push $R2<br />
+  Push $R3<br />
+  Push $R4<br />
+<br />
+  StrCpy $R0 &quot;0&quot;<br />
+  GetDLLVersionLocal &quot;${LOCALFILE}&quot; $R1 $R2<br />
+  ${LOGLINE} &quot;${LOCALFILE} version $R1 $R2&quot;<br />
+  IfFileExists &quot;${TARGETFILE}&quot; 0 ${Index_CheckFileVersionUpToDate}-finish<br />
+  ClearErrors<br />
+  ${LOGLINE} &quot;check ${TARGETFILE}...&quot;<br />
+  GetDllVersion &quot;${TARGETFILE}&quot; $R3 $R4<br />
+  IfErrors ${Index_CheckFileVersionUpToDate}-finish<br />
+  ${LOGLINE} &quot;${TARGETFILE} version $R3 $R4&quot;<br />
+  IntCmpU $R1 $R3 0 +2 ${Index_CheckFileVersionUpToDate}-checkWFP<br />
+  IntCmpU $R2 $R4 0  0 ${Index_CheckFileVersionUpToDate}-checkWFP<br />
+<br />
+  ; obviously installed version is up to date (or even newer)<br />
+  StrCpy $R0 &quot;2&quot;<br />
+  Goto ${Index_CheckFileVersionUpToDate}-finish<br />
+${Index_CheckFileVersionUpToDate}-checkWFP:<br />
+  !insertmacro FileProtectedByWfp &quot;${TARGETFILE}&quot; &quot;${LOGLINE}&quot;<br />
+  Pop $R0<br />
+  ; 0 =&gt; file is not protected or does not exist<br />
+  ; 1 =&gt; file is protected<br />
+  StrCmp $R0 &quot;1&quot; 0 ${Index_CheckFileVersionUpToDate}-finish<br />
+  ${LOGLINE} &quot;${TARGETFILE} wfp&quot;  <br />
+${Index_CheckFileVersionUpToDate}-finish:<br />
+  ; MessageBox MB_OK &quot;$R0 # ${TARGETFILE} $R3 $R4 ${LOCALFILE} $R1 $R2 &quot;<br />
+  ClearErrors<br />
+  Pop $R4<br />
+  Pop $R3<br />
+  Pop $R2<br />
+  Pop $R1<br />
+  Exch $R0 ; result zurÃ¼ckgeben<br />
+  !undef Index_CheckFileVersionUpToDate <br />
+!macroend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">17th March 2007, 11:18</div></div><div class="posttext">CheckFileVersionUpToDate is the main macro<br />
+<br />
+If you do not know where the DLL is located you could search PATH directories, but I would not recommend this.<br />
+<br />
+But if this is a legacy DLL (no COM) then I would perhaps check if it is installed in the default location (probably SYSDIR) and install your DLL in INSTALLDIR.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">vomba</div><div class="date">18th March 2007, 21:59</div></div><div class="posttext">Thanks for your suggestion,<br />
+<br />
+Here's how I ended solving my problem...<br />
+<br />
+After calling LoadLibrary, I call:<br />
+<br />
+System::Call &quot;kernel32::GetModuleHandle(t 'dbghelp.dll') i .s&quot;<br />
+System::Call &quot;kernel32::GetProcAddress(i s, t 'MiniDumpWriteDump') i .r2&quot;<br />
+<br />
+The I do<br />
+IntCmp $2 0 NoFoundIt NoFoundIt DbgDone<br />
+<br />
+If the ProcAddress is not found, I know this is the wrong version of DbgHelp that is on that operating system.<br />
+<br />
+Regard,<br />
+<br />
+Karl</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

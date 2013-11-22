@@ -1,0 +1,185 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" String Replacing and Error Handling, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  String Replacing and Error Handling NSIS Discussion" />
+	
+	<title> String Replacing and Error Handling [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  String Replacing and Error Handling</div>
+<hr />
+<div class="pda"><a href="t-275339.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=275339">String Replacing and Error Handling</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">carlosfocker</div><div class="date">3rd August 2007, 16:17</div></div><div class="posttext">I have to question/comments.  Is there a function/macro included in the NSIS headers that can do exactly what ReplaceLineSt does. I know you can use linefind and call a function if the file is found but this creates a function for each file I have to edit.  I would like to just tell the macro/function what file I need to edit, what string to look for and what to replace it with.<br />
+<br />
+The second thing is the error handling in NSIS.  From what I can see is that the only error handling that is used is the set errors and clear them.  What if something goes wrong in my installer and I want the user to a have a proper error written to the log. It would be nice to handle all exception in the functions I am calling to.  If I am completely out of line just put me in my place.  ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">3rd August 2007, 17:34</div></div><div class="posttext">Feel free to build your own macro that suits your needs, after all the meaning of the macro is to avoid repeating code.<br />
+<br />
+Almost every nsis command sets the error flag, for instance ReadRegStr sets the error flag if the string isn't present.<br />
+Using the IfErrors instruction you're able to handle every error and write a detailed log if you like.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">carlosfocker</div><div class="date">3rd August 2007, 17:34</div></div><div class="posttext">Well it seems ReplaceLineSt doesnt work the way I want it to.  What I want is to replace a single string inside a text file.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">3rd August 2007, 17:40</div></div><div class="posttext">Did you search at wiki? Most likely there's a function tailored for you ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">carlosfocker</div><div class="date">3rd August 2007, 18:15</div></div><div class="posttext">I ended up going with AdvReplaceInFile.  <br />
+<br />
+By biggest concern with custom error handling for each call is you have to write a lot of duplicate code.  <br />
+<br />
+Call Command that sets errors<br />
+<br />
+${If} ${Errors}<br />
+   DetailPrint 'Error: Custom error message'<br />
+${EndIf}<br />
+<br />
+<br />
+It would be nice if when an error occurs in a function that you could throw a string to an error handler that prints it out.  I will look into what might be possible later.<br />
+<br />
+I tailored AdvReplaceInFile to include error handling.  So now instead of just quiting out of the function when certain errors occur, it gives a message describing what happened.  <br />
+<br />
+<br />
+Function AdvReplaceInFile<br />
+Exch $0 ;file to replace in<br />
+Exch<br />
+Exch $1 ;number to replace after<br />
+Exch<br />
+Exch 2<br />
+Exch $2 ;replace and onwards<br />
+Exch 2<br />
+Exch 3<br />
+Exch $3 ;replace with<br />
+Exch 3<br />
+Exch 4<br />
+Exch $4 ;to replace<br />
+Exch 4<br />
+Push $5 ;minus count<br />
+Push $6 ;universal<br />
+Push $7 ;end string<br />
+Push $8 ;left string<br />
+Push $9 ;right string<br />
+Push $R0 ;file1<br />
+Push $R1 ;file2<br />
+Push $R2 ;read<br />
+Push $R3 ;universal<br />
+Push $R4 ;count (onwards)<br />
+Push $R5 ;count (after)<br />
+Push $R6 ;temp file name<br />
+<br />
+  GetTempFileName $R6<br />
+  <br />
+  IfFileExists $0 0 FileOpenError  <br />
+  FileOpen $R1 $0 r ;file to search in<br />
+  <br />
+  FileOpen $R0 $R6 w ;temp file<br />
+  IfFileExists $R6 0 TempFileOpenError<br />
+  <br />
+  StrLen $R3 $4<br />
+  StrCpy $R4 -1<br />
+  StrCpy $R5 -1<br />
+   <br />
+  goto loop_read<br />
+  <br />
+  FileOpenError:<br />
+  detailprint 'Error: $0 does not exist'<br />
+  Goto ErrorExit<br />
+<br />
+  TempFileOpenError:<br />
+  detailprint 'Error: Temp file could not be created to edit $0'<br />
+  Goto ErrorExit<br />
+<br />
+  FileWriteError:<br />
+  detailprint 'Error: Could not write to $0'<br />
+  Goto ErrorExit<br />
+<br />
+<br />
+loop_read:<br />
+ ClearErrors<br />
+ FileRead $R1 $R2 ;read line<br />
+ IfErrors exit<br />
+<br />
+   StrCpy $5 0<br />
+   StrCpy $7 $R2<br />
+<br />
+loop_filter:<br />
+   IntOp $5 $5 - 1<br />
+   StrCpy $6 $7 $R3 $5 ;search<br />
+   StrCmp $6 &quot;&quot; file_write2<br />
+   StrCmp $6 $4 0 loop_filter<br />
+<br />
+StrCpy $8 $7 $5 ;left part<br />
+IntOp $6 $5 + $R3<br />
+IntCmp $6 0 is0 not0<br />
+is0:<br />
+StrCpy $9 &quot;&quot;<br />
+Goto done<br />
+not0:<br />
+StrCpy $9 $7 &quot;&quot; $6 ;right part<br />
+done:<br />
+StrCpy $7 $8$3$9 ;re-join<br />
+<br />
+IntOp $R4 $R4 + 1<br />
+StrCmp $2 all file_write1<br />
+StrCmp $R4 $2 0 file_write2<br />
+IntOp $R4 $R4 - 1<br />
+<br />
+IntOp $R5 $R5 + 1<br />
+StrCmp $1 all file_write1<br />
+StrCmp $R5 $1 0 file_write1<br />
+IntOp $R5 $R5 - 1<br />
+Goto file_write2<br />
+<br />
+file_write1:<br />
+ FileWrite $R0 $7 ;write modified line<br />
+ IfErrors FileWriteError<br />
+Goto loop_read<br />
+<br />
+file_write2:<br />
+ FileWrite $R0 $R2 ;write unmodified line<br />
+ IfErrors FileWriteError<br />
+Goto loop_read<br />
+<br />
+exit:<br />
+  FileClose $R0<br />
+  FileClose $R1<br />
+<br />
+   SetDetailsPrint none<br />
+  Delete $0<br />
+  Rename $R6 $0<br />
+  Delete $R6<br />
+   SetDetailsPrint both<br />
+ErrorExit:<br />
+Pop $R6<br />
+Pop $R5<br />
+Pop $R4<br />
+Pop $R3<br />
+Pop $R2<br />
+Pop $R1<br />
+Pop $R0<br />
+Pop $9<br />
+Pop $8<br />
+Pop $7<br />
+Pop $6<br />
+Pop $5<br />
+Pop $0<br />
+Pop $1<br />
+Pop $2<br />
+Pop $3<br />
+Pop $4<br />
+FunctionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

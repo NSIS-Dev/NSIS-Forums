@@ -1,0 +1,264 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Library.nsh - problem with readonly dll, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Library.nsh - problem with readonly dll NSIS Discussion" />
+	
+	<title> Library.nsh - problem with readonly dll [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Library.nsh - problem with readonly dll</div>
+<hr />
+<div class="pda"><a href="t-211446.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=211446">Library.nsh - problem with readonly dll</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">26th March 2005, 14:29</div></div><div class="posttext">Hi!<br />
+<br />
+InstallLib macro does not remove the readonly attribute from DLLs it could replace (non-WFP). My script runs itself after reboot, so I get an endless loop for people having some older M$ runtime DLL with Read-Only-Attribute set.<br />
+<br />
+I added SetFileAttributes to Library.nsh. Can anybody familar with those macros into this issue and see whether I did it right?<br />
+<br />
+near line 340 I have this:<br />
+<br />
+<br />
+  ;------------------------<br />
+  ;Upgrade<br />
+<br />
+  !ifdef LIBRARY_DEFINE_UPGRADE_LABEL<br />
+<br />
+    !undef LIBRARY_DEFINE_UPGRADE_LABEL<br />
+<br />
+    installlib.upgrade_${INSTALLLIB_UNIQUE}:<br />
+    SetFileAttributes &quot;$R4&quot; FILE_ATTRIBUTE_NORMAL<br />
+<br />
+  !endif</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th March 2005, 17:42</div></div><div class="posttext">Thanks for the report. I've modified the latest version to use SetFileAttributes just above Rename /REBOOTOK. That's the only place where it might fail because of the read-only attribute.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">27th March 2005, 18:43</div></div><div class="posttext">I think you changed the wrong line as that is only executed in  _REBOOT_ calls and that execution point is after trying to upgrade the file. The &quot;Rename /REBOOTOK&quot; will fail always (this seems just write the file in Registry-Entries for Startup-Renaming).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th March 2005, 20:27</div></div><div class="posttext">I've added it just above the Rename /REBOOTOK that will otherwise fail on reboot. If a reboot is not needed, the change isn't needed anyway. The File command removes the read-only flag on its own.<br />
+<br />
+Actually, on second thought, File should always remove the read-only flag, even if the file is in use. I have attached a script showing this behavior. As File is always tried before calling Rename /REBOOTOK, there must be something more here.<br />
+<br />
+Can you attach a script reproducing the behavior you were talking about in the first post?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">28th March 2005, 11:08</div></div><div class="posttext">Hi kichik,<br />
+<br />
+ok, if File does remove the READONLY flag itself you're solution is correct. I wasn't aware of that. The problem was that my installer rebooted again and again on a customers machine, due to the fact it could not replace an old msvbvm60.dll (which had the ReadOnly flag). So according to the fail of the File statement, the problem wasn't readonly in the first but another program using the dll.<br />
+<br />
+Maybe in future NSIS relaeses Rename should remove the target READONLY attribute itself just like File.<br />
+<br />
+I have another problem related to DLLs/reboot/register:<br />
+<br />
+I install several DLLs I have to register and they depend on another. For now I check the RebootFlag after each install and stop installation if it is set, so the file gets installed and registered before I run the installer again (RunOnce). So the installer runs for each file I need to register in the middle of the chain:<br />
+<br />
+dllA<br />
+dllB needs dllA for registering<br />
+<br />
+If dllA could not be installed I can't register dllB. If dllB is writable this is a problem because I would have to register it after reboot.<br />
+<br />
+Question: How can I schedule a RegDll after Reboot? (Ok, I have ideas for this) But more important: how can I chain the RegDll calls into the right order? Just entering them into RunOnce may execute RegDll dllB before RegDll dllA which will cause dllB not to be registered.<br />
+<br />
+Any idea? Can I solve this with LibTool anyway?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th March 2005, 20:35</div></div><div class="posttext">As far as removing the read-only flag, File and SetFileAttributes do exactly the same. In InstallLib, File is always called before Rename so the read-only flag should always be removed. It seems the SetFileAttributes shouldn't matter. Also, if SetFileAttributes works when the DLL is in use by another application, so should File. I would still like an example that reproduces your problem so I can test this.<br />
+<br />
+When a DLL is queued to be replaced after reboot by InstallLib, it is also queued to be registered. The order of the registration is currently random. That needs to be fixed.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">29th March 2005, 21:26</div></div><div class="posttext">Hi,<br />
+<br />
+1. reboot problem<br />
+2. register queue<br />
+<br />
+ad 1.: in short: I couldn't reproduce the problem and you seem to be right.<br />
+<br />
+I have a log file from a customer and I spoke him on phone. The log showed that msvbvm60.dll could not be installed. The nsis line is:<br />
+<br />
+<br />
+!insertmacro InstallLib REGDLL NOTSHARED REBOOT_PROTECTED \<br />
+&quot;${VBFILESDIR}\Msvbvm60.dll&quot; &quot;$SYSDIR\Msvbvm60.dll&quot; $SYSDIR<br />
+<br />
+<br />
+(Don't worry about the NOTSHARED -- I increment the dll counter myself for some reason.)<br />
+<br />
+The log said:<br />
+<br />
+<br />
+IfFileExists: file &quot;C:\WINDOWS\system32\Msvbvm60.dll&quot; exists, jumping 0<br />
+Call: 521<br />
+File: overwriteflag=2, allowskipfilesflag=0, name=&quot;C:\WINDOWS\system32\Msvbvm60.dll&quot;<br />
+File: skipped: &quot;C:\WINDOWS\system32\Msvbvm60.dll&quot; (overwriteflag=2)<br />
+Call: 521<br />
+File: overwriteflag=2, allowskipfilesflag=0, name=&quot;C:\WINDOWS\system32\nsp7.tmp&quot;<br />
+File: wrote 1386496 to &quot;C:\WINDOWS\system32\nsp7.tmp&quot;<br />
+Rename: C:\WINDOWS\system32\nsp7.tmp-&gt;C:\WINDOWS\system32\Msvbvm60.dll<br />
+Rename on reboot: C:\WINDOWS\system32\nsp7.tmp-&gt;C:\WINDOWS\system32\Msvbvm60.dll<br />
+IfFileExists: file &quot;&quot; does not exist, jumping 0<br />
+File: overwriteflag=2, allowskipfilesflag=0, name=&quot;C:\WINDOWS\system32\NSIS.Library.RegTool.exe&quot;<br />
+File: wrote 19451 to &quot;C:\WINDOWS\system32\NSIS.Library.RegTool.exe&quot;<br />
+WriteRegStr: set -2147483646\Software\Microsoft\Windows\CurrentVersion\RunOnce\NSIS.Library.RegTool to &quot;C:\WINDOWS\system32\NSIS.Library.RegTool.exe&quot;<br />
+WriteRegStr: set -2147483646\Software\NSIS.Library.RegTool\C:\WINDOWS\system32\Msvbvm60.dll to D<br />
+<br />
+<br />
+This occured in endless loop because the installer automatically started after Reboot. The customer could gave me some information:<br />
+i) He had Outlook and some other background software running (some systray icons).<br />
+ii) His msvbvm60.dll was outdated. It had an older date and the version number was lower than the one within the installer.<br />
+iii) His msvbvm60.dll had the ReadOnly flag (after calling the installer which produced the log above!)<br />
+<br />
+He killed Outlook and he removed the ReadOnly flag manually. Then he executed the installer again and it worked without rebooting. I can't exactly say what he did or what really solved the problem.<br />
+<br />
+I tried to reproduce this but as you said the Readonly attribute gets removed before Reboot (if file in use). If file is not in use it gets overwritten regardless of Readonly state.<br />
+<br />
+Very strange.<br />
+<br />
+ad 2. Queuing regdll:<br />
+<br />
+It is not enough to make InstallLib/LibTool stable regarding the queue order. Think about my initial setup:<br />
+<br />
+dllA<br />
+dllB (registering this requires a registered and installed dllA)<br />
+<br />
+if dllA cannot be copied it is scheduled for replace after reboot, but the installer continues with dllB. It copies dllB but RegDll will fail because dllA is not copied/registered. But RegDll won't be called after reboot for dllB, so dllA is correctly installed after reboot but dllB never gets installed correctly. The nsis/InstallLib way of installing COM-Dlls which are possibly in use does not work with COM-Dlls which have such dependencies. Unfortunately this is the case for most ActiveX controls as they depend on ole32/oleaut32 which may be outdated on older systems (win98). I thought about building another little &quot;RegDll subinstaller&quot; which I will package into the installer and run after Reboot. But this does not work (queue problem, again) together with LibTool or other unqueued RunOnce actions. Conclusion/Suggestion: Make LibTool beware of the queue order and allow LibTool to be entered easily from outside InstallLib. I think an external macro should do this (!macro AddLibToolAction ...) and could be called by InstallLib macro as submacro and by the installer script itself.<br />
+<br />
+Sorry, much text, hope it got clear..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">31st March 2005, 20:55</div></div><div class="posttext">The only situation I can think of that can cause the first problem is that another application which runs on startup replaces msvnvm60.dll. After the user quit Outlook and installed it successfully with reboot, did the change stick after rebooting?<br />
+<br />
+I think a better solution for the second problem would be registering both dllA and dllB after reboot if one of them is scheduled to be replaced after reboot.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">31st March 2005, 21:42</div></div><div class="posttext">ad 1.: That would be very strange. I don't know whether this was the case. The dll was current enough so the user will not note that it might be replaced again (after install). The installation did run _without_ reboot, so I'm quite sure the dll was replaced then. I think the problem was that the File-command in InstallLib didn't remove the Readonly flag while trying to overwrite the dll. So on reboot the replace maybe failed due to presence of the readonly flag. I don't think it is possible for the dll being in use during replace phase...<br />
+<br />
+ad 2.: Yes, I thought that way (and actually do this in my installer, but due to queue problems I reboot after each problematic dll upgrade error). The problem of the right order persists, so it would be nice to handle this with LibTool and some additional macro. Otherwise you need double rebooting to solve the order problem: first ReplaceFiles and second RegisterAll. You can only be sure to have the correct order if you handle this with 1 call in RunOnce: on reboot first all dlls must be replaced and then all dlls must be registered in the correct order. Whether you do it this way or do it the smart way (replace dllA, register dllA, replace dllB, register dllB, register dllC) is some detail question. I would just add some auto numbering to LibTool entries in registry and LibTool should process the list in this order. You wouldn't need explicit numbers in install scripts if you use some variable the macro could increment itself (some INOUT parameter). For this solution you automatically get the smart way without much work.<br />
+<br />
+Can anybody upgrade LibTool to process some numbered list? I would add the macros to library.nsh. <br />
+<br />
+Macro pseudo code for RegDllCheckReboot(?):<br />
+- check reboot flag<br />
+- if not set call RegDll<br />
+- if set call RegDll (a try worth?) and call the RegDllOnReboot macro<br />
+<br />
+Macro pseudo code for RegDllOnReboot:<br />
+- increment INOUT parameter COUNT<br />
+- add registry entry to Software\NSIS.Libtool...:<br />
+  $COUNT file t  (just adding $COUNT to those calls)<br />
+<br />
+The InstallLib code would change to not directly make this registry entries but call the macro above (to avoid double code).<br />
+<br />
+This would be compatible to current scripts (versions of LibTool and library.nsh have to much) but solve the problem.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st April 2005, 13:11</div></div><div class="posttext">Since the reboot flag wasn't set, the DLL was probably replaced. But what I wanted to know is if the DLL wasn't reverted back to the older version the next unrelated reboot. File replacement occurs before the RunOnce key is read. The registration is already handled with one RunOnce call. Only the order needs to be sorted out. Just having one integer which will be incremented is not good enough because the LibTool registry key might contain entries from other installers too.<br />
+<br />
+LibTool is a simple NSIS uninstaller. If you want to make the change yourself, its source code is available in Contrib\Library\RegTool.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">3rd April 2005, 16:31</div></div><div class="posttext">ad 1.: Of course. I want to know that, too. And I asked the customer to send me the current dll version. If it is the old one again, your theory is correct. Otherwise we're none the wiser. As I said: I could not reproduce this.<br />
+<br />
+ad 2.: I implemented this in a way that different installers will have different &quot;reg lists&quot;. When I have tested this I will post the solution here.<br />
+<br />
+I wonder why RegTool.bin is only 19KB. If I compile it, I get a executable about 37KB in size.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">3rd April 2005, 20:31</div></div><div class="posttext">I could reduce the size by 4KB using the non-logging NSIS compiler. But there is still a gap (19KB original vs. 33KB recompiled). Is this the difference between NSIS 2.06 and that older released used on 2004-09-24?<br />
+<br />
+If nobody has an idea I will forget this issue as for me those 14KB are quite peanuts...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">4th April 2005, 10:06</div></div><div class="posttext">Hi kichik,<br />
+<br />
+could you think about a builtin NSIS Session-ID? I realized the Library ordered reg solution using some session variable. The variable needs a unique value and I fill it in .onInit using CreateGUID. It would make the interface much smaller (the GUID has to be passed to all 3 macros) if NSIS had an builtin session id. The ID has to be unique for each call of the installer. Eventually a session id could be useful in other cases. Think about $SESSION...<br />
+<br />
+Stefan</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">4th April 2005, 17:29</div></div><div class="posttext">Hi,<br />
+<br />
+here comes the tested solution. The design may be improvable (see last point) but it works. There's no help yet.<br />
+<br />
+1. The modified version of Library.nsh is in the file Library2.nsh, the modified RegTool has the new name &quot;RegTool2&quot;.<br />
+<br />
+2. You have to copy those files where the original ones are. Compile RegTool2.nsi, run RegTool2Generator.exe.<br />
+<br />
+3. The InstallLib macro has a new obligatory parameter (the first one). You have to pass some unique identifier here. The identifier has to be unique per installer run. I mean unique for all vendors, applications AND runs. I use &quot;CreateGUID&quot; macro for this (macro is attached, too). You should create your GUID in .onInit and store it in a VAR. All Dlls that are registered (using the supplied macros) after the RebootFlag got set will be scheduled after reboot. On next reboot they will be registered exactly in the order of the installation process. This only works if the GUID is the same for all those calls in one run. So don't create a GUID for each InstallLib call.<br />
+<br />
+4. some example code snapshots<br />
+<br />
+Function .onInit<br />
+  !insertmacro CreateGuid<br />
+  Pop $SESSIONID<br />
+FunctionEnd<br />
+<br />
+Section MySec<br />
+  !insertmacro InstallLib &quot;$SESSIONID&quot; REGDLL SHARED REBOOT_PROTECTED &quot;DLL_REPOSITORY\Oleaut32.dll&quot; &quot;$SYSDIR\Oleaut32.dll&quot; $SYSDIR<br />
+SectionEnd<br />
+<br />
+5. There is a macro RegDllCheckReboot which should be called instead of RegDll. The macro calls RegDll if the RebootFlag is not set, otherwise RegDll is scheduled using RegTool2. REGTYPE is 'D' for RegDll, 'T' for TypeLib::Register, 'DT' for both.<br />
+<br />
+6. I improved RegTool2 so it does not get executed by accident (on doubleclick). It is no more silent by default but it must be run with /S (silent) to enable it. Running it unsilent won't do anything. Of course macros in library2.nsh install RegTool2 with /S in RunOnce... (Please note: This behaviour was enabled in my file uploaded after 2005-04-04 17:30 GMT!)<br />
+<br />
+7. Improvements possible:<br />
+- RegTool and RegTool2 can be joined to be one tool as the new registry entries are stored under subkeys (so a new RegTool could do both to be compatible with older installers). The &quot;File /oname=$R3\NSIS.Library.RegTool2.exe&quot; has to be different from the old one (otherwise the new tool will not get written to disk if the old one is present).<br />
+- The extra parameter in InstallLib and the other macros can be avoided if NSIS had a internal SessionID variable.<br />
+- The REGTYPE parameter for RegDllCheckReboot and RegDllOnReboot may be replaced by some !define construction as in InstallLib.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th April 2005, 21:18</div></div><div class="posttext">RegTool is compiled using a specially compiled makensis.exe with as many options as possible disabled in config.h.<br />
+<br />
+I'll take a look at your changes over the weekend. Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">17th March 2006, 19:49</div></div><div class="posttext">The read-only issue is still there! I just had the issue with some ocx which is NOT used by any application. I have installed an old version (older than in my nsis package) and it remains there because of the read-only flag. If I run my setup, InstallLib will NOT overwrite the ocx file but does the &quot;rename on reboot&quot; thing. But that fails, too (probably due to read-only?). I tried attrib -r ocx and copy newfile sys32\ocx manually and it worked at once (without rebooting).<br />
+<br />
+I think InstallLib should SetFileAttributes ALWAYS (if the dll is not up to date).<br />
+<br />
+NSIS 2.15</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">17th March 2006, 20:09</div></div><div class="posttext">You're correct. I've misread the code the first time. It only removes the read-only flag if SetOverwrite mode is set to &quot;on&quot;. The Library macros use &quot;try&quot; mode so no message boxes saying the file can't be overwritten will pop-up.<br />
+<br />
+I've attached the new version so you can test it as anonymous CVS is having trouble right now. It worked in my simple test case.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">17th March 2006, 20:29</div></div><div class="posttext">Hi kichik,<br />
+<br />
+I already did that change for myself :-) and will test it soon.<br />
+<br />
+There is a difference though:<br />
+<br />
+490c464,465<br />
+&lt;     SetFileAttributes $R0 FILE_ATTRIBUTE_NORMAL<br />
+---<br />
+&gt;     SetFileAttributes &quot;$R0&quot; FILE_ATTRIBUTE_NORMAL<br />
+&gt;     ClearErrors<br />
+<br />
+I added the ClearErrors because I felt checking with IfErrors could be a bad idea if the file did not exist. Had a second look and saw that IfErrors only checks when the file exists. So you're solution should be fine.<br />
+<br />
+Another question: When do I have to enclose arguments in quotes (what about strings/filenames containing spaces)? Is this never necessary with Vars? I think it is necessary with defines. Correct?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">17th March 2006, 20:35</div></div><div class="posttext">ClearErrors is a good idea, I've added it just in case.<br />
+<br />
+Quotes are only for the parser of the compiler. Variables are translated at runtime and so they don't require quotes. Defines are replaced at compile time and so you need spaces, if that's what you really want. You can also skip the spaces and do something like the following. In this case, quotes will cause a parsing error.!macro blah<br />
+#...<br />
+!macroend<br />
+!define blah &quot;!insertmacro blah&quot;<br />
+${blah}</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

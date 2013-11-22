@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Locate crashes on C:\Recycled, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Locate crashes on C:\Recycled NSIS Discussion" />
+	
+	<title> Locate crashes on C:\Recycled [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Locate crashes on C:\Recycled</div>
+<hr />
+<div class="pda"><a href="t-250534.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=250534">Locate crashes on C:\Recycled</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">6th July 2006, 22:09</div></div><div class="posttext">I'm using the locate function (in FileFunc.nsh) to search windows drive (which is C:\ in this case) for a file. Whenever it gets to &quot;C:\Recycled&quot; it crashes the installer, with a Windows XP &quot;0x00000005: Access Violation&quot;. I looked into it and apparently &quot;C:\Recycled&quot; is NOT A REAL DIRECTORY! It is actually a subdirectory (with a different name) under &quot;C:\Recycler&quot;, which is hidden. I would prefer that Locate skip this folder entirely, but I don't see any way to do that without getting an advanced plugin (I cannot do that-don't ask). <br />
+<br />
+This seems to me to be some sort of bug. I dunno why I couldn't find a post about this.<br />
+<br />
+I'm looking for either a solution or ... a bugfix(?).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">7th July 2006, 06:08</div></div><div class="posttext">Sorry for the long post, but I have found a few things that might be helpful here:<br />
+<br />
+First, I did my own research (thanks to Google) and found something interesting about the &quot;C:\recycled&quot; folder.  The best article I found on the topic was here (http://www.windowsitpro.com/Article/ArticleID/47677/47677.html). <br />
+Basically, the folder &quot;C:\Recycled&quot; was the name of the recycle bin on Win9x computers. When upgrading to XP, the folder gets replaced by &quot;C:\recycler&quot; (which is the standard folder I've seen on most other XP boxes).  Furthermore, the original &quot;C:\recycled&quot; folder may have it's attributes/permissions set in such a way that prevents access.  So, my first suggestion would be to check the file attributes and security settings on your &quot;C:\recycled&quot; folder to see if perhaps you just don't have enought permissions or that perhaps the folder isn't read-only.<br />
+<br />
+Next, I did some of my own testing that seems to support the above theory:<br />
+I created my own folder with no permissions and ran a search with the Locate plugin.  Something a bit odd happened:  I found that the LOCATE macro assigned a size ($R6) to the &quot;permission-less&quot; folder, even though according to the docs, folders are supposed to return a null value (&quot;&quot;) for $R6.  As soon as I gave permissions back to the folder, the macro once again worked as expected and returned a null value for the folder name.  (This is what leads me to believe your issue is likely a permissions problem.)<br />
+<br />
+So, bottom line here is that there appears to be a flaw in the logic in that the plugin is setting a non-null size variable when a folder has no permissions.  (Unfortunately, I don't have any clever work-arounds at the moment.  You might want to contact the author for help.)<br />
+<br />
+Edit<br />
+Just a thought:<br />
+If you used the option &quot;/L=FD&quot; (as I did in my example), then you might be able to just check the size in your callback function and if it's zero, just continue on.  (This is of course assuming that the file you intend to find not a 0 KB file.)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">7th July 2006, 07:32</div></div><div class="posttext">Comperio<br />
+Locate function (http://nsis.sourceforge.net/Locate) and Locate plugin (http://nsis.sourceforge.net/Locate_plugin) are not the same.<br />
+<br />
+Something a bit odd happened: I found that the LOCATE macro assigned a size ($R6) to the &quot;permission-less&quot; folder, even though according to the docs, folders are supposed to return a null value (&quot;&quot;) for $R6.In the locate function code for check folder or file used command . Because files inside doesn't exist &quot;permission-less&quot; folder detected as file. Locate [i]plugin returns &quot;&quot; for &quot;permission-less&quot; folder.<br />
+<br />
+Shorin what parameters you use? As suggested Comperio: do you have all permissions to recycled bin folder?<br />
+<br />
+P.S. and better show your code with callback function</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">7th July 2006, 14:23</div></div><div class="posttext">Sorry, I probably used the wrong terms.  <br />
+<br />
+I was referring to the ${Locate} macro that is included as part of NSIS, not your stand-alone plugin. (I believe is also what Shorin was also referring to).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">7th July 2006, 14:29</div></div><div class="posttext">Here is my call to the locate plugin:<br />
+<br />
+${Locate} &quot;C:\&quot; &quot;/M=rtsky.ini&quot; &quot;SetSuccess&quot;<br />
+<br />
+The &quot;C:\&quot; is usually supplied with the variable $9, and it has had this value during tests.<br />
+<br />
+Also, regarding permissions to the &quot;Recycled&quot; folder (which definitely seems to be a 'virtual directory' in Windows XP), It shows that it's read only, but the checkbox for that is &lt;B&gt;tri-state&lt;/B&gt;. It is in its &lt;I&gt;partially selected&lt;/I&gt; state I think. I do not precisely what this means (or even if that state is called the &lt;I&gt;partially selected&lt;/I&gt; state). I have not been able to find out what this third state means. Perhaps it means &quot;system&quot;. <br />
+<br />
+Also I found something interesting about windows folder attributes just now:<br />
+<br />
+From:<br />
+http://support.microsoft.com/?id=326549<br />
+<br />
+Excerpt<br />
+Unlike the Read-only attribute for a file, the Read-only attribute for a folder is typically ignored by Windows, Windows components and accessories, and other programs. For example, you can delete, rename, and change a folder with the Read-only attribute by using Windows Explorer. The Read-only and System attributes is only used by Windows Explorer to determine whether the folder is a special folder, such as a system folder that has its view customized by Windows (for example, My Documents, Favorites, Fonts, Downloaded Program Files), or a folder that you customized by using the Customize tab of the folder's Properties dialog box. As a result, Windows Explorer does not allow you to view or change the Read-only or System attributes of folders. When a folder has the Read-Only attribute set it causes Explorer to &lt;B&gt;request the Desktop.ini of that folder&lt;/B&gt; to see if any special folder settings need to be set.<br />
+<br />
+- however I do not see a Desktop.ini in C:\recycled . If anything, the function should be modified so that it does not access that folder, as it is a virtual folder (more like a shortcut).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">7th July 2006, 16:40</div></div><div class="posttext">only way to find desktop.ini is with attrib in a command prompt, its hidden in explorer</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">7th July 2006, 16:42</div></div><div class="posttext">I can't reproduce the problem. Maybe you can pack this folder (without trash) and attach it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">7th July 2006, 17:26</div></div><div class="posttext">This is strange. I have NO idea why it failed before. I did get success this past time I ran it. I dunno why this is happening. When it finds the file it actually crashes. <br />
+What's all this about (in the documentation) :<br />
+<br />
+(from Locate's topic)<br />
+Function &quot;Function&quot;<br />
+	; $R9    &quot;path\name&quot;<br />
+	; $R8    &quot;path&quot;<br />
+	; $R7    &quot;name&quot;<br />
+	; $R6    &quot;size&quot;  ($R6=&quot;&quot; if directory, $R6=&quot;0&quot; if file with /S=)<br />
+<br />
+	; $R0-$R5  are not used (save data in them).<br />
+	; ...<br />
+<br />
+	Push $var    ; &lt;B&gt;If $var=&quot;StopLocate&quot; &lt;/B&gt;Then exit from function<br />
+FunctionEnd<br />
+<br />
+I do believe &lt;B&gt;$var&lt;/B&gt; should be &lt;B&gt;$0&lt;/B&gt; like all the examples.<br />
+<br />
+Ok... so it does work now. But having to push $0 onto the stack with a valie of &quot;StopLocate&quot; to end the function??... That's a somewhat strange way to do things... I think I'm going to investigate this source myself and see if I can put better error catching in this thing.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">7th July 2006, 17:45</div></div><div class="posttext">I think I got these html tags wrong somehow</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">7th July 2006, 17:52</div></div><div class="posttext">Also, is it possible to make Locate stop before a search is done? I would like to give impatient users a chance to quit without manually terminating.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">7th July 2006, 18:39</div></div><div class="posttext">Also, is it possible to make Locate stop before a search is done? I would like to give impatient users a chance to quit without manually terminating.<br />
+See in the docs &quot;Example (Locate with banner - NxS plugin required):&quot;</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

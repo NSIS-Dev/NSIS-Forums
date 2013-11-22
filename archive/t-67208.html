@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" StrStr and adding to PATH env var, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  StrStr and adding to PATH env var NSIS Discussion" />
+	
+	<title> StrStr and adding to PATH env var [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  StrStr and adding to PATH env var</div>
+<hr />
+<div class="pda"><a href="t-67208.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=67208">StrStr and adding to PATH env var</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">mgentry</div><div class="date">30th November 2001, 20:32</div></div><div class="posttext">Here's a couple of functions I whipped up for the purpose of allowing me to add something to the PATH environment variable.  The StrStr function was implemented so I could see if what I was going to add was already in the path.<br />
+<br />
+If someone has some suggestions for improving them that'd be great .. they were my first working pass as them so I'm sure there's probably some room for improvement.<br />
+<br />
+<br />
+;===================================================================<br />
+; StrStr - Find $0 in $1.<br />
+;        $0 - String to find.<br />
+;        $1 - String to search in.<br />
+;        $2 - [out] Index of where string was found, or -1.<br />
+;===================================================================<br />
+Function StrStr<br />
+Push $3<br />
+Push $4<br />
+Push $5<br />
+<br />
+    StrCpy $2 -1<br />
+    StrLen $4 $0<br />
+    StrLen $5 $1<br />
+    IntOp $3 $5 - $4<br />
+    <br />
+    loop:<br />
+    IntOp $2 $2 + 1<br />
+    IntCmp $2 $3 0 0 fail<br />
+    StrCpy $5 $1 $4 $2<br />
+    StrCmp $0 $5 return loop<br />
+    <br />
+    fail:<br />
+    StrCpy $2 -1        <br />
+<br />
+return:<br />
+Pop $5<br />
+Pop $4<br />
+Pop $3<br />
+FunctionEnd<br />
+<br />
+<br />
+;===================================================================<br />
+; AddOUTDIRToSearchPath - Append the given directory to the<br />
+;                         PATH env var.<br />
+;===================================================================<br />
+Function AddOUTDIRToSearchPath<br />
+Push $0<br />
+Push $1<br />
+Push $2<br />
+<br />
+    StrCpy $0 $OUTDIR<br />
+    ReadRegStr $1 HKLM &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion&quot; CurrentVersion<br />
+    StrCmp $1 &quot;&quot; 0 winnt<br />
+    ReadRegStr $1 HKLM SOFTWARE\Microsoft\Windows\CurrentVersion VersionNumber<br />
+    StrCmp $1 &quot;&quot; return win9x<br />
+    <br />
+    winnt:<br />
+    ReadRegStr $1 HKLM &quot;SYSTEM\CurrentControlSet\Control\Session Manager\Environment&quot; Path<br />
+    Call StrStr<br />
+    IntCmp $2 -1 0 0 return<br />
+    StrCpy $1 &quot;$1;$OUTDIR&quot;<br />
+    WriteRegExpandStr HKLM &quot;SYSTEM\CurrentControlSet\Control\Session Manager\Environment&quot; Path $1<br />
+    Goto return<br />
+    <br />
+    win9x:<br />
+    ReadEnvStr $1 PATH<br />
+    Call StrStr<br />
+    IntCmp $2 -1 0 0 return<br />
+    ClearErrors<br />
+    FileOpen $1 &quot;C:\autoexec.bat&quot; &quot;a&quot;<br />
+    FileSeek $1 0 SET<br />
+    loop:<br />
+        FileRead $1 $2<br />
+        IfErrors end<br />
+        StrCmp &quot;PATH=%PATH%;$OUTDIR$\r$\n&quot; $2 return loop<br />
+    end:<br />
+    FileSeek $1 0 END<br />
+    FileWrite $1 &quot;$\r$\nPATH=%PATH%;$OUTDIR$\r$\n&quot;<br />
+    FileClose $1<br />
+    <br />
+return:<br />
+Pop $2<br />
+Pop $1<br />
+Pop $0<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">30th November 2001, 22:27</div></div><div class="posttext">One thing is missing in adding the PATH to WinNT which is a program that its only line code is:<br />
+<br />
+<br />
+SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, (LPARAM) &quot;Environment&quot;, SMTO_ABORTIFHUNG, 5000, &amp;dwReturnValue);<br />
+<br />
+<br />
+This will cause all of Windows apps to reload the env and thus you will not need to logoff and on again.<br />
+<br />
+There is also a little problem with Win9x search path addition, the path you have inserted into the autoexec.bat is in Windoes long file name format. Win9x needs 8.3 names. I have implented a new function into NSIS called GetShortPathName, which returns 8.3 names, but it is no longer needed as 1.7 will have GetFullPathName /SHORT.<br />
+<br />
+One thing I don't understand is what is ]. Where did it come from? Is this a normal NSIS var or a changed NSIS?<br />
+<br />
+I have been working on this kind of code too. I must say there are some improvments in your code over mine. Yours is very efficient.<br />
+Do you mind telling me what application you are working on?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mgentry</div><div class="date">30th November 2001, 22:41</div></div><div class="posttext">Good catch on the short file name issue, obviously it hadn't occurred to me.  Generally for my purposes I wasn't too concerned about the fact that the user would have to log off/on (or reboot for 9x).<br />
+<br />
+I hadn't noticed the [ all over the place .. if you replace them with 'dollar 1' then you'll see what I see when I look at my code.  I suppose this message board software replaces it with [.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st December 2001, 09:29</div></div><div class="posttext">Another improvement you can add is usage with the stack instead of set vars like $1 and $2. It will make it usable anywhere.<br />
+<br />
+Attached is the program to refresh the env vars in WinNT, with the source.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st December 2001, 10:04</div></div><div class="posttext">One more thing you have forgot:<br />
+What if Windows9x is not installed on C:?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st December 2001, 10:31</div></div><div class="posttext">.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st December 2001, 10:39</div></div><div class="posttext">I can't post! I can't edit! What happened?! Only short messages get posted all else gives me server not found!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st December 2001, 11:34</div></div><div class="posttext">Here it is, all togther in one zip file. Remove included.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

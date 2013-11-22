@@ -1,0 +1,249 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Source of !(insert)macro RadioButton, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Source of !(insert)macro RadioButton NSIS Discussion" />
+	
+	<title> Source of !(insert)macro RadioButton [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Source of !(insert)macro RadioButton</div>
+<hr />
+<div class="pda"><a href="t-171042.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=171042">Source of !(insert)macro RadioButton</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Devion</div><div class="date">26th February 2004, 07:57</div></div><div class="posttext">I'm using RadioButton-kindish features in my component page. I only need to tweak it somewhat.<br />
+<br />
+For example I need the components to be unselectable (currently 1 always must be selected - which is normal with RadioButtons, but I dont want that).<br />
+<br />
+I could program this myself in the &quot;Function .onSelChange&quot;, but have no idea on how to start. The .nsi source of the RadioButton macro would help me a lot, but i can't find it (does it exist? or is it only in C++ source).<br />
+<br />
+Can someone post it? Or your &quot;Function .onSelChange&quot; section if you're using some scripts in there?<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Devion</div><div class="date">26th February 2004, 08:01</div></div><div class="posttext">stupid me.... *slaps self*<br />
+<br />
+Just found it... it's in sections.nsh<br />
+<br />
+If someone would be so graceful to still post his nifty .onSelChange function I'd be thankful. Otherwise sorry for wasting your time ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Devion</div><div class="date">26th February 2004, 08:22</div></div><div class="posttext">Okay.... Not that easy (or i just cant read this efficient programming.. ;)). I have declared my own RadioButton macros:<br />
+!macro StartRadioButtons2 var<br />
+  !define StartRadioButtons_Var &quot;${var}&quot;<br />
+  Push $R0<br />
+   SectionGetFlags &quot;${StartRadioButtons_Var}&quot; $R0<br />
+   IntOp $R0 $R0 &amp; ${SECTION_OFF}<br />
+   SectionSetFlags &quot;${StartRadioButtons_Var}&quot; $R0<br />
+  Push $R1<br />
+    StrCpy $R1 &quot;${StartRadioButtons_Var}&quot;<br />
+!macroend<br />
+<br />
+!macro RadioButton2 SECTION_NAME<br />
+  SectionGetFlags ${SECTION_NAME} $R0<br />
+  IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+  IntCmp $R0 ${SF_SELECTED} 0 +2 +2<br />
+  StrCpy &quot;${StartRadioButtons_Var}&quot; ${SECTION_NAME}<br />
+!macroend<br />
+<br />
+!macro EndRadioButtons2<br />
+  StrCmp $R1 &quot;${StartRadioButtons_Var}&quot; 0 +4 ; selection hasn't changed<br />
+    SectionGetFlags &quot;${StartRadioButtons_Var}&quot; $R0<br />
+    IntOp $R0 $R0 | ${SF_SELECTED}<br />
+;    SectionSetFlags &quot;${StartRadioButtons_Var}&quot; $R0<br />
+  Pop $R1<br />
+  Pop $R0<br />
+  !undef StartRadioButtons_Var<br />
+!macroend<br />
+As you can see, this is directly copied from Sections.nsh. All I did was commenting one line in !macro EndRadioButtons2. This gives the desired effect:<br />
+- when clicking an unselected option from the radio-group, it gets selected and all others deselected.<br />
+- when clicking the selected option, it deselects leaving all options in the radiogroup deselected.<br />
+But what not works (when the entire group is deselected):<br />
+- when clicking the just deselected (last) option from the radiogroup, nothing happens (it doesn't get selected).<br />
+- when clickin on NOT the just deselected option, it gets selected (as it should).<br />
+<br />
+Hope this is a little clear.. ;)<br />
+<br />
+Ofcourse this is because i just left an entire line out and I've tried playing with the IntOp command... but it all doesn't make much sense to me.... Anyone got any suggestions?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Devion</div><div class="date">26th February 2004, 11:33</div></div><div class="posttext">Hmmm.. i threw away all the RadioButton code and have this now:<br />
+Function .onSelChange<br />
+   SectionGetFlags ${SEC_Cross1} $0<br />
+   SectionGetFlags ${SEC_Cross2} $1<br />
+  IntOp $3 $0 &amp; $1<br />
+  IntCmp $3 1 0 +3 +3<br />
+   SectionSetFlags ${SEC_Cross1} 0<br />
+   SectionSetFlags ${SEC_Cross2} 0<br />
+FunctionEnd<br />
+This deselects both options if both are selected, allowing the user to re-select one.<br />
+<br />
+I dont know how to &quot;see&quot; what option was last clicked... how is that done?<br />
+<br />
+I basicly want to add a SectionSetFlags ${last_section_clicked} 1 command at the end...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">26th February 2004, 11:45</div></div><div class="posttext">You have to store the last clicked section in a variable.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Devion</div><div class="date">26th February 2004, 11:50</div></div><div class="posttext">Originally posted by Joost Verburg <br />
+You have to store the last clicked section in a variable. <br />
+<br />
+no really? :rolleyes: :D <br />
+<br />
+I unfortunatly dont know how... I've seen some other sources, but they dont give me what I'm looking for... Or I'm misinterpreting them...<br />
+<br />
+Can't believe I'm the only one wanting this kind of feature...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">26th February 2004, 11:54</div></div><div class="posttext">* Set the default state in a variable<br />
+* Unselect the previous selection in .onSelChange (if there is one selected)<br />
+* See what's selected right now and store that in the variable</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Devion</div><div class="date">26th February 2004, 12:33</div></div><div class="posttext">Sorry.. you're not making any sense to me.... $0 contains the result of SectionGetFlags ${SEC_Cross1} as far as I can see.<br />
+<br />
+I'm currently unselecting all sections, but have no way to reselect the clicked section. I'm still looking for the SectionSetFlags ${last_section_clicked} 1 sollution... :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">heXor</div><div class="date">26th February 2004, 13:03</div></div><div class="posttext">I'm not sure the solution below is the right thing to do because I don't *really* understand what you mean, but to store that value in a variable I suggest you use a global variable.<br />
+<br />
+Try this (otside of your function):<br />
+<br />
+Var nSectionSelectionValue<br />
+<br />
+Function .onSelChange<br />
+   SectionGetFlags ${SEC_Cross1} $0<br />
+   ...<br />
+   SectionSetFlags ${SEC_Cross2} $nSectionSelectionValue<br />
+FunctionEnd<br />
+<br />
+Maybe this helps...<br />
+<br />
+Then I also suggest that you try to use the &quot;LogicLib.nsh&quot; and write like this instead of using &quot;IntCmp&quot;<br />
+<br />
+IntCmp $3 1 0 +3 +3<br />
+SectionSetFlags ${SEC_Cross1} 0<br />
+SectionSetFlags ${SEC_Cross2} 0<br />
+<br />
+could be written as:<br />
+<br />
+${If} $3 = 1<br />
+      SectionSetFlags ${SEC_Cross1} 0<br />
+      SectionSetFlags ${SEC_Cross2} 0<br />
+${EndIf}<br />
+<br />
+Almost like C :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">eccles</div><div class="date">26th February 2004, 13:31</div></div><div class="posttext">Actually, &quot;==&quot; is StrCmp; IntCmp is &quot;=&quot;.<br />
+<br />
+Devion, I think I had to do this once.  I'll try to dig it out...<br />
+<br />
+edit:<br />
+OK, no need :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Devion</div><div class="date">26th February 2004, 13:45</div></div><div class="posttext">AHYES... I finally got it! Here's my sollution:<br />
+<br />
+This is the solution for having 2 sections, who both can be selected or unselected, but not both selected at the same time. E.g. if section 1 is selected, and you select section 2, section 1 will become unselected.<br />
+<br />
+this in .onInit<br />
+   StrCpy $8 &quot;true&quot; ; using $8 to store state of section1 (default is on)<br />
+   StrCpy $9 &quot;false&quot;; using $9 to store state of section2 (default is off)<br />
+<br />
+<br />
+this in .onSelChange<br />
+   SectionGetFlags ${SEC_Cross1} $0 ;get both states<br />
+   SectionGetFlags ${SEC_Cross2} $1<br />
+  IntOp $3 $0 &amp; $1<br />
+  IntCmp $3 1 doscheck sisok sisok ;if both states are ON, go check what to do, else selection is OK<br />
+   doscheck:<br />
+;   MessageBox MB_OK &quot;c1:$8 - c2:$9&quot; ;for debugging<br />
+   SectionSetFlags ${SEC_Cross1} 0 ;deselect both sections<br />
+   SectionSetFlags ${SEC_Cross2} 0<br />
+<br />
+   StrCmp $8 &quot;true&quot; c1wason c2wason ; section1 WAS on, so now section 2 must be on<br />
+   c1wason:<br />
+   SectionSetFlags ${SEC_Cross2} 1<br />
+    StrCpy $8 &quot;false&quot;<br />
+    StrCpy $9 &quot;true&quot;<br />
+   goto sisok ; variables are updated and the section has been selected<br />
+<br />
+   c2wason:<br />
+   SectionSetFlags ${SEC_Cross1} 1<br />
+    StrCpy $8 &quot;true&quot;<br />
+    StrCpy $9 &quot;false&quot;<br />
+<br />
+   sisok:<br />
+This is prolly not the best way to do this, but it works! Would also be easily possible to do this for more that 2 sections.<br />
+<br />
+Thanks for your input everyone!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">26th February 2004, 14:35</div></div><div class="posttext">There is an easier method. Use this set of macros in the same way as the orignal Sections.nsh macros and it should work.<br />
+!macro StartRadioButtons var<br />
+<br />
+  !define StartRadioButtons_Var &quot;${var}&quot;<br />
+<br />
+  Push $R0<br />
+  <br />
+  Push $R1<br />
+  <br />
+  StrCpy $R1 0<br />
+  <br />
+  SectionGetFlags &quot;${StartRadioButtons_Var}&quot; $R0<br />
+  IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+  IntCmp $R0 ${SF_SELECTED} 0 +5 +5  <br />
+    SectionGetFlags &quot;${StartRadioButtons_Var}&quot; $R0<br />
+    IntOp $R0 $R0 &amp; ${SECTION_OFF}<br />
+    SectionSetFlags &quot;${StartRadioButtons_Var}&quot; $R0<br />
+    StrCpy $R1 1<br />
+   <br />
+  Push $R2<br />
+  <br />
+    StrCpy $R2 &quot;${StartRadioButtons_Var}&quot;<br />
+   <br />
+!macroend<br />
+<br />
+; A radio button<br />
+<br />
+!macro RadioButton SECTION_NAME<br />
+<br />
+  SectionGetFlags ${SECTION_NAME} $R0<br />
+  IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+  IntCmp $R0 ${SF_SELECTED} 0 +3 +3<br />
+    StrCpy &quot;${StartRadioButtons_Var}&quot; ${SECTION_NAME}<br />
+    StrCpy $R1 1<br />
+<br />
+!macroend<br />
+<br />
+; Ends the radio button block<br />
+<br />
+!macro EndRadioButtons<br />
+  <br />
+  StrCmp $R1 0 +5<br />
+    StrCmp $R2 &quot;${StartRadioButtons_Var}&quot; 0 +4 ; selection hasn't changed<br />
+      SectionGetFlags &quot;${StartRadioButtons_Var}&quot; $R0<br />
+      IntOp $R0 $R0 | ${SF_SELECTED}<br />
+      SectionSetFlags &quot;${StartRadioButtons_Var}&quot; $R0<br />
+  <br />
+  Pop $R2<br />
+  Pop $R1<br />
+  Pop $R0<br />
+  <br />
+  !undef StartRadioButtons_Var<br />
+<br />
+!macroend</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Banner hangs when called from custom page., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Banner hangs when called from custom page. NSIS Discussion" />
+	
+	<title> Banner hangs when called from custom page. [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Banner hangs when called from custom page.</div>
+<hr />
+<div class="pda"><a href="t-270838.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=270838">Banner hangs when called from custom page.</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">lybra</div><div class="date">8th May 2007, 14:40</div></div><div class="posttext">I have created a custom page to install .NET Framework 2.0. This page uses a banner to show while the .NET installer is running. However, if I press Cancel in the .NET installer, the NSIS installer hangs.<br />
+<br />
+If I use the same code in an installation section of the main page, it does work OK.<br />
+<br />
+Simplified code sample of the main page:<br />
+; Pages<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+Page custom PageDotNet2 InstallDotNet2<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+<br />
+; Sections<br />
+Section x<br />
+  ; install .NET Framework 2.0<br />
+  Banner::show /NOUNLOAD /set 76 $(InstallingNet2) $(PleaseWait)<br />
+  ExecWait '&quot;$REDISTRIBUTABLES_FOLDER\dotnetfx.exe&quot;'<br />
+  Banner::destroy<br />
+SectionEnd<br />
+<br />
+The InstallDotNet2 function in my custom page contains the exact same code as Section x on the main page. If I comment out the Banner statements in the InstallDotNet2 function, everything works fine.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">goldy1064</div><div class="date">8th May 2007, 16:38</div></div><div class="posttext">You could try ensuring that the current working directory is set to $PLUGINSDIR before doing calls to the banner plugin.<br />
+<br />
+Section x<br />
+  ; install .NET Framework 2.0<br />
+  SetOutPath &quot;$PLUGINSDIR&quot;<br />
+  Banner::show /NOUNLOAD /set 76 $(InstallingNet2) $(PleaseWait)<br />
+  ExecWait '&quot;$REDISTRIBUTABLES_FOLDER\dotnetfx.exe&quot;'<br />
+  SetOutPath &quot;$PLUGINSDIR&quot;<br />
+  Banner::destroy<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">8th May 2007, 16:39</div></div><div class="posttext">Use InitPluginsDir for that.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lybra</div><div class="date">9th May 2007, 07:23</div></div><div class="posttext">I've tried adding the InitPluginsDir statement at the top of the function and right after the ExecWait call, but without success.<br />
+<br />
+I found some more strange behaviour: if I add a MessageBox call after the ExecWait call, but before the Banner::destroy, the message box gets shown and when I click that away, the installer continues. If I place the MessageBox call after the Banner::destroy, the installer hangs. If I remove the MessageBox call, it also hangs.<br />
+<br />
+The code below works (but gives me an unwanted message box); if I (re)move the MessageBox call, it hangs. Again, only in the function on the custom page. The banner is working fine in my main installer section.<br />
+<br />
+Function InstallDotNet2<br />
+  ; install .NET Framework 2.0<br />
+  InitPluginsDir<br />
+  Banner::show /NOUNLOAD /set 76 $(InstallingNet2) $(PleaseWait)<br />
+  ExecWait '&quot;$REDISTRIBUTABLES_FOLDER\dotnetfx.exe&quot;'<br />
+  InitPluginsDir<br />
+  MessageBox MB_OK &quot;x&quot;<br />
+  Banner::destroy<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th May 2007, 11:29</div></div><div class="posttext">Are you using the latest version of NSIS. This could be a new bug. I've used the banner plugin between pages in the past with no problems.<br />
+<br />
+Try using /NOUNLOAD on destroy but make sure you call destroy again without /NOUNLOAD in .onGUIEnd otherwise the plugin will not be deleted.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lybra</div><div class="date">9th May 2007, 12:19</div></div><div class="posttext">The /NOUNLOAD on destroy doesn't work. Thanks for your help by the way (usually if you start answering in a topic, the problem is quickly resolved, so I have high hopes &amp; expectations :-))<br />
+<br />
+I found another freaky thing during testing. First: I accidentally put the .NET 1.1 redistributable in the REDISTRIBUTABLES_FOLDER, so that is the one causing the hang-up. I replaced it with the .NET 2.0 installer and then my installer works;, however a DirectX installer makes it hang again. Difference is that the .NET 2.0 installer is not immediately cancellable (you get a number of screens before the installer closes), and the other two installers are immediately closed if you press Cancel.<br />
+<br />
+I'm using NSIS 2.11.<br />
+<br />
+If you want, I can attach my two source files?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">23rd May 2007, 15:38</div></div><div class="posttext">Have you tried with NSIS 2.27? Does it happen on more than one computer? Can you attach a simple script that reproduces this? I can't reproduce it with some random installers I had laying around.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lybra</div><div class="date">31st May 2007, 14:53</div></div><div class="posttext">I'm sorry for my late response, I was on (a well-deserved :-)) holiday.<br />
+<br />
+Attached you'll find my testfiles. You'll also need the .NET 1.1 redistributable in the REDISTRIBUTABLES_FOLDER (set in .onInit). <br />
+<br />
+Steps to reproduce:<br />
+- Run the installer.<br />
+- When the .NET installer asks &quot;Would you like to install Microsoft .NET Framework 1.1 Package?&quot;, press No.<br />
+- The installer freezes.<br />
+<br />
+Also notice:<br />
+- The same code on the main page does not freeze (you can see this by commenting out the custom Page command in MyTestInstaller.nsi.<br />
+- If you enable the MessageBox statement in function InstallDotNet in MyTestCustomPage.nsh, you'll find that it won't freeze.<br />
+<br />
+I won't have time to test much this week, but I'll install NSIS 2.27 on a different computer early next week.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th June 2007, 21:20</div></div><div class="posttext">Haven't had a chance to test your program or try reproducing it myself but I think I've found something. Let me know if the attached Banner solves this.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lybra</div><div class="date">14th June 2007, 11:54</div></div><div class="posttext">I have tested the new banner, but unfortunately the result is the same. I have tested this with the latest version (2.28).<br />
+<br />
+I did find something interesting though. In the current implementation, I call the .NET installer in the page creator function.<br />
+<br />
+<br />
+&lt;MyTestInstaller.nsi&gt;<br />
+Page custom ShowMyTestCustomPage<br />
+<br />
+&lt;MyTestCustomPage.nsh&gt;<br />
+Function ShowMyTestCustomPage<br />
+	...<br />
+	Call InstallDotNet<br />
+FunctionEnd<br />
+However, if I change this code to call the .NET installer from the page leave function, it works just fine.<br />
+<br />
+<br />
+&lt;MyTestInstaller.nsi&gt;<br />
+Page custom ShowMyTestCustomPage LeaveMyTestCustomPage<br />
+<br />
+&lt;MyTestCustomPage.nsh&gt;<br />
+Function ShowMyTestCustomPage<br />
+	...<br />
+	; Call InstallDotNet<br />
+FunctionEnd<br />
+<br />
+Function LeaveMyTestCustomPage<br />
+	Call InstallDotNet<br />
+FunctionEnd<br />
+This doesn't explain to me why it does work in the page creator function when I add a message box, but as a workaround it'll do just fine.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">16th June 2007, 12:53</div></div><div class="posttext">Here's a version that works with your test case. It has better synchronization methods. I still need to figure out what exactly went wrong with the original one.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lybra</div><div class="date">18th June 2007, 10:27</div></div><div class="posttext">@kichik: thanks, the new banner works perfectly! :up: If you need me to further test anything, let me know.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">26th June 2007, 20:01</div></div><div class="posttext">Well, I managed to freeze the new Banner on my first try. So my next guess was correct and it's indeed the frozen message loop in the main thread.<br />
+<br />
+I've now implemented the message loop where it's needed and also uploaded it to CVS. I've also attached the compiled version here. Please test it and let me know if it works fine for you too.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lybra</div><div class="date">28th June 2007, 16:22</div></div><div class="posttext">This latest banner also works fine for me! Thanks for all the effort.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bobics</div><div class="date">29th June 2007, 00:59</div></div><div class="posttext">This appears to have fixed the banner hanging in my installer script also.  I only started noticing this problem when launching an executable during the banner... whereas before I had a placeholder since we didn't have the exe implementation finished yet.  In case it helps, in my script the banner is being displayed in the Component Leave callback, i.e.:<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE verifyComponentReqs<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+<br />
+Thank you for the fix.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

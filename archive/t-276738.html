@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" InstallDirRegKey and Uninstaller, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  InstallDirRegKey and Uninstaller NSIS Discussion" />
+	
+	<title> InstallDirRegKey and Uninstaller [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  InstallDirRegKey and Uninstaller</div>
+<hr />
+<div class="pda"><a href="t-276738.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=276738">InstallDirRegKey and Uninstaller</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">pozbremser</div><div class="date">31st August 2007, 14:02</div></div><div class="posttext">hi,<br />
+<br />
+I use both functions<br />
+<br />
+InstallDir ${path}<br />
+InstallDirRegKey HKLM ${mainpath} &quot;InstallLocation&quot;<br />
+<br />
+in directory page by running I change the path.<br />
+<br />
+Uninstaller uses old path.<br />
+Schall Uninstaller read the registry for new path?<br />
+<br />
+thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">31st August 2007, 14:27</div></div><div class="posttext">Taken from the Help File.. Should help..<br />
+<br />
+$INSTDIR<br />
+<br />
+The installation directory ($INSTDIR is modifiable using StrCpy, ReadRegStr, ReadINIStr, etc. - This could be used, for example, in the .onInit function to do a more advanced detection of install location).<br />
+<br />
+Note that in uninstaller code, $INSTDIR contains the directory where the uninstaller lies. It does not necessarily contain the same value it contained in the installer. For example, if you write the uninstaller to $WINDIR and the user doesn't move it, $INSTDIR will be $WINDIR in the uninstaller. If you write the uninstaller to another location, you should keep the installer's $INSTDIR in the registry or an alternative storing facility and read it in the uninstaller.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pozbremser</div><div class="date">3rd September 2007, 17:29</div></div><div class="posttext">oh-oh;<br />
+it would mean:<br />
+Section &quot;Uninstall&quot;<br />
+  RMDir &quot;$WINDIR&quot;<br />
+SectionEnd<br />
+<br />
+I will do a MessageBox that ask, delete or not,<br />
+if $INSTDIR not like default install location.<br />
+<br />
+I expected, that InstallDirRegKey set $INSTDIR<br />
+by running of uninstaller.<br />
+<br />
+thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">4th September 2007, 13:20</div></div><div class="posttext">urrr.... no<br />
+I think you understand wrong about $WINDIR (The help file was just talking about $WINDIR as an example, for those BAD installers that place the Uninstaller program inside WINDOWS directory)<br />
+<br />
+My recommendation would be to generate your Uninstaller in the $INSTDIR directory, rather than in $WINDIR<br />
+<br />
+SetOutPath &quot;$INSTDIR&quot;<br />
+WriteUninstaller &quot;Uninstall.exe&quot;<br />
+<br />
+<br />
+<br />
+So that when the Uninstaller is run (from inside the installation dir), the $INSTDIR is already correct, and match the directory choosen by the user in the installer</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pozbremser</div><div class="date">4th September 2007, 13:29</div></div><div class="posttext">OK,<br />
+normally is it so,<br />
+but somebody can choose c:\windows or c\programm files as install directory.<br />
+or one can move unistaller into other directories without intent.<br />
+<br />
+I use <br />
+<br />
+Function .onVerifyInstDir<br />
+<br />
+	${If} &quot;$INSTDIR&quot; == &quot;$WINDIR&quot; <br />
+	    Abort<br />
+	${EndIf}<br />
+   <br />
+FunctionEnd<br />
+<br />
+but if deinstaller delete only files and dirs, that were installed, it's no problem.<br />
+<br />
+I used RMDir /r $INSTDIR and it's wrong.<br />
+must be corrected.<br />
+<br />
+thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">4th September 2007, 13:39</div></div><div class="posttext">Right..<br />
+if you delete only the files you installed, then it should be ok<br />
+if you do a RMDir /r $INSTDIR, then you might have a problem<br />
+<br />
+<br />
+But if a user choose the &quot;Program Files&quot; or WINDOWS directory to install a program, he is going to be in trouble anyway<br />
+(for example, you might be replacing an existing -potentially system- file during installation)<br />
+<br />
+I myself have used RMDir /r $INSTDIR in some of my installation scripts, so I'm starting to wonder if I shouldn't add a .onVerifyInstDir function like you suggest, just to prevent a dumb user from doing something bad</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">4th September 2007, 13:43</div></div><div class="posttext">If you really want to handle the case where the user moved the uninstaller without intent, you might want to compare the $INSTDIR with the path taken for the registry (Add/Remove program) if you use it<br />
+<br />
+ReadRegStr	$0  HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\&lt;your_app&gt;&quot; &quot;InstallLocation&quot;<br />
+<br />
+and then prompt a dialog if the path are different</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pozbremser</div><div class="date">4th September 2007, 14:29</div></div><div class="posttext">the good way.<br />
+<br />
+my installer hadn't directory page, <br />
+InstDir was hardcoded.<br />
+I generated and put uninstaller on cd with installer.<br />
+But after adding directroy page, I become this questions with uninstaller pathes.<br />
+possible, it's not good idea, to put uninstaller on cd.<br />
+(for example if user delete uninstaller).<br />
+<br />
+RMDir /r $INSTDIR is very dangerously.<br />
+<br />
+Now, my uninstaller delete the directories, that were copied by installer.<br />
+I have a custom unpage with checkbox (Delete $INSTDIR?)<br />
+(would be good to implement this checkbox into directory page) and if $INSTDIR after deleting of directories and files is empty,  I delete it too.<br />
+<br />
+  StrCpy $0 &quot;$INSTDIR&quot;<br />
+  Call un.DeleteDirIfEmpty</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pozbremser</div><div class="date">4th September 2007, 15:22</div></div><div class="posttext">$INSTDIR can be $WINDIR,<br />
+if user set in directory page c:\windows\assembly\.. for example.<br />
+also it's not really protected with this version of .onVerifyInstDir</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

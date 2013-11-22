@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Silent uninstall always exits with errorlevel, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Silent uninstall always exits with errorlevel NSIS Discussion" />
+	
+	<title> Silent uninstall always exits with errorlevel [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Silent uninstall always exits with errorlevel</div>
+<hr />
+<div class="pda"><a href="t-276701.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=276701">Silent uninstall always exits with errorlevel</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">AxelMock</div><div class="date">30th August 2007, 13:53</div></div><div class="posttext">Hi,<br />
+<br />
+I have the following problem. <br />
+Calling the uninstaller in silent mode from a batch file which checks the returned error level, always gives error level 2.<br />
+<br />
+Adding SetErrorLevel 0 as last instruction in the uninstaller section DOES NOT help.<br />
+<br />
+Second strange behaviour: <br />
+I placed 2 Messageboxes with debug output into the uninstaller section. Both MessageBoxes appear one after the other, but when the first one appears, the installer has already finished and returned to the calling batch file.<br />
+<br />
+1. What happens after this section, that sets the errorlevel to 2<br />
+<br />
+2. Why do the Messageboxes NOT interrupt the program and wait until OK is pressed? <br />
+<br />
+<br />
+<br />
+Section Uninstall<br />
+  SetDetailsPrint None<br />
+<br />
+  StrCmp $MustUpdate &quot;1&quot; SkipUninstDriver<br />
+  Call un.InstallDriver<br />
+<br />
+SkipUninstDriver:<br />
+ ; Can't uninstall if uninstall log is missing!<br />
+ IfFileExists &quot;$INSTDIR\${UninstLogfileName}&quot; NormalUninst<br />
+#  MessageBox MB_YESNO|MB_ICONSTOP &quot;$(UninstLogMissing)$\r$\n$(ForcedUninst)&quot; /SD IDNO IDYES ForcedUninst<br />
+#   Abort<br />
+<br />
+ForcedUninst:<br />
+  StrCmp &quot;$INSTDIR&quot; &quot;${DEFAULTDIR}&quot; 0 NoUninstall<br />
+  Delete &quot;$INSTDIR\*.*&quot;<br />
+  Delete &quot;${SYSDRIVERDIR}\$DriverBaseName${SYS_EXT}&quot;<br />
+<br />
+  RmDir /r &quot;$INSTDIR&quot;<br />
+  RmDir /r &quot;$SMPROGRAMS\${OEM}\${PRODUCT}&quot;<br />
+  Push &quot;RegOnly&quot;<br />
+  goto DoUninst<br />
+<br />
+NoUninstall:<br />
+ StrCpy $UserError &quot;Unable to uninstall: $INSTDIR\${UninstLogfileName} missing and not installed in ${DEFAULTDIR}&quot;<br />
+ MessageBox MB_ICONEXCLAMATION|MB_OK &quot;$UserError&quot;<br />
+ goto UnInstDone<br />
+<br />
+NormalUninst:<br />
+ SetDetailsPrint None<br />
+ Push $R0<br />
+ Push $R1<br />
+ Push $R2<br />
+ Push $R4<br />
+<br />
+ Push &quot;&quot;<br />
+ DoUninst:<br />
+ Call un.NormalUninst<br />
+<br />
+UninstDone:<br />
+ ${Log} &quot;[ResponseResult]&quot;<br />
+ StrCpy $R0 &quot;0&quot;<br />
+ MessageBox MB_ICONINFORMATION|MB_OK &quot;UserError=$UserError ($R0)&quot;<br />
+ StrCmp $UserError &quot;&quot; LogResult<br />
+ StrCpy $R0 &quot;2&quot;<br />
+<br />
+ LogResult:<br />
+ ${Log} &quot;ResultCode=$R0&quot;<br />
+ SetErrorLevel $R0<br />
+ StrCmp $UserError &quot;&quot; +2<br />
+ ${Log} &quot;ErrMessage=$UserError&quot;<br />
+<br />
+ FileClose $InstLog<br />
+ SetFileAttributes &quot;$InstLogDir\$InstallLog&quot; READONLY<br />
+<br />
+ Pop $R4<br />
+ Pop $R2<br />
+ Pop $R1<br />
+ Pop $R0<br />
+<br />
+ StrCmp $UserError &quot;&quot; Done<br />
+ Call un.closelog<br />
+ Abort<br />
+ Done:<br />
+ MessageBox MB_ICONINFORMATION|MB_OK &quot;Setting ErrorLevel to 0&quot;<br />
+<br />
+ SetErrorLevel 0<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">30th August 2007, 14:46</div></div><div class="posttext">From the helpfile: errorlevel: 2 = Installation aborted by script. And you do have an Abort in there</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AxelMock</div><div class="date">30th August 2007, 15:10</div></div><div class="posttext">Originally posted by Anders <br />
+From the helpfile: errorlevel: 2 = Installation aborted by script. And you do have an Abort in there  <br />
+<br />
+Yes, but if you look at the code, you can see, that the Abort is only executed if UserError != &quot;&quot;, but UserError is empty (MessageBoxOutput is UserError= (0))<br />
+and the Logfile contains ResultCode=0 but NO line with ErrMessage=, so $UserError MUST BE empty.<br />
+<br />
+Added a Messagebox saying &quot;Aborting uninstall&quot; immediately before Abort and it DID NOT show up!!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AxelMock</div><div class="date">30th August 2007, 15:31</div></div><div class="posttext">Originally posted by Anders <br />
+From the helpfile: errorlevel: 2 = Installation aborted by script. And you do have an Abort in there  <br />
+<br />
+Yepp! It was Abort, but not that one in the uninstall section, but the one I put in .oninit where I check the commandline to allow calling the installer with /REMOVE, invoking the UNINST of an already installed version. <br />
+After the DoRemove I HAVE to abort the installer, since I don't want to continue the installer when called with /REMOVE  . :-((<br />
+<br />
+So I have to look for a way to quit the installer in .oninit with the errorlevel returned by uninst.exe...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">30th August 2007, 15:59</div></div><div class="posttext">SetErrorLevel+Quit ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AxelMock</div><div class="date">31st August 2007, 10:06</div></div><div class="posttext">Originally posted by Anders <br />
+SetErrorLevel+Quit ?  <br />
+<br />
+Yes, did it that way and it now it works as expected.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bradkohl</div><div class="date">11th January 2008, 19:27</div></div><div class="posttext">Did you ever find the answer for:<br />
+Why do the Messageboxes NOT interrupt the program and wait until OK is pressed?<br />
+<br />
+also how are you checking the returned exit code from the uninstaller?  Execwait?  <br />
+<br />
+I'm using the UAC plugin to elevate user access and the uninstaller creates Au_.exe which is a copy of the unintaller in a temp dir, and runs that.  Thus, I believe my uninstaller will always exit with error code 0, even though Au_.exe won't or may still be running.  It this makes sense to anybody, do you have any ideas on how to get the exit code of Au_.exe which is not created until the uninstaller is executed?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">11th January 2008, 19:28</div></div><div class="posttext">http://nsis.sourceforge.net/When_I_use_ExecWait_uninstaller.exe_it_doesn%27t_wait_for_the_uninstaller</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

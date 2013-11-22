@@ -1,0 +1,70 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" System: best practices for splitting a struct into its substructs?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  System: best practices for splitting a struct into its substructs? NSIS Discussion" />
+	
+	<title> System: best practices for splitting a struct into its substructs? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  System: best practices for splitting a struct into its substructs?</div>
+<hr />
+<div class="pda"><a href="t-322834.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=322834">System: best practices for splitting a struct into its substructs?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">1st October 2010, 00:14</div></div><div class="posttext">I'm trying to figure out what the best practice would be to split a struct into its substructs/data.<br />
+<br />
+E.g. say I have a struct in $0 that looks like this:<br />
+(NMHDR, dwFlags, RECT)<br />
+<br />
+I can pass $0 directly to a macro / function / copy/paste bit of code to handle NMHDR.  But let's say I have a similar macro / function /copy/paste bit of code to handle RECTs.. but I can't pass i t $0 because it's got the NMHDR and dwSomething in front.<br />
+<br />
+I could be hacky and offset $0 by the size of NMHDR+dwSomething, but I'd imagine that may be architecture-specific and, well, hacky.<br />
+<br />
+But what would be the best practice?  Put the relevant bits on the stack, pop into a newly allocated struct, free that struct when done?<br />
+e.g.<br />
+<br />
+System::Call &quot;*$0(i, i, i, i, i.s, i.s, i.s, i.s)&quot; /* presuming I don't care about nmhdr/dwFlags */<br />
+System::Alloc &quot;*(is, is, is, is).r1&quot;<br />
+[parse the RECT struct in $1 now]<br />
+System::Free $1<br />
+<br />
+<br />
+Or is there a more appropriate method?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">1st October 2010, 07:44</div></div><div class="posttext">Yes, a offset would be architecture-specific (32 and 64 bit, and 64bit NSIS, well, lets get unicode merged first)<br />
+<br />
+But when you do System::Call &quot;*$0(i, i, i, i... , this is actually the same as a offset and would not work as a native 64 bit app. When 2.47 comes out, you would be able to use p tho.<br />
+<br />
+You could add a helper macro: !macro GetStructMemberPtr_NMHDR::RECT in_baseptr outvar_adjustedptr (You might want a shorter name ;) and NMHDR is probably not the correct name, you are probably working with the listview specific struct or something like that)<br />
+<br />
+...or just a define for the offset. You could have a macro that created struct offset defines:<br />
+!macro CreateStructOffsetDefine symname p i32 i16 i8<br />
+ex !insertmacro CreateStructOffsetDefine NMLVDISPINFO::LVITEM 2 1 0 0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">1st October 2010, 12:13</div></div><div class="posttext">But would I then use that defined offset in exactly the hacky manner that I mentioned? :o<br />
+<br />
+Right now I&quot;m using the out-to-stack, create-from-stack, destroy-creation method, but if the hacky method is every bit as valid, I'd happily use that instead %)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">1st October 2010, 21:26</div></div><div class="posttext">Yes, but with a define, it is in a header somewhere and you can use !ifdef NSIS_WIN64 when the time comes ;)<br />
+<br />
+But like I said, when 2.47 comes out, you can use p and then system::call *$x(... will work without hacks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">1st October 2010, 21:52</div></div><div class="posttext">Yes, of course with a define :)<br />
+(or rather, multiple defines.. defining the offsets within structs for other structs)<br />
+<br />
+I'll have to await the details of 2.47 and how p kicks in here :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

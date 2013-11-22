@@ -1,0 +1,69 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How much memory is occupied by what or process ?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How much memory is occupied by what or process ? NSIS Discussion" />
+	
+	<title> How much memory is occupied by what or process ? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How much memory is occupied by what or process ?</div>
+<hr />
+<div class="pda"><a href="t-371381.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=371381">How much memory is occupied by what or process ?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">stass</div><div class="date">20th September 2013, 15:43</div></div><div class="posttext">How can I tell how much memory is used by a particular process ?<br />
+<br />
+Is it possible to use this function GetProcessMemoryInfo ?   How to do it ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">23rd September 2013, 18:21</div></div><div class="posttext">Something like this maybe:<br />
+Var /GLOBAL pid<br />
+<br />
+System::Call KERNEL32::GetCurrentProcessId()i.s<br />
+Pop $pid<br />
+<br />
+!include LogicLib.nsh<br />
+!define PROCESS_VM_READ                   0x0010<br />
+!define PROCESS_QUERY_INFORMATION         0x0400<br />
+!define PROCESS_QUERY_LIMITED_INFORMATION 0x1000<br />
+<br />
+System::Call 'KERNEL32::OpenProcess(i${PROCESS_VM_READ}|${PROCESS_QUERY_LIMITED_INFORMATION},i0,i$pid)i.r0'<br />
+${If} $0 = 0<br />
+	System::Call 'KERNEL32::OpenProcess(i${PROCESS_VM_READ}|${PROCESS_QUERY_INFORMATION},i0,i$pid)i.r0'<br />
+${EndIf}<br />
+${If} $0 = 0<br />
+	DetailPrint &quot;Unable to open process $pid!&quot;<br />
+	Goto done_noprocess<br />
+${EndIf}<br />
+!define CB_PMC32 40<br />
+!define CB_PMCE32 44<br />
+System::Call '*(i,i,i,i,i,i,i,i,i,i,i0)i.r1' ; Probably only going to work for 32 bit processes<br />
+System::Call 'PSAPI::GetProcessMemoryInfo(ir0,ir1,i${CB_PMCE32})i.r2'<br />
+${If} $2 = 0<br />
+	System::Call 'PSAPI::GetProcessMemoryInfo(ir0,ir1,i${CB_PMC32})i.r2'<br />
+${EndIf}<br />
+${If} $2 = 0<br />
+	DetailPrint &quot;GetProcessMemoryInfo failed&quot;<br />
+${Else}<br />
+	System::Call '*$1(i.r2,i,i,i.r3,i,i,i,i,i.r4,i,i.r5)'<br />
+	${IfThen} $5 &lt;&gt; 0 ${|} StrCpy $4 $5 ${|} ; MSDN claims PagefileUsage is always 0 on Win7+ (Does not seem to be true but lets play it safe)<br />
+	DetailPrint &quot;cbStruct=$2 WorkingSet=$3 PrivateUsage=$4&quot;<br />
+${EndIf}<br />
+System::Free $1<br />
+System::Call 'KERNEL32::CloseHandle(ir0)'<br />
+done_noprocess:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stass</div><div class="date">24th September 2013, 05:56</div></div><div class="posttext">Anders<br />
+Thank you very much !</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Custom dialog is displayed very slowly, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Custom dialog is displayed very slowly NSIS Discussion" />
+	
+	<title> Custom dialog is displayed very slowly [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Custom dialog is displayed very slowly</div>
+<hr />
+<div class="pda"><a href="t-340362.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=340362">Custom dialog is displayed very slowly</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">agaasbeek</div><div class="date">9th January 2012, 12:46</div></div><div class="posttext">Hi,<br />
+<br />
+In my installer I display the MUI_PAGE_COMPONENTS to let the user make a selection. Now I added a custom page where the user can enter a database user name and password. So far so goed and the page is displayed fine. Notice that at this time the function that displays my page is placed/defined in the .nsi file before all the section code.<br />
+<br />
+Now I wanted to only show this custom page whenever the user has selected the database component. So I use SectionGetFlags for this. The problem I now faced was that it always returned 1, no matter what the selection was.  Then I moved the custom page function code after the section code, and suddenly the flag was correct! Is this normal behaviour, or am I missing something?<br />
+<br />
+Although this works, another problem pops up, and that is that it takes about 30 seconds for the page to load after clicking on next in the previous page! I immediately see the header text, but the rest of the dialog keeps displaying the data from the previous dialog for about 30 seconds. When the dialog should not be displayed, the next page is displayed half for 30 seconds before being displayed correctly.<br />
+<br />
+Does anyone know what the problem is or have suggestion on how to solve it? I have added my script (emptied the section, to have a more readable script).<br />
+Any help would greatly be appreciated.<br />
+<br />
+Ad.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th January 2012, 12:48</div></div><div class="posttext">Firstly try switching to MUI2.nsh which is MUI but using nsDialogs instead of InstallOptions.<br />
+<br />
+Edit: Your actual problem is moving the functions after the sections means nsDialogs.dll is at the top of the compression block which means it takes a long time to extract. As well as aforementioned modification, add a ReserveFile `${NSISDIR}\Plugins\nsDialogs.dll`.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">agaasbeek</div><div class="date">9th January 2012, 13:35</div></div><div class="posttext">Firstly try switching to MUI2.nsh which is MUI but using nsDialogs instead of InstallOptions.<br />
+<br />
+Edit: Your actual problem is moving the functions after the sections means nsDialogs.dll is at the top of the compression block which means it takes a long time to extract. As well as aforementioned modification, add a ReserveFile `${NSISDIR}\Plugins\nsDialogs.dll`.<br />
+<br />
+Stu<br />
+<br />
+<br />
+Switching to MUI2.nsh did the trick and solved the slow loading. (only adding ReserveFile didn't work). Thanks!<br />
+<br />
+Any ideas though on why the functions needs to be placed in the .nsi file after the sections? Is this normal behaviour and related to how nsis processes/interprets the file?<br />
+<br />
+Ad.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th January 2012, 14:44</div></div><div class="posttext">Yes it is because SEC_DATABASES is not defined until after the section which defines it (it is just a regular !define containing the section index).<br />
+<br />
+Rather than using SectionGetFlags etc. you can use:${IfNot} ${SectionIsSelected} ${SEC_DATABASES}<br />
+  Abort<br />
+${EndIf}Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">agaasbeek</div><div class="date">10th January 2012, 08:53</div></div><div class="posttext">That is much cleaner code. Thanks a lot.<br />
+<br />
+But ... I just found out that the 30 seconds delay is still present but now at the end after I press finish. The page goes white, it looks like it 'hangs' and then after about 30 seconds it closes. While I prefer to wait 30 seconds at the end instead of somewhere in the middle, I would rather not wait at all :-)\<br />
+The delay is also present when I don't select any components.<br />
+<br />
+I do ReserveFile now, as you suggested, although the purpose of that was to speed up page loading and I guess it has nothing to do with closing the installer.<br />
+<br />
+Any thoughts?<br />
+<br />
+Ad.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">agaasbeek</div><div class="date">10th January 2012, 10:04</div></div><div class="posttext">I emptied all sections and the installer closes quickly. After putting the code back into 4 of the 7 sections, I again get a delay, but now only about 5 seconds.<br />
+<br />
+So, apparently the more sections (or the more I do in them?), the bigger the delay gets. I don't select any components, so the sections are not executed.<br />
+<br />
+Are there any general rules or do's and don'ts that I'm not aware of?<br />
+<br />
+Ad.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th January 2012, 11:12</div></div><div class="posttext">It may be that you have WriteUninstaller in .onInstSuccess. I would move it to a hidden section. You could also try ReserveFile for the System plug-in.<br />
+<br />
+Just a few notes for you.<br />
+<br />
+ You are using Icon and MUI_ICON; you should only use MUI_ICON.<br />
+ You are using Page instfiles; you should use !insertmacro MUI_PAGE_INSTFILES (avoid mixing non-MUI pages with MUI pages).<br />
+ I see no RequestExecutionLevel instruction (it probably ought to be user). Without it you may have problems installing on Vista and above.<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">agaasbeek</div><div class="date">10th January 2012, 11:13</div></div><div class="posttext">Ok, I find out which line causes the delay and I think also why but not how to get around it.<br />
+I have the following line inside a section:<br />
+<br />
+<br />
+    File /r /x *.svn .\target\distribution.dir\distribution\*.*<br />
+<br />
+<br />
+Without this line, the installer builds much faster and the delay upon closing is gone. With this line included the delay is back. When the component is selected, then the delay at the end is also gone.<br />
+<br />
+So, what happens is that the installer unpacks all these files and that causes the delay. When the component/section is selected, then the delay is ok, because it is just part of the installation of that component.<br />
+<br />
+However, when the component is not selected and the section is therefore not executed, the installer apparently still unpacks all the files after pressing the finish button, hence the delay.<br />
+The question is why? And how do I solve this? Is there a better way than what I'm doing now?<br />
+<br />
+Ad.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">agaasbeek</div><div class="date">10th January 2012, 11:17</div></div><div class="posttext">It may be that you have WriteUninstaller in .onInstSuccess. I would move it to a hidden section. You could also try ReserveFile for the System plug-in.<br />
+<br />
+Just a few notes for you.<br />
+<br />
+ You are using Icon and MUI_ICON; you should only use MUI_ICON.<br />
+ You are using Page instfiles; you should use !insertmacro MUI_PAGE_INSTFILES (avoid mixing non-MUI pages with MUI pages).<br />
+ I see no RequestExecutionLevel instruction (it probably ought to be user). Without it you may have problems installing on Vista and above.<br />
+Stu<br />
+<br />
+<br />
+I just missed your reply while I was typing my previous message.<br />
+<br />
+I already tried removing WriteUninstaller but to no avail, but that is not a surprise when you take into account my previous post.<br />
+<br />
+Will incorporate your suggestions though.<br />
+<br />
+Ad</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th January 2012, 11:32</div></div><div class="posttext">I suppose you could try putting a MessageBox in a leave function for the finish page (to pause before exiting) and then check the contents of $PLUGINSDIR (%TEMP%\ns*.tmp\*) to see if there are any DLL's in there that need reserving.<br />
+<br />
+If you cannot solve the problem, just move the page functions back to before the sections and just hard-code the section index (or define SEC_DATABASE yourself).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">agaasbeek</div><div class="date">10th January 2012, 13:11</div></div><div class="posttext">I suppose you could try putting a MessageBox in a leave function for the finish page (to pause before exiting) and then check the contents of $PLUGINSDIR (%TEMP%\ns*.tmp\*) to see if there are any DLL's in there that need reserving.<br />
+<br />
+If you cannot solve the problem, just move the page functions back to before the sections and just hard-code the section index (or define SEC_DATABASE yourself).<br />
+<br />
+Stu<br />
+<br />
+Moving the page functions back doesn't work. It turns out that both problems are not related.  I just hadn't noticed the delay before because I never tested what happened when no component was selected. <br />
+<br />
+In the pluginsdir only the system.dll is present, and reserving it does not help.<br />
+<br />
+I can reserve all big .exe/.zip/.jar/.war files in the distribution that are copied with before mentioned &quot;FILE /r ...&quot; command, but that does just move the delay from the end of the installer to the beginning. When I then start the installer it takes 30 seconds before the first installer page is shown, so that is even worse. I found a similar topic (t-202654.html), but the main question there remains also unanswered.<br />
+<br />
+So, no matter what I do, I can not prevent the extracting of files, even when the code that actually copies them is inside an unselected section and is not executed.<br />
+<br />
+This behaviour seems very strange to me and I cannot believe that there is no solution for it. But unfortunately I cannot find it.<br />
+<br />
+Any suggestions are still more than welcome!<br />
+<br />
+Ad.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">agaasbeek</div><div class="date">10th January 2012, 13:39</div></div><div class="posttext">I found a work around for my problem. Simply by setting<br />
+<br />
+SetCompress Off<br />
+<br />
+The installer executable gets somewhat bigger, but the delay is gone, and that is much more  important. The question still remains why the files get extracted, even when the installer does not need them because the section that copies them is not selected.<br />
+<br />
+But for now it will do. <br />
+<br />
+Ad.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th January 2012, 16:48</div></div><div class="posttext">It is just the way the compression works. I'm sure there are other settings which will help improve but you'd have to check lzma specifics. How big are the files? Also make sure no antivirus software is running.<br />
+<br />
+Edit: Also can you attach your updated script?<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">agaasbeek</div><div class="date">11th January 2012, 06:06</div></div><div class="posttext">It is just the way the compression works. I'm sure there are other settings which will help improve but you'd have to check lzma specifics. How big are the files? Also make sure no antivirus software is running.<br />
+<br />
+Edit: Also can you attach your updated script?<br />
+<br />
+Stu<br />
+<br />
+I still fail to understand why the installer starts extracting files at the end of the installation process when it is sure that the files are not needed and the only thing the installer has to do is close.<br />
+<br />
+I have about 20 files with sizes in the range of 1 to 32 MB, with the average size being 11 to 12 MB. All other files have much smaller sizes like 5 KB or so.<br />
+<br />
+I attached the script and emptied all sections but one. I marked/commented the line that causes the delay (when compression is turned on).<br />
+<br />
+Ad.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">agaasbeek</div><div class="date">11th January 2012, 06:40</div></div><div class="posttext">I tried:<br />
+<br />
+SetCompressor /SOLID lzma  --&gt; 30 seconds delay, installer exe of 225 MB<br />
+SetCompressor lzma            --&gt; no delay, installer exe of 237 MB<br />
+SetCompressor zlib              --&gt; no delay, installer exe of 246 MB<br />
+SetCompress Off                 --&gt; no delay, installer exe of 256 MB<br />
+<br />
+<br />
+So, the /SOLID option compresses the best, but at the cost of a big performance penalty (in my case anyway).<br />
+<br />
+EDIT: my previous post is still 'under moderation' and not shown.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">11th January 2012, 12:37</div></div><div class="posttext">I'm no expert on the matter but if the installer needs to access a file which has been compressed last, it needs to decompress the entire block that contains that file to access it. You should probably try and contact kichik if you want to know the real details (but he's not around much now). Maybe just avoid /SOLID then but this is not really a solution. I'm interested to play around with your script. Where can I grab the files to build it?<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">agaasbeek</div><div class="date">12th January 2012, 07:03</div></div><div class="posttext">Many thanks for your time, suggestions and explanations!<br />
+<br />
+My company does not allow me to put our own files on the internet, but I don't think you will need my files. I think any file of 20 MB or so will do, just copy it ten times, and then you will have a similar situation. The more files, the bigger the delay will be obviously. (The installer includes jre-win32.exe and apache-activemq.zip, 16 and 32 MB in size respectively, so you could download and use them). <br />
+<br />
+Ad</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

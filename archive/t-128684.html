@@ -1,0 +1,162 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problem with DeleteINISec, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problem with DeleteINISec NSIS Discussion" />
+	
+	<title> Problem with DeleteINISec [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problem with DeleteINISec</div>
+<hr />
+<div class="pda"><a href="t-128684.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=128684">Problem with DeleteINISec</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">wossName</div><div class="date">16th March 2003, 22:56</div></div><div class="posttext">Hi,<br />
+<br />
+I seem to have a problem with DeleteINISec:  I call that command in my function and then add the deleted section back in (with some modifications), at least that's the plan. But in reality, the INI file is empty on every other run of the installer, even though the details view shows $R0 having the correct value.<br />
+<br />
+I can't use the normal INI functions, because I'm modifying wininit.ini.<br />
+<br />
+If anyone can give me some hints, that would be very nice. Maybe I'm doing something obviously wrong, this is my first more complicated function for NSIS. (I'm using NSIS 2.0b2.)<br />
+<br />
+Here's the function:<br />
+<br />
+;<br />
+; AddToWininit - adds lines to the [Rename] section of wininit.ini<br />
+;<br />
+; Expects string with new lines on top of stack<br />
+; Returns nothing, error flag will be set on failure<br />
+;<br />
+; Make sure new lines end with &quot;$\r$\n&quot;<br />
+;<br />
+Function AddToWininit<br />
+	Exch $R0 ; lines<br />
+	Push $R1 ; file handle<br />
+	Push $R2 ; read buffer<br />
+	Push $R3 ; compare buffer<br />
+<br />
+	ClearErrors<br />
+	IfFileExists &quot;$WINDIR\wininit.ini&quot; 0 WRITE<br />
+	FileOpen $R1 &quot;$WINDIR\wininit.ini&quot; &quot;r&quot;<br />
+	IfErrors SAFE_RETURN<br />
+	<br />
+	SECTION_LOOP:<br />
+		FileRead $R1 $R2<br />
+		IfErrors READ_DONE<br />
+		Push $R2<br />
+		Call TrimNewlines<br />
+		Pop $R2<br />
+		StrCmp $R2 &quot;[Rename]&quot; 0 SECTION_LOOP		<br />
+<br />
+	READ_LOOP:<br />
+		FileRead $R1 $R2<br />
+		IfErrors READ_DONE<br />
+		Push $R2<br />
+		Call TrimNewlines<br />
+		Pop $R2<br />
+		StrCmp $R2 &quot;&quot; READ_LOOP<br />
+		StrCpy $R3 $R2 1<br />
+		StrCmp $R3 &quot;[&quot; READ_DONE<br />
+		StrCpy $R0 &quot;$R0$R2$\r$\n&quot;<br />
+		Goto READ_LOOP<br />
+<br />
+	READ_DONE:<br />
+		FileClose $R1<br />
+		DeleteINISec &quot;$WINDIR\wininit.ini&quot; &quot;Rename&quot;<br />
+		ClearErrors<br />
+<br />
+	WRITE:<br />
+		FileOpen $R1 &quot;$WINDIR\wininit.ini&quot; &quot;a&quot;<br />
+		IfErrors SAFE_RETURN<br />
+		FileSeek $R1 0 END<br />
+		FileWrite $R1 &quot;$\r$\n[Rename]$\r$\n&quot;<br />
+		DetailPrint $R0<br />
+		FileWrite $R1 $R0<br />
+		FileClose $R1<br />
+<br />
+	SAFE_RETURN:<br />
+		Pop $R3<br />
+		Pop $R2<br />
+		Pop $R1<br />
+		Exch $R0<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">17th March 2003, 02:26</div></div><div class="posttext">READ_DONE:<br />
+		FileClose $R1<br />
+		DeleteINISec &quot;$WINDIR\wininit.ini&quot; &quot;Rename&quot;<br />
+		ClearErrors<br />
+<br />
+You close $R1 and you trying to read it again, maybe:<br />
+<br />
+<br />
+READ_DONE:<br />
+		DeleteINISec &quot;$WINDIR\wininit.ini&quot; &quot;Rename&quot;<br />
+		FileClose $R1<br />
+                ClearErrors</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">17th March 2003, 07:32</div></div><div class="posttext">WRITE:<br />
+		FileOpen $R1 &quot;$WINDIR\wininit.ini&quot; &quot;a&quot;<br />
+		IfErrors SAFE_RETURN<br />
+		FileSeek $R1 0 END<br />
+<br />
+<br />
+Replace this above by this below:<br />
+<br />
+<br />
+WRITE:<br />
+		FileOpen $R1 &quot;$WINDIR\wininit.ini&quot; &quot;w&quot;<br />
+		IfErrors SAFE_RETURN<br />
+		FileSeek $R1 0 END<br />
+<br />
+<br />
+Because when you append is:<br />
+<br />
+Quote from documentation (Chapter4.html)<br />
+<br />
+opened for both read and write, contents preserved<br />
+<br />
+Contents preserved? So can only read, because the contents are preserved. So use the &quot;w&quot; for write.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">wossName</div><div class="date">17th March 2003, 09:38</div></div><div class="posttext">Originally posted by Dark Boy<br />
+You close $R1 and you trying to read it again, maybe:<br />
+<br />
+DeleteINISec doesn't operate on my file handle, I'm pretty sure I have to close it so DeleteINISec can write to the file.<br />
+<br />
+Originally posted by deguix <br />
+Contents preserved? So can only read, because the contents are preserved. So use the &quot;w&quot; for write.<br />
+<br />
+No, I quote from the documentation: &quot;a&quot; (append, meaning opened for both read and write, contents preserved)<br />
+<br />
+There's a slim chance that there are other sections in wininit.ini, that's why I can't just use mode &quot;w&quot;, which would create an entirely new file.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">17th March 2003, 13:24</div></div><div class="posttext">You are probably using Windows 9x which likes to turture people. Windows 9x (including ME) buffers INI file changes and doesn't commit them immediately. To flush the buffers use WriteINIStr inifile.ini &quot;&quot; &quot;&quot; &quot;&quot; on b2 or FlushINI inifile.ini in the latest CVS version. See this thread (http://forums.winamp.com/showthread.php?s=&amp;threadid=111851&amp;highlight=flush) for more information.<br />
+<br />
+BTW, why do you manually add entries to wininit.ini? NSIS does that for you when you use Delete /REBOOTOK or Rename /REBOOTOK and the file is in use. On Windows NT it just uses MoveFileEx.<br />
+<br />
+Please attach large scripts next time.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">wossName</div><div class="date">17th March 2003, 14:22</div></div><div class="posttext">Ah, I wasn't aware of &quot;Rename&quot;. I've been playing with NSIS only for a day or two, so I haven't memorized the reference yet. :)<br />
+<br />
+I was cursing &quot;File&quot; all the time for not having a /REBOOT switch. So I'll have to extract the files to temporary names, then call &quot;Rename /REBOOTOK ...&quot;, right ? It's a bit more work, but if it does the trick...<br />
+At least now I can drop this horrible function.<br />
+<br />
+Thanks !</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">17th March 2003, 14:25</div></div><div class="posttext">Yep, that's exactly how you do it :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

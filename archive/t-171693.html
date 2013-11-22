@@ -1,0 +1,263 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Check if ... is installed, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Check if ... is installed NSIS Discussion" />
+	
+	<title> Check if ... is installed [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Check if ... is installed</div>
+<hr />
+<div class="pda"><a href="t-171693.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=171693">Check if ... is installed</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">treborhudson</div><div class="date">2nd March 2004, 00:34</div></div><div class="posttext">I've been tasked to put together the functionality we need to check for various programs and their versions that our programs depend on, and if they aren't installed or they don't have the minimum version, offer to install or point to the place to install, etc.<br />
+<br />
+I know in the archives there are various checkers.  Which is typically the most robust way to check for the existence and version of X program?<br />
+<br />
+I've seen:<br />
+* Look in the HKCR for existence (flash)<br />
+* Do a GetDllVersion (IE)<br />
+* Check in registry (HKLM) for a version number (windows)<br />
+<br />
+Is it whatever works?  Do all programs typically do each of these?<br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">2nd March 2004, 01:41</div></div><div class="posttext">Depends.<br />
+If you are looking for a file than check its version,<br />
+I'll do a search, with IfFileExists than check its version with GetDLLVersion.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th March 2004, 09:53</div></div><div class="posttext">In my opnion, it is best to check as much as possible. The best test is calling a few functions you need and verify that they preform as you would expect.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">5th March 2004, 12:44</div></div><div class="posttext">especially flash:<br />
+<br />
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\{D27CDB6E-AE6D-11CF-96B8-444553540000} [Version]<br />
+<br />
+and<br />
+<br />
+<br />
+HKEY_CLASSES_ROOT\CLSID\{D27CDB70-AE6D-11cf-96B8-444553540000}\InprocServer32 [&quot;&quot;]<br />
+(Standard = %systemroot%\system32\macromed\flash\Flash.ocx)<br />
+<br />
+<br />
+Current here 7,0,19,0<br />
+<br />
+Check Registry and file and version match of file (possible)<br />
+<br />
+<br />
+Function getfilever<br />
+  ; grab version of installed file<br />
+  Exch $0 ; file to grab<br />
+  Exch<br />
+  <br />
+  Push $R0<br />
+  Push $R1<br />
+  Push $R2<br />
+  Push $R3<br />
+  Push $R4<br />
+  Push $R5<br />
+<br />
+  GetDllVersion $0 $R0 $R1<br />
+  IntOp $R2 $R0 / 0x00010000<br />
+  IntOp $R3 $R0 &amp; 0x0000FFFF<br />
+  IntOp $R4 $R1 / 0x00010000<br />
+  IntOp $R5 $R1 &amp; 0x0000FFFF<br />
+  StrCpy $0 &quot;$R2.$R3.$R4.$R5&quot;<br />
+<br />
+  Pop $R5<br />
+  Pop $R4<br />
+  Pop $R3<br />
+  Pop $R2<br />
+  Pop $R1<br />
+  Pop $R0<br />
+  <br />
+  Exch<br />
+  Exch $0<br />
+FunctionEnd<br />
+<br />
+<br />
+Damn - i forgot something...<br />
+registry saves with comma ',' file with a point '.'<br />
+7.0.19.0 &lt;&gt; 7,0,19,0<br />
+<br />
+use this one:<br />
+<br />
+  Push $string_from_registry<br />
+  Push &quot;,&quot;<br />
+  Push &quot;.&quot;<br />
+    Call StrRep<br />
+  Pop $file_version_with_points<br />
+<br />
+<br />
+; Usage<br />
+; Push String to do replacement in (haystack)<br />
+; Push String to replace (needle)<br />
+; Push Replacement<br />
+; Call StrRep<br />
+; Pop $R0 result<br />
+<br />
+Function StrRep<br />
+  Exch $R4 ; $R4 = Replacement String<br />
+  Exch<br />
+  Exch $R3 ; $R3 = String to replace (needle)<br />
+  Exch 2<br />
+  Exch $R1 ; $R1 = String to do replacement in (haystack)<br />
+  Push $R2 ; Replaced haystack<br />
+  Push $R5 ; Len (needle)<br />
+  Push $R6 ; len (haystack)<br />
+  Push $R7 ; Scratch reg<br />
+  StrCpy $R2 &quot;&quot;<br />
+  StrLen $R5 $R3<br />
+  StrLen $R6 $R1<br />
+loop:<br />
+  StrCpy $R7 $R1 $R5<br />
+  StrCmp $R7 $R3 found<br />
+  StrCpy $R7 $R1 1 ; - optimization can be removed if U know len needle=1<br />
+  StrCpy $R2 &quot;$R2$R7&quot;<br />
+  StrCpy $R1 $R1 $R6 1<br />
+  StrCmp $R1 &quot;&quot; done loop<br />
+found:<br />
+  StrCpy $R2 &quot;$R2$R4&quot;<br />
+  StrCpy $R1 $R1 $R6 $R5<br />
+  StrCmp $R1 &quot;&quot; done loop<br />
+done:<br />
+  StrCpy $R3 $R2<br />
+  Pop $R7<br />
+  Pop $R6<br />
+  Pop $R5<br />
+  Pop $R2<br />
+  Pop $R1<br />
+  Pop $R4<br />
+  Exch $R3<br />
+FunctionEnd<br />
+<br />
+<br />
+HTH</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">matttiasw</div><div class="date">6th October 2004, 08:23</div></div><div class="posttext">I need to make sure that Excel 2000 or later is installed. Excel 2000 is version 9.<br />
+<br />
+I tried to following code<br />
+<br />
+SearchPath $R2 &quot;excel.exe&quot;<br />
+MessageBox MB_OK|MB_ICONEXCLAMATION &quot;Excel is at $R2&quot; <br />
+GetDllVersion $R2 $R0 $R1<br />
+IntOp $R2 $R0 / 0x00010000<br />
+IntOp $R3 $R0 &amp; 0x0000FFFF<br />
+IntOp $R4 $R1 / 0x00010000<br />
+IntOp $R5 $R1 &amp; 0x0000FFFF<br />
+StrCpy $0 &quot;$R2.$R3.$R4.$R5&quot;<br />
+MessageBox MB_OK|MB_ICONEXCLAMATION &quot;Excel version is $0&quot; IDOK AbortInstallation<br />
+<br />
+<br />
+Both with and without the initial SearchPath. I checked the version of the excel.exe file. It has something like 9.0.215<br />
+<br />
+However, the message box above always prints 0.0.0.0 and SearchPath doesn't find excel.exe<br />
+<br />
+What am I doing wrong?<br />
+<br />
+<br />
+---<br />
+<br />
+An alternative implementation would be to check if<br />
+<br />
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Office\11.0\Excel<br />
+<br />
+exists and then if <br />
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Office\10.0\Excel<br />
+<br />
+and then if<br />
+<br />
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Office\9.0\Excel<br />
+<br />
+However, there is no key at that level, so I cannot see how I can use ReadRegStr to check existence of the registry key.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">matttiasw</div><div class="date">6th October 2004, 09:51</div></div><div class="posttext">It seems that Windows finds excel.exe even if it isn't part of the path. That is probably the reason SearchPath fails.<br />
+<br />
+Instead I will use this code, but it probably won't work on non-English Excels:<br />
+<br />
+<br />
+  StrCpy $0 &quot;$PROGRAMFILES\Microsoft Office\OFFICE12\excel.exe&quot;<br />
+  IfFileExists $0 found_excel<br />
+  StrCpy $0 &quot;$PROGRAMFILES\Microsoft Office\OFFICE10\excel.exe&quot;<br />
+  IfFileExists $0 found_excel<br />
+  StrCpy $0 &quot;$PROGRAMFILES\Microsoft Office\OFFICE9\excel.exe&quot;<br />
+  IfFileExists $0 found_excel<br />
+  StrCpy $0 &quot;$PROGRAMFILES\Microsoft Office\OFFICE\excel.exe&quot;<br />
+  IfFileExists $0 found_excel<br />
+<br />
+  MessageBox MB_YESNO|MB_ICONINFORMATION &quot; I cannot find Excel 2000 or later.$\n$\n \<br />
+  If you are sure you have a modern Excel and want to continue$\ninstallation anyway, press Yes.&quot; \<br />
+             IDYES excel_version_is_ok \<br />
+             IDNO AbortInstallation <br />
+<br />
+found_excel:<br />
+	GetDllVersion $0 $R0 $R1<br />
+	IntOp $R2 $R0 / 0x00010000<br />
+	IntOp $R3 $R0 &amp; 0x0000FFFF<br />
+	IntOp $R4 $R1 / 0x00010000<br />
+	IntOp $R5 $R1 &amp; 0x0000FFFF<br />
+	StrCpy $0 &quot;$R2.$R3.$R4.$R5&quot;<br />
+	;MessageBox MB_OK|MB_ICONEXCLAMATION &quot;Excel version is $0&quot; IDOK AbortInstallation<br />
+<br />
+  StrCmp $R2 &quot;9&quot; excel_version_is_ok<br />
+  StrCmp $R2 &quot;10&quot; excel_version_is_ok<br />
+  StrCmp $R2 &quot;11&quot; excel_version_is_ok<br />
+  StrCmp $R2 &quot;12&quot; excel_version_is_ok<br />
+   <br />
+  MessageBox MB_YESNO|MB_ICONINFORMATION &quot; You are using Excel version $0, which is too old.$\n$\n \<br />
+  If you are sure you have a modern Excel and want to continue$\ninstallation anyway, press Yes.&quot; \<br />
+             IDYES excel_version_is_ok \<br />
+             IDNO AbortInstallation <br />
+	<br />
+excel_version_is_ok:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">matttiasw</div><div class="date">6th October 2004, 10:29</div></div><div class="posttext">The path to excel.exe is found in the registry, so instead of the list above, the following code is much better:<br />
+<br />
+<br />
+<br />
+  ReadRegStr $0 HKLM &quot;SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\excel.exe&quot; &quot;&quot;<br />
+  IfFileExists $0 found_excel<br />
+<br />
+  MessageBox MB_YESNO|MB_ICONINFORMATION &quot; I cannot find Excel 2000 or later.$\n$\n \<br />
+  If you are sure you have a Excel 2000 or later and want to continue$\n installation anyway, press Yes.&quot; \<br />
+             IDYES excel_version_is_ok \<br />
+             IDNO AbortInstallation <br />
+<br />
+found_excel:<br />
+	GetDllVersion $0 $R0 $R1<br />
+	IntOp $R2 $R0 / 0x00010000<br />
+	IntOp $R3 $R0 &amp; 0x0000FFFF<br />
+	IntOp $R4 $R1 / 0x00010000<br />
+	IntOp $R5 $R1 &amp; 0x0000FFFF<br />
+	StrCpy $0 &quot;$R2.$R3.$R4.$R5&quot;<br />
+	;MessageBox MB_OK|MB_ICONEXCLAMATION &quot;Excel version is $0&quot; IDOK AbortInstallation<br />
+<br />
+  StrCmp $R2 &quot;9&quot; excel_version_is_ok<br />
+  StrCmp $R2 &quot;10&quot; excel_version_is_ok<br />
+  StrCmp $R2 &quot;11&quot; excel_version_is_ok<br />
+  StrCmp $R2 &quot;12&quot; excel_version_is_ok<br />
+   <br />
+  MessageBox MB_YESNO|MB_ICONINFORMATION &quot; You are using Excel version $0, which is too old.$\n$\n \<br />
+  If you are sure you have a Excel 2000 or later and want to continue$\n installation anyway, press Yes.&quot; \<br />
+             IDYES excel_version_is_ok \<br />
+             IDNO AbortInstallation <br />
+	<br />
+excel_version_is_ok:</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

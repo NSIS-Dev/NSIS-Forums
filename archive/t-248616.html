@@ -1,0 +1,149 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Search In EXE and return Offset, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Search In EXE and return Offset NSIS Discussion" />
+	
+	<title> Search In EXE and return Offset [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Search In EXE and return Offset</div>
+<hr />
+<div class="pda"><a href="t-248616.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=248616">Search In EXE and return Offset</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">kookh</div><div class="date">13th June 2006, 13:54</div></div><div class="posttext">Is it possible to search an exe for a string or hex code and return the offset of the first match ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">13th June 2006, 14:34</div></div><div class="posttext">FileReadByte might do what you need.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kookh</div><div class="date">13th June 2006, 17:38</div></div><div class="posttext">but how does FileReadByte search ? In a loop ? That would take forever since the file I'm searching in is around 1.60 MBs</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">13th June 2006, 17:53</div></div><div class="posttext">That's how searching is done if you think about it...<br />
+As long as you call it inside a Function it shouldn't take that long at all.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kookh</div><div class="date">13th June 2006, 17:56</div></div><div class="posttext">well I've been trying to edit this (http://nsis.sourceforge.net/Find_a_string_in_an_e.g._exe_or_dll_file) function so that it searches only once and returns only the offset of the first byte of the string... No luck yet! If you can help me out I'd appreciate it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">13th June 2006, 18:03</div></div><div class="posttext">I'm not sure how you'd do the comparison exactly, but a simple loop would be:<br />
+<br />
+<br />
+FileOpen $R0 &quot;$INSTDIR\file.exe&quot; r<br />
+StrCpy $R2 -1 # return -1 if not found<br />
+StrCpy $R3 0<br />
+Loop:<br />
+ ClearErrors<br />
+ FileReadByte $R0 $R1<br />
+ IfErrors Done<br />
+<br />
+  IntOp $R3 $R3 + 1<br />
+  StrCmp $R1 ... 0 Loop<br />
+  StrCpy $R2 $R3<br />
+<br />
+ FileClose $R0<br />
+<br />
+ # At this point $R2 is the byte #, or -1.<br />
+<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kookh</div><div class="date">13th June 2006, 18:14</div></div><div class="posttext">yes! thanks for that... but now how do I implement it to search for an specified string and not just a byte ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">13th June 2006, 19:13</div></div><div class="posttext">Hmm that would be quite a bit more complicated.<br />
+If the string was 5 bytes in length for example you'd have to grab the first 5 bytes starting at offset 0, 5 bytes starting at offset 1, offset 2 and so on.<br />
+<br />
+How about this plugin:<br />
+http://nsis.sourceforge.net/TextReplace_plugin<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kookh</div><div class="date">14th June 2006, 01:30</div></div><div class="posttext">TextReplace cannot search in a binary file. Gives the following: &quot;input file is binary or wide character Unicode file&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">14th June 2006, 03:18</div></div><div class="posttext">I think what Afrow meant was to use his search example for binary file searches and to use the TextReplace plugin for text file searches.<br />
+<br />
+<br />
+The TextReplace plugin seems to have an error code specifically for binary files, so you could use this to detect whether the file was binary or text (if you needed that type of test).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">galil</div><div class="date">14th June 2006, 06:02</div></div><div class="posttext">Originally posted by kookh <br />
+yes! thanks for that... but now how do I implement it to search for an specified string and not just a byte ?  <br />
+<br />
+Well, duh... after you get 1st character match from that loop, you have to add another loop to check byte by byte if the rest of the string matches too.<br />
+<br />
+Var BSS_Filename<br />
+Var BSS_String<br />
+Var BSS_Offset<br />
+<br />
+Function BinStrSearch<br />
+     Push $0<br />
+     Push $1<br />
+     Push $2<br />
+     Push $R0<br />
+     Push $R1<br />
+     Push $R2<br />
+     StrLen $R0 $BSS_String<br />
+     StrCmp $R0 0 @errors<br />
+     StrCpy $BSS_Offset 0<br />
+     FileOpen $R2 $BSS_Filename r<br />
+     DetailPrint 'File $\&quot;$BSS_Filename$\&quot; :'<br />
+     StrCpy $1 $BSS_String 1 0    ;1st_chr<br />
+@loop_1st_char:<br />
+     ClearErrors<br />
+     FileSeek $R2 $BSS_Offset<br />
+     FileReadByte $R2 $R1<br />
+     IfErrors @errors<br />
+     IntOp $BSS_Offset $BSS_Offset + 1<br />
+     IntFmt $R1 &quot;%c&quot; $R1<br />
+     StrCmp $1 $R1 0 @loop_1st_char<br />
+     StrCpy $0 $R0<br />
+@loop_the_rest:<br />
+     IntOp $0 $0 - 1<br />
+     StrCmp $0 0 @loop_end<br />
+     StrCpy $2 $BSS_String 1 -$0<br />
+     FileReadByte $R2 $R1<br />
+     IntFmt $R1 &quot;%c&quot; $R1<br />
+     StrCmp $2 $R1 @loop_the_rest<br />
+     Goto @loop_1st_char<br />
+@loop_end:<br />
+     IntOp $BSS_Offset $BSS_Offset - 1<br />
+     IntFmt $BSS_Offset &quot;0x%X&quot; $BSS_Offset<br />
+     DetailPrint 'String $\&quot;$BSS_String$\&quot; is at offset $BSS_Offset'<br />
+     Goto @done<br />
+@errors:<br />
+     DetailPrint 'String $\&quot;$BSS_String$\&quot; not found!'<br />
+@done:<br />
+     FileClose $R2<br />
+     Pop $R2<br />
+     Pop $R1<br />
+     Pop $R0<br />
+     Pop $2<br />
+     Pop $1<br />
+     Pop $0<br />
+FunctionEnd<br />
+<br />
+Case insensitive. If you need sensitive, you know what to do.<br />
+Stops after first match. If you need to find all matches, it's easy enough to change too.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kookh</div><div class="date">14th June 2006, 14:42</div></div><div class="posttext">that's it. Thank you !</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

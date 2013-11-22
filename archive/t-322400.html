@@ -1,0 +1,134 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" NSIS Array: Problem when using user function in installer AND uninstaller, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  NSIS Array: Problem when using user function in installer AND uninstaller NSIS Discussion" />
+	
+	<title> NSIS Array: Problem when using user function in installer AND uninstaller [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  NSIS Array: Problem when using user function in installer AND uninstaller</div>
+<hr />
+<div class="pda"><a href="t-322400.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=322400">NSIS Array: Problem when using user function in installer AND uninstaller</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">AMock</div><div class="date">14th September 2010, 14:19</div></div><div class="posttext">Hi,<br />
+<br />
+I used NSISArray in some functions in an installer (install sections).<br />
+Now when I encapsulate the functions as macros to be able to use them in the<br />
+uninstaller too, I get <br />
+!error: NSISArray: An array can only be initialised once.<br />
+<br />
+Is there an elegant way to use the same user defined function using NSISArray both in installer and uninstaller parts. NSIS requests that uninstaller functions must be preceded by &quot;un.&quot;<br />
+<br />
+Code:<br />
+<br />
+!include NSISArray.nsh<br />
+<br />
+${Array} &quot;Devices&quot; 40 5<br />
+${ArrayFunc} Inited<br />
+${ArrayFunc} Shift<br />
+${ArrayFunc} SizeOf<br />
+${ArrayFunc} ReadFirst<br />
+${ArrayFunc} ReadNext<br />
+${ArrayFunc} ReadClose<br />
+!ifdef USE_DEBUGGER<br />
+${ArrayFunc} Debug<br />
+!endif<br />
+<br />
+!macro Init_Devices un<br />
+Function ${un}Init_Devices<br />
+	${Devices-&gt;Init}<br />
+FunctionEnd<br />
+!macroend<br />
+<br />
+!macro Done_Devices un<br />
+Function ${un}Done_Devices<br />
+	${Devices-&gt;Inited} 0 empty1<br />
+	${Devices-&gt;Delete}<br />
+	empty1:<br />
+FunctionEnd<br />
+!macroend<br />
+:<br />
+;+ other functions working on array Devices, declared as macros the same way<br />
+:<br />
+:<br />
+; Installer section<br />
+!insertmacro Init_Devices &quot;&quot;<br />
+<br />
+; Uninstaller section<br />
+!insertmacro Init_Devices &quot;un.&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">14th September 2010, 14:25</div></div><div class="posttext">You just need to define another array for use in the uninstaller.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AMock</div><div class="date">14th September 2010, 14:46</div></div><div class="posttext">First I thought that I'd have to throw a lot of !ifdef...!endif into my functions....<br />
+<br />
+But then I just put<br />
+ !include NSISArray.nsh<br />
+<br />
+${Array} &quot;Devices&quot; 40 5<br />
+${ArrayFunc} Inited<br />
+${ArrayFunc} Shift<br />
+${ArrayFunc} SizeOf<br />
+${ArrayFunc} ReadFirst<br />
+${ArrayFunc} ReadNext<br />
+${ArrayFunc} ReadClose<br />
+!ifdef USE_DEBUGGER<br />
+${ArrayFunc} Debug<br />
+!endif<br />
+<br />
+${Array} &quot;un.Devices&quot; 40 5<br />
+${ArrayFunc} Inited<br />
+${ArrayFunc} Shift<br />
+${ArrayFunc} SizeOf<br />
+${ArrayFunc} ReadFirst<br />
+${ArrayFunc} ReadNext<br />
+${ArrayFunc} ReadClose<br />
+!ifdef USE_DEBUGGER<br />
+${ArrayFunc} Debug<br />
+!endif<br />
+<br />
+!macro Init_Devices un<br />
+Function ${un}Init_Devices<br />
+    ${${un}Devices-&gt;Init}<br />
+FunctionEnd<br />
+!macroend<br />
+<br />
+!macro Done_Devices un<br />
+Function ${un}Done_Devices<br />
+    ${${un}Devices-&gt;Inited} 0 empty1<br />
+    ${${un}Devices-&gt;Delete}<br />
+    empty1:<br />
+FunctionEnd<br />
+!macroend<br />
+<br />
+<br />
+and using  ${un} in the worker functions accordingly:<br />
+e.g.  <br />
+Call ${un}Init_Devices	<br />
+Push 'PCI'<br />
+Call ${un}GetDeviceList<br />
+${${un}Devices-&gt;SizeOf} $R0 $R1 $R2<br />
+<br />
+${${un}Devices-&gt;ReadFirst} $R0 $R1<br />
+${${un}Devices-&gt;ReadNext} $R0 $R1<br />
+${${un}Devices-&gt;ReadClose} $R0<br />
+Call ${un}Done_Devices	<br />
+<br />
+looks a little strange/cryptic, but the NSIS compiler no longer complains.<br />
+<br />
+Thanks for the idea!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

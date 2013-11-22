@@ -1,0 +1,151 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Windows CE / Pocket PC Installer, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Windows CE / Pocket PC Installer NSIS Discussion" />
+	
+	<title> Windows CE / Pocket PC Installer [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Windows CE / Pocket PC Installer</div>
+<hr />
+<div class="pda"><a href="t-218882.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=218882">Windows CE / Pocket PC Installer</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">JakeChance</div><div class="date">14th June 2005, 14:28</div></div><div class="posttext">I was wondering if anyone had any examples of a Windows CE or Pocket PC installer. Basically a Win32 program (runs on a desktop computer) and copies its CAB files through ActiveSync to the handheld device where they are unpacked and installed. Any help on this topic would be greatly appreciated.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">14th June 2005, 15:46</div></div><div class="posttext">Well I only can give you a clue how I (that is me) would do it:<br />
+<br />
+1) I use Delphi http://www.borland.com/delphi/ to create a plugin<br />
+2) I already have created CAB compress/decompres libraries myself<br />
+3) I buy the http://www.tmssoftware.com/cecompidx.htm Ssource library version  TMS CETools to speed up my work...<br />
+4) Then program the rest that is left into the plugin...<br />
+<br />
+But indeed if I do this I did not need NSIS anyhow...<br />
+<br />
+NOTE: This is not the only way, only MY way.<br />
+<br />
+Success in your quest.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JakeChance</div><div class="date">14th June 2005, 16:55</div></div><div class="posttext">This doesn't really help me out. Is there a way to just get NSIS to copy the file through activesync and also for it to make it unpack over there or call another exe on the CE device?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">15th June 2005, 12:30</div></div><div class="posttext">If you look into the source of TMS CSTools you will see all the neeed OS calls, and that will be a lot of them sadly...<br />
+<br />
+In these tools the Delphi function:<br />
+<br />
+TCEFileOperations.CopyFileWinToCE(WinFilename,CEFilename: string): Bool; <br />
+<br />
+will do what you want to do.<br />
+<br />
+Or follow this path...<br />
+<br />
+With Win32AS there is this thing called the Remote Application Programming Interface, or, RAPI. See MSDN site for some buggy documentation.<br />
+<br />
+RAPI encapsulates the old file function functionality:<br />
+<br />
+Old C function 	RAPI Function<br />
+CreateFile() 	CeCreateFile()<br />
+WriteFile() 	CeWriteFile()<br />
+ReadFile() 	CeReadFile()<br />
+etc...<br />
+<br />
+How to I call these RAPI functions..<br />
+<br />
+1. download the source files: RencherRAPI.cpp and RencherRAPI.h<br />
+2. And you could start off with converting them to NSIS  via the system::whatevercall $R0 $R1 etc. etc.<br />
+3. To transfer a file from the PC to the Pocket PC, call the CopyFiletoWinCE() function.<br />
+<br />
+Whatever way, it's will be a lot of work for you to do.<br />
+<br />
+Success</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">15th June 2005, 12:40</div></div><div class="posttext">The include file must get you started, or someone else for that mather. You could start to convert it to a NSIS plugin to be use by others.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JakeChance</div><div class="date">15th June 2005, 20:35</div></div><div class="posttext">Hey onad,<br />
+<br />
+Thanks so much for your help but I actually figured out a way to do it without going outside of NSIS. I'll post it here so other people can read it but also on NSIS's page where I would think to look for it.<br />
+<br />
+//Make a desktop installer that only installs its contense to a Windows CE device<br />
+//You can add what ever you like to the rest of the program but these are the only steps you need to pass the CAB to ActiveSync and let it do the rest.<br />
+//Obviously fill in where it makes sense<br />
+<br />
+;This is just a place to hold your files, it can be anything but your program name works best as the folder shouldn't already exist<br />
+InstallDir &quot;$TEMP\YourProgram'sName&quot;<br />
+<br />
+;Var to hold the location of CeAppMgr.exe<br />
+var CeAppMgrLocation<br />
+<br />
+Section PathObtain<br />
+  ;It can be obtained from the registry at this location always<br />
+  ReadRegStr $CeAppMgrLocation HKLM &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\CEAPPMGR.EXE&quot; &quot;&quot;<br />
+SectionEnd<br />
+<br />
+Section CEInstallAndDelete<br />
+  ;This calls the program and passes to it the program's ini file which tells it which CAB file(s) it needs and sets it up to install<br />
+  ExecWait '&quot;$CeAppMgrLocation&quot; &quot;$INSTDIR\YourProgram'sINIfile.ini&quot;' $0<br />
+  ;Changes the output path so the temporary folder can be deleted<br />
+  SetOutPath $TEMP<br />
+  ;Remove the directory and all the files put into it<br />
+  RMDir /r /REBOOTOK $INSTDIR<br />
+SectionEnd<br />
+<br />
+//Thats all you need for it to be a very clean install process<br />
+//Feel free to post any questions<br />
+//The only two things in my install are a CAB file that is referenced in the ini file I pass to CeAppMgr</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">16th June 2005, 09:32</div></div><div class="posttext">Wow, have't thought of that since I'm an API geek ;), this info will be helpfull for others too, Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Kieren</div><div class="date">20th June 2005, 15:57</div></div><div class="posttext">The scary thing is:<br />
+<br />
+var CeAppMgrLocation<br />
+<br />
+<br />
+Is *exactly* letter for letter, capitalisation for capitalisation, the variable name I use :)<br />
+<br />
+Could I possibly ask why you've added the &quot;$0&quot; to the end of the ExecWait line?  In my own installers, I've always used the syntax:<br />
+<br />
+ExecWait '${CeAppMgrLocation} &quot;$INSTDIR\${APPFILENAME}.ini&quot;'<br />
+<br />
+<br />
+(The odd variable name for the ini file is because I have to build so many PPC/Smartphone scripts that I ended up turning it into a template based on a few defines at the start :) )<br />
+<br />
+There are a few other registry keys that hold some useful information about the last/currently connected device which you might also find handy:<br />
+&quot;HKCU\Software\Microsoft\Windows CE Services&quot;<br />
+<br />
+&quot;DeviceProcessorType&quot; (DWORD value containing numeric processor ID, e.g. 2577 for ARM based devices)<br />
+&quot;DeviceType&quot; = &quot;PocketPC&quot; or &quot;Smartphone&quot; (String value, used in the UnsupportedPlatforms/PlatformString of the .inf file)<br />
+&quot;DeviceVersion&quot; = DWORD value, seems to be a mangle of the OS version and build number, but you might be able to use it to identify the OS version with a little finagling.<br />
+<br />
+These get updated whenever a Windows Mobile device connects and Activesync fires up, so it's a reasonable record of the last connected or currently connected Pocket PC.<br />
+<br />
+Kieren</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JakeChance</div><div class="date">20th June 2005, 16:44</div></div><div class="posttext">Crazy coincidence on the var name but it makes sense as it holds the location of the file CeAppMgr.exe.<br />
+<br />
+I have the $0 at the end because that was in the help files and I didn't think to take it out. It actually doesn't do anything as long as the $0 var is never used.<br />
+<br />
+I kinda just jumped into the companies install project so I wasn't looking at all the possibilities of using variables but we basically have many CAB files, each one specific to the device its being installed on and ini that all have the same name. I just copied and pasted the nsi file into each device's directory and changed the device name so it makes the correct exe file. Then to make things easier I wrote a batch file to call makensis.exe with each one of these nsi files. Just a tip, if you're thinking of doing this, definitely take advantage of the fact that in a bat file you can use a replace all to change something used many times. Our example would be that I have makensis.exe /DPRODUCT_VERSION = &quot;1.75&quot; bla/bla/something.nsi for each nsi file so I can use the same bat file if I just replace 1.75 when we go to 2.0. In the nsi file it is just safe to put <br />
+!ifndef PRODUCT_VERSION<br />
+!define PRODUCT_VERSION = &quot;2.0&quot;<br />
+!endif<br />
+just so you don't have a missing variable.<br />
+<br />
+This way I just run my bat file and it does all the work of making the cabs, the exes, and moving them to our server. Isn't DOS great?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" ExecWait and Redirection (Again), media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  ExecWait and Redirection (Again) NSIS Discussion" />
+	
+	<title> ExecWait and Redirection (Again) [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  ExecWait and Redirection (Again)</div>
+<hr />
+<div class="pda"><a href="t-130916.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=130916">ExecWait and Redirection (Again)</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">garrel</div><div class="date">4th April 2003, 01:16</div></div><div class="posttext">Hello. I'm using NSIS 1.98. I'm unsuccessfully executing MySQL and redirecting a file of SQL commands to it with my installer. I see someone else had this problem, but the proposed solution is not working for me. It was discussed here:<br />
+<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=70724&amp;highlight=mysql<br />
+<br />
+I have exactly duplicated the proposed solution by DarkTrain but it doesn't work. My file of SQL commands works perfectly when redirected from the command line. When my installer runs, the command shell flashes by but the SQL commands have not been executed. The NSIS progress window shows the command I'm trying to run (partially, it runs past the dialog so I can't see the end).<br />
+I'm at a loss for how to debug this. Any ideas?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">4th April 2003, 08:18</div></div><div class="posttext">You can hold your mouse on a line in the log to see the whole line.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th April 2003, 10:46</div></div><div class="posttext">Holding the mouse over the line to see the entire line works only in NSIS 2.<br />
+<br />
+garrel, can you please paste here the exact code you are using to execute the MySQL queries in the file?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">garrel</div><div class="date">4th April 2003, 15:46</div></div><div class="posttext">Thanks for responding. Here's my code. In this case $INSTDIR is set to C:\mysql (MySQL home directory).<br />
+<br />
+  SetOutPath $INSTDIR\bin<br />
+  ExpandEnvStrings $0 %COMSPEC%<br />
+  Exec '&quot;$0&quot; /C &quot;C:\mysql\bin\mysql&quot; &lt; &quot;C:\mysql\bin\test.sql&quot;'<br />
+<br />
+When this runs, the DOS shell flashes by, but when I reload the MySQL tables and look at the data, the commands obviously didn't run. I have removed almost all of my other logic in the NSIS script and isolated the problem to these lines. I'm running the installer on Windows 2000 using NSIS version 1.98.<br />
+<br />
+Any troubleshooting tips you can suggest are very appreciated!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th April 2003, 15:54</div></div><div class="posttext">Try:<br />
+<br />
+ExpandEnvStrings $0 &quot;%COMSPEC%&quot;<br />
+DetailPrint $0<br />
+StrCpy $1 '&quot;$0&quot; /C &quot;$INSTDIR\bin\mysql.exe&quot; &lt; &quot;$INSTDIR\bin\test.sql&quot;'<br />
+DetailPrint $1<br />
+IfFileExists &quot;$INSTDIR\bin\test.sql&quot; +2<br />
+  DetailPrint &quot;test.sql not found!&quot;<br />
+IfFileExists &quot;$INSTDIR\bin\mysql.exe&quot; +2<br />
+  DetailPrint &quot;MySQL.exe not found!&quot;<br />
+ExecWait $1<br />
+<br />
+and tell me what is the output that this script generates.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">garrel</div><div class="date">4th April 2003, 15:54</div></div><div class="posttext">I forgot to mention that I've also tried modifying the SQL commands to force MySQL to hang (i.e. not adding a semicolon after a command) so I could see the execution of the commands, but the shell window just flashes by. The result leads me to believe the query is never running.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">garrel</div><div class="date">4th April 2003, 17:51</div></div><div class="posttext">I tried the code you gave me, and added just a little bit to the end to display any errors from the ExecWait. Here's the code I tried:<br />
+<br />
+<br />
+Function configure<br />
+<br />
+  ; run the MySQL monitor and redirect SQL file for setting<br />
+  ; up permissions<br />
+  SetOutPath $INSTDIR\bin<br />
+  ExpandEnvStrings $0 &quot;%COMSPEC%&quot;<br />
+  DetailPrint $0<br />
+  StrCpy $1 '&quot;$0&quot; /C &quot;$INSTDIR\bin\mysql.exe&quot; &lt; &quot;$INSTDIR\bin\test.sql&quot;'<br />
+  DetailPrint $1<br />
+  IfFileExists &quot;$INSTDIR\bin\test.sql&quot; +2<br />
+  DetailPrint &quot;test.sql not found!&quot;<br />
+  IfFileExists &quot;$INSTDIR\bin\mysql.exe&quot; +2<br />
+  DetailPrint &quot;MySQL.exe not found!&quot;<br />
+  ExecWait $1 $3<br />
+<br />
+  IfErrors 0 noErrorsSeen<br />
+   MessageBox MB_OK &quot;Error: $3&quot;<br />
+  noErrorsSeen:<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+When I run the script, the DetailPrint lines do not display, so the files are being found. In addition, the MessageBox does not display. I've also tried this with SQL statements that should hang the window (i.e. no semicolon at the end of a command), and the shell window never halts, it just appears and disappears. I've attached a jpg that shows the installer progress window.<br />
+<br />
+Thanks again for helping debug this problem.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th April 2003, 17:55</div></div><div class="posttext">Try attaching again please.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">garrel</div><div class="date">4th April 2003, 18:04</div></div><div class="posttext">Trying to attach .jpg again...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th April 2003, 18:10</div></div><div class="posttext">Try:<br />
+Exec '&quot;$0&quot; /C &quot;C:\mysql\bin\mysql&quot; &lt; &quot;C:\mysql\bin\test.sql&quot; &gt; &quot;$DESKTOP\mysql.log&quot;'<br />
+and attach mysql.log.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">garrel</div><div class="date">4th April 2003, 20:18</div></div><div class="posttext">Good suggestion to redirect to a log, but unfortunately it didn't help. I run the installer and it behaves exactly as it did before (shell opens then closes without expected results in MySQL db). However, this is interesting because the mysql.log file is NOT created. I searched my entire system for it and it doesn't exist.<br />
+Here's the code as it exists now, and a snapshot of the progress window is attached.<br />
+<br />
+<br />
+Function configure<br />
+<br />
+<br />
+  ; run the MySQL monitor and redirect temporary SQL file for setting<br />
+  ; up permissions<br />
+  SetOutPath $INSTDIR\bin<br />
+  ExpandEnvStrings $0 &quot;%COMSPEC%&quot;<br />
+  DetailPrint $0<br />
+  Sleep 3000<br />
+  Exec '&quot;$0&quot; /C &quot;C:\mysql\bin\mysql&quot; &lt; &quot;C:\mysql\bin\test.sql&quot; &gt; &quot;$DESKTOP\mysql.log&quot;'<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th April 2003, 20:21</div></div><div class="posttext">Well, it's supposed to be on your desktop... Any chance you can attach the SQL file too?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">garrel</div><div class="date">4th April 2003, 20:33</div></div><div class="posttext">Yes, it should be on the desktop, but it isn't. I've searched my entire hard drive for it, and it doesn't exist. This seems to be a clue to why this isn't working, but I'm at a loss.<br />
+<br />
+I've attached a file sql commands. The other file will be in a follow-up message. I've tried both of them, and the behavior is the same. I've renamed these from .sql to .txt for attaching to this posting. test1.txt should hang MySQL since it doesn't have a semicolon at the end of the second SQL command. test2.txt is the actual file I need to be redirected to MySQL.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">garrel</div><div class="date">4th April 2003, 20:34</div></div><div class="posttext">And the other file of SQL commands...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th April 2003, 20:35</div></div><div class="posttext">Try:<br />
+Exec '$0 /C C:\mysql\bin\mysql.exe &lt; C:\mysql\bin\test.sql &gt; &quot;$DESKTOP\mysql.log&quot;'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">garrel</div><div class="date">4th April 2003, 20:51</div></div><div class="posttext">That command line did it!!!!!!!<br />
+<br />
+The redirect and filename didn't need to be quoted. THANK YOU so much for helping me troubleshoot this problem in a prompt manner. Hopefully this will help others as well.<br />
+<br />
+Regards,<br />
+Garrel Renick</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th April 2003, 21:01</div></div><div class="posttext">We are not finished yet, but I think I finally have a good idea about the source of the problem :)<br />
+<br />
+This code, if works, should be the safest solution:<br />
+<br />
+SetOutPath $INSTDIR\bin<br />
+ExpandEnvStrings $0 %COMSPEC%<br />
+GetFullPathName /SHORT $1 $INSTDIR\bin\test.sql<br />
+Exec '&quot;$0&quot; /C &quot;$INSTDIR\bin\mysql.exe&quot; &lt; $1' <br />
+<br />
+If that doesn't work, try the same trick with $INSTDIR\bin\mysql.exe (GetFullPathName /SHORT and no quotes).<br />
+<br />
+You need to get the short path name because the file name might contain spaces and then the command won't work.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

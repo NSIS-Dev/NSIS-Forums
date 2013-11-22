@@ -1,0 +1,98 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Incremental Updates, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Incremental Updates NSIS Discussion" />
+	
+	<title> Incremental Updates [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Incremental Updates</div>
+<hr />
+<div class="pda"><a href="t-298837.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=298837">Incremental Updates</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">AaronLS</div><div class="date">18th October 2008, 05:56</div></div><div class="posttext">I have a installer compiled with NSIS that is roughly 300 mb.  Each new version of the installer we release is designed to work for both new installs and updates.  <br />
+<br />
+The issue we have is that in some cases updates need to be deployed to a large number of users who are on low bandwidth connections or are on mobile broadband.  After the initial install, there are many cases where the amount of data needed for an update may be minimal.  I could make seperate installers that only include what's different from version to version, but I don't think I could maintain seperate reduced size installers designed to do the udpates, and also be compatible with all our previous versions.  I'd also increase the amount of testing I'd have to do significantly to try all the combinations.  <br />
+<br />
+The installer I have now is wonderful, thanks in a large part to the NSIS community, and I think the same scripts could be used for an updater.<br />
+<br />
+If there was a way to modify the bahevior of the File command, such that instead of trying to extract a file, it attempts to download it from some configured location.  It would function something like this:<br />
+1. Compile installer as a &quot;remote updater&quot;.  Instead of the File command causing files to be compressed and included in the installer, only a hash/checksum of the file is stored.  Thus the installer would be significantly smaller.<br />
+2. When running the installer, it would expect that script instructions provide some information about where the actual files should be retrieved from.  I.e.<br />
+SetRemoteFileSource &quot;\\someServer\networkshare\MyInstallerFiles\&quot;<br />
+<br />
+This at the programmers option this could be set dynamically at runtime.  In my case I'd probably make it a command line or a ini file accompaning the installer, so that each user's site would have a different configuration for where the files are stored.<br />
+<br />
+3.  As the installer is running and encounters a File command, it uses the checksum/hash of the files to compare against the local files that would have been overwritten had this been a real File command.  If the files are different, then the new file is retrieved from the remote location, it's integrity is verified(using the has again), and then the existing logic used for overwriting the old file with the new is applied.<br />
+<br />
+This would minimize the amount of data that must be pushed down to clients before the installer is run, and only transfer the files that are neccessary.  My hope would be that implementing this feature using the File command in this way will abstract the file transfer to the extent that existing scripts could be recompiled with minimal modification and take advantage of this feature.<br />
+<br />
+Bah, I just drunkenly misclicked and added &quot;neccessary&quot; to my firefox dictionary.<br />
+<br />
+Unfortunately the only C/C++ experience I had was in college, and I have used it next to never since then, so I don't think I'd be capable.<br />
+<br />
+If we write our own updater for the ground up using another language, then it will surely suck because I have put a lot of effort into our existing NSIS installer.  Thanks to poor design of some of the third party components and software our installation depends on, there is a lot of conditional logic and wacky things we have to do to deploy our software.  Now that we have completely redone our installer using NSIS and manage the build with some NANT scripts, I am very happy with it.<br />
+<br />
+If we roll our own autoupdater using something like WCF services, but then it will surely suck in comparison to our installer, it will be duplicate management of the same logic that we already put into our isntaller(and I would not want to replace the NSIS installer, because even with an updater, it would still be the ideal choice for new installs), and it probably won't be as easy to write as the NSIS installer was due to the wonderful features NSIS provides.<br />
+<br />
+Any opinions on this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AaronLS</div><div class="date">18th October 2008, 06:09</div></div><div class="posttext">Maybe since some people would like the files pulled via HTTP, rather form a network share, it should be plugable.  I.e the file command does its normal logic, but at the point where it would normally extract the file, it instead calls some function of a plugin which then handles the retrieval of the file, then once that function returns, the file command continues with it's normal logic.  There probably also need to be plugable logic for compile time, because the files that are referenced by File commands should probably be gathered into a folder structure that can easily be copied to the network share or http site.<br />
+<br />
+Of course I could do all this stuff without the file command using existing plugins, but it seems it would be tedious and difficult to manage.  There are lots of places in our installer that a file command is handling dozens upon dozens of files.  In our build environment, most changes to the installer involve just dropping files in appropriate subdirectories, and the recersive File commands do the rest.  I love the File command, and I'd hate to replace it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">QOAL</div><div class="date">18th October 2008, 14:12</div></div><div class="posttext">Hrmm, well this may be of some help to you:<br />
+<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=297533</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AaronLS</div><div class="date">21st October 2008, 15:21</div></div><div class="posttext">I will take a look at it.  It seems extending the functionality of the File command would be ideal since that wouldn't require additional scripting.  I could then still have my traditional &quot;install from CD/thumbdrive/download&quot; that is ideal for new installs, and just recompile with the network functionality and provide that version of the isntall to large agencies wanting to push it out over their network.<br />
+<br />
+I have the source code for NSIS.  It looks like the file related operations are on lines 446+:<br />
+<br />
+&quot;#ifdef NSIS_SUPPORT_FILE<br />
+    case EW_EXTRACTFILE:<br />
+      {&quot;<br />
+<br />
+My hope is to set it up where you can plugin DLLs so that in the future the File command can be extended however someone wants.<br />
+<br />
+Edit: that's in exec.c</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AaronLS</div><div class="date">21st October 2008, 17:23</div></div><div class="posttext">That block of code in exec.c looks like it is what gets run by an installer, correct?<br />
+<br />
+And then it looks like in script.cpp on line 4472 this is the code that is run when compiling a script, correct?<br />
+<br />
+    case TOK_FILE:<br />
+#ifdef NSIS_SUPPORT_FILE<br />
+      {...<br />
+<br />
+Just trying to get my head wrapped around the code.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AaronLS</div><div class="date">22nd October 2008, 04:32</div></div><div class="posttext">So just fleshing out the design of this.  I'm working on getting NSIS to compile on my machine right now.<br />
+<br />
+User's of this feature would provide two functions. The first is called at compile time for each File command, and it decides what to do with the source file.<br />
+<br />
+The second function is called at runtime, and handles fetching the file.<br />
+<br />
+-Commands at compile time would define what functions handle these things. Perhaps:<br />
+SetCompressor /PLUGIN=MyPluginName<br />
+<br />
+Other parameters to that command such as the algorithm type could still be used by the plugin if it itself will be doing any type of compression.  But in essence it will handle grabbing the file, so it replaces the step of compressing the file into the installer.  <br />
+<br />
+-Of course if you are the implementer of this plugin, you need some info at runtime about where these files should be retrieved from.  Depending on how the plugin retrieves the files, the plugin will probably need additional information.  I haven't figured out how this will be communicated yet.  It would probably be some commands or macros that would set values to be used by the plugin.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

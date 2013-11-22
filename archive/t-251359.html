@@ -1,0 +1,127 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to System::Call DLL function with reference?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to System::Call DLL function with reference? NSIS Discussion" />
+	
+	<title> How to System::Call DLL function with reference? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to System::Call DLL function with reference?</div>
+<hr />
+<div class="pda"><a href="t-251359.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=251359">How to System::Call DLL function with reference?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">dbarrett</div><div class="date">18th July 2006, 04:01</div></div><div class="posttext">I have a DLL with an exported function with the following signature:<br />
+<br />
+extern &quot;C&quot; __declspec(dllexport) HRESULT Run4( HINSTANCE, HINSTANCE, HINSTANCE, LPSTR, int, bool&amp; )<br />
+<br />
+How do I call this function and receive the 'bool&amp;' back into the NSIS script?<br />
+<br />
+The best I can come up with is:<br />
+<br />
+System::Call &quot;MyDLL::Run4( i 0, i 0, i 0, t '', *i .r4 ), i.r3&quot; ? u<br />
+<br />
+But the DLL segfaults when it tries to write to the boolean reference.  I assume this means I'm incorrectly passing in the reference to $4.  I've tried this:<br />
+<br />
+System::Alloc 4<br />
+Pop $4<br />
+System::Call &quot;MyDLL::Run4( i 0, i 0, i 0, t '', *i .r4 ), i.r3&quot; ? u<br />
+<br />
+And this:<br />
+<br />
+System::Alloc 4<br />
+Pop $4<br />
+System::Call &quot;MyDLL::Run4( i 0, i 0, i 0, t '', i .r4 ), i.r3&quot; ? u<br />
+<br />
+And this:<br />
+<br />
+System::Call &quot;MyDLL::Run4( i 0, i 0, i 0, t '', *i 0 r4 ), i.r3&quot; ? u<br />
+<br />
+But no effect.  Can you see what mistake I'm making, or is what I'm trying to do not possible?<br />
+<br />
+-david<br />
+<br />
+PS: It works fine if I comment out the line assigning the value to the 'bool' in the DLL, so I do believe it's been narrowed down to this one issue.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">18th July 2006, 04:22</div></div><div class="posttext">Let's see:<br />
+<br />
+extern &quot;C&quot; __declspec(dllexport) HRESULT Run4( HINSTANCE, HINSTANCE, HINSTANCE, LPSTR, int, bool&amp;)<br />
+<br />
+Now converted to system syntax:<br />
+<br />
+System:Call 'MyDLL::Run4(i 0, i 0, t &quot;&quot;, i 0, *i .r1) i .r0'<br />
+<br />
+I don't have the dll, so I can't test it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dbarrett</div><div class="date">18th July 2006, 04:39</div></div><div class="posttext">Alas, no luck.  Every time it just segfaults when I try to write to the 'bool&amp;' parameter. :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">18th July 2006, 11:11</div></div><div class="posttext">Can't you use BOOL with TRUE and FALSE?<br />
+It's just an int with 0 or 1 then.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dbarrett</div><div class="date">18th July 2006, 20:50</div></div><div class="posttext">Unfortunately I can't change the function signature for backwards compatability reasons.  Were it up to me I'd just return 'true' or 'false' in the return value.  Unfortunately, I'm stuck with a reference to a 'bool'.<br />
+<br />
+Now, I *think* a reference looks just like a pointer on the stack, and is just treated special by the compiler.  Thus I'd assume the standard pointer semantics of the System::Call would work.  But unfortunately I can't get them too.  Can you come up with any other variations I might try?<br />
+<br />
+-david</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">19th July 2006, 02:25</div></div><div class="posttext">Can you come up with any other variations I might try?<br />
+<br />
+Can you post the DLL?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dbarrett</div><div class="date">19th July 2006, 09:38</div></div><div class="posttext">Ok, I'll put together a DLL with the same function signature and post a link here.  Thanks for all your help on this.<br />
+<br />
+In the meantime, I've decided to temporarily drop the backwards compatibility requirement and go with a function that's:<br />
+<br />
+HRESULT Run( )<br />
+<br />
+Much simpler, works like a charm.  However, now I've discovered another hangup: the DLL filename contains a hyphen, and that seems to muck it up.  Specifically, my code is:<br />
+<br />
+System::Call &quot;$2::Run( ) i.r3 ? u&quot;<br />
+<br />
+So far as I can tell, this works great so long as $2 is a purely alphabetical name (eg, &quot;MyDLL&quot;).  But a DLL name with hyphens (eg, &quot;MyDLL-1.2-3&quot;) appears to screw it up.<br />
+<br />
+Can you recommend any way to pass in a hyphenated DLL name?<br />
+<br />
+Again, thanks for all your help with this.<br />
+<br />
+-david</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th July 2006, 17:12</div></div><div class="posttext">Originally posted by dbarrett <br />
+Can you recommend any way to pass in a hyphenated DLL name?Extract it with a hyphen-less name. You can even use GetTempFileName.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dbarrett</div><div class="date">19th July 2006, 23:37</div></div><div class="posttext">Eureka!  I figured out the filename issue.  My DLL filename is of the following form:<br />
+<br />
+MyDLL-X.YYY-ZZZ.dll<br />
+<br />
+And I was calling as follows:<br />
+<br />
+System::Call &quot;MyDLL-X.YYY-ZZZ::Run( ) i.r3 ? u&quot;<br />
+<br />
+However, the 'LoadLibrary' Win32 function only appends the &quot;.dll&quot; to the end when searching if the name passed in doesn't have an extension.  And it assumed my DLL had the extension &quot;YYY-ZZZ&quot; and thus failed.  The solution is to explicitly indicate the &quot;.dll&quot; extension in the System::Call as follows:<br />
+<br />
+System::Call &quot;MyDLL-X.YYY-ZZZ.dll::Run( ) i.r3 ? u&quot;<br />
+<br />
+So, that fixes that up.  Next I need to get the &quot;bool&amp;&quot; function signature to work, but this lets me keep moving forward.  Thanks!<br />
+<br />
+-david</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

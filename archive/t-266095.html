@@ -1,0 +1,87 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to determine when a file has been written to disk?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to determine when a file has been written to disk? NSIS Discussion" />
+	
+	<title> How to determine when a file has been written to disk? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to determine when a file has been written to disk?</div>
+<hr />
+<div class="pda"><a href="t-266095.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=266095">How to determine when a file has been written to disk?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">99999999</div><div class="date">18th February 2007, 21:52</div></div><div class="posttext">We are using NSIS to be the installer for a large number of individual installers, which will work with our system.  We don't want to support changes to base script for individual components, as was the past method, because we want to be able to chang that base script.  So each of the components we are building also has a &quot;Hooks.nsh&quot; file.  This file is specific to each component, and may or may not exist.<br />
+<br />
+The idea with the hooks file is to enable specific customization of each of the component installers, using the function callbacks. <br />
+PreInstallation - Before the installer writes anything to disk. <br />
+PostInstallation - After the installer has completed in the &quot;Install&quot; section.<br />
+<br />
+We also have these as well for the uninstaller, obiviously named correctly.<br />
+These all work just fine.<br />
+<br />
+However we also wanted to make a callback for each file being installed.  Pre and Post installation for each file, so the following:<br />
+<br />
+Function PreFileFilter<br />
+FunctionEnd<br />
+<br />
+Function PostFileFilter<br />
+FunctionEnd<br />
+<br />
+<br />
+The idea is instead of doing a chunk of work at the end of the installation to copy around files, (which are sometimes huge,) we could instead modify the path of installer to out these files.    So in a PreFileFilter the function could merely check for the file name, and change the location and/or name of the file.    This too works perfectly.<br />
+<br />
+In order to support this functionality, the code which generates the file list now instead of just generating a single file entry per file, generates the following:<br />
+<br />
+;File .\state.xml<br />
+push &quot;$OUTDIR&quot;<br />
+StrCpy $CURRENTFILEPATH &quot;$OUTDIR&quot;<br />
+StrCpy $CURRENTFILENAME &quot;state.xml&quot;<br />
+Call PreFileFilter<br />
+StrCmp $ALLOWCURRENTFILE &quot;0&quot; lbl_skip_1<br />
+SetOutPath &quot;$CURRENTFILEPATH&quot;<br />
+File &quot;/oname=$CURRENTFILENAME&quot; &quot;.\state.xml&quot;<br />
+Call PostFileFilter<br />
+lbl_skip_1:<br />
+pop $OUTDIR<br />
+ <br />
+<br />
+It generates the above, on a perfile basis.  lbl_skip_1 increments per file of course.  The globals $CURRENTFILENAME and $CURRENTFILEPATH are used to communicate with the filter functions.<br />
+<br />
+So the issue I am having, is with the PostFileFilter, the PostFileFilter needs to be able to modify files, the above case, I need to be able to adjust &quot;state.xml&quot;  however, when the PostFileFilter is called, the state.xml file, is not always there!!!!<br />
+<br />
+So what I need is a way to ensure that the file has been written, before I call the PostFileFilter.  How would I do this?  I've tried ReserveFile for the files which I know will need to be modified in this manner, but to no avail.     Also I've checked, and yes the file has not yet been written to disk at the point the PostFileFilter has been called, if I put a messagebox in the PostFileFilter, it stops there, and then I go check the directory.<br />
+<br />
+Anyone have an idea of how to solve this?  This would be incredibly useful for the system we are writing.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">19th February 2007, 19:41</div></div><div class="posttext">IfFileExists isn't enough? Also, there's a function in the wiki call to get file size, in case that you want if the file actually has bytes.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">99999999</div><div class="date">20th February 2007, 19:22</div></div><div class="posttext">No IfFileExists is not enough, because what I need to know, is  *WHEN* does the file get written to disk, and so that I can ensure that the file gets written to disk, *before* I need to modify it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">20th February 2007, 19:32</div></div><div class="posttext">Wow! You want to know when the file get written? :\<br />
+I think you can only know if the file was written.<br />
+As I told you, you can know if a file has bytes with fileSize...Or..subclass the explorer to catch the written event.<br />
+<br />
+For me, that's out of nsis league.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">99999999</div><div class="date">20th February 2007, 19:35</div></div><div class="posttext">Yeah it is very important to know when, or to be able to force at a particular time, the file to be written.  <br />
+<br />
+So does anyone have an answer?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">20th February 2007, 19:53</div></div><div class="posttext">See NSIS documentation 4.8.2.7 SetDateSave and 4.9.3.7 GetFileTime</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

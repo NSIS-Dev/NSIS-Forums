@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problem creating scheduled task, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problem creating scheduled task NSIS Discussion" />
+	
+	<title> Problem creating scheduled task [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problem creating scheduled task</div>
+<hr />
+<div class="pda"><a href="t-251742.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=251742">Problem creating scheduled task</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">BSOD2600</div><div class="date">23rd July 2006, 08:13</div></div><div class="posttext">I need to create a scheduled task on Windows 2000/XP/2003, which runs daily, every 5 minutes with a duration of 24hrs.<br />
+<br />
+Since windows 2000 does not have the schtasks.exe tool, I'm forced to use alternative methods.  No, I do NOT want to use the AT command, since then it wouldn't visable to the user.  I'm trying to use the CreateTask stuff which is found in the System plugin.  Seems though when the installer is in the portion of the script were it creates the scheduled task, the whole installer crashes. This is all I get in the eventlog:<br />
+<br />
+The application, , generated an application error The error occurred on 07/23/2006 @ 00:05:47.237 The exception generated was c0000005 at address 01141519 (Store)<br />
+<br />
+I know it has something to do with the system plugin and the scheduled task, but not sure what I'm doing wrong.  I can see the scheduled task does get created... but the entire installer crashes, so doesn't do me any good.<br />
+<br />
+Here is what I've got going:<br />
+<br />
+        ;Create scheduled task<br />
+        ${If} $OS != 'Windows2000'<br />
+            ExecDos::exec /NOUNLOAD /TIMEOUT=2000 '&quot;$SYSDIR\schtasks.exe&quot; /create /RU SYSTEM /SC MINUTE /MO 5 /TN Cacti /TR &quot;php $INSTDIR\inetpub\wwwroot\cacti\poller.php&quot; /ST 01:00:00' &quot;&quot; &quot;$INSTDIR\Inetpub\wwwroot\cacti\log\schtasks.log&quot;<br />
+        ${Else}<br />
+            MessageBox MB_OK &quot;Creating win2k task&quot;<br />
+            push &quot;Cacti&quot;<br />
+            push &quot;Invokes the Cacti poller&quot;<br />
+            push &quot;php&quot;<br />
+            push &quot;$INSTDIR\inetpub\wwwroot\cacti\&quot;<br />
+            push &quot;$INSTDIR\inetpub\wwwroot\cacti\poller.php&quot;<br />
+            push &quot;*(&amp;l2, &amp;i2 0, &amp;i2 2006, &amp;i2 1, &amp;i2 1, &amp;i2 0, &amp;i2 0, &amp;i2 0, &amp;i2 9, &amp;i2 0, i 1440, i 5, i 0, i 1, &amp;i2 1, i 0, i 0, &amp;i2 0) i.s&quot;<br />
+            Call CreateTask<br />
+            Pop $0<br />
+            MessageBox MB_OK &quot;CreateTask result: $0&quot;<br />
+        ${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">23rd July 2006, 08:35</div></div><div class="posttext">It works fine for me when I test it and aside from a stray `&amp;i2 0` at the end, I can't see anything wrong with the code. Try adding some debug messages in CreateTask to see exactly where it crashes.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BSOD2600</div><div class="date">23rd July 2006, 16:12</div></div><div class="posttext">Well it crashes for me somewhere inside of CreateTask.<br />
+<br />
+I've actually copied the CreateTask function from the forum thread where it was implemented.  Is there some other way I'm suppose to do use it?  If I don't do that, then I get the error<br />
+<br />
+Error: resolving install function &quot;CreateTask&quot; in install section &quot;Cacti&quot; (1)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">23rd July 2006, 16:17</div></div><div class="posttext">Of course it crashes inside CreateTask, there's nothing special in the code calling it ;) That's why you should try adding debug message into CreateTask.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BSOD2600</div><div class="date">23rd July 2006, 16:31</div></div><div class="posttext">Alright, did that and found the location, when the scheduled task doesn't exist.<br />
+<br />
+<br />
+#Function CreateTask<br />
+     MessageBox MB_OK &quot;debug10&quot;<br />
+<br />
+End:<br />
+     ; restore registers and push result<br />
+     System::Store &quot;P0 l&quot;<br />
+     MessageBox MB_OK &quot;debug20&quot;<br />
+FunctionEnd<br />
+<br />
+<br />
+It crashes right after debug10, so I assume its the system:store line which is the cause.<br />
+<br />
+When the scheduled task already exists, it crashes in a different spot<br />
+<br />
+     ; ITask-&gt;SetComment()<br />
+     System::Call '$R2-&gt;18(w r1)'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">23rd July 2006, 18:41</div></div><div class="posttext">Hmm... There's error checking for ITaskScheduler-&gt;NewWorkItem(). It shouldn't crash if it returns ERROR_FILE_EXISTS.<br />
+<br />
+I still can't see why it would crash when the task doesn't already exist. Does it work with the original TASK_TRIGGER structure from the example?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BSOD2600</div><div class="date">23rd July 2006, 21:42</div></div><div class="posttext">Nope, using the sample code chunk from that nsi file crashes on System::Store &quot;P0 l&quot;.  Running the installer again, it then crashes on System::Call '$R2-&gt;18(w r1)'.<br />
+<br />
+Sounds like brainsucker didn't test this code on Windows 2000.<br />
+<br />
+I'm not setting the SetPluginUnload  alwaysoff or SetPluginUnload manual stuff.  Would that be causing this problem?  Anything special I need to consider since I'm using other plugins too?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">24th July 2006, 19:34</div></div><div class="posttext">The first crash is caused by the lack of SetPluginUnload. SetPluginUnload alwaysoff tells NSIS to keep plug-ins loaded. When it's used, plug-ins aren't unloaded from memory after the plug-in call line. In this specific case, the first code line in CreateTask saves variables on a new stack. A pointer to that stack is kept in the plug-in's memory. When it's unloaded, because SetPluginUnload alwaysoff isn't used, that pointer is gone. When the plug-in is reloaded in the last line, that pointer points to a new stack that doesn't contain the pushed variables from the first line. When the plug-in tries to pop the variables from this wrong stack, it crashes because they're not there.<br />
+<br />
+The second problem is actually the same problem as the first, because you've placed the message box before the end label.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BSOD2600</div><div class="date">25th July 2006, 06:28</div></div><div class="posttext">Ah, figured it might've been something with those settings.  After enabling that, no more crashes. thanks :-).<br />
+<br />
+Does leaving the setting SetPluginUnload alwaysoff make the installer more inefficient / memory intensive?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">25th July 2006, 23:32</div></div><div class="posttext">I doubt you'll be able to tell the difference in terms of memory usage. However, it might leave plug-ins behind in the temporary folder pending deletion on reboot. You should set it back to manual just before the last plug-in call for it to be unloaded. If you want to contain the effect to CreateTask, have it set to manual just before the Store call.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

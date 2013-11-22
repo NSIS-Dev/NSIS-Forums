@@ -1,0 +1,133 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Find if a previous soft is installed, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Find if a previous soft is installed NSIS Discussion" />
+	
+	<title> Find if a previous soft is installed [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Find if a previous soft is installed</div>
+<hr />
+<div class="pda"><a href="t-268042.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=268042">Find if a previous soft is installed</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ichyban</div><div class="date">19th March 2007, 13:47</div></div><div class="posttext">Hi, i am a newbie on NSIS and also on this forum. The script that i wrote installs a soft in a directory that i choose.  Is there a way to find out if the soft is already installed on the computer, before i get to the component page and how to calculate the space required for installation.<br />
+<br />
+Hope i will hear from you soon,<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">19th March 2007, 14:23</div></div><div class="posttext">How about InstallDirRegKey? See NSIS manual,<br />
+<br />
+http://nsis.sourceforge.net/Docs/Chapter4.html#4.8.1.22<br />
+<br />
+Required space calculated automatically by the installer on components page and on directory page.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ichyban</div><div class="date">19th March 2007, 15:48</div></div><div class="posttext">thanks i will try</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ichyban</div><div class="date">19th March 2007, 16:13</div></div><div class="posttext">i have done this:<br />
+<br />
+!define company &quot;Home&quot;<br />
+!define prodname &quot;TestApp&quot;<br />
+!define regkey &quot;Software\${company}\${prodname}&quot;<br />
+<br />
+Section	<br />
+	InstallDirRegKey HKLM &quot;${regkey}&quot;<br />
+SectionEnd<br />
+<br />
+Error: command InstallDirRegKey not valid in Section</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">19th March 2007, 16:24</div></div><div class="posttext">then use InstallDirRegKey outside a section!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">19th March 2007, 16:30</div></div><div class="posttext">As described in manual this is an installer attribute, so you need to add it like this e.g.<br />
+<br />
+Name &quot;my app&quot;<br />
+OutFile &quot;myapp.exe&quot;<br />
+InstallDirRegKey HKLM &quot;Software\NSIS&quot; &quot;&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ichyban</div><div class="date">20th March 2007, 14:01</div></div><div class="posttext">ok i have done this:<br />
+Name &quot;my app&quot;<br />
+OutFile &quot;myapp.exe&quot;<br />
+InstallDirRegKey HKLM &quot;${regkey}&quot; &quot;&quot;<br />
+<br />
+i tested the installer but what i should do so when i try to use the installer will warn me that i have the soft already installed</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">20th March 2007, 14:48</div></div><div class="posttext">Provided that ${regkey} is defined properly, installer finds automatically any previous installation.<br />
+If you want to pop up a warning or set up another action regarding to that previous installation then,<br />
+Function .onInit<br />
+ClearErrors<br />
+ReadRegStr $0 HKLM &quot;${regkey}&quot; &quot;&quot;<br />
+IfErrors done<br />
+MessageBox MB_OK &quot;Previous installation detected here $0&quot;<br />
+# code here<br />
+done:<br />
+ClearErrors<br />
+# other code here<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ichyban</div><div class="date">20th March 2007, 15:21</div></div><div class="posttext">i have attached the source...please take a look...i did what you told me to do but has no effect<br />
+<br />
+thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">20th March 2007, 15:36</div></div><div class="posttext">Hopefully this minimal out of script will help you,<br />
+!define uninstaller &quot;uninstall.exe&quot;<br />
+!define prodname &quot;testapl&quot;<br />
+!define company &quot;Home&quot;<br />
+!define regkey &quot;Software\${company}\${prodname}&quot;<br />
+<br />
+Outfile 'test.exe'<br />
+InstallDir '$PROGRAMFILES\${prodname}'<br />
+InstallDirRegKey HKLM &quot;${regkey}&quot; &quot;&quot;<br />
+AutoCloseWindow false<br />
+ShowInstDetails show<br />
+<br />
+!include &quot;mui.nsh&quot;<br />
+<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+Function .onInit   <br />
+   ClearErrors<br />
+   ReadRegStr $0 HKLM &quot;${regkey}&quot; &quot;&quot;<br />
+   IfErrors done<br />
+   MessageBox MB_OK &quot;Previous installation detected here $0&quot; IDOK<br />
+<br />
+   done:<br />
+   ClearErrors<br />
+FunctionEnd<br />
+<br />
+Section<br />
+	SetOutPath &quot;$INSTDIR&quot;<br />
+	WriteUninstaller &quot;${uninstaller}&quot;<br />
+	WriteRegStr HKLM &quot;${regkey}&quot; &quot;&quot; &quot;$INSTDIR&quot;<br />
+SectionEnd<br />
+<br />
+Section &quot;Uninstall&quot;<br />
+  Delete &quot;$INSTDIR\${uninstaller}&quot;<br />
+  RMDIR &quot;$INSTDIR&quot;  <br />
+  DeleteRegKey HKLM &quot;${regkey}&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ichyban</div><div class="date">20th March 2007, 16:14</div></div><div class="posttext">It works...thanks a lot</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

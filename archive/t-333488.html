@@ -1,0 +1,125 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Varying the MUI2 Pages based on OS Version, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Varying the MUI2 Pages based on OS Version NSIS Discussion" />
+	
+	<title> Varying the MUI2 Pages based on OS Version [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Varying the MUI2 Pages based on OS Version</div>
+<hr />
+<div class="pda"><a href="t-333488.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=333488">Varying the MUI2 Pages based on OS Version</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Ron.Stordahl</div><div class="date">12th August 2011, 17:37</div></div><div class="posttext">I want to be able to present a different series of install screens to the user depending upon that OS the install is executing upon, for example Vista/Windows 7 and higher vs XP and lower.<br />
+<br />
+Within sections I am currently using the test:<br />
+<br />
+${If} ${AtLeast_OS} ; Previously defined as AtLeastWinVista<br />
+ --- do this--<br />
+${Else}<br />
+ --- do this instead--<br />
+${Endif}<br />
+<br />
+successfully within sections, however such tests are not valid outside of installer Sections or Functions and all my MUI2 definitions proceed the first Installer Section.<br />
+<br />
+The OS version is of course dynamically determined at run time, thus it would seem that such tests would have to be in a section, but I do not see where the MUI2 runtime actions are actually called.<br />
+<br />
+How do I do this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">12th August 2011, 20:33</div></div><div class="posttext">!insertmacro MUI_PAGE_WELCOME<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE canpage_nt6<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE canpage_win4<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+Function canpage_nt6<br />
+${If} ${AtLeast ....<br />
+	Abort<br />
+${EndIf}<br />
+FunctionEnd<br />
+<br />
+Function canpage_win4<br />
+${If} ${AtMost ....<br />
+	Abort<br />
+${EndIf}<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ron.Stordahl</div><div class="date">14th August 2011, 15:52</div></div><div class="posttext">Thanks Anders for your comment...I was unaware of this capability.<br />
+<br />
+Where would I place the call to the functions in your example to insure that they will be called before any page is displayed (and thus too late)?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">14th August 2011, 16:03</div></div><div class="posttext">You have to define them as PRE-page functions, as in Anders' example. You don't call them explicitly!<br />
+<br />
+Make sure you have a &quot;!define MUI_PAGE_CUSTOMFUNCTION_PRE &lt;func_name&gt;&quot; right before the corresponding &quot;!insertmacro MUI_PAGE_FOOBAR&quot; -  for all pages that should (not) be shown based on some condition.<br />
+<br />
+If the PRE-page function associated with a certain page calls &quot;Abort&quot;, then that page won't be shown. Of course you can associate several pages with the same PRE-page function, if these pages should (not) be shown based on the same condition.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ron.Stordahl</div><div class="date">15th August 2011, 22:20</div></div><div class="posttext">I am having success with controlling the pages with the help received, but I get an error when using these lines:<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE AtLeast_OS_or_Later_A<br />
+!define MUI_DIRECTORYPAGE_TEXT_TOP &quot;Application Data Files associated with BPQ32 and its selected optional components, will be installed \<br />
+  or updated in the Destination Folder selected below.$\r$\n$\n\<br />
+  Click Install to continue the process or cancel to quit.&quot;<br />
+!define MUI_DIRECTORYPAGE_VARIABLE $APPDATA<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+<br />
+The error is with the MUI_DIRECTORYPAGE_VARIABLE.  If I enter $INSTDIR all is well, but as shown with $APPDATA I get this error:<br />
+<br />
+Error: cannot change constants : $APPDATA<br />
+Usage: DirVar $(user_var: dir in/out))<br />
+<br />
+What I want the page to offer is the expansion of %appdata%\BPQ32, which would expand for example to:<br />
+<br />
+c:\Users\'username'\AppData\Roaming\BPQ32<br />
+<br />
+How can I accomplish this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th August 2011, 23:44</div></div><div class="posttext">You need to create your own variable, then StrCpy $YourVar $APPDATA before you get to the page</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ron.Stordahl</div><div class="date">16th August 2011, 17:17</div></div><div class="posttext">Thanks Anders.  I have the custom pages working with your help.  Here is a snippet of how it was done:<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE AtLeast_OS_or_Later_A<br />
+!define MUI_DIRECTORYPAGE_TEXT_TOP &quot;Application Data Files associated with BPQ32 and its selected optional components, will be installed \<br />
+  or updated in the Destination Folder selected below.$\r$\n$\n\<br />
+  Click Install to start the process or cancel to quit.&quot;<br />
+!define MUI_DIRECTORYPAGE_VARIABLE $ApplicationDataPath<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+.<br />
+.<br />
+Function AtLeast_OS_or_Later_A<br />
+${If} ${AtLeast_OS}<br />
+  StrCpy $ApplicationDataPath $APPDATA\${PRODUCT_NAME}<br />
+${Else}<br />
+  Abort<br />
+${EndIf}<br />
+FunctionEnd<br />
+<br />
+In my original installer both the programs and the application data went into %programfiles%.  Now when the test ${AtLeast_OS} is satisfied, currently set to Vista, I <br />
+place application data at %appdata%\&quot;program name&quot;.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">16th August 2011, 17:29</div></div><div class="posttext">This AtLeast_OS thing only makes sense if you are testing for Win9x, all NT systems have the same problem, you are just not testing as non-admin!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

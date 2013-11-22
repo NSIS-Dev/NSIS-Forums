@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Altering Cancel Button behaviour (and/or label), media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Altering Cancel Button behaviour (and/or label) NSIS Discussion" />
+	
+	<title> Altering Cancel Button behaviour (and/or label) [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Altering Cancel Button behaviour (and/or label)</div>
+<hr />
+<div class="pda"><a href="t-203849.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=203849">Altering Cancel Button behaviour (and/or label)</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">4th January 2005, 11:17</div></div><div class="posttext">Happy new year guys!<br />
+<br />
+I need to alter a Cancel button label (to say &quot;Skip&quot; instead) and obviously get it to simply move on to the next page instead of halting the install process.<br />
+<br />
+I've read about mysterious things such as $HWNDPARENT, FindWindow and SendMessage, all with rather sparse documentation. Can anyone point me at full documentation, or provide documentation within this thread for me and others who will no doubt struggle with this topic?<br />
+<br />
+Thanks guys!<br />
+<br />
+Rob</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">4th January 2005, 12:53</div></div><div class="posttext">Done the changing the label bit, here's the code:<br />
+<br />
+Push $0<br />
+GetDlgItem $0 $HWNDPARENT 2<br />
+  SendMessage $0 ${WM_SETTEXT} 0 &quot;STR:Skip&quot;<br />
+Pop $0<br />
+<br />
+<br />
+The cancel button is marked as 2 in GetDlgItem, that's where that comes from. The rest should be pretty self-explanatory/obvious when you've seen the docs.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">4th January 2005, 13:45</div></div><div class="posttext">To find dialogue item id's you can use Resource Hacker.<br />
+What do you mean by moving the cancel button? Do you want a cancel button on the InstFiles page?<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">4th January 2005, 14:28</div></div><div class="posttext">Hah! sorry. I mean I want the behaviour of the Cancel button to change, so that instead of cancelling the install, the user is moved onto the next page (i.e. skipping the current page).<br />
+<br />
+Even help with simply removing the prompt (are you sure you want to cancel&quot; or whatever) would be helpful, at least then I could play with MUI_INSTALLOPTIONS_DISPLAY_RETURN stuff.<br />
+<br />
+Thanks<br />
+<br />
+Rob</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">4th January 2005, 15:37</div></div><div class="posttext">Bump! I'd love to fix this by the end of the day if poss guys...:) (45mins to go)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th January 2005, 16:05</div></div><div class="posttext">To the best of my knowledge, this is not possible without changing the source code or writing a plug-in that will override the handling of IDCANCEL. Once IDCANCEL is caught, the quit flag is set and NSIS quits immediately after the custom page function returns. There is no way to unset the quit flag.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">4th January 2005, 16:09</div></div><div class="posttext">Aah. Ok, thanks for that, I'll stop searching :) I found a thread where you said something similar but it was from ages ago so I thought things might have changed.<br />
+<br />
+Cheers!<br />
+<br />
+Rob</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">5th January 2005, 00:48</div></div><div class="posttext">There is a way. I created a function that goes to another page on the installer relatively from the current page. I played with it and the callback funcion &quot;.onUserAbort&quot; to try to get the results you expect. What's incredible is that I got it working all right!!!<br />
+<br />
+1) You need to copy this function code (http://nsis.sourceforge.net/archive/viewpage.php?pageid=183) into your script.<br />
+<br />
+2) If you want to skip a page for ALL installer pages, copy this below:<br />
+Function .onUserAbort<br />
+  StrCpy $R9 1 ;It uses the variable $R9<br />
+  Call RelGotoPage<br />
+  Abort<br />
+FunctionEndOR<br />
+<br />
+If you only want only ONE page to skip another, you need to:<br />
+- use a variable to hold the page index:<br />
+&amp;nbsp;&amp;nbsp;- inside the PreFunction of every page.<br />
+&amp;nbsp;&amp;nbsp;- before InstallOptions plugin first call inside every custom page main function.<br />
+- compare this variable inside the callback function.<br />
+<br />
+This is an example:<br />
+<br />
+Page custom CustomPage<br />
+Page components Components_PreFunction<br />
+Page directory Directory_PreFunction<br />
+<br />
+Function CustomPage<br />
+  StrCpy $R8 1 ;This is the first page<br />
+  InstallOptions::dialog &quot;C:\Dir\Temp.ini&quot;<br />
+  Pop $0<br />
+FunctionEnd<br />
+<br />
+Function Components_PreFunction<br />
+  StrCpy $R8 2 ;This is the second page<br />
+FunctionEnd<br />
+<br />
+Function Directory_PreFunction<br />
+  StrCpy $R8 3 ;This is the third page<br />
+FunctionEnd<br />
+<br />
+Function .onUserAbort<br />
+  StrCmp $R8 1 0 End ;Compare the variable with the<br />
+                     ;page index of your choice<br />
+    StrCpy $R9 1<br />
+    Call RelGotoPage<br />
+    Abort<br />
+  End:<br />
+FunctionEnd<br />
+<br />
+(I based the function &quot;Goto a NSIS Page&quot; from a code inside &quot;io.cpp&quot; that can be found inside &quot;NSIS\Contrib\InstallOptions&quot; folder)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">5th January 2005, 08:54</div></div><div class="posttext">Wow this is fantastic thanks! Question tho - it says it can already see an .onUserAbort function; is this because I'm using the MUI or am I just stupid or what? :)<br />
+<br />
+Cheers<br />
+<br />
+Rob<br />
+<br />
+P.S. thanks again amazing!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">5th January 2005, 10:02</div></div><div class="posttext">Oooh, MUI_CUSTOMFUNCTION_ABORT, right?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">5th January 2005, 11:20</div></div><div class="posttext">Yeah. I put this information on the Archive page.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

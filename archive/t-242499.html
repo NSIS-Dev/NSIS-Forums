@@ -1,0 +1,85 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" InetLoad un-URLEncoding, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  InetLoad un-URLEncoding NSIS Discussion" />
+	
+	<title> InetLoad un-URLEncoding [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  InetLoad un-URLEncoding</div>
+<hr />
+<div class="pda"><a href="t-242499.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=242499">InetLoad un-URLEncoding</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">dienjd</div><div class="date">3rd April 2006, 17:06</div></div><div class="posttext">When I use InetLoad to do an HTTP GET with URLEncoded data, I see with ethereal that what goes through is not URLEncoded.<br />
+<br />
+When I try the same thing with NSISdl, the data goes through encoded properly.<br />
+<br />
+I searched InetLoad.cpp quickly and didn't see any relevant encoding references. Any ideas why this is happening? I can use NSISdl for this GET, but I'm curious as to what caused this.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">3rd April 2006, 18:13</div></div><div class="posttext">GET requests worked correct in my tests ;) Can you give a script sample? And what you see in ethereal. Current version adds &quot;Content-Type: application/x-www-form-urlencoded&quot; header to POST requests only (if you had in mind this). I know it is possible to move FORM data to header URL for GET requests, but this is not implemented yet (and not required I guess).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dienjd</div><div class="date">3rd April 2006, 19:37</div></div><div class="posttext">When I do this test:<br />
+<br />
+Name &quot;gettest&quot;<br />
+Outfile &quot;gettest.exe&quot;<br />
+Section &quot;&quot;<br />
+SectionEnd<br />
+Function .onInit<br />
+  InitPluginsDir<br />
+  GetTempFileName $0 $PLUGINSDIR<br />
+  Rename $0 &quot;$0.htm&quot;<br />
+  StrCpy $R1 &quot;hi%20%3a%29&quot; # &quot;hi :)&quot;<br />
+  InetLoad::load &quot;$my_server/$R1&quot; &quot;$0.htm&quot;<br />
+  ;NSISdl::download &quot;$my_server/$R1&quot; &quot;$0.htm&quot;<br />
+FunctionEnd<br />
+<br />
+I see this in ethereal:<br />
+Inetload:<br />
+hi%20:)<br />
+68 69 25 32 30 3a 29<br />
+<br />
+NSISdl:<br />
+hi%20%3a%29<br />
+68 69 25 32 30 25 33 61 25 32 39<br />
+<br />
+It seems like NSISdl is sending what I passed ($R1), but Inetload seems to be converting the &quot;%3a%29&quot; to the hex values &quot;3a29&quot;. Both may be fine with the server, but I was surprised to see this and wanted to point it out in case it may be an issue. Sorry about the smiley in the example, I didn't think about it at the time.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">3rd April 2006, 20:29</div></div><div class="posttext">You can use the Disable Smilies in This Post check box, if you don't use the quick reply box or if you edit your message. I've disabled it for you in your last post.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">4th April 2006, 06:48</div></div><div class="posttext">I am not sure where this happens precisely - InternetCrackUrl, InternetConnect or somewhere else (this may be tested with simple MessageBox'es), but WinInet probably has some reasons to do this, smiles might be allowed in the http get ;)<br />
+In my tests POST (form) data were sent to server unconverted, so you can use this method. php example included to package.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dienjd</div><div class="date">4th April 2006, 17:07</div></div><div class="posttext">It doesn't just happen with smilies, but you are right, it seems to be InternetCrackUrl. I MessageBox'd before and after this line:<br />
+<br />
+if(InternetCrackUrl(url, 0, ICU_ESCAPE , &amp;uc))<br />
+<br />
+The value before was what I passed in, and the value after was unencoded. Looks like it's the ICU_ESCAPE that does it:<br />
+<br />
+Converts all escape sequences (%xx) to their corresponding characters.<br />
+<br />
+I have to use a GET with URLEncoded data for this particular situation, so I'll go with NSISdl for that, but I have to POST other times, and Inetload works perfectly for that.<br />
+<br />
+Thanks for the quick responses and helping me figure out what was happening :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">4th April 2006, 18:01</div></div><div class="posttext">You can rebuild plug-in with InternetCrackUrl(url, 0, 0, &amp;uc) for your needs ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dienjd</div><div class="date">4th April 2006, 18:11</div></div><div class="posttext">Ah, cool. The MSDN documentation had me thinking that you had to either use ICU_DECODE or ICU_ESCAPE. Thanks!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

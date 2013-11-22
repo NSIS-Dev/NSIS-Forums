@@ -1,0 +1,165 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" User Input Prompt, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  User Input Prompt NSIS Discussion" />
+	
+	<title> User Input Prompt [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  User Input Prompt</div>
+<hr />
+<div class="pda"><a href="t-73862.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=73862">User Input Prompt</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ssurfer26</div><div class="date">29th January 2002, 22:48</div></div><div class="posttext">Ok I know I've asked this question before but I want to do this without an ini file if all possible. What I want is a prompt for some user input so it will pass that variable to the shortcut link NSIS creates.<br />
+<br />
+The variable below is $0, $1 and $2.<br />
+<br />
+Example:<br />
+CreateShortCut &quot;$SMPROGRAMS\test\test\test.lnk&quot; &quot;$INSTDIR\test.exe&quot; &quot;-ip$0 -port$1 -pass$2&quot; &quot;$INSTDIR\test.exe&quot; 0<br />
+<br />
+How can I prompt the user to enter in the info so it will pass to the shortcut?<br />
+<br />
+Thanks,<br />
+Derek :igor:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">30th January 2002, 09:59</div></div><div class="posttext">Hi ssurfer26,<br />
+<br />
+NSIS does not have possibilities for this. But maybe you can write a small exe that will be called from the script and asks for the user input, saves it to the registry, so that the installer scripts can access the user input again.<br />
+<br />
+This is a possibility...<br />
+<br />
+Good luck, greetz,<br />
+Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">30th January 2002, 13:24</div></div><div class="posttext">Maybe also possible: use NSIS extension dll like programming to access the stack and user variables. So create a small exe that requests for user input and sets eg $R9 to the given value.<br />
+But again: i'm not sure this is possible (maybe someone else can verify this one)<br />
+<br />
+Good luck, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">30th January 2002, 15:11</div></div><div class="posttext">Or you can just use InstallOptions which is already included in the NSIS pacakage. :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ssurfer26</div><div class="date">30th January 2002, 20:14</div></div><div class="posttext">ok I think the InstallOptions will work. Just have to figure out how to implement it into my script. So question... How do I package both the installer and the dll/ini files together? Do I need 2 install packages then? One to extract all the temp files and then excute the real installer?<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">30th January 2002, 21:04</div></div><div class="posttext">Derek,<br />
+<br />
+i understood you didn't want to use an ini...<br />
+Whatever, here's how you do it:<br />
+<br />
+<br />
+SetOutPath $TEMP<br />
+File InstOpts.dll<br />
+File myini.ini<br />
+Push $TEMP\myini.ini<br />
+CallInstDll $TEMP\InstOpts.dll dialog<br />
+; return can be 'cancel', 'back', or 'Ok'<br />
+; so check this and then use ReadIniStr<br />
+; to read the $TEMP\myini.ini.<br />
+; Do not forget to delete these files after<br />
+; completing setup.<br />
+<br />
+<br />
+You can put this code whereever you like, eg in .onNextPage (then you can ask for a RegCode before getting to install files) or in some section.<br />
+<br />
+Good luck, greetz,<br />
+Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ssurfer26</div><div class="date">30th January 2002, 23:16</div></div><div class="posttext">ok well I kind of have it working... This is the code I have for a section. Only a few small problems. It doesn't popup until the very end after it's created the shortcuts already. How can I get that to run before it creates the shortcuts etc?<br />
+<br />
+Derek<br />
+<br />
+Example Code:<br />
+; optional section<br />
+Section &quot;Monitoring Server Shortcuts&quot;  <br />
+SetOutPath $TEMP<br />
+	File test.ini<br />
+	File InstallOptions.dll<br />
+	Push $TEMP\test.ini<br />
+ 	CallInstDLL $TEMP\InstallOptions.dll dialog<br />
+        Pop $0 <br />
+        ;  ($0 would be &quot;success&quot; &quot;cancel&quot; &quot;back&quot; or some other value on error.<br />
+<br />
+	ReadINIStr $R0 $7 &quot;Field 1&quot; State<br />
+	ReadINIStr $R1 $7 &quot;Field 2&quot; State<br />
+	ReadINIStr $R2 $7 &quot;Field 3&quot; State<br />
+<br />
+	Delete $TEMP\test.ini<br />
+	Delete $TEMP\InstallOptions.dll<br />
+<br />
+<br />
+CreateShortCut &quot;$SMPROGRAMS\test\test.lnk&quot; &quot;$INSTDIR\test.exe&quot; &quot;-1$R0 -2$R1 -3$R2&quot; &quot;$INSTDIR\test.exe&quot; 0<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">31st January 2002, 09:34</div></div><div class="posttext">In the code you've posted, it's not possible (i think) that the shortcut is created before asking for input.<br />
+<br />
+If you want to get the information before getting to 'install', use .onNextPage to put your question between some pages of the installer. Take a look at RegCode (included) for an example on how to ask for a regcode before selecting a dir.<br />
+<br />
+Good luck, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Dizzy007</div><div class="date">16th September 2002, 13:04</div></div><div class="posttext">Hi to all!<br />
+<br />
+i'm new in using NSIS and i've problems to understand the code of &quot;regcodenew&quot; :( <br />
+Can anyone explain the following line to me?<br />
+<br />
+!insertmacro CustomPages 01AB2345 $R9 $R8 onCustomPage onPageEntry onPageExit<br />
+<br />
+OK - custom pages .. but how does it work?<br />
+And which section is section 5 ??<br />
+<br />
+What about the sections at the end of the code (Section 1 to 3) ?? Are this the sections &quot;1=Installation Options,2=Installation Directory,3=Installing Files&quot; where i have to put my onw code???<br />
+<br />
+And ... Exch-Pop-Push ... <br />
+In the &quot;Funktion onCustomPage&quot; the first thing is <br />
+Exch $0 <br />
+Why ?<br />
+<br />
+Thanks for help a newbie!!<br />
+Dizzy</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">16th September 2002, 13:34</div></div><div class="posttext">!insertmacro CustomPages 01AB2345 $R9 $R8 onCustomPage onPageEntry onPageExit<br />
+<br />
+This line inserts a macro into the script. A macro is a defined set of lines that you can insert into your script in any positions. This line inserts the CustomPages macro which helps you create custom pages with ease (MultIni4 (http://www.clantpa.co.uk/nsis/wiki/index.php/MultIni4) is its newer version). Open up CustomPages.nsh, there are a lot of explainations about this macro in there.<br />
+<br />
+And which section is section 5 ?? <br />
+<br />
+What about the sections at the end of the code (Section 1 to 3) ?? Are this the sections &quot;1=Installation Options,2=Installation Directory,3=Installing Files&quot; where i have to put my onw code???<br />
+<br />
+You are confusing sections and pages. The numbers there represent pages, not sections.<br />
+<br />
+And ... Exch-Pop-Push ... <br />
+In the &quot;Funktion onCustomPage&quot; the first thing is <br />
+Exch $0 <br />
+Why ?<br />
+<br />
+NSIS scripting langauge isn't a high language like C and friends. You have to use the stack manually in NSIS. To give a function an parameter you have to push it to the stack. For the function to get this parameter it has to pop it from the stack. Exch just replaces the top stack element with the given variable ($0 in this case). This was done so $0's old value won't get deleted by a simple pop instruction.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Dizzy007</div><div class="date">16th September 2002, 16:22</div></div><div class="posttext">Yes ... now i see a little bit clearer! :p <br />
+<br />
+Now i've to test a little bit with the stack. <br />
+<br />
+Thanks for your help! :up: <br />
+<br />
+Dizzy</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

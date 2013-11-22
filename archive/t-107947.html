@@ -1,0 +1,185 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Need &quot;SendMessage&quot;-Command Help, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Need &quot;SendMessage&quot;-Command Help NSIS Discussion" />
+	
+	<title> Need &quot;SendMessage&quot;-Command Help [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Need &quot;SendMessage&quot;-Command Help</div>
+<hr />
+<div class="pda"><a href="t-107947.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=107947">Need &quot;SendMessage&quot;-Command Help</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Borg Number One</div><div class="date">2nd October 2002, 03:27</div></div><div class="posttext">Hello World:)<br />
+Closing winamp with NSIS is no problem:<br />
+<br />
+Function CloseWinamp<br />
+	Push $0<br />
+	loop:<br />
+		FindWindow $0 &quot;Winamp v1.x&quot;<br />
+		IntCmp $0 0 done<br />
+			SendMessage $0 &quot;000E&quot; 0 0<br />
+			SendMessage $0 &quot;0002&quot; 0 0<br />
+			SendMessage $0 &quot;0082&quot; 0 0<br />
+;or thisone		SendMessage $0 &quot;16&quot; 0 0<br />
+			Sleep 100<br />
+			Goto loop<br />
+	done:<br />
+Pop $0<br />
+FunctionEnd<br />
+<br />
+But I would like to build a little effect with MS-Editor<br />
+Editor should start and Letters should be inserted automatically.<br />
+<br />
+I tried thisone without succes, Notepad starts and nothing else.<br />
+<br />
+Function CloseWinamp<br />
+Exec $WINDIR\Notepad.exe<br />
+Push $0<br />
+	loop:<br />
+		FindWindow $0 &quot;&quot; &quot;Unbenannt - Editor&quot;<br />
+		IntCmp $0 0 done<br />
+<br />
+			SendMessage $0 &quot;0100&quot; 48 230001<br />
+;P WM_KEYDOWN nVirtKey:'H' cRepeat:1 ScanCode:23 fExtended:0 fAltDown:0 fRepeat:0 fUp:0 [wParam:00000048 lParam:00230001]<br />
+00000514<br />
+			SendMessage $0 &quot;0102&quot; 68 230001<br />
+;P WM_CHAR chCharCode:'h' (104) cRepeat:1 ScanCode:23 fExtended:0 fAltDown:0 fRepeat:0 fUp:0 [wParam:00000068 lParam:00230001]<br />
+00000514<br />
+			SendMessage $0 &quot;0101&quot; 48 C0230001<br />
+;P WM_KEYUP nVirtKey:'H' cRepeat:1 ScanCode:23 fExtended:0 fAltDown:0 fRepeat:1 fUp:1 [wParam:00000048 lParam:C0230001]<br />
+<br />
+;			SendMessage $0 &quot;000E&quot; 0 0<br />
+;			SendMessage $0 &quot;0002&quot; 0 0<br />
+;			SendMessage $0 &quot;0082&quot; 0 0<br />
+;			SendMessage $0 &quot;16&quot; 0 0<br />
+			Sleep 100<br />
+			Goto loop<br />
+	done:<br />
+Pop $0<br />
+FunctionEnd<br />
+<br />
+How Can I realize this special effect?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd October 2002, 13:01</div></div><div class="posttext">You got two problems in your code:<br />
+1) You send the messages to the notepad window it self and not to its text edit sub-window.<br />
+2) All of your hex numbers are written as normal numbers.<br />
+<br />
+You can also use WinMessages.nsh to make the code more readable, using ${WM_CLOSE} instead of 16 (0x10) for example.<br />
+<br />
+Exec notepad.exe<br />
+<br />
+findloop:<br />
+	Sleep 500<br />
+	FindWindow $0 &quot;Notepad&quot;<br />
+	StrCmp $0 0 findloop<br />
+<br />
+FindWindow $1 &quot;Edit&quot; &quot;&quot; $0<br />
+<br />
+SendMessage $1 ${WM_CHAR} 0x68 0x230001<br />
+<br />
+MessageBox MB_OK &quot;Click OK to close Notepad&quot;<br />
+<br />
+SendMessage $0 ${WM_CLOSE} 0 0<br />
+<br />
+I didn't use WM_KEYDOWN and WM_KEYUP because:<br />
+The WM_CHAR message is posted to the window with the keyboard focus when a WM_KEYDOWN message is translated by the TranslateMessage function. The WM_CHAR message contains the character code of the key that was pressed.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Borg Number One</div><div class="date">2nd October 2002, 23:25</div></div><div class="posttext">I put yours Into this:<br />
+<br />
+<br />
+OutFile &quot;Print text to editor.exe&quot;<br />
+Name &quot;Print text to editor&quot;<br />
+;Caption &quot;CD input Plug-in Changer Built by Borg_No.One&quot;<br />
+SilentInstall &quot;silent&quot;<br />
+ShowInstDetails &quot;hide&quot;<br />
+DirShow &quot;hide&quot;<br />
+;InstallDir $PROGRAMFILES\Winamp<br />
+<br />
+Function .onInit<br />
+<br />
+FunctionEnd<br />
+<br />
+Section DoItAll<br />
+	Call CloseWinamp<br />
+SectionEnd<br />
+<br />
+Function CloseWinamp<br />
+Exec $WINDIR\Notepad.exe<br />
+<br />
+findloop:<br />
+    Sleep 500<br />
+    FindWindow $0 &quot;Notepad&quot;<br />
+    StrCmp $0 0 findloop<br />
+<br />
+FindWindow $1 &quot;Edit&quot; &quot;&quot; $0<br />
+<br />
+SendMessage $1 ${WM_CHAR} 0x68 0x230001<br />
+<br />
+MessageBox MB_OK &quot;Click OK to close Notepad&quot;<br />
+<br />
+SendMessage $0 ${WM_CLOSE} 0 0<br />
+Pop $0<br />
+FunctionEnd<br />
+<br />
+<br />
+And if I want to compile the whole with &quot;Compile with Nsis/ Nsis+Bzip2,<br />
+<br />
+I get following errormessage:<br />
+<br />
+2 warnings:<br />
+  unknown variable &quot;{WM_CHAR}&quot; detected, ignoring<br />
+<br />
+  unknown variable &quot;{WM_CLOSE}&quot; detected, ignoring<br />
+<br />
+After running the exe only editor starts, withoutany typed char and without closing editor.<br />
+<br />
+Could you test it please?<br />
+What do you mean with unknown file:&quot;WinMessages.nsh&quot;?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Borg Number One</div><div class="date">2nd October 2002, 23:41</div></div><div class="posttext">Hi<br />
+<br />
+I put the content of winmessages into my nsi script file and it works great. Why does not the NSIS-compiler use Winmessages automatically?<br />
+<br />
+Why are &quot;Winmessages.nsh&quot; and all other nsh files not mentioned in any documentation?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Borg Number One</div><div class="date">3rd October 2002, 03:00</div></div><div class="posttext">;&quot;SendMessage $2 ${WM_CHAR} 0x006E	0x310001<br />
+&quot; should close the editor &quot;click no-button&quot;, but it does not work, why????<br />
+<br />
+FindWindow $2 &quot;#3277&quot; &quot;Editor&quot;<br />
+SendMessage $2 ${WM_CHAR} 0x006E	0x310001<br />
+<br />
+<br />
+SendMessage $0 ${WM_CLOSE} 0 0<br />
+Pop $0<br />
+FunctionEnd<br />
+<br />
+<br />
+How can NSIS select &quot;no&quot;  if Notepad ask me if I want to save changes?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">3rd October 2002, 11:09</div></div><div class="posttext">You can also use WinMessages.nsh to make the code more readable, using ${WM_CLOSE} instead of 16 (0x10) for example.<br />
+<br />
+Using it means including it like you did in your last code. NSIS doesn't automatically includes this file becuase not all users use it. Like you have probably noticed, you got those warnings because you didn't include it.<br />
+<br />
+How can NSIS select &quot;no&quot; if Notepad ask me if I want to save changes?<br />
+<br />
+You can't. SendMessage will wait until notepad finishes processing it, and this will only happen when the user will click something. You can if you want use the latest CVS version and use SendMessage /TIMEOUT=1.<br />
+<br />
+I have edited some of your posts because they were huge, please post only the relevant parts of your scripts or output instead of all of it at once. If you want to include a big script attach it.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

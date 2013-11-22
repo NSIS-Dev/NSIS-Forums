@@ -1,0 +1,130 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" BUG: GetParameters or $CMDLINE broken in 2.01, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  BUG: GetParameters or $CMDLINE broken in 2.01 NSIS Discussion" />
+	
+	<title> BUG: GetParameters or $CMDLINE broken in 2.01 [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  BUG: GetParameters or $CMDLINE broken in 2.01</div>
+<hr />
+<div class="pda"><a href="t-195290.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=195290">BUG: GetParameters or $CMDLINE broken in 2.01</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">byteboon</div><div class="date">1st October 2004, 18:08</div></div><div class="posttext">Hi,<br />
+<br />
+I have an uninstall script that takes a custom parameter. After upgrading to 2.01, this script now fails to recognize the parameter. It seems that the GetParameters or $CMDLINE behaviour changed. I now get a trailing space in the returned string from GetParameters, which fails my StrCmp. I know I can add a space to my string, but this should be fixed internally if it is indeed a bug.<br />
+<br />
+Thanks,<br />
+Jeremy.<br />
+<br />
+<br />
+MY Code:<br />
+<br />
+Function un.onInit<br />
+  SetSilent silent<br />
+<br />
+  StrCpy $R0 &quot;&quot;<br />
+  Call un.GetParameters<br />
+  Pop $R0<br />
+<br />
+  MessageBox MB_OK &quot;[$R0]&quot; ; this shows [/D ]<br />
+  <br />
+  StrCmp $R0 &quot;/D&quot; 0 GoCheckParm2 ; fails now because &quot;/D&quot;!=&quot;/D &quot;<br />
+  ..do stuff..<br />
+ GoCheckParm2:<br />
+  ..do stuff..<br />
+<br />
+  ...snip...<br />
+<br />
+<br />
+MY GetParameters (for uninstaller):<br />
+<br />
+Function un.GetParameters<br />
+<br />
+   Push $R0<br />
+   Push $R1<br />
+   Push $R2<br />
+   Push $R3<br />
+<br />
+   StrCpy $R2 1<br />
+   StrLen $R3 $CMDLINE<br />
+<br />
+   ;Check for quote or space<br />
+   StrCpy $R0 $CMDLINE $R2<br />
+   StrCmp $R0 '&quot;' 0 +3<br />
+     StrCpy $R1 '&quot;'<br />
+     Goto loop<br />
+   StrCpy $R1 &quot; &quot;<br />
+<br />
+   loop:<br />
+     IntOp $R2 $R2 + 1<br />
+     StrCpy $R0 $CMDLINE 1 $R2<br />
+     StrCmp $R0 $R1 get<br />
+     StrCmp $R2 $R3 get<br />
+     Goto loop<br />
+<br />
+   get:<br />
+     IntOp $R2 $R2 + 1<br />
+     StrCpy $R0 $CMDLINE 1 $R2<br />
+     StrCmp $R0 &quot; &quot; get<br />
+     StrCpy $R0 $CMDLINE &quot;&quot; $R2<br />
+<br />
+   Pop $R3<br />
+   Pop $R2<br />
+   Pop $R1<br />
+   Exch $R0<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st October 2004, 21:08</div></div><div class="posttext">It's $CMDLINE's behavior that changed in version 2.0. It's &quot;made the command line parser cut right on /D= and _?= and not one char before. this way foo.exe &quot;bla&quot;/D=..., which appears to be valid in other applications, will not get the last quote cut off.&quot; (http://cvs.sourceforge.net/viewcvs.py/nsis/NSIS/Source/exehead/Main.c?r1=1.53&amp;r2=1.54)<br />
+<br />
+Should $CMDLINE stick to the real command line or trim from the right? GetParameters already trims from the left, maybe it should trim from the right too. The uninstaller should remove the space it adds, that's what it has been doing before 2.0. But should it trim other spaces too? Someone might want to use the spaces for some reason.<br />
+<br />
+Comments anyone?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">byteboon</div><div class="date">1st October 2004, 22:13</div></div><div class="posttext">Obviously I'm biased since I want my code to work like it did before but...<br />
+<br />
+I tend to think of the commandline like the C main(argc,argv[]) where a space in a non-quoted part of the commandline is treated as a delimiter for a new parameter. I understand that Windows just passes the whole line, but is it not reasonable to mimic C's behaviour?  Even Windows requires a path with a space be quoted to be recognized properly. So, if I want a trailing space, I could use mycmd.exe &quot;/D &quot; to force the space... usually you don't want the quotes returned with the parameter, and if quotes are important you can double quote...<br />
+<br />
+This is how I would naturally expect things to be parsed:<br />
+<br />
+mycmd.exe /D -&gt; [/D]<br />
+mycmd.exe &quot;/D &quot; -&gt; [/D ]<br />
+mycmd.exe /D=test -&gt; [/D=test]<br />
+mycmd.exe &quot;/D=test -&gt; [/D=test]<br />
+mycmd.exe /D=&quot;test &quot; -&gt; [/D=&quot;test &quot;]<br />
+mycmd.exe &quot;&quot;/D &quot; &quot; -&gt; [&quot;/D &quot; ] (but I guess parsing double quotes could get hairy)<br />
+<br />
+My two cents.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st October 2004, 22:21</div></div><div class="posttext">It's all true, but $CMDLINE doesn't pretend to mimic C's behavior. It just passes the command line almost as-is.<br />
+<br />
+Anyway, I have reverted the changes done in 1.54 and added a check to make sure there is a space before _=? and /D=. This will cause your script to work as before.<br />
+<br />
+Currnetly, $CMDLINE is not trimmed. It just passes the arguments the user passed as-is.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">byteboon</div><div class="date">1st October 2004, 22:23</div></div><div class="posttext">Works for me, thanks for a great product! :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">byteboon</div><div class="date">3rd October 2004, 02:15</div></div><div class="posttext">Well, I tried the autogenerated build from Saturday and the same problem exists. I still get a trailing space as above. Am I missing something? <br />
+<br />
+Please not that this is *not* the /D= switch for the compiler, this is my own /D switch that I use to tell the uninstaller to do something different.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">10th October 2004, 14:38</div></div><div class="posttext">You are missing a compiled version ;)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

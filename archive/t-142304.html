@@ -1,0 +1,468 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Copying single multibyte characters with StrCpy, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Copying single multibyte characters with StrCpy NSIS Discussion" />
+	
+	<title> Copying single multibyte characters with StrCpy [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Copying single multibyte characters with StrCpy</div>
+<hr />
+<div class="pda"><a href="t-142304.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=142304">Copying single multibyte characters with StrCpy</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">15th July 2003, 17:52</div></div><div class="posttext">I have this function that takes a string that is a directory path and tries to figure out what's the upper most directory that has to be created.<br />
+<br />
+For example, if the user wants to install the app to:<br />
+C:\Program Files\ABC\123<br />
+<br />
+and ABC doesn't exist in Program Files, the function will return C:\Program Files\ABC, it makes it usefull for deleting all the directories that you've created upon uninstall.<br />
+<br />
+The function looks like:<br />
+<br />
+<br />
+  ; FindTopLevelDirectory<br />
+  ; input, none, uses $INSTDIR<br />
+  ; output, top of stack (replaces, with e.g. C:\Program Files)<br />
+  ; the top-most parent of $INSTDIR that does not currently exist<br />
+  ; modifies no other variables.<br />
+  ;<br />
+  ; Usage:<br />
+  ;   Call FindTopLevelDirectory<br />
+  ;   Pop $R0<br />
+  ;   ; at this point $R0 will equal &quot;C:\Program Files\NonexistantDirectory&quot;<br />
+  function FindTopLevelDirectory<br />
+    ; $R2 directory path to installation<br />
+    ; $R3 counter<br />
+    ; $R4 temp counter<br />
+    ; $R5 temp string<br />
+    Pop $R2 ;the orginal string<br />
+    StrCpy $R3 &quot;-1&quot;<br />
+    StrCpy $R5 &quot;&quot;<br />
+    Loop:<br />
+    IntOp $R3 $R3 + 1<br />
+    StrCpy $R4 $R2 1 $R3<br />
+    StrCmp $R4 &quot;&quot; ExitLoop<br />
+    StrCmp $R4 &quot;\&quot; Directory<br />
+    StrCpy $R5 $R5$R4<br />
+    Goto Loop<br />
+    Directory:<br />
+    StrCpy $R5 &quot;$R5&quot;<br />
+    IfFileExists &quot;$R5\*.*&quot; &quot;&quot; ExitLoop<br />
+    StrCpy $R5 &quot;$R5\&quot;<br />
+    Goto Loop<br />
+    ExitLoop:<br />
+    IfFileExists &quot;$R5*.*&quot; +2<br />
+    Push $R5<br />
+  FunctionEnd<br />
+<br />
+<br />
+The problem is when the path has Japanese characters, the statement<br />
+<br />
+StrCpy $R4 $R2 1 $R3<br />
+<br />
+<br />
+returns an invalid character, which is expected, because it's a multibyte character. I somtimes can detect this by doing the following instead:<br />
+<br />
+<br />
+         StrCpy $R4 $R2 1 $R3<br />
+         StrCmp $R4 &quot;&quot; &quot;&quot; Check<br />
+	; try 2 bytes in case it's a multibyte folder.<br />
+         StrCpy $R4 $R2 2 $R3 <br />
+	StrCmp $R4 &quot;&quot; ExitLoop<br />
+	Check:<br />
+         StrCmp $R4 &quot;\&quot; Directory<br />
+<br />
+<br />
+But sometimes the copying 1 character returns a valid character, even though it's part of a multibyte character, and I get what is commonly known as mojibake. <br />
+<br />
+Does anyone have any ideas of a better way to copy one character at a time that handles multibyte characters? Or is there a better way to iterate over the parent directories of a path? <br />
+<br />
+I'm using NSIS 2.01b if that helps.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">15th July 2003, 17:56</div></div><div class="posttext">Use GetParent to get the C:\Program Files\ABC bit, then use GetFileName to get hold of ABC.<br />
+<br />
+All functions are on the NSIS Archive (http://nsis.sourceforge.net/archive/nsisweb.php)<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">15th July 2003, 17:59</div></div><div class="posttext">That has the same problem.<br />
+<br />
+<br />
+StrCpy $R2 $R0 1 $R1</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">15th July 2003, 18:02</div></div><div class="posttext">Have you tried getting the latest CVS, because maybe new support for these characters have been added.<br />
+I know that it will be a lot of work converting to the new NSIS2b4 format, but it's worth it.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">15th July 2003, 18:19</div></div><div class="posttext">The latest CVS version won't help with this. But it does contain an example to what you're trying to do (folder stuff, not MBCS). You can find this example online, here (http://nsis.sourceforge.net/Examples/Modern%20UI/StartMenu.nsi).<br />
+<br />
+To be to get one &quot;real&quot; character you should use CharNext with System.dll.<br />
+<br />
+BTW, why are you comparing it to a quoted space?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">15th July 2003, 18:39</div></div><div class="posttext">With the GetParent and GetFileName functions, just blank out the lines that compare the variable to &quot;&quot; that come below the single character seperation.<br />
+It won't matter whether or not the character is invalid (&quot;&quot;) or not then.<br />
+<br />
+(All you want to look for is &quot;\&quot;, so there is no need to check for &quot;&quot; which is usually the output got at the end of a string)<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">16th July 2003, 00:50</div></div><div class="posttext">I'm not comparing anything to a quoted space. It's an empty string. &quot;&quot; :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">16th July 2003, 00:57</div></div><div class="posttext">So if i blank those lines, how does it know if it's reached the end of the string?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">16th July 2003, 09:48</div></div><div class="posttext">Haha, I'm going blind :)<br />
+<br />
+Anyway, the only way you'd know what you're up against is by using CharNext or IsDBCSLeadByte. But you don't need either, just use the script I have attached, it's much more efficient.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">16th July 2003, 16:14</div></div><div class="posttext">Right, I see why that solution would work. There's a problem with it however, if the user had created an empty directory previously, then installed the application into that directory, the uninstall would delete the directory the user created beforehand even though it wasn't created by the application's installer. <br />
+<br />
+This may or may not be the wish of the user. The safer route is to delete only the directories that the installer creates.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th July 2003, 16:42</div></div><div class="posttext">Originally posted by tderouin <br />
+So if i blank those lines, how does it know if it's reached the end of the string?  <br />
+<br />
+As long as the string has &quot;\&quot; in it then it won't need to go to the end of the string :p<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">16th July 2003, 16:43</div></div><div class="posttext">$INSTDIR isn't terminated with a \ character.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th July 2003, 16:46</div></div><div class="posttext">?<br />
+If $INSTDIR is e.g. C:\quake2\dday, then it will see the &quot;\&quot; before &quot;dday&quot;.<br />
+<br />
+$INSTDIR is a run-time variable, so changes to whatever the user has entered.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">16th July 2003, 16:49</div></div><div class="posttext">Right. <br />
+What about this example: C:\Program Files\ABC (C:\Program Files exists, ABC does not)<br />
+<br />
+It checks to C:\Program Files\ finds it exists.<br />
+Keeps copying over characters. Copies A, then B, then C, then copies &quot;&quot; not &quot;\&quot; and just loops infinitely because we're not checking for the end of a string that's not terminated by &quot;\&quot;.<br />
+<br />
+Doesn't work, does it?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th July 2003, 16:58</div></div><div class="posttext">I don't understand why you think it won't work.<br />
+It checks for &quot;\&quot;, then when it is found (it will be) it gets straight out of the loop, gets ABC from the string, then exits the function.<br />
+There is no way it will loop unless you're string has no &quot;\&quot; in it.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">16th July 2003, 17:02</div></div><div class="posttext">I know it won't work because I tested it. Take a look at the loop:<br />
+<br />
+<br />
+    Loop:<br />
+    IntOp $R3 $R3 + 1<br />
+    StrCpy $R4 $R2 1 $R3<br />
+    StrCmp $R4 &quot;&quot; ExitLoop<br />
+    StrCmp $R4 &quot;\&quot; Directory<br />
+    StrCpy $R5 $R5$R4<br />
+    Goto Loop<br />
+<br />
+<br />
+It loops copying over a character at time. When it has copied over the final C, it has nothing left to copy, so $R4 is &quot;&quot; on the next iteration. Since it's not terminated by &quot;\&quot;, it continues to loop, $R4 continues to be &quot;&quot;. Taking that statement out will cause it to loop infinitely if the string is not terminated by a back slash, guaranteed.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th July 2003, 17:04</div></div><div class="posttext">I am wondering now why you need the function...<br />
+Because, the $INSTDIR is created automatically anyway.<br />
+<br />
+If $INSTDIR is C:\progra~1\abc\123 then subdirs abc and 123 are created anyway.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th July 2003, 17:05</div></div><div class="posttext">Code is wrong.<br />
+<br />
+StrCpy $R3 0<br />
+Loop:<br />
+    IntOp $R3 $R3 - 1<br />
+    StrCpy $R4 $R2 1 $R3<br />
+    StrCmp $R4 &quot;&quot; ExitLoop<br />
+    StrCmp $R4 &quot;\&quot; Directory<br />
+    StrCpy $R5 $R5$R4<br />
+    Goto Loop<br />
+<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">16th July 2003, 17:06</div></div><div class="posttext">Right. But if you read my previous posts you'll see I'm worried about the uninstall process.<br />
+<br />
+RMDIR $INSTDIR <br />
+<br />
+only removes C:\progra~1\abc\123 and not C:\progra~1\abc.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th July 2003, 17:09</div></div><div class="posttext">There's a problem with what you want too...<br />
+What happens if the $INSTDIR is just C:\progra~1\abc?<br />
+abc will be removed, then you will remove the next directory down which is C:\progra~1!!!<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">16th July 2003, 17:11</div></div><div class="posttext">Are you that familiar with the NSIS code? <br />
+<br />
+RMDIR removes the directory only if it's empty.<br />
+<br />
+RMDIR /R removes the directory recursively. <br />
+<br />
+In the previous code C:\Program Files\abc would be identified as the top level directory and stored in the registry. That would be the top most directory that would be removed, not C:\Program Files, not sure where you got the idea that the code would attempt to remove that directory.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th July 2003, 17:18</div></div><div class="posttext">Sorry, missed that.<br />
+<br />
+Ok. I will right a small function for this because I think that it would be useful.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">16th July 2003, 17:18</div></div><div class="posttext">There is a very simple solution to avoid comparing to &quot;&quot; and it's to simply append a back-slash to the end of the string.<br />
+<br />
+As for deleting empty directories the user have created, unless you want to create the directories manually at install time and save in a log each directory created, that's what you've got.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th July 2003, 17:29</div></div><div class="posttext">Try this out.<br />
+<br />
+Usage:<br />
+Push 2 ;check 2 last dirs<br />
+Push $INSTDIR<br />
+ Call RemoveDirs<br />
+<br />
+<br />
+Function RemoveDirs<br />
+Exch $R0 ;input string<br />
+Exch<br />
+Exch $R1 ;maximum number of dirs to check for<br />
+Push $R2<br />
+Push $R3<br />
+Push $R4<br />
+Push $R5<br />
+   IfFileExists &quot;$R0\*.*&quot; 0 +2<br />
+   RMDir &quot;$R0&quot;<br />
+ StrCpy $R5 0<br />
+top:<br />
+ StrCpy $R2 0<br />
+ StrLen $R4 $R0<br />
+loop:<br />
+ IntOp $R2 $R2 + 1<br />
+  StrCpy $R3 $R0 1 -$R2<br />
+ StrCmp $R2 $R4 exit<br />
+ StrCmp $R3 &quot;\&quot; 0 loop<br />
+  StrCpy $R0 $R0 -$R2<br />
+   IfFileExists &quot;$R0\*.*&quot; 0 +2<br />
+   RMDir &quot;$R0&quot;<br />
+ IntOp $R5 $R5 + 1<br />
+ StrCmp $R5 $R1 exit<br />
+Goto top<br />
+exit:<br />
+Pop $R5<br />
+Pop $R4<br />
+Pop $R3<br />
+Pop $R2<br />
+Pop $R1<br />
+Pop $R0<br />
+FunctionEnd<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th July 2003, 17:34</div></div><div class="posttext">Just tested it, and changed 1 thing - works fine.<br />
+Re-copy the script.<br />
+I will put this on the archive.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">16th July 2003, 17:38</div></div><div class="posttext">How are you calling it?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th July 2003, 17:50</div></div><div class="posttext">http://nsis.sourceforge.net/archive/nsisweb.php?page=358&amp;instances=0,11,211<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">16th July 2003, 17:56</div></div><div class="posttext">That looks good. I'll give it a try. <br />
+<br />
+However, how do you know how many directories are created? Would it involve iterating over $INSTDIR in SecCopyUI and create each directory piecemeal correct? <br />
+<br />
+Then we'd probably have to copy a character at a time, right? :) Which takes us back to the original problem. I have yet to try out NextChar, I'll post my findings when I am finished. <br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th July 2003, 18:04</div></div><div class="posttext">Look at my script.<br />
+It bypasses the problem that we had before.<br />
+<br />
+By comparing the strlen with the minus (chop number)<br />
+Therefore, if the strlen and chop number are equal, then it has got to the end of the string.<br />
+<br />
+If you want to find out how many subdirectories there are, use this:<br />
+<br />
+Function SubdirsAmount<br />
+Exch $R0 ;input string<br />
+Push $R1<br />
+Push $R2<br />
+Push $R3<br />
+Push $R4<br />
+ StrCpy $R1 0<br />
+ StrLen $R2 $R0<br />
+loop:<br />
+ IntOp $R1 $R1 + 1<br />
+  StrCpy $R3 $R0 1 -$R1<br />
+ StrCmp $R1 $R2 exit<br />
+ StrCmp $R3 &quot;\&quot; 0 loop<br />
+  IntOp $R4 $R4 + 1<br />
+Goto loop<br />
+exit:<br />
+StrCpy $R0 $R4<br />
+Pop $R4<br />
+Pop $R3<br />
+Pop $R2<br />
+Pop $R1<br />
+Exch $R0 ;output<br />
+FunctionEnd<br />
+<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th July 2003, 18:05</div></div><div class="posttext">So you're code should look like this:<br />
+<br />
+Push $INSTDIR<br />
+ Call SubdirsAmount<br />
+Pop $R0<br />
+<br />
+Push $R0<br />
+Push $INSTDIR<br />
+ Call UninstallDirs<br />
+<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th July 2003, 15:49</div></div><div class="posttext">tderouin, do the MBCS characters come right if you copy byte by byte? Afrow UK's code should help you test that.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">24th July 2003, 00:26</div></div><div class="posttext">I'm just getting around to testing this now, SubdirsAmount doesn't actually record how many directories are going to be created. It should probably be changed to check to see if a directory exists, if it doesn't exist then increment the number of subdirs, if it doesn't exist don't increment but continue copying. <br />
+I'll play with it and post new code if I find a better way. <br />
+<br />
+Ex:<br />
+SubdirsAmount C:\Documents and Settings\user\Start Menu\Programs\Product<br />
+<br />
+returns 6<br />
+<br />
+but only one dir is being created, so in the uninstall log you see:<br />
+<br />
+rmdir C:\Documents and Settings\user\Start Menu\Programs\Product<br />
+rmdir C:\Documents and Settings\user\Start Menu\Programs<br />
+rmdir C:\Documents and Settings\user\Start Menu<br />
+rmdir C:\Documents and Settings\user<br />
+rmdir C:\Documents and Settings<br />
+rmdir C:<br />
+<br />
+Which wouldn't look to pleasant to the user.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">24th July 2003, 00:57</div></div><div class="posttext">I found this was a good way for finding the numbeof subdirs that had to be created:<br />
+<br />
+<br />
+	Function SubdirsAmount<br />
+	Exch $R0 ;input string<br />
+	Push $R1<br />
+	Push $R2<br />
+	Push $R3<br />
+	Push $R4<br />
+	Push $R5<br />
+	 StrCpy $R1 0<br />
+	 StrLen $R2 $R0<br />
+	loop:<br />
+	 IntOp $R1 $R1 + 1<br />
+	  StrCpy $R5 $R0 -$R1<br />
+	  StrCpy $R3 $R0 1 -$R1<br />
+	 StrCmp $R1 $R2 exit<br />
+	 StrCmp $R3 &quot;\&quot; 0 loop<br />
+	 IfFileExists &quot;$R5\*.*&quot; loop ; don't increment if the directory exists<br />
+	  IntOp $R4 $R4 + 1<br />
+	Goto loop<br />
+	exit:<br />
+	StrCpy $R0 $R4<br />
+	Pop $R5<br />
+	Pop $R4<br />
+	Pop $R3<br />
+	Pop $R2<br />
+	Pop $R1<br />
+	Exch $R0 ;output<br />
+	FunctionEnd<br />
+<br />
+<br />
+So when installing I would do:<br />
+<br />
+   Push &quot;$INSTDIR&quot;<br />
+   Call SubdirsAmount<br />
+   Pop $R0<br />
+   WriteRegStr HKCU &quot;${REGISTRY_LOC}&quot; &quot;UninstallTopLevelFolder&quot; &quot;$R0&quot;<br />
+<br />
+<br />
+When uninstalling: <br />
+<br />
+  ; remove folders<br />
+  ReadRegStr $R0 HKCU &quot;${REGISTRY_LOC}&quot; &quot;UninstallTopLevelFolder&quot;<br />
+  Push $R0<br />
+  Push &quot;$INSTDIR&quot;<br />
+  call un.UninstallDirs</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">24th July 2003, 12:43</div></div><div class="posttext">What about the MBCS characters? Do they come out right?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">24th July 2003, 17:16</div></div><div class="posttext">Yes, this seems to work for multibyte characters.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">13th August 2003, 21:08</div></div><div class="posttext">I have updated the GetParent function, so it should support MBCS now. Can you please test this one? Thanks :)Function GetParent<br />
+   Exch $R0 ; old $R0 is on top of stack<br />
+   Push $R1<br />
+   Push $R2<br />
+   Push $R3<br />
+   StrLen $R3 $R0<br />
+   loop:<br />
+     IntOp $R1 $R1 - 1<br />
+     IntCmp $R1 -$R3 exit exit<br />
+     StrCpy $R2 $R0 1 $R1<br />
+     StrCmp $R2 &quot;\&quot; exit<br />
+   Goto loop<br />
+   exit:<br />
+     StrCpy $R0 $R0 $R1<br />
+     Pop $R3<br />
+     Pop $R2<br />
+     Pop $R1<br />
+     Exch $R0 ; put $R0 on top of stack, restore $R0 to original value<br />
+ FunctionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

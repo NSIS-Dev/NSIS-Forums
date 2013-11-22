@@ -1,0 +1,87 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" BUG: Ampersand in path causes ExecCmd to fail, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  BUG: Ampersand in path causes ExecCmd to fail NSIS Discussion" />
+	
+	<title> BUG: Ampersand in path causes ExecCmd to fail [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  BUG: Ampersand in path causes ExecCmd to fail</div>
+<hr />
+<div class="pda"><a href="t-302063.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=302063">BUG: Ampersand in path causes ExecCmd to fail</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">basilisk561</div><div class="date">14th January 2009, 15:49</div></div><div class="posttext">Hello,<br />
+<br />
+At install time I extract an EXE to $PLUGINSDIR.<br />
+<br />
+On a page in the installer I attempt to shell out to this EXE as so:<br />
+<br />
+ExecCmd::exec '&quot;$PLUGINSDIR\myexe.exe&quot; param1 param2 etc'<br />
+<br />
+A certain Windows user is logged in with account username &quot;Bob &amp; Gina&quot;.  The command shell attempt fails.  Filemon reveals that ExecCmd is looking here:<br />
+<br />
+C:\Documents and Settings\Bob &amp; Gina\Desktop\G~1\LOCALS~1\Temp\nsw557.tmp\myexe.exe<br />
+<br />
+When it should be looking here:<br />
+<br />
+C:\Documents and Settings\Bob &amp; Gina\LOCALS~1\Temp\nsw557.tmp\myexe.exe<br />
+<br />
+Notice that &quot;Desktop&quot; is included in the incorrect path.  This is because that is where the installer EXE is located and run from.  If the installer EXE path changes, that is reflected in the path ExecCmd attempts to execute MYEXE.EXE from.<br />
+<br />
+All other references to $PLUGINSDIR are evaluated properly -- installer INI files, etc. are correctly located.  This is why I believe the problem resides with ExecCmd.<br />
+<br />
+Any ideers on this?<br />
+<br />
+FYI SetOutPath has no effect on this, in case that was a coming suggestion. :(<br />
+<br />
+Thanks in advance!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">15th January 2009, 08:38</div></div><div class="posttext">Seems like you're right. What about included nsExec ?<br />
+Does it produce the same issue ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">basilisk561</div><div class="date">15th January 2009, 13:47</div></div><div class="posttext">Haven't tried nsExec.<br />
+<br />
+I will say that it appears in the ExecCmd source that the code responsible for expanding $PLUGINSDIR and passing it to the plugins resides in NSIS itself.  In other words, I would expect any plugins to have this same issue.  ExecCmd just takes what it is given as far as the command line is concerned.<br />
+<br />
+I would have thought this issue would have surfaced long before now.  Or no?<br />
+<br />
+Any things I can do like escaping the ampersand, etc. to get this working without a huge refactor like switching to nsExec?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">15th January 2009, 13:56</div></div><div class="posttext">The code that expands $PLUGINSDIR is indeed not present in any plug-in but in the installer itself. But as you said, it works fine in other places and the same expansion code is used everywhere so it's probably a problem with ExecCmd.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">basilisk561</div><div class="date">15th January 2009, 14:58</div></div><div class="posttext">Originally posted by kichik <br />
+The code that expands $PLUGINSDIR is indeed not present in any plug-in but in the installer itself. But as you said, it works fine in other places and the same expansion code is used everywhere so it's probably a problem with ExecCmd.  <br />
+Well, I don't have any personal evidence that $PLUGINSDIR gets handed off properly to plugins.  Like you said, it does expand properly everywhere else.<br />
+<br />
+What about the NSIS code that takes the plugin parameters and parses them into the array of strings for handoff to the plugin?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">15th January 2009, 15:17</div></div><div class="posttext">That's the code I meant. It's all the same for both plug-ins and other script parts.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">basilisk561</div><div class="date">15th January 2009, 15:57</div></div><div class="posttext">nsExec works in this situation.  I've changed my installer to that effect.  No big deal. ;)<br />
+<br />
+Thanks to all who helped on this.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">15th January 2009, 16:25</div></div><div class="posttext">Strange issue, might be good to have script sample. May be even reproducing situation without creation of special account :)<br />
+In ExecDos following 2 lines only work with path to executablepopstring(ptp-&gt;dosExec);<br />
+...<br />
+if(!CreateProcess(NULL, ptp-&gt;dosExec, NULL, NULL, TRUE, 0, NULL, NULL, psi, &amp;pi)) So I hope plug-in not changes path. To be sure I testedExecDos::exec /NOUNLOAD /ASYNC /DETAILED /TIMEOUT=6000 &quot;C:\Users\takhir\Documents\Kisa &amp; Osja\consApp.exe&quot; &quot;test_login$\ntest_pwd$\n&quot;<br />
+ and this worked fine (while Windows permits ampersands in file/dir names).</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

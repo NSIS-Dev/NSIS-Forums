@@ -1,0 +1,200 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Component Select Verification Back!!, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Component Select Verification Back!! NSIS Discussion" />
+	
+	<title> Component Select Verification Back!! [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Component Select Verification Back!!</div>
+<hr />
+<div class="pda"><a href="t-262946.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=262946">Component Select Verification Back!!</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Boyito</div><div class="date">3rd January 2007, 18:18</div></div><div class="posttext">Hi<br />
+In my 1st post ive got a solution reading this thread<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=261059<br />
+<br />
+Ive put a similar code in my installer but only checks well the first component.<br />
+Here a part of code<br />
+-------------------------<br />
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE ComponentsLeave<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+<br />
+<br />
+Function ComponentsLeave<br />
+   SectionGetFlags Sec01 $R0<br />
+   IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+   StrCmp $R0 1 clSkip<br />
+<br />
+   SectionGetFlags Sec02 $R1<br />
+   IntOp $R1 $R1 &amp; ${SF_SELECTED}<br />
+   StrCmp $R1 1 clSkip<br />
+<br />
+   MessageBox MB_OK|MB_ICONEXCLAMATION 'Please select a component!'<br />
+   Abort<br />
+clSkip:<br />
+FunctionEnd<br />
+-------------------------<br />
+<br />
+The result of SectionGetFlags Sec01 if this section es checked is 9 and 8 if its not, but SectionGetFlags Sec02 always returns 8<br />
+Where is the problem??<br />
+<br />
+TIA</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">3rd January 2007, 18:36</div></div><div class="posttext">outfile 'Components.exe'<br />
+InstallDir '$PROGRAMFILES\Components Test'<br />
+InstType 'Typical'<br />
+InstType 'Full'<br />
+<br />
+!include &quot;Sections.nsh&quot;<br />
+!include 'mui.nsh'<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE LeaveComponents<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!insertmacro MUI_PAGE_FINISH<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+section &quot;!Required Section&quot;<br />
+  SectionIn RO<br />
+   SetOutPath '$INSTDIR'<br />
+SectionEnd<br />
+<br />
+Section &quot;Components 1&quot; sec01<br />
+  SectionIn 1 2<br />
+   SetOutPath '$INSTDIR\Component 1'<br />
+SectionEnd<br />
+<br />
+Section /o &quot;Components 2&quot; sec02<br />
+  SectionIn 2<br />
+   SetOutPath '$INSTDIR\Component 2'<br />
+SectionEnd<br />
+<br />
+Section /o &quot;Components 3&quot; sec03<br />
+  SectionIn 2<br />
+   SetOutPath '$INSTDIR\Component 3'<br />
+SectionEnd<br />
+<br />
+Function LeaveComponents<br />
+SectionGetFlags ${sec01} $R0<br />
+IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+StrCmp $R0 1 skip<br />
+<br />
+SectionGetFlags ${sec02} $R0<br />
+IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+StrCmp $R0 1 skip<br />
+<br />
+SectionGetFlags ${sec03} $R0<br />
+IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+StrCmp $R0 1 skip<br />
+<br />
+SectionGetFlags 3 $R0<br />
+IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+StrCmp $R0 1 skip<br />
+<br />
+MessageBox MB_OK|MB_ICONEXCLAMATION &quot;Please select a Component!&quot;<br />
+Abort<br />
+<br />
+skip:<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Boyito</div><div class="date">3rd January 2007, 18:48</div></div><div class="posttext">HI RW<br />
+I dont use InstType I dont need it<br />
+I replace in my code this line<br />
+   SectionGetFlags Sec01 $R0<br />
+with yours <br />
+   SectionGetFlags ${sec01} $R0<br />
+<br />
+And now the compiler says<br />
+1 warnings:<br />
+unknown variable/constant &quot;{Sec01}&quot; detected, ignoring<br />
+<br />
+<br />
+And still the same problem if i put this code the messagebox shows me always 8 in Sec02, ( checked or not )<br />
+<br />
+Function ComponentsLeave<br />
+   SectionGetFlags ${Sec01} $R0<br />
+   MessageBox MB_OK '   SectionGetFlags Sec01 $R0'<br />
+   IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+   StrCmp $R0 1 clSkip<br />
+<br />
+   SectionGetFlags ${Sec02} $R0<br />
+   MessageBox MB_OK '   SectionGetFlags Sec02 $R0'<br />
+   IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+   StrCmp $R0 1 clSkip<br />
+<br />
+   MessageBox MB_OK|MB_ICONEXCLAMATION 'Please select a component!'<br />
+   Abort<br />
+clSkip:<br />
+FunctionEnd<br />
+<br />
+Any Idea??</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">3rd January 2007, 18:56</div></div><div class="posttext">Simply compile and run my example above, compare them, so you'll find the fault.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Boyito</div><div class="date">3rd January 2007, 19:03</div></div><div class="posttext">Ive just do it<br />
+Your sample works fine<br />
+The results numbers 8 and 9 of SectionGetFlags ${sec01} $R0 are because my sections are in bold , but this is not a problem, ive change the same in your sample and still works, ive comment the Required Section and still works, ive comment the InstType and still works!!!!<br />
+I dont konw why my code dont, and why shows me a warning<br />
+Crying :-(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">3rd January 2007, 19:12</div></div><div class="posttext">Here is yours Boyo, probably there is a typo somewhere :-)<br />
+!include &quot;Sections.nsh&quot;<br />
+!include 'mui.nsh'<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE ComponentsLeave<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+Section /o &quot;Components 1&quot; sec01 ;section ID<br />
+<br />
+SectionEnd<br />
+<br />
+Section /o &quot;Components 2&quot; sec02 ;section ID<br />
+<br />
+SectionEnd<br />
+<br />
+Function ComponentsLeave<br />
+             ; section ID user_var_output<br />
+SectionGetFlags ${Sec01} $R0<br />
+IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+StrCmp $R0 1 clSkip<br />
+<br />
+             ; section ID user_var_output<br />
+SectionGetFlags ${Sec02} $R0<br />
+IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+StrCmp $R0 1 clSkip<br />
+<br />
+MessageBox MB_OK|MB_ICONEXCLAMATION 'Please select a component!'<br />
+Abort<br />
+clSkip:<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Boyito</div><div class="date">4th January 2007, 14:00</div></div><div class="posttext">RW thanks a lot again for your help<br />
+The problem was a order instructions<br />
+Ive Sections after Functions<br />
+Ive write in order like your code and everything works fine<br />
+<br />
+Bye ( see you in my next post )</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

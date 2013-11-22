@@ -1,0 +1,173 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Dynamic finish page options, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Dynamic finish page options NSIS Discussion" />
+	
+	<title> Dynamic finish page options [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Dynamic finish page options</div>
+<hr />
+<div class="pda"><a href="t-177448.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=177448">Dynamic finish page options</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">coho</div><div class="date">21st April 2004, 03:19</div></div><div class="posttext">My product has two major applications as options during install.  Let's just call them Server and Client.  After installing one, or both, I would like to offer to launch them on the finish page.  I can fudge the FINISHPAGE_SHOWREADME to relate to the Client (IE based), and FINISHPAGE_RUN is used for the Server App.  However, I have yet to find a way to make this dynamic... If they only install the client, I don't want to have a checkbox to launch the Server App.<br />
+I thought MUI_WELCOMEFINISHPAGE_CUSTOMFUNCTION_INIT would let me change variables based on Sections before they are written to ioSpecial.ini, but I can't place:<br />
+<br />
+!define MUI_PAGEMUI_FINISHPAGE_SHOWREADME &quot;http://...&quot;<br />
+<br />
+in the custom init function.  Any suggestions (short of writing to the ioSpecial.ini file itself)?<br />
+Specifically, can I define/undef MUI_FINISHPAGE_RUN dynamically?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">21st April 2004, 09:38</div></div><div class="posttext">MUI_FINISHPAGE_SHOWREADME is a defined symbol, not a variable.<br />
+<br />
+You can hide the checkbox in a custom show function of the finish page. Find the inner window (see NSIS Users Manual, FindWindow) and use the control IDs 1202 and 1203.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">coho</div><div class="date">21st April 2004, 18:15</div></div><div class="posttext">My other option was to write them to the ini file myself in a custom pre function, but after browsing System.nsh I realized it would be tough to mimick the logic that arranges all the controls on the finish page.<br />
+Thanks for the tip!<br />
+<br />
+By the way, System.nsh (Feb. 6 2004) has a typo in !macro MUI_PAGE_FINISH<br />
+This line...<br />
+!insertmacro MUI_UNSET MUI_FINISHPAGE_RUN_PARAMETES<br />
+...needs an 'R' in PARAMETERS.<br />
+Probably never cause an issue though, since it is for finish page only and the temp ini file is deleted right after this.<br />
+Thanks again!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">21st April 2004, 18:38</div></div><div class="posttext">Thanks, I'll fix that typo. It will indeed never cause any problems.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">coho</div><div class="date">22nd April 2004, 00:44</div></div><div class="posttext">Word... got it workin'.<br />
+Tried to Find my main dialog first before getting the inner dialog - but this happened before the SHOW occured, so I got the page before the finish page and it did not have a control with id 1203 or 1204. (Spy++ said my controls were 1203 and 1204, not 1202 and 1203)<br />
+I just checked the trusty user manual and found that $MUI_HWND has already been set for me as the inner dialog's handle.<br />
+Also had to SendMessages LMBUTTONDOWN and LMBUTTONUP to uncheck them before I hide them.  There's probably a better way, but it works.   ;-)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">22nd April 2004, 11:50</div></div><div class="posttext">That's correct, using $MUI_HWND is even easier :)<br />
+<br />
+The ID is 1200 + Field Number - 1, so for field fields 4 and 5 it's indeed 1203 and 1204.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mdlazreg</div><div class="date">27th May 2004, 04:20</div></div><div class="posttext">Hi coho,<br />
+<br />
+can you please or someone else post an nsi script example of how you solved your problem? <br />
+<br />
+I want to create a dynamic finish page but I can not do it:(.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">coho</div><div class="date">25th June 2004, 02:51</div></div><div class="posttext">First added these:<br />
+<br />
+!define MUI_FINISHPAGE_LINK &quot;Visit us on the web&quot;<br />
+!define MUI_FINISHPAGE_LINK_LOCATION &quot;http://homepage/&quot;<br />
+!define MUI_FINISHPAGE_RUN &quot;$INSTDIR\program.exe&quot;<br />
+!define MUI_FINISHPAGE_RUN_TEXT &quot;Launch Program&quot;<br />
+!define MUI_FINISHPAGE_SHOWREADME &quot;http://host/site&quot;<br />
+!define MUI_FINISHPAGE_SHOWREADME_TEXT &quot;Launch the web service I just installed&quot;<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW SetFinishPageOptions ;hide the options if we did not install the corresponding component<br />
+!insertmacro MUI_PAGE_FINISH<br />
+<br />
+My SHOW function for the finishpage is SetFinishPageOptions, and looks like this:<br />
+<br />
+Function SetFinishPageOptions<br />
+<br />
+IfRebootFlag 0 +2  ;if reboot flag has been set, our Launch options have been replaced.<br />
+    Abort ;Don't hide the reboot radio buttons!<br />
+<br />
+  StrCmp $vInstallingWebService &quot;yes&quot; 0 hide_web<br />
+  StrCmp $vInstallingProgram &quot;yes&quot; done hide_prog<br />
+<br />
+hide_web:<br />
+  GetDlgItem $2 $MUI_HWND &quot;1204&quot;         ;control id gathered from Spy++. (1200 + Field number - 1)<br />
+  SendMessage $2 ${WM_LBUTTONDOWN} 0 0   ;uncheck it<br />
+  SendMessage $2 ${WM_LBUTTONUP} 0 0     ;<br />
+  ShowWindow $2 ${SW_HIDE}<br />
+  StrCmp $vInstallingNQSAdmin &quot;yes&quot; done hide_prog<br />
+<br />
+hide_prog:<br />
+  GetDlgItem $2 $MUI_HWND &quot;1203&quot;         ;$MUI_HWND is defined for us by the MUI macros as the inner dialog hwnd<br />
+  SendMessage $2 ${WM_LBUTTONDOWN} 0 0   ;uncheck it<br />
+  SendMessage $2 ${WM_LBUTTONUP} 0 0     ;<br />
+  ShowWindow $2 ${SW_HIDE}<br />
+<br />
+done:<br />
+<br />
+FunctionEnd<br />
+<br />
+I set the $vInstalling variables in a MUI pre-function for the page called after the Components page. And remember, 1203 and 1204 are only because I have Link, Run, and Readme defined.  Shrink by one for each that you leave out.<br />
+<br />
+Sorry it took so long to reply!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">coho</div><div class="date">1st July 2004, 19:20</div></div><div class="posttext">P.S. Don't use ABORT in the above IfRebootFlag check, it will never show the finish page. Try Return. My bad.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">coho</div><div class="date">1st July 2004, 19:36</div></div><div class="posttext">I used: <br />
+<br />
+IfRebootFlag done 0 ;<br />
+<br />
+since I have the label 'done'.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GemunuRW</div><div class="date">6th January 2005, 16:29</div></div><div class="posttext">Hi Coho,<br />
+    Thanks a lot fo the cool code block which saved me when I had run out of all the other ways to achieve what you have done. However I think we can further refine the above script by introducing   <br />
+!define MUI_FINISHPAGE_RUN_NOTCHECKED<br />
+!define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED before <br />
+!insertmacro MUI_PAGE_FINISH. This will allow us to get rid of extra SendMessage calls <br />
+SendMessage $2 ${WM_LBUTTONDOWN} 0 0 ;uncheck it<br />
+SendMessage $2 ${WM_LBUTTONUP} 0 0 ;<br />
+ and have a more readable script.<br />
+<br />
+Thanks a lot!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tms</div><div class="date">13th February 2008, 17:28</div></div><div class="posttext">Hi there, <br />
+I'm trying a similar solution for the following scenario.<br />
+<br />
+* My Finish page includes always a checkbox to select if you want or not run the application when you finish.<br />
+* When I'm installing in any OS different from WVista, I want to include also a checkbox to select if you want to create shortcut in the Desktop or not (I don't want to show this checkbox in Windows Vista). So I'm dynamically hidding it when I detect it's WVista.<br />
+<br />
+My code is something like this:<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW HideDynamically<br />
+!define MUI_FINISHPAGE_SHOWREADME<br />
+!define MUI_FINISHPAGE_SHOWREADME_TEXT &quot;Create Shortcut in Desktop&quot;<br />
+!define MUI_FINISHPAGE_SHOWREADME_FUNCTION CreateShCtFunction<br />
+!insertmacro MUI_PAGE_FINISH<br />
+ <br />
+<br />
+and my function to dinamically Hide the checkbox is something like<br />
+<br />
+<br />
+Function HideDynamically<br />
+Call GetWindowsVersion<br />
+Pop $R1<br />
+  ${If} $R1 == 'WVista'<br />
+        FindWindow $2 &quot;#32770&quot; &quot;&quot; $HWNDPARENT	; Get inner dialog inside main window (the &quot;white part&quot; of the dialog)<br />
+        GetDlgItem $2 $2 1204  ; Item 1204 -&gt; &quot;Create Shortcut in Desktop&quot; checkbox	control (id gathered from WinSpy++)<br />
+        SendMessage $2 ${BM_CLICK} 0 0	; uncheck it<br />
+        ShowWindow $2 ${SW_HIDE} ; Hide it<br />
+  ${Endif}<br />
+Functionend<br />
+ <br />
+<br />
+My problem is that MUI_PAGE_CUSTOMFUNCTION_SHOW is executed just before the Finish page is shown, so the dialog has not been painted yet. I have tried with MUI_PAGE_CUSTOMFUNCTION_LEAVE to check my code is working (and it works), but I cannot use &quot;LEAVE&quot; because it is executed when clicking on the finish button.<br />
+<br />
+How could I do it to call the function just when the Finish dialog is shown? Or how can I access the check button if it doesn't exist yet? I have tried a lot of variations of the code above and it did not work :(<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bubu</div><div class="date">19th February 2008, 09:46</div></div><div class="posttext">hi. i have tried ur code example and i cannot make it work. this is way to confusing for me. firstly i didn't know how to initialize var $vInstalling( &quot;I set the $vInstalling variables in a MUI pre-function for the page called after the Components page&quot;). my problem is that i have to say at the finish page, what programs were installed and what weren't. is there a special place i have to add the code &quot;function SetfinishPageOptions&quot;...help, pls?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

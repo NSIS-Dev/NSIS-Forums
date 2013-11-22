@@ -1,0 +1,169 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" setting up a virtual directory, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  setting up a virtual directory NSIS Discussion" />
+	
+	<title> setting up a virtual directory [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  setting up a virtual directory</div>
+<hr />
+<div class="pda"><a href="t-153983.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=153983">setting up a virtual directory</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jorge_bittencou</div><div class="date">26th October 2003, 00:44</div></div><div class="posttext">Hi there: I´m new to NSIS but a friend of mine recommended it to me, so I decided to use it to create a setup for my web app. <br />
+<br />
+There are two things I don´t know how to and would really appreciate some help or direction. I´ve seacrhed the whole site and documentation, but am still at a loss. <br />
+<br />
+1. I want to create a virtual directory in IIS. To my knowledge, this is the same as right-cliking on a directory, selecting Sharing, cliking on the Web Sharing tab and selecting Share this Folder. But I don´t know how to set those options for a folder. <br />
+<br />
+2. I need to find out the computer name I´m installing the application on. <br />
+<br />
+Thanks in advance. <br />
+<br />
+Jorge</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">26th October 2003, 09:39</div></div><div class="posttext">These 3 threads should help you create a virtual folder for IIS:<br />
+<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=148899&amp;highlight=virtual<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=146155&amp;highlight=virtual<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=135937&amp;highlight=virtual<br />
+<br />
+You could probably use the ADSI/WMI interface with the new System.dll COM support, give it a shot if you want. It would be great if you could get it working and publish an Archive page about it.<br />
+<br />
+To find out the computer name take a look at the following thread:<br />
+<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=150837&amp;highlight=computer+name</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jorge_bittencou</div><div class="date">29th October 2003, 23:36</div></div><div class="posttext">Thanks a lot for your help. I tried the second option which just executes the script with the specified parameters and gets the virtual directory up and going.<br />
+<br />
+Jorge</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">icebrrrg</div><div class="date">30th October 2003, 22:21</div></div><div class="posttext">I've written some functions that set up a vdir and create an application at that point ... and back it out at uninstall. Thought I'd share. It's all adapted from the links and info in this discussion forum, thanks to all!<br />
+<br />
+There are a lot of places for customization -- the attributes for the virtual directory and the application, the type of app (I'm using an out-of-proc app), etc. All you'll need to do is place this in your script, tweak it for your install, and call the CreateVDir function in one of your sections; call un.DeleteVDir from your Uninstall section.<br />
+<br />
+<br />
+LangString ERR_VDIREXISTS ${LANG_ENGLISH} &quot;A virtual directory named ${VDIRNAME} already exists. The new virtual directory will not be created.&quot;<br />
+<br />
+;--------------------------------<br />
+; CreateVDir Function<br />
+Function CreateVDir<br />
+<br />
+	;Open a VBScript File in the temp dir for writing<br />
+	DetailPrint &quot;Creating $TEMP\createVDir.vbs&quot;;<br />
+	FileOpen $0 &quot;$TEMP\createVDir.vbs&quot; w<br />
+<br />
+	;Write the script:<br />
+	;Create a virtual dir named ${VDIRNAME} pointing to $INSTDIR\web with proper attributes<br />
+	FileWrite $0 &quot;On Error Resume Next$\n$\n&quot;<br />
+	FileWrite $0 &quot;Set Root = GetObject($\&quot;IIS://LocalHost/W3SVC/1/ROOT$\&quot;)$\n&quot;<br />
+	FileWrite $0 &quot;Set Dir = Root.Create($\&quot;IIsWebVirtualDir$\&quot;, $\&quot;${VDIRNAME}$\&quot;)$\n$\n&quot;<br />
+	FileWrite $0 &quot;If (E******mber &lt;&gt; 0) Then$\n&quot;<br />
+	StrCpy $1 $(ERR_VDIREXISTS)						;To substitute a LangString in the vbs copy it before<br />
+	FileWrite $0 &quot;    MsgBox $\&quot;$1$\&quot;$\n&quot;<br />
+	FileWrite $0 &quot;    Wscript.Quit (E******mber)$\n&quot;<br />
+	FileWrite $0 &quot;End If$\n$\n&quot;<br />
+	FileWrite $0 &quot;Dir.Path = $\&quot;$INSTDIR\web$\&quot;$\n&quot;<br />
+	FileWrite $0 &quot;Dir.AccessRead = True$\n&quot;<br />
+	FileWrite $0 &quot;Dir.AccessWrite = False$\n&quot;<br />
+	FileWrite $0 &quot;Dir.AccessScript = True$\n&quot;<br />
+	FileWrite $0 &quot;Dir.AppFriendlyName = $\&quot;${VDIRNAME}$\&quot;$\n&quot;<br />
+	FileWrite $0 &quot;Dir.EnableDirBrowsing = False$\n&quot;<br />
+	FileWrite $0 &quot;Dir.ContentIndexed = False$\n&quot;<br />
+	FileWrite $0 &quot;Dir.DontLog = True$\n&quot;<br />
+	FileWrite $0 &quot;Dir.EnableDefaultDoc = True$\n&quot;<br />
+	FileWrite $0 &quot;Dir.DefaultDoc = $\&quot;default.asp$\&quot;$\n&quot;<br />
+	FileWrite $0 &quot;Dir.AspBufferingOn = True$\n&quot;<br />
+	FileWrite $0 &quot;Dir.AspAllowSessionState = True$\n&quot;<br />
+	FileWrite $0 &quot;Dir.AspSessionTimeout = 30$\n&quot;<br />
+	FileWrite $0 &quot;Dir.AspScriptTimeout = 900$\n&quot;<br />
+	FileWrite $0 &quot;Dir.SetInfo$\n$\n&quot;<br />
+	;Create the application object<br />
+	FileWrite $0 &quot;Set IISObject = GetObject($\&quot;IIS://LocalHost/W3SVC/1/ROOT/${VDIRNAME}$\&quot;)$\n$\n&quot;<br />
+	FileWrite $0 &quot;IISObject.AppCreate2(1)			'Create an out-of-process web application$\n&quot;<br />
+	FileWrite $0 &quot;If (E******mber &lt;&gt; 0) Then$\n&quot;<br />
+	FileWrite $0 &quot;    MsgBox $\&quot;Error trying to create the application at 'IIS://LocalHost/W3SVC/1/ROOT/${VDIRNAME}'$\&quot;$\n&quot;<br />
+	FileWrite $0 &quot;    WScript.Quit (E******mber)$\n&quot;<br />
+	FileWrite $0 &quot;End If$\n&quot;<br />
+<br />
+	FileClose $0<br />
+<br />
+	DetailPrint &quot;Executing $TEMP\createVDir.vbs&quot;<br />
+	nsExec::Exec /TIMEOUT=20000 '&quot;$SYSDIR\cscript.exe&quot; &quot;$TEMP\createVDir.vbs&quot;'<br />
+	DetailPrint &quot;Virtual Directory ${VDIRNAME} successfully created.&quot;<br />
+	Delete &quot;$TEMP\createVDir.vbs&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+;--------------------------------<br />
+; CreateVDir Function<br />
+Function un.DeleteVDir<br />
+<br />
+	;Open a VBScript File in the temp dir for writing<br />
+	DetailPrint &quot;Creating $TEMP\deleteVDir.vbs&quot;;<br />
+	FileOpen $0 &quot;$TEMP\deleteVDir.vbs&quot; w<br />
+<br />
+	;Write the script:<br />
+	;Create a virtual dir named ${VDIRNAME} pointing to $INSTDIR\web with proper attributes<br />
+	FileWrite $0 &quot;On Error Resume Next$\n$\n&quot;<br />
+	;Delete the application object<br />
+	FileWrite $0 &quot;Set IISObject = GetObject($\&quot;IIS://LocalHost/W3SVC/1/ROOT/${VDIRNAME}$\&quot;)$\n$\n&quot;<br />
+	FileWrite $0 &quot;IISObject.AppDelete			'Delete the web application$\n&quot;<br />
+	FileWrite $0 &quot;If (E******mber &lt;&gt; 0) Then$\n&quot;<br />
+	FileWrite $0 &quot;    MsgBox $\&quot;Error trying to delete the application at [IIS://LocalHost/W3SVC/1/ROOT/${VDIRNAME}]$\&quot;$\n&quot;<br />
+	FileWrite $0 &quot;    WScript.Quit (E******mber)$\n&quot;<br />
+	FileWrite $0 &quot;End If$\n$\n&quot;<br />
+	<br />
+	FileWrite $0 &quot;Set IISObject = GetObject($\&quot;IIS://LocalHost/W3SVC/1/ROOT$\&quot;)$\n$\n&quot;<br />
+	FileWrite $0 &quot;IIsObject.Delete $\&quot;IIsWebVirtualDir$\&quot;, $\&quot;${VDIRNAME}$\&quot;$\n&quot;<br />
+	FileWrite $0 &quot;If (E******mber &lt;&gt; 0) Then$\n&quot;<br />
+	FileWrite $0 &quot;    MsgBox $\&quot;Error trying to delete the virtual directory '${VDIRNAME}' at 'IIS://LocalHost/W3SVC/1/ROOT'$\&quot;$\n&quot;<br />
+	FileWrite $0 &quot;    Wscript.Quit (E******mber)$\n&quot;<br />
+	FileWrite $0 &quot;End If$\n$\n&quot;<br />
+<br />
+	FileClose $0<br />
+<br />
+	DetailPrint &quot;Executing $TEMP\deleteVDir.vbs&quot;<br />
+	nsExec::Exec /TIMEOUT=20000 '&quot;$SYSDIR\cscript.exe&quot; &quot;$TEMP\deleteVDir.vbs&quot;'<br />
+	DetailPrint &quot;Virtual Directory ${VDIRNAME} successfully removed.&quot;<br />
+	Delete &quot;$TEMP\deleteVDir.vbs&quot;<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">30th October 2003, 22:24</div></div><div class="posttext">Best place to share is the Archive (http://nsis.sf.net/archive). It would be easier to find it there.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">icebrrrg</div><div class="date">30th October 2003, 22:29</div></div><div class="posttext">done ...<br />
+<br />
+http://nsis.sourceforge.net/archive/nsisweb.php?page=455&amp;instances=0,11<br />
+<br />
+thanks, <br />
+-m-</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stonkers</div><div class="date">13th January 2006, 15:43</div></div><div class="posttext">Hi, all!  Where'd the archive go?  I can't hit this link.  Sorry if I'm behind on times, haven't been around here in a while.  Eric</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th January 2006, 15:57</div></div><div class="posttext">The Archive has been replaced by the Wiki, but all old links should still work. I don't know why this specific link doesn't work as it should...<br />
+<br />
+For now, you can simply search the Wiki for &quot;virtual directory&quot; and find this:<br />
+<br />
+http://nsis.sourceforge.net/Setting_up_a_virtual_directory<br />
+<br />
+[edit] That link has the wrong page id. The instance id for the virtual directory page is 871, not 455.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

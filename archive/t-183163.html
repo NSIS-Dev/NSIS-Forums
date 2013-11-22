@@ -1,0 +1,492 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Custom Page is skipped on XP; enable Cancel button, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Custom Page is skipped on XP; enable Cancel button NSIS Discussion" />
+	
+	<title> Custom Page is skipped on XP; enable Cancel button [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Custom Page is skipped on XP; enable Cancel button</div>
+<hr />
+<div class="pda"><a href="t-183163.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=183163">Custom Page is skipped on XP; enable Cancel button</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jared</div><div class="date">13th June 2004, 03:45</div></div><div class="posttext">I created a custom page using the InstallOptions template; it appears fine in Win2000 on the development box, but when I run the installer in XP, this page is skipped. Has this happened to anyone else?<br />
+<br />
+Also, how can I enable the CANCEL button, which is disabled during the install-files portion of the installation?<br />
+<br />
+Thank you,<br />
+<br />
+-Jared</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">13th June 2004, 04:05</div></div><div class="posttext">Originally posted by jared <br />
+Also, how can I enable the CANCEL button, which is disabled during the install-files portion of the installation? <br />
+<br />
+using the search  (http://forums.winamp.com/search.php) feature you will find multiple posts related to this. i bet there's also something about it in the faq (http://nsis.sourceforge.net/support/faq/).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jared</div><div class="date">13th June 2004, 18:53</div></div><div class="posttext">Thanks for your quick response. I had in fact already searched, but found nothing. Thanks to your hint, I dug deeper and finally found the fact that the Cancel button is disabled until at least NSIS 2.1.<br />
+<br />
+However, this is not in the faq, and if the problem persists much longer, it _should_ be in the faq, which I had also already read, seeking an answer.<br />
+<br />
+Meanwhile, back at the ranch: Does anyone know why the custom page works fine in Win2K but not XP?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">13th June 2004, 18:57</div></div><div class="posttext">To help you with this problem I need more information, including script files and INI files.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jared</div><div class="date">13th June 2004, 21:51</div></div><div class="posttext">Here is the script; the ini file follows:<br />
+<br />
+; preamble<br />
+Name                &quot;WinLAMP&quot;<br />
+OutFile             &quot;WinLAMP03.exe&quot;<br />
+Icon                &quot;Apache2\install\dct.ico&quot;<br />
+<br />
+<br />
+; install directory options<br />
+InstallDir          &quot;C:\&quot;<br />
+DirText             &quot;Select the drive on which to install Apache2. \<br />
+                    For quick navigation to the Apache2\htdocs directory, \<br />
+                    we recommend a root directory, as below.&quot;<br />
+AllowRootDirInstall true<br />
+ShowInstDetails     show<br />
+SetCompress         auto<br />
+<br />
+<br />
+; define the installation types<br />
+InstType &quot;Typical&quot; ; Section 1<br />
+InstType &quot;Full&quot;    ; Section 2<br />
+InstType &quot;Minimal&quot; ; Section 3<br />
+<br />
+<br />
+; list the various component sections<br />
+ComponentText       &quot;Note: MySQL, php, and phpMyAdmin directories are installed within the Apache2 tree.&quot;<br />
+<br />
+<br />
+; show pages in this order<br />
+Page components<br />
+Page directory<br />
+Page custom ApacheConfig ValidateConfig &quot;: Apache2 configuration&quot;<br />
+Page instfiles<br />
+<br />
+<br />
+;display the Install Options dialog<br />
+Function ApacheConfig<br />
+  Push $R0<br />
+  InstallOptions::dialog Apache2\install\apacheconfig.ini<br />
+  Pop $R0<br />
+FunctionEnd<br />
+<br />
+<br />
+; retrieve apache configuration data<br />
+Function ValidateConfig<br />
+  ; retrieve data from the two fields<br />
+  ReadINIStr $0 &quot;Apache2\install\apacheconfig.ini&quot; &quot;Field 4&quot; &quot;State&quot;<br />
+  ReadINIStr $1 &quot;Apache2\install\apacheconfig.ini&quot; &quot;Field 5&quot; &quot;State&quot;<br />
+  ; crude attempt at validation: make sure there is at least some data<br />
+  StrCmp $0 &quot;&quot; +1 +3<br />
+    MessageBox MB_ICONEXCLAMATION|MB_OK &quot;Please enter a Server Name&quot;<br />
+    Abort<br />
+  StrCmp $1 &quot;&quot; +1 +3<br />
+    MessageBox MB_ICONEXCLAMATION|MB_OK &quot;Please enter an Admin Email Address&quot;<br />
+    Abort<br />
+FunctionEnd<br />
+<br />
+<br />
+; main section<br />
+Section &quot;Apache + MySQL + PHP&quot;<br />
+<br />
+  SectionIn           1 2 3 RO ; this section is always included<br />
+  SetShellVarContext  all ; modifies 'all users' area of start menu<br />
+<br />
+  ; backup and clean up from preceding installation<br />
+  Call                BackupHtdocs<br />
+  Call                BackupData<br />
+  Call                CleanupFromApache1<br />
+<br />
+  ; install the main Apache2 directory<br />
+  SetOutPath          &quot;$INSTDIR&quot;<br />
+  File /r             &quot;Apache2&quot; ; install the main Apache directory<br />
+<br />
+  ; install some shortcuts<br />
+  SetOutPath          &quot;$SMPROGRAMS&quot; ; install the Apache shortcuts directory into start menu<br />
+  File /nonfatal /r   &quot;Apache2\install\WinLAMP&quot;<br />
+  CreateShortCut      &quot;$SMPROGRAMS\WinLAMP\Apache Start.lnk&quot; \<br />
+                      &quot;$INSTDIR\Apache2\bin\Apache.exe&quot; \<br />
+                      '-w -n &quot;Apache2&quot; -d &quot;$INSTDIR\Apache2&quot; -k start' \<br />
+                      &quot;$INSTDIR\Apache2\install\apache.ico&quot;<br />
+  CreateShortCut      &quot;$SMPROGRAMS\WinLAMP\Apache Stop.lnk&quot; \<br />
+                      &quot;$INSTDIR\Apache2\bin\Apache.exe&quot; \<br />
+                      '-w -n &quot;Apache2&quot; -d &quot;$INSTDIR\Apache2&quot; -k stop' \<br />
+                      &quot;$INSTDIR\Apache2\install\apache.ico&quot;<br />
+  CreateShortCut      &quot;$SMPROGRAMS\WinLAMP\Apache Restart.lnk&quot; \<br />
+                      &quot;$INSTDIR\Apache2\bin\Apache.exe&quot; \<br />
+                      '-w -n &quot;Apache2&quot; -d &quot;$INSTDIR\Apache2&quot; -k restart' \<br />
+                      &quot;$INSTDIR\Apache2\install\apache.ico&quot;<br />
+  CreateShortCut      &quot;$SMPROGRAMS\WinLAMP\MySQL Start.lnk&quot; \<br />
+                      &quot;$SYSDIR\net&quot; \<br />
+                      &quot;start mysql&quot; \<br />
+                      &quot;$INSTDIR\Apache2\install\mysql.ico&quot;<br />
+  CreateShortCut      &quot;$SMPROGRAMS\WinLAMP\MySQL Stop.lnk&quot; \<br />
+                      &quot;$SYSDIR\net&quot; \<br />
+                      &quot;stop mysql&quot; \<br />
+                      &quot;$INSTDIR\Apache2\install\mysql.ico&quot;<br />
+  CreateShortCut      &quot;$SMPROGRAMS\WinLAMP\Edit httpd.conf file.lnk&quot; \<br />
+                      &quot;Notepad&quot; \<br />
+                      &quot;$INSTDIR\Apache2\conf\httpd.conf&quot;<br />
+  CreateShortCut      &quot;$SMPROGRAMS\WinLAMP\Edit php.ini file.lnk&quot; \<br />
+                      &quot;Notepad&quot; \<br />
+                      &quot;$WINDIR\php.ini&quot;<br />
+  CreateShortCut      &quot;$SMPROGRAMS\WinLAMP\Edit my.ini file.lnk&quot; \<br />
+                      &quot;Notepad&quot; \<br />
+                      &quot;$WINDIR\my.ini&quot;<br />
+  CreateShortCut      &quot;$SMPROGRAMS\WinLAMP\Uninstall WinLAMP.lnk&quot; \<br />
+                      &quot;$INSTDIR\Apache2\uninstall_WinLAMP.exe&quot; \<br />
+                      &quot;$INSTDIR\Apache2\install\dct.ico&quot;<br />
+<br />
+  ; run the updateconfs perlscript to add this machine's servername to httpd.conf, etc.<br />
+  ; updateconfs also updates and copies my.ini and php.ini, etc. into their appropriate dir<br />
+  SetOutPath          '$INSTDIR\Apache2\install'<br />
+  ExecWait            '$INSTDIR\Apache2\install\perl \<br />
+                      &quot;$INSTDIR\Apache2\install\updateconfs.pl&quot; \<br />
+                      &quot;$INSTDIR\Apache2&quot; &quot;$0&quot; &quot;$1&quot; &quot;$WINDIR&quot;'<br />
+<br />
+  ; make sure there are no other Apache, MySQL currently installed -- uninstall em<br />
+  ExecWait            &quot;$SYSDIR\net stop mysql&quot; ; shutdown mysql service<br />
+  ExecWait            '$INSTDIR\Apache2\mysql\bin\mysqld-nt.exe --remove' ; remove mysql service<br />
+  ExecWait            '$INSTDIR\Apache2\bin\Apache.exe -k uninstall' ; remove apache service<br />
+<br />
+  ; install Apache and MySQL as services<br />
+  ExecWait            '$INSTDIR\Apache2\mysql\bin\mysqld-nt --install'<br />
+  ExecWait            '$INSTDIR\Apache2\bin\Apache.exe -k install -n &quot;Apache2&quot; -d &quot;$INSTDIR\Apache2&quot;'<br />
+<br />
+  ; start the two services<br />
+  ExecWait            '$INSTDIR\Apache2\bin\Apache.exe -w -n &quot;Apache2&quot; -d &quot;$INSTDIR\Apache2&quot; -k start'<br />
+  ExecWait            &quot;$SYSDIR\net start mysql&quot;<br />
+<br />
+  ; registry settings, useful for add/remove programs<br />
+  WriteRegStr         HKEY_LOCAL_MACHINE \<br />
+                      &quot;SOFTWARE\DCT\WinLAMP&quot; \<br />
+                      &quot;Install_Dir&quot; \<br />
+                      &quot;$INSTDIR\Apache2&quot;<br />
+  WriteRegStr         HKEY_LOCAL_MACHINE \<br />
+                      &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\WinLAMP&quot; \<br />
+                      &quot;DisplayName&quot; \<br />
+                      &quot;WinLAMP (remove only)&quot;<br />
+  WriteRegStr         HKEY_LOCAL_MACHINE \<br />
+                      &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\WinLAMP&quot; \<br />
+                      &quot;UninstallString&quot; \<br />
+                      &quot;$INSTDIR\Apache2\uninstall_WinLAMP.exe&quot;<br />
+<br />
+  ; create the uninstaller<br />
+  WriteUninstaller    &quot;$INSTDIR\Apache2\uninstall_WinLAMP.exe&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+Section &quot;phpMyAdmin 2.5.6 (recommended)&quot;<br />
+  SectionIn           1 2 ; this section is often included<br />
+  SetOutPath          &quot;$INSTDIR\Apache2&quot;<br />
+  File /r             phpMyAdmin<br />
+SectionEnd<br />
+<br />
+<br />
+Section &quot;esKUel 1.0.5&quot;<br />
+  SectionIn           2 ; this section is only in 'full' install<br />
+  SetOutPath          &quot;$INSTDIR\Apache2&quot;<br />
+  File /r             esKUel<br />
+SectionEnd<br />
+<br />
+<br />
+Section &quot;Add MySQL-Front 2.5 Installer to desktop&quot;<br />
+  SectionIn           2 ; this section is only in 'full' install<br />
+  SetOutPath          &quot;$DESKTOP&quot;<br />
+  File                MySQL-Front\MySQL-Front_2.5_Setup.exe<br />
+SectionEnd<br />
+<br />
+<br />
+Section &quot;Add SQLyog 3.71 Installer to desktop&quot;<br />
+  SectionIn           2 ; this section is only in 'full' install<br />
+  SetOutPath          &quot;$DESKTOP&quot;<br />
+  File                SQLyog\SQLyog371.exe<br />
+SectionEnd<br />
+<br />
+<br />
+Section &quot;Add DBTools 2.3 Installer to desktop&quot;<br />
+  SectionIn           2 ; this section is only in 'full' install<br />
+  SetOutPath          &quot;$DESKTOP&quot;<br />
+  File                DBTools\prosetup230EN.exe<br />
+SectionEnd<br />
+<br />
+<br />
+Section &quot;Add ActivePerl 5.8 Installer to desktop&quot;<br />
+  SectionIn           2 ; this section is only in 'full' install<br />
+  SetOutPath          &quot;$DESKTOP&quot;<br />
+  File                Perl58\ActivePerl-5.8.3.809-MSWin32-x86.msi<br />
+SectionEnd<br />
+<br />
+<br />
+Section &quot;Apache help manual&quot;<br />
+  SectionIn           2 ; this section is only in 'full' install<br />
+  SetOutPath          &quot;$INSTDIR\Apache2\manuals&quot;<br />
+  File /r             manuals\apache<br />
+SectionEnd<br />
+<br />
+<br />
+Section &quot;MySQL help manual&quot;<br />
+  SectionIn           2 ; this section is only in 'full' install<br />
+  SetOutPath          &quot;$INSTDIR\Apache2\manuals&quot;<br />
+  File /r             manuals\mysql<br />
+SectionEnd<br />
+<br />
+<br />
+Section &quot;PHP help manual&quot;<br />
+  SectionIn           2 ; this section is only in 'full' install<br />
+  SetOutPath          &quot;$INSTDIR\Apache2\manuals&quot;<br />
+  File /r             manuals\php<br />
+SectionEnd<br />
+<br />
+<br />
+; popup a browser when the installation is complete<br />
+Function .onInstSuccess<br />
+  ; give us an introductory page; hopefully it will all work!<br />
+  Exec '$PROGRAMFILES\Internet Explorer\Iexplore.exe http://localhost/'<br />
+FunctionEnd<br />
+<br />
+<br />
+; remove remnants of a previous Apache 1.x installation<br />
+Function CleanupFromApache1<br />
+<br />
+  SetShellVarContext  all<br />
+<br />
+  ; stop and remove any running versions of Apache and MySQL<br />
+  ExecWait            &quot;$SYSDIR\net stop mysql&quot; ; shutdown mysql service<br />
+  ExecWait            &quot;$SYSDIR\net stop apache&quot; ; shutdown apache service<br />
+  Exec                '$INSTDIR\Apache\mysql\bin\mysqld-nt.exe --remove' ; remove mysql service<br />
+  Exec                '$INSTDIR\Apache\Apache.exe -k uninstall' ; remove apache service<br />
+<br />
+  ; remove Apache dir<br />
+  IfFileExists        &quot;$INSTDIR\Apache\*.*&quot; +1 WinLamp<br />
+  MessageBox MB_YESNO &quot;You are upgrading to Apache 2. \<br />
+                      I found an Apache 1.x version. \<br />
+                      $\n$\nIf you made backups of your data, it is safe to delete now. \<br />
+                      $\n$\nDo you want to remove it?&quot; IDNO WinLamp<br />
+  SetOutPath          &quot;$INSTDIR\Apache&quot;<br />
+  ExecWait            'del /s /q *.*' ; delete all files in the directory<br />
+  RMDir /r            &quot;$INSTDIR\Apache&quot; ; remove the empty directories<br />
+<br />
+  ; remove Start Menu items<br />
+  WinLamp:<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Apache Start.lnk&quot; ; remove shortcuts<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Apache Stop.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Apache Restart.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Edit httpd.conf file.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Uninstall WinLAMP.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\MySQL Start.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\MySQL Stop.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Edit php.ini file.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Edit my.ini file.lnk&quot;<br />
+  RMDir               &quot;$SMPROGRAMS\WinLAMP&quot;<br />
+<br />
+  ; remove ini and dll files<br />
+  Delete              &quot;$WINDIR\php.ini&quot;<br />
+  Delete              &quot;$WINDIR\my.ini&quot;<br />
+  Delete              &quot;$WINDIR\php4ts.dll&quot;<br />
+<br />
+  ; pull out any registry key<br />
+  DeleteRegKey        HKEY_LOCAL_MACHINE &quot;SOFTWARE\DCT\WinLAMP&quot;<br />
+  DeleteRegKey        HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WinLAMP&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+; backup Apache htdocs directories; ask first<br />
+Function BackupHtdocs<br />
+<br />
+  ; backup Apache htdocs<br />
+  IfFileExists           &quot;$INSTDIR\Apache\htdocs&quot; +1 +3<br />
+  MessageBox MB_OKCANCEL &quot;Your Apache\htdocs directory has files in it. I recommend a backup before continuing. \<br />
+                         $\n$\nClick OK to make a backup now.&quot; IDOK +1 IDCANCEL +2<br />
+  CopyFiles /SILENT      &quot;$INSTDIR\Apache\htdocs&quot; &quot;$DESKTOP\WinLAMP Apache htdocs Backup&quot;<br />
+  ; backup Apache2 htdocs<br />
+  IfFileExists           &quot;$INSTDIR\Apache2\htdocs&quot; +1 +3<br />
+  MessageBox MB_OKCANCEL &quot;Your Apache2\htdocs directory has files in it. I recommend a backup before continuing. \<br />
+                         $\n$\nClick OK to make a backup now.&quot; IDOK +1 IDCANCEL +2<br />
+  CopyFiles /SILENT      &quot;$INSTDIR\Apache2\htdocs&quot; &quot;$DESKTOP\WinLAMP Apache2 htdocs Backup&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+; backup MySQL data directories; ask first<br />
+Function BackupData<br />
+<br />
+  ; backup mysql data<br />
+  IfFileExists           &quot;$INSTDIR\Apache\mysql\data&quot; +1 +3<br />
+  MessageBox MB_OKCANCEL &quot;Your Apache\mysql\data directory has files in it. I recommend a backup before continuing. \<br />
+                         $\n$\nClick OK to make a backup now.&quot; IDOK +1 IDCANCEL +2<br />
+  CopyFiles /SILENT      &quot;$INSTDIR\Apache\mysql\data&quot; &quot;$DESKTOP\WinLAMP MySQL data Backup&quot;<br />
+  ; backup mysql2 data<br />
+  IfFileExists           &quot;$INSTDIR\Apache2\mysql\data&quot; +1 +3<br />
+  MessageBox MB_OKCANCEL &quot;Your Apache2\mysql\data directory has files in it. I recommend a backup before continuing. \<br />
+                         $\n$\nClick OK to make a backup now.&quot; IDOK +1 IDCANCEL +2<br />
+  CopyFiles /SILENT      &quot;$INSTDIR\Apache\mysql\data&quot; &quot;$DESKTOP\WinLAMP MySQL data Backup(2)&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+; uninstaller version; note the path difference here, though: whether NSIS bug or feature, not sure<br />
+Function un.BackupHtdocs<br />
+<br />
+  IfFileExists           &quot;$INSTDIR\htdocs\*.*&quot; +1 +3<br />
+  MessageBox MB_OKCANCEL &quot;Your Apache2\htdocs directory has files in it. I recommend a backup before continuing. \<br />
+                         $\n$\nClick OK to make a backup now.&quot; IDOK +1 IDCANCEL +2<br />
+  CopyFiles /SILENT      &quot;$INSTDIR\htdocs&quot; &quot;$DESKTOP\WinLAMP Apache htdocs Backup&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+; uninstaller version of backupdata func<br />
+Function un.BackupData<br />
+<br />
+  IfFileExists           &quot;$INSTDIR\mysql\data\*.*&quot; +1 +3<br />
+  MessageBox MB_OKCANCEL &quot;Your Apache2\mysql\data directory has files in it. I recommend a backup before continuing. \<br />
+                         $\n$\nClick OK to make a backup now.&quot; IDOK +1 IDCANCEL +2<br />
+  CopyFiles /SILENT      &quot;$INSTDIR\mysql\data&quot; &quot;$DESKTOP\WinLAMP MySQL data Backup&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+; set the text which appears on the uninstall page<br />
+UninstallText &quot;Uninstalls WinLAMP from your system.$\rThe entire directory below WILL BE REMOVED!&quot;<br />
+<br />
+<br />
+; uninstall<br />
+Section &quot;Uninstall&quot;<br />
+<br />
+  SetShellVarContext  all<br />
+<br />
+  ; check and see if we're about to delete somethin precious<br />
+  Call un.BackupHtdocs<br />
+  Call un.BackupData<br />
+<br />
+  ; shutdown anything still running<br />
+  ExecWait            &quot;$SYSDIR\net stop mysql&quot; ; shutdown mysql service<br />
+  ExecWait            '$INSTDIR\bin\Apache.exe -k shutdown' ; stop apache service<br />
+  ExecWait            '$INSTDIR\mysql\bin\mysqld-nt.exe --remove' ; remove mysql service<br />
+  ExecWait            '$INSTDIR\bin\Apache.exe -k uninstall' ; remove apache service<br />
+<br />
+  ; remove the start menu items<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Apache Start.lnk&quot; ; remove shortcuts<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Apache Stop.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Apache Restart.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Edit httpd.conf file.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Uninstall WinLAMP.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\MySQL Start.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\MySQL Stop.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Edit php.ini file.lnk&quot;<br />
+  Delete              &quot;$SMPROGRAMS\WinLAMP\Edit my.ini file.lnk&quot;<br />
+  RMDir               &quot;$SMPROGRAMS\WinLAMP&quot;<br />
+<br />
+  ; remove the ini files in the windows directory<br />
+  Delete              &quot;$WINDIR\php.ini&quot;<br />
+  Delete              &quot;$WINDIR\my.ini&quot;<br />
+<br />
+  ; goodbye registry entries<br />
+  DeleteRegKey        HKEY_LOCAL_MACHINE &quot;SOFTWARE\DCT\WinLAMP&quot;<br />
+  DeleteRegKey        HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\WinLAMP&quot;<br />
+<br />
+  ; and finally, goodbye to the Apache2 directory<br />
+  SetOutPath          &quot;$INSTDIR&quot;<br />
+  ExecWait            'del /s /q *.*' ; delete all files in the directory<br />
+  RMDir /r            &quot;$INSTDIR&quot; ; remove the empty directories<br />
+<br />
+SectionEnd<br />
+<br />
+;eof<br />
+<br />
+=============ini:================<br />
+<br />
+; Ini file generated by the HM NIS Edit IO designer.<br />
+[Settings]<br />
+NumFields=7<br />
+Title=Apache Configuration<br />
+<br />
+[Field 1]<br />
+Type=Groupbox<br />
+Text=Apache Configuration<br />
+Left=22<br />
+Right=242<br />
+Top=14<br />
+Bottom=115<br />
+<br />
+[Field 2]<br />
+Type=Label<br />
+Text=Server Name:<br />
+Left=37<br />
+Right=89<br />
+Top=40<br />
+Bottom=48<br />
+<br />
+[Field 3]<br />
+Type=Label<br />
+Text=Admin email address:<br />
+Left=37<br />
+Right=103<br />
+Top=75<br />
+Bottom=83<br />
+<br />
+[Field 4]<br />
+Type=Text<br />
+State=&quot;localhost&quot;<br />
+Left=110<br />
+Right=234<br />
+Top=38<br />
+Bottom=51<br />
+<br />
+[Field 5]<br />
+Type=Text<br />
+State=&quot;admin@somewhere.com&quot;<br />
+Left=110<br />
+Right=234<br />
+Top=73<br />
+Bottom=86<br />
+<br />
+[Field 6]<br />
+Type=Label<br />
+Text=(either a valid DNS name for your host, or an IP address)<br />
+Left=110<br />
+Right=233<br />
+Top=52<br />
+Bottom=70<br />
+<br />
+[Field 7]<br />
+Type=Label<br />
+Text=(appears on some server-generated pages)<br />
+Left=110<br />
+Right=233<br />
+Top=88<br />
+Bottom=105</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">13th June 2004, 22:12</div></div><div class="posttext">Is that INI file stored as a normal ANSI file?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jared</div><div class="date">14th June 2004, 04:41</div></div><div class="posttext">Yes. I am using the HM NIS editor to create and save the script. I assume that it is saving in a normal ANSI format.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">14th June 2004, 13:15</div></div><div class="posttext">Please create a minimal example that compiles on every system and reproduces the problem.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jared</div><div class="date">14th June 2004, 14:27</div></div><div class="posttext">That will take me some time; I will post here again in a few days when I can. Thank you for your patience.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

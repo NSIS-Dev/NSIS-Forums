@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Wiki-code for only one instance doesnâ€™t work?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Wiki-code for only one instance doesnâ€™t work? NSIS Discussion" />
+	
+	<title> Wiki-code for only one instance doesnâ€™t work? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Wiki-code for only one instance doesnâ€™t work?</div>
+<hr />
+<div class="pda"><a href="t-301972.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=301972">Wiki-code for only one instance doesnâ€™t work?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">eagle3386</div><div class="date">11th January 2009, 23:27</div></div><div class="posttext">Hey guys,<br />
+<br />
+I came across the problem within my NSIS-script which happens whenever the user launches the (un)installer twice.<br />
+Thanks to the Wiki, I found the solution (http://nsis.sourceforge.net/Allow_only_one_installer_instance), but even the â€œeven more advancedâ€ example BringToFront<br />
+<br />
+# Check if already running<br />
+# If so don't open another but bring to front<br />
+System::Call &quot;kernel32::CreateMutexA(i 0, i 0, t '$(^Name)') i .r0 ?e&quot;<br />
+Pop $0<br />
+StrCmp $0 0 launch<br />
+StrLen $0 &quot;$(^Name)&quot;<br />
+IntOp $0 $0 + 1<br />
+loop:<br />
+ FindWindow $1 '#32770' '' 0 $1<br />
+ IntCmp $1 0 +3<br />
+ System::Call &quot;user32::GetWindowText(i r1, t .r2, i r0) i.&quot;<br />
+ StrCmp $2 &quot;$(^Name)&quot; 0 loop<br />
+ System::Call &quot;user32::ShowWindow(i r1, i 9) i.&quot;         ; If minimized then maximize<br />
+ System::Call &quot;user32::SetForegroundWindow(i r1) i.&quot;     ; Bring to front<br />
+ Abort<br />
+launch: doesnâ€™t work â€” no matter if I modify â€œIntCmp $1 0 +5â€ to â€œ+4â€ (or even â€œ+3â€) or not.<br />
+<br />
+By â€œdoesnâ€™t workâ€, I mean that thereâ€™s only _one_ installer launched, but that one _never_ gets brought to the front or maximized (when previously minimized, of course).<br />
+<br />
+The test bed consists of Vista Business x64 with myself having administrative rights, several entries at the taskbar and HM NIS Edit 2.0.3 as the IDE.<br />
+<br />
+If somebody knows something: please, share your knowledge and/or ideas! :)<br />
+<br />
+/Martin..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">11th January 2009, 23:52</div></div><div class="posttext">the code worked fine when I tested (XP SP2), but I would make a couple of changes:<br />
+<br />
+StrCpy $1 &quot;&quot; ;make sure we start at the top of the z-order<br />
+BringToFront<br />
+# Check if already running<br />
+# If so don't open another but bring to front<br />
+System::Call &quot;kernel32::CreateMutexA(i 0, i 0, t '$(^Name)') i .r0 ?e&quot;<br />
+Pop $0<br />
+StrCmp $0 0 launch<br />
+StrLen $0 &quot;$(^Name)&quot;<br />
+IntOp $0 $0 + 1<br />
+loop:<br />
+ FindWindow $1 '#32770' '' 0 $1<br />
+ StrCmp $1 0 +3<br />
+ System::Call &quot;user32::GetWindowText(i r1, t .r2, i r0) i.&quot;<br />
+ StrCmp $2 &quot;$(^Name)&quot; 0 loop<br />
+ System::Call &quot;user32::ShowWindow(i r1, i 9) i.&quot;         ; If minimized then maximize<br />
+ System::Call &quot;user32::SetForegroundWindow(i r1) i.&quot;     ; Bring to front<br />
+ Abort<br />
+launch:<br />
+<br />
+<br />
+if there is no code before this in .oninit, you don't need to reset $1<br />
+<br />
+There could be several reasons why it does not work, if you set a custom caption or something like that so it can't find the window. Try adding MessageBox mb_ok &quot;$1&quot; after the StrCmp $2 &quot;$(^Name)&quot; 0 loop line and make sure its not 0.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">eagle3386</div><div class="date">12th January 2009, 00:12</div></div><div class="posttext">The caption remains something like â€œMy-App 1.2.3.4â€ throughout the whole time.. :)<br />
+<br />
+Regarding the reset, I added that line, although â€œBringToFrontâ€ is the very first command after â€œFunction .onInitâ€ â€” just to make sure.. ;)<br />
+<br />
+Though, the message box does indeed show â€œ0â€.. :(<br />
+<br />
+[-EDIT-]<br />
+Okay, I probably found the reason â€” and itâ€™s almost a shame I didnâ€™t notice it earlier.. :rolleyes:<br />
+<br />
+The search focuses on what is specified via â€œName &quot;foobar&quot;â€, but Name and Caption arenâ€™t the same within my script..<br />
+After fixing that issue, everything worked as expected! :)<br />
+<br />
+So, thank you _very_ much for pointing at the right spot! ;)<br />
+<br />
+/Martin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">12th January 2009, 00:21</div></div><div class="posttext">BringToFront does not modify $1, so you don't need to reset $1<br />
+<br />
+and â€œMy-App 1.2.3.4â€ is the same as the string you used in the name instruction? Try switching out StrCmp $2 &quot;$(^Name)&quot; 0 loop<br />
+ with StrCmp $2 &quot;My-App 1.2.3.4&quot; 0 loop</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">eagle3386</div><div class="date">12th January 2009, 00:48</div></div><div class="posttext">Thanks for that hint! ;)<br />
+<br />
+Regarding your suggestion: as I said in the â€œ[-EDIT-]â€-paragraph, it was not â€” but now it is and everything works _very_ well! :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

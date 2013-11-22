@@ -1,0 +1,111 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Starting/configuring MySQL woes, help!, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Starting/configuring MySQL woes, help! NSIS Discussion" />
+	
+	<title> Starting/configuring MySQL woes, help! [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Starting/configuring MySQL woes, help!</div>
+<hr />
+<div class="pda"><a href="t-246785.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=246785">Starting/configuring MySQL woes, help!</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">pisymbol</div><div class="date">23rd May 2006, 00:04</div></div><div class="posttext">I have looked at many many posts regarding installation of MySQL as well as looking at the sample code up on Sourceforge.<br />
+<br />
+My problem is not that I can't do install it, its that I'm getting different results depending on target machine (variables such as FireWall/security software I believe are not a factor).<br />
+<br />
+Here is my script to start and configure MySQL:<br />
+<br />
+<br />
+# Start MySQL<br />
+DetailPrint &quot;Starting MySQL Configuration...&quot;<br />
+ExecCmd::exec /NOUNLOAD /ASYNC `&quot;$INSTDIR\mysql-5.0.20a-win32\bin\mysqld-nt.exe&quot;`<br />
+Pop $0 ; return value<br />
+DetailPrint &quot;Starting MySQL Daemon returned $0&quot;<br />
+${If} $0 != &quot;error&quot;<br />
+   # Load it<br />
+   DetailPrint &quot;Loading schema...&quot;<br />
+   ExpandEnvStrings $0 &quot;%COMSPEC%&quot;<br />
+   NsExec::exec `&quot;$0&quot; /C $INSTDIR\mysql-5.0.20a-win32\bin\mysql.exe -u root &lt; $INSTDIR\mysql-5.0.20a-win32\my_ddl.sql`<br />
+   Pop $0 ; return value<br />
+   DetailPrint &quot;Schema loading returned $0&quot;<br />
+   StrCmp $0 &quot;0&quot; 0 DatabaseSchemaFail<br />
+   DetailPrint &quot;Schema load successful!&quot;<br />
+${Else}<br />
+DatabaseSchemaFail:<br />
+   MessageBox MB_OK &quot;Install failed to load database schema.  Please see documentation on how to load schema file manually!&quot;<br />
+${EndIf}<br />
+<br />
+<br />
+Can someone tell me if they see something glaringly wrong?  I've noticed that I can not use Exec or NsExec to start mysqld since it just hangs waiting which seems wrong based on the doc (I would assume it should fork a child process and continue).<br />
+<br />
+When it fails, it seems that the schema load fails, i.e. mysql starts but then the schema instantly fails.  Occasionally on some boxes when this occurs the mysqld process dies as well.  On my machine it works everytime, on other machines it fails miserably.<br />
+<br />
+Does anyone know what's going on or have seen this type of behavior before?<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pisymbol</div><div class="date">23rd May 2006, 03:28</div></div><div class="posttext">Btw, if anyone is doing this and has a *known* way please post!!! :-)!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">23rd May 2006, 08:41</div></div><div class="posttext">Exec shouldn't hang around waiting (block), but nsExec should. I wonder if it's the nsExec call that's the problem: is it failing depending on what version of Windows you run it on? It could be that different versions handle command-line stuff slightly differently.<br />
+<br />
+Oh actually you can only install it on NT boxes can't you, otherwise the mysql version is wrong.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pisymbol</div><div class="date">23rd May 2006, 15:17</div></div><div class="posttext">Thanks Rob, yes this is only NT.<br />
+<br />
+Exec most certainly hangs around when executing mysqld or mysqld-nt.exe with 5.0.20a.  I think there is a real bug either in my syntax or within NSIS.<br />
+<br />
+It seems in the majority of cases, mysqld starts fine, but the schema loads fails.  It doesn't make sense to me.<br />
+<br />
+Has anyone installed and loaded schema MySQL successfully on more than one machine before?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">23rd May 2006, 17:46</div></div><div class="posttext">The way you're using LogicLib is wrong.<br />
+${If} $0 != &quot;error&quot;<br />
+# Load it means install it, right?<br />
+............<br />
+StrCmp $0 &quot;0&quot; 0 DatabaseSchemaFail<br />
+DetailPrint &quot;Schema load successful!&quot;<br />
+${Else}<br />
+DatabaseSchemaFail:<br />
+MessageBox MB_OK &quot;Install failed to load database schema. Please see documentation on how to load schema file manually!&quot;<br />
+${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pisymbol</div><div class="date">23rd May 2006, 17:55</div></div><div class="posttext">Originally posted by Red Wine <br />
+The way you're using LogicLib is wrong.<br />
+${If} $0 != &quot;error&quot;<br />
+# Load it means install it, right?<br />
+............<br />
+StrCmp $0 &quot;0&quot; 0 DatabaseSchemaFail<br />
+DetailPrint &quot;Schema load successful!&quot;<br />
+${Else}<br />
+DatabaseSchemaFail:<br />
+MessageBox MB_OK &quot;Install failed to load database schema. Please see documentation on how to load schema file manually!&quot;<br />
+${EndIf} <br />
+<br />
+Yes, but I don't see how I'm using it wrong?  <br />
+<br />
+If the return code does NOT equal an error, load the schema, else we can't load the schema and move on.<br />
+<br />
+I should mention that logically it a flows fine...I do get to the load schema print but the loading of the schema line fails sometimes.  Its really really weird.<br />
+<br />
+Can anyone tell me why Exec doesn't work for mysqld?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pisymbol</div><div class="date">24th May 2006, 23:15</div></div><div class="posttext">For any other MySQL install stuckees...the fix is to add a --console to the mysqld-nt.exe line.  For some reason, on some machines you need the --console and others you don't.  With --console, it now works everytime.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

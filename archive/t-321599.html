@@ -1,0 +1,105 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" uninstallation errors, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  uninstallation errors NSIS Discussion" />
+	
+	<title> uninstallation errors [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  uninstallation errors</div>
+<hr />
+<div class="pda"><a href="t-321599.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=321599">uninstallation errors</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">pocruadhlaoich</div><div class="date">12th August 2010, 08:58</div></div><div class="posttext">Hi,<br />
+in my installer, during .onInit I call UninstallPreviousSoftware, code below. I think that there are two problems with this code and would appreciate advice.<br />
+1. If my product has already been installed then I call its uninstaller using ExecWait, before continuing with the new installer. When the old uninstaller is running, if I cancel out of it, I was expecting it to return an error code that I could pick up as such. However I do not seem to get any error returned and so the following code will then delete the old uninstaller.<br />
+2. I am not totally sure that the HideWindow and BringToFront code is working, I have seen times when after the uninstaller has finished, the installer is still running in the task manager but it seems to be hidden.<br />
+<br />
+Function UninstallPreviousSoftware<br />
+	#if a previous version of the software is already installed, then uninstall it. When uninstalling:<br />
+	#- if the new software is an updater installer, then tell the uninstaller, using a command line parameter,<br />
+	#  that a subsequent reinstall will take place, so that it *should not delete everything*<br />
+	#- if the new software is a full installer, then tell the uninstaller that a subsequent reinstall<br />
+	#  will take place, so that it *should delete everything*<br />
+<br />
+	Push $R0<br />
+	Push $R1<br />
+	Push $R2<br />
+	<br />
+	ReadRegStr $R0 &quot;HKEY_LOCAL_MACHINE&quot; &quot;${MY_ADD_REMOVE_PROGRAMS_REGISTRY_KEY}&quot; &quot;UninstallString&quot;<br />
+	<br />
+	${If} &quot;&quot; != $R0<br />
+		IfFileExists $R0 0 done<br />
+			HideWindow<br />
+			<br />
+			ClearErrors<br />
+			<br />
+			StrCpy $R1 &quot;&quot;<br />
+			<br />
+			!ifdef UPDATER_BUILD<br />
+			StrCpy $R1 ${MY_UPDATER_UNINSTALL_COMMAND_LINE_PARAMETER}<br />
+			!endif<br />
+			<br />
+			ExecWait &quot;$R0 $R1 _?=$INSTDIR&quot; $R2<br />
+			<br />
+			${If} ${Errors}<br />
+				MessageBox MB_OK &quot;uninstall error = $R2&quot;<br />
+				ClearErrors<br />
+			${Else}<br />
+				Delete &quot;$R0&quot;<br />
+				RMDir &quot;$INSTDIR&quot;<br />
+			${EndIf}<br />
+			<br />
+			BringToFront<br />
+	${EndIf}<br />
+	<br />
+	done:<br />
+	<br />
+	Pop $R2<br />
+	Pop $R1<br />
+	Pop $R0<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">12th August 2010, 09:34</div></div><div class="posttext">1. I googled for 'nsis uninstaller return codes' and the first hit pointed me at this: http://nsis.sourceforge.net/Docs/AppendixD.html#D.1  The solution you seek is shown there. Next time please google first, ask later.  (And anyway, you could just read your registry entry again to see if uninstallation was executed properly.)<br />
+<br />
+2. Not sure how that works. But you can always just use the Banner plugin to let the installer 'sleep' while uninstallation is performed.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">12th August 2010, 10:47</div></div><div class="posttext">BTW, if you specify a returncode variable (in this case $R2) the errorflag will not be set when a returncode other then 0 is returned.<br />
+So you should check $R2 not equal to 0 as well.<br />
+See http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.1.4</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pocruadhlaoich</div><div class="date">12th August 2010, 15:20</div></div><div class="posttext">Hi MSG, yes I had read the documentation but it seemed unclear to me about the fact that if I called ExecWait with $R2, that the error would be placed in $R2 but would not be raised as an error I could query with ${If} ${Errors}. Thanks to jpderuiter's advice, I changed the code to the snippet below and all now works :)<br />
+<br />
+ExecWait &quot;$R0 $R1 _?=$INSTDIR&quot; $R2<br />
+			<br />
+${If} ${Errors}<br />
+	GetErrorLevel $R2<br />
+	MessageBox MB_OK &quot;uninstall error = $R2&quot;<br />
+	ClearErrors<br />
+	Abort<br />
+${ElseIf} 0 != $R2<br />
+	DetailPrint &quot;uninstall error = $R2&quot;<br />
+	ClearErrors<br />
+	Abort<br />
+${Else}<br />
+	Delete &quot;$R0&quot;<br />
+	RMDir &quot;$INSTDIR&quot;<br />
+${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">12th August 2010, 18:54</div></div><div class="posttext">Just FYI, you don't have to ClearErrors when you detect them. The detection (either IfErrors or ${If}${Errors}) will clear the error flag.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" SetErrors in a plugin., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  SetErrors in a plugin. NSIS Discussion" />
+	
+	<title> SetErrors in a plugin. [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  SetErrors in a plugin.</div>
+<hr />
+<div class="pda"><a href="t-136793.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=136793">SetErrors in a plugin.</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">banaman8d</div><div class="date">27th May 2003, 16:01</div></div><div class="posttext">Hi,<br />
+<br />
+I am writing a generic application update tool using<br />
+specially formatted .ini files and a plugin used to<br />
+fill in values specified in the ini files.<br />
+<br />
+For example a valid ini entry would look like:<br />
+key={INSTDIR}\somedir <br />
+<br />
+and I use the plugin to replace this with the value of $INSTDIR.<br />
+<br />
+I am new to writing plugins for NSIS, and NSIS for that matter, but<br />
+after digging through the sources for a number of plugins I don't see where the plugin functions set any error flags. How would I do this?<br />
+<br />
+What people seem to do now is just push thier own status values onto the stack, but they are undocumented. Since people rely on a sane stack for their installs to run correctly, this could break installs.<br />
+<br />
+If anyone could set me straight on this I would greatly appreciate it.<br />
+<br />
+Otherwise I'll stay looking like Igor -&gt; :igor:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th May 2003, 16:10</div></div><div class="posttext">Welcome to the forum.<br />
+<br />
+Plug-ins can't set the error flag yet. You have to push it on the stack. Since the NSIS stack doesn't really use the stack but allocates memory using GlobalAlloc there shouldn't be any problem of the stack &quot;running out&quot;.<br />
+<br />
+BTW, why don't you use ReadIniStr and WriteIniStr instead of writing a plug-in?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">banaman8d</div><div class="date">27th May 2003, 18:20</div></div><div class="posttext">Thanks Kichik,<br />
+<br />
+I am using the (Write|Read)Ini* functions to read and write values from the ini files. I am using the plugin for utility functions like interpolating NSIS variables into ini strings after they are read.<br />
+<br />
+so, <br />
+  {INSTDIR}\myfile<br />
+becomes: <br />
+  C:\Program Files\MyApp\myfile<br />
+<br />
+This simple task could be done by scripting, but I wanted to keep the functions together logically. Also, the scripts become cumbersome fast.<br />
+<br />
+The only thing I can't figure out is how to access values like<br />
+$PROGRAMFILES from the plugin. The defines in the ExDLL example include INSTDIR and friends, but not others. Is there a way to do this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">27th May 2003, 18:48</div></div><div class="posttext">You can write the folders to a temporary location or detect 'em yourself (just a simple registry key).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">27th May 2003, 23:00</div></div><div class="posttext">Why not just have a plugin function which you call giving it the values (such as $PROGRAMFILES) from the script, a kind of initialisation function so that the plugin can do its work?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">banaman8d</div><div class="date">28th May 2003, 14:55</div></div><div class="posttext">Thanks for the suggestion SJ,<br />
+<br />
+I decided to do just that. This is the general idea of what I am doing:<br />
+<br />
+; Function to interpolate 'special' values into strings.<br />
+; input: $R0<br />
+; output: $R0<br />
+; error: none set<br />
+; This will probably change so that it uses the stack.<br />
+Function Interpolate<br />
+  Push $R1<br />
+<br />
+  ; Interpolate Program Files location into string<br />
+  nsmys::SearchAndReplace $R0 &quot;{PGMFILES}&quot; &quot;$PROGRAMFILES&quot;<br />
+  Pop $R1                        ; Get value from SearchAndReplace<br />
+  StrCmp $R1 &quot;error&quot; +2 0 <br />
+  StrCpy $R0 $R1                 ; replace old string with interp'ed<br />
+<br />
+  ; Interpolate Desktop values  <br />
+  nsmys::SearchAndReplace $R0 &quot;{DESKTOP}&quot; &quot;$DESKTOP&quot;<br />
+  Pop $R1<br />
+  StrCmp $R1 &quot;error&quot; +2 0<br />
+  StrCpy $R0 $R1<br />
+<br />
+  .<br />
+  . ; Do other interpolations<br />
+  .<br />
+<br />
+  Pop $R1<br />
+FunctionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

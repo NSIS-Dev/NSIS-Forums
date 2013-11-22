@@ -1,0 +1,354 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Batch append to file name?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Batch append to file name? NSIS Discussion" />
+	
+	<title> Batch append to file name? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Batch append to file name?</div>
+<hr />
+<div class="pda"><a href="t-267653.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=267653">Batch append to file name?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">DJosephDesign</div><div class="date">12th March 2007, 20:28</div></div><div class="posttext">I've got an installer that I need to batch rename some files by just adding some letters to the beginning of the file names. For example, I have:<br />
+<br />
+17-this file.ppt<br />
+36-another file.ppt<br />
+<br />
+All I want to do is rename them to include &quot;CW&quot; before the file name. Thus:<br />
+<br />
+CW17-this file.ppt<br />
+CW36-another file.ppt<br />
+<br />
+And I've got a whole folder of these.<br />
+<br />
+I tried:<br />
+<br />
+rename &quot;$INSTDIR\*.*&quot; &quot;$INSTDIR\CW*.*&quot;<br />
+<br />
+But that doesn't work.<br />
+<br />
+Any ideas?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">12th March 2007, 20:40</div></div><div class="posttext">Make a loop with FindFirst/FindNext e.g.<br />
+ClearErrors<br />
+FindFirst $0 $1 &quot;$INSTDIR\*.ppt&quot;<br />
+IfErrors end<br />
+Rename &quot;$INSTDIR\$1&quot; &quot;$INSTDIR\CW$1&quot;<br />
+<br />
+loop:<br />
+FindNext $0 $1<br />
+IfErrors end<br />
+Rename &quot;$INSTDIR\$1&quot; &quot;$INSTDIR\CW$1&quot;<br />
+goto loop<br />
+<br />
+end:<br />
+FindClose $0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DJosephDesign</div><div class="date">12th March 2007, 20:48</div></div><div class="posttext">Thanks a bunch ... but here's how my file was named:<br />
+CWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCW<br />
+CWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCWCW<br />
+CWCWCWCWCWCWCWCWCWCWCWCWCWCW2-Name.ppt<br />
+<br />
+:)<br />
+<br />
+Could it have something to do with me already using $0 and $1? Here's my code:<br />
+<br />
+<br />
+Section -Full SEC0000<br />
+    CheckSpace:<br />
+    StrCpy $0 3000000 ; kb u need<br />
+    StrCpy $1 'C:'; check drive c: for space<br />
+    Call CheckSpaceFunc<br />
+    IntCmp $2 1 Begin<br />
+    MessageBox MB_RETRYCANCEL &quot;Message&quot; IDRETRY CheckSpace<br />
+    Quit<br />
+    Begin:<br />
+    ${GetDrives} &quot;CDROM&quot; &quot;ContinueInstall&quot;<br />
+    StrCmp $R0 Founded +3<br />
+    MessageBox MB_RETRYCANCEL &quot;Message&quot; IDRETRY begin<br />
+    Quit<br />
+SectionEnd<br />
+<br />
+Function ContinueInstall<br />
+    IfFileExists &quot;$9\Library Catalog.fdb&quot; 0 end<br />
+    SetOverwrite on<br />
+    # Copy PPTs from disc<br />
+    CreateDirectory $INSTDIR\Library<br />
+    # Extract program folders to HD<br />
+    SetOutPath $INSTDIR<br />
+    File &quot;preslib.ico&quot;<br />
+    # Move/rename files from old version(s)<br />
+    ClearErrors<br />
+    FindFirst $0 $1 &quot;$INSTDIR\Library\Images\C\CreationWise\*.ppt&quot;<br />
+    IfErrors endRen<br />
+    Rename &quot;$INSTDIR\Library\Images\C\CreationWise\$1&quot; &quot;$INSTDIR\Library\Images\C\CreationWise\CW$1&quot;<br />
+    <br />
+    loop:<br />
+    FindNext $0 $1<br />
+    IfErrors endRen<br />
+    Rename &quot;$INSTDIR\Library\Images\C\CreationWise\$1&quot; &quot;$INSTDIR\Library\Images\C\CreationWise\CW$1&quot;<br />
+    goto loop<br />
+    <br />
+    endRen:<br />
+    FindClose $0<br />
+    rename &quot;$INSTDIR\Library\Videos\Day Month Year V001.avi&quot; &quot;$INSTDIR\Library\Videos\AiG\Day Month Year V001.avi&quot;<br />
+    rename &quot;$INSTDIR\Library\Videos\Sunless Day V002.avi&quot; &quot;$INSTDIR\Library\Videos\AiG\Sunless Day V002.avi&quot;<br />
+    # Write Portfolio Preferences in the Registry<br />
+    WriteRegStr HKLM &quot;${REGKEY}\Components&quot; Full 1<br />
+    WriteRegDWORD HKEY_CURRENT_USER &quot;Software\Extensis\Portfolio 8.0\Preference&quot; &quot;Tabbed Window Mode&quot; 0<br />
+    WriteRegDWORD HKEY_CURRENT_USER &quot;Software\Extensis\Portfolio 8.0\Preference&quot; &quot;Dbl Click Item Action&quot; 2<br />
+    StrCpy $R0 Founded<br />
+    StrCpy $0 StopGetDrives<br />
+    end:<br />
+    Push $0<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">12th March 2007, 21:05</div></div><div class="posttext">Strange... this works perfect for me, let me check further<br />
+outfile 'find.exe'<br />
+ShowInstDetails show<br />
+<br />
+section -<br />
+SetOutPath &quot;$EXEDIR&quot;<br />
+CreateDirectory &quot;$EXEDIR\boo&quot;<br />
+<br />
+FileOpen $R0 &quot;$EXEDIR\boo\test1.txt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\test2.txt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\test3.txt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\test4.txt&quot; w<br />
+FileClose $R0<br />
+<br />
+StrCpy $INSTDIR &quot;$EXEDIR\boo&quot;<br />
+<br />
+ClearErrors<br />
+FindFirst $0 $1 &quot;$INSTDIR\*.txt&quot;<br />
+IfErrors end<br />
+Rename &quot;$INSTDIR\$1&quot; &quot;$INSTDIR\CW$1&quot;<br />
+<br />
+loop:<br />
+FindNext $0 $1<br />
+IfErrors end<br />
+Rename &quot;$INSTDIR\$1&quot; &quot;$INSTDIR\CW$1&quot;<br />
+goto loop<br />
+<br />
+end:<br />
+FindClose $0<br />
+sectionend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">12th March 2007, 21:20</div></div><div class="posttext">I think I got it, it's because the file name begins with numeric value so when the file 01-file.ppt is renamed goes down and findnext finds it again.<br />
+We need a work around this issue, I'll post back in a while.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DJosephDesign</div><div class="date">12th March 2007, 21:28</div></div><div class="posttext">Thanks! You're just oozing with NSIS knowledge. I really appreciate your help!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">12th March 2007, 21:36</div></div><div class="posttext">Thanks!<br />
+I have a work around...<br />
+outfile 'find.exe'<br />
+ShowInstDetails show<br />
+<br />
+!include logiclib.nsh<br />
+<br />
+section -<br />
+SetOutPath &quot;$EXEDIR&quot;<br />
+CreateDirectory &quot;$EXEDIR\boo&quot;<br />
+<br />
+FileOpen $R0 &quot;$EXEDIR\boo\01-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\02-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\03-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\04-some file.ppt&quot; w<br />
+FileClose $R0<br />
+<br />
+StrCpy $INSTDIR &quot;$EXEDIR\boo&quot;<br />
+<br />
+ClearErrors<br />
+FindFirst $0 &quot;$1&quot; &quot;$INSTDIR\*.*&quot;<br />
+<br />
+${do}<br />
+FindNext $0 &quot;$1&quot;<br />
+${If} ${Errors}<br />
+${exitdo}<br />
+${else}<br />
+StrCpy $2 $1 &quot;&quot; &quot;-3&quot;<br />
+${unless} $2 != &quot;ppt&quot;<br />
+Rename &quot;$INSTDIR\$1&quot; &quot;$INSTDIR\CW$1&quot;<br />
+${endunless}<br />
+${endif}<br />
+${loop}<br />
+<br />
+FindClose $0<br />
+sectionend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">12th March 2007, 22:07</div></div><div class="posttext">Would this work?<br />
+<br />
+ClearErrors<br />
+FindFirst $0 $1 &quot;$INSTDIR\*.ppt&quot;<br />
+IfErrors end<br />
+StrCpy $2 $1<br />
+;Rename &quot;$INSTDIR\$1&quot; &quot;$INSTDIR\CW$1&quot;<br />
+<br />
+loop:<br />
+FindNext $0 $1<br />
+IfErrors end<br />
+Rename &quot;$INSTDIR\$1&quot; &quot;$INSTDIR\CW$1&quot;<br />
+goto loop<br />
+<br />
+end:<br />
+Rename &quot;$INSTDIR\$2&quot; &quot;$INSTDIR\CW$2&quot;<br />
+FindClose $0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DJosephDesign</div><div class="date">13th March 2007, 14:59</div></div><div class="posttext">Nope. That still looped into &quot;CWCWCWCWCWCWCW...&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DJosephDesign</div><div class="date">13th March 2007, 15:06</div></div><div class="posttext">BTW, it's very interesting that the first file in the sequence gets properly named. But everything else gets the CW overdrive treatment.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DJosephDesign</div><div class="date">13th March 2007, 15:19</div></div><div class="posttext">I figured it out. The problem was what I thought (and posted earlier).<br />
+<br />
+I used Red Wine's first script, and just changed the variables, since some of them were already used. $0 -&gt; $3, $1 -&gt; $4, etc. And then it worked.<br />
+<br />
+[b]EDIT]/b]: Actually, I had to comment out a line as bnicer suggested, lest the last file get renamed twice.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DJosephDesign</div><div class="date">13th March 2007, 15:29</div></div><div class="posttext">GRR! Strike that. The problem seems to arise when I have more than 10 files.<br />
+<br />
+EDIT: No, the problem is with 27 or more files. Is there some limitation to variables?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">13th March 2007, 15:31</div></div><div class="posttext">Well, did you try to compile/execute the work around I've posted above?<br />
+Works perfect for me :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DJosephDesign</div><div class="date">13th March 2007, 15:56</div></div><div class="posttext">Oh. I didn't see that. The same problem with this script, but this time, only with 25 or more files. The original script worked until 27 files. Weird stuff.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">13th March 2007, 16:14</div></div><div class="posttext">I think this is ok now,<br />
+outfile 'find.exe'<br />
+ShowInstDetails show<br />
+<br />
+!include logiclib.nsh<br />
+<br />
+section -<br />
+SetOutPath &quot;$EXEDIR&quot;<br />
+CreateDirectory &quot;$EXEDIR\boo&quot;<br />
+<br />
+FileOpen $R0 &quot;$EXEDIR\boo\01-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\02-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\03-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\04-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\05-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\06-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\07-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\08-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\09-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\10-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\11-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\12-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\13-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\14-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\15-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\16-some file.ppt&quot; w<br />
+FileClose $R0<br />
+<br />
+FileOpen $R0 &quot;$EXEDIR\boo\17-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\18-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\19-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\20-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\21-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\22-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\23-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\24-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\25-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\26-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\27-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\28-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\29-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\30-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\31-some file.ppt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\32-some file.ppt&quot; w<br />
+FileClose $R0<br />
+<br />
+StrCpy $INSTDIR &quot;$EXEDIR\boo&quot;<br />
+<br />
+ClearErrors<br />
+FindFirst $0 &quot;$1&quot; &quot;$INSTDIR\*.*&quot;<br />
+<br />
+${do}<br />
+FindNext $0 &quot;$1&quot;<br />
+${If} ${Errors}<br />
+${exitdo}<br />
+${else}<br />
+StrCpy $2 $1 &quot;&quot; &quot;-3&quot;<br />
+${if} $2 == &quot;ppt&quot;<br />
+StrCpy $2 $1 &quot;2&quot; &quot;&quot;<br />
+${andif} $2 != &quot;CW&quot;<br />
+Rename &quot;$INSTDIR\$1&quot; &quot;$INSTDIR\CW$1&quot;<br />
+${endif}<br />
+${endif}<br />
+${loop}<br />
+<br />
+FindClose $0<br />
+sectionend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DJosephDesign</div><div class="date">13th March 2007, 16:18</div></div><div class="posttext">Are the FileOpen / FileClose commands required? I need to enter each file name into those?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">13th March 2007, 16:43</div></div><div class="posttext">Nope! these required for my example in order to create 32 files with .ppt extension and numeric value in file name to test my example ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DJosephDesign</div><div class="date">13th March 2007, 16:49</div></div><div class="posttext">Hooray! That works! Thank you very much!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Serial Checking Using Own .DLL, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Serial Checking Using Own .DLL NSIS Discussion" />
+	
+	<title> Serial Checking Using Own .DLL [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Serial Checking Using Own .DLL</div>
+<hr />
+<div class="pda"><a href="t-201123.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=201123">Serial Checking Using Own .DLL</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Mikej0h</div><div class="date">4th December 2004, 17:15</div></div><div class="posttext">Hey all,<br />
+<br />
+We are currenly building an installer which can install one of our own tailor-made products. We would like to do serial checking during installation.<br />
+The idea was that we make our own dll, and start this with parameters trough NSIS (by making a custom dialog) the dll gives a response[return?] but is NSIS able to catch up this responses or reactions from an external program/libary?<br />
+<br />
+Is this possible ? Or do you have some other bright ideas ?<br />
+Thanks in advance.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">4th December 2004, 17:31</div></div><div class="posttext">2 possibilities:<br />
+you will need to build your dll as a nsis-plugin dll, or call it by system-plugin.<br />
+example-code for plugin-dlls to interact with nsis stack and variables is delievered in every nsis build, more on that in the documentation, as i'm not familiar with plugin programming :)<br />
+maybe lobo lunar, deguix, or the nsis devs may help.<br />
+<br />
+calling your own dll with the system plugin doesn't require you to rewrite it, so have a look at the system plugin readme to see how to use it.<br />
+code would look like that:<br />
+syntax of your serial-check function, provided by serial.dll:<br />
+bool CheckSerial(LPSTR serial);<br />
+<br />
+correct usage of system-plugin:<br />
+; --- insert code to get the users input (the serial) here<br />
+; --- as you need to use installoptions for a serial-page, no need to init pluginsdir anymore :)<br />
+; --- after user input, lets say you stored the serial in $SERIAL (user var defined by 'Var SERIAL')<br />
+; --- then extract your dll:<br />
+File /oname=$PLUGINSDIR\Serial.dll .\Serial.dll<br />
+; --- call it, output will be stored on top of stack<br />
+System:Call '$PLUGINSDIR\serial.dll::CheckSerial (t $SERIAL)i .s'<br />
+; --- get output<br />
+Pop $0<br />
+; --- if return is &quot;1&quot; (=true), serial is ok<br />
+StrCmp $0 &quot;1&quot; serial_ok serial_wrong<br />
+serial_ok:<br />
+; --- insert code to execute if serial is ok here<br />
+; --- e.g. enable next-button (disable it on prefunction of serial page)<br />
+Goto done<br />
+serial_wrong:<br />
+; --- insert code to execute if serial is wrong here<br />
+; --- e.g. messagebox<br />
+done:<br />
+; --- continue installation<br />
+<br />
+code will be the same if you redesign your dll as nsis-plugin, except of this change:<br />
+except of File /oname=$PLUGINSDIR\Serial.dll .\Serial.dll<br />
+System:Call '$PLUGINSDIR\serial.dll::CheckSerial (t $SERIAL)i .s'<br />
+u'd use Serial::CheckSerial $SERIAL</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">martinmace</div><div class="date">4th December 2004, 18:33</div></div><div class="posttext">Hi Comm@nder21,<br />
+<br />
+first of all thanks for your reply (Mike and I are building the installer together and I will take the plugin building into my account).<br />
+<br />
+The code certainly clears some blanks for me.<br />
+<br />
+However, the real difference between an NSIS plugin and the system DLL is still a bit unclear to me.<br />
+<br />
+Basically they look the same in your code but I am a bit confused on how to write the DLL (or what differentiates them from eachother). I have already started writing a simple plugin but I think I can get it to work just as you did in your example.<br />
+<br />
+Do you also have any idea on how to extract the input from a custom dialog and put it in a variable to pass to the serial checking function?<br />
+<br />
+Background:<br />
+<br />
+In total, the serial checking function passes these values:<br />
+<br />
+Username, Address, Zip code, City, Expiration date, Licensetype (true license (1) or demo license (0)) and of<br />
+course the serial number to check. Later on I also want to add modules to it (eg. the client buys one module, so he cannot use the other modules, just the one he bought).<br />
+<br />
+The code in the DLL then performs some calculations on the input and calculates the serial. Then it compares the serial to the one supplied by the user. Return values should be indeed something like true or false, just like you pointed out in your example.<br />
+<br />
+Thanks again,<br />
+Martin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">5th December 2004, 14:49</div></div><div class="posttext">the system dll is a plugin for nsis delievered with any nsis distribution.<br />
+it is used to interact between &quot;normal&quot; dlls and nsis.<br />
+if you code your own plugin you'll have to use special code to interact with nsis. (variables, stack)<br />
+system dll already has this code and interacts with your dll like every other program, but also it can interact with nsis using nsis specific features.<br />
+so it is the easiest way.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

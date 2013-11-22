@@ -1,0 +1,85 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" execwait problems, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  execwait problems NSIS Discussion" />
+	
+	<title> execwait problems [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  execwait problems</div>
+<hr />
+<div class="pda"><a href="t-295327.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=295327">execwait problems</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">cinvoice</div><div class="date">31st July 2008, 12:59</div></div><div class="posttext">Hello everyone!<br />
+A bit of a problem appeared when using ExecWait<br />
+<br />
+Here's a piece of my NSIS script:<br />
+<br />
+ClearErrors<br />
+ExecWait '&quot;$INSTDIR\returnZero.exe&quot;'<br />
+IfErrors 0 errors<br />
+Goto done<br />
+errors:<br />
+MessageBox MB_OK &quot;Errors!&quot;<br />
+Abort<br />
+done:<br />
+<br />
+<br />
+returnZero is a dummy, a program written in C++ that just can't be more simple:<br />
+<br />
+int main(int argc, char* argv[])<br />
+{<br />
+	exit(0);<br />
+}<br />
+<br />
+But the installer goes to errors label anyway, as if the return code of my program was not 0.<br />
+<br />
+Could anybody please help me with this prob?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">31st July 2008, 14:07</div></div><div class="posttext">The error flag will only be raised if that executable could not be run (e.g. file not found). This is not related to the exit code at all. To capture the exit code, you must use another variable. Like this:<br />
+<br />
+ClearErrors<br />
+ExecWait '&quot;$INSTDIR\returnZero.exe&quot;' $0<br />
+IfErrors errors<br />
+StrCmp $0 0 done nonezeroexitcode<br />
+<br />
+errors:<br />
+  MessageBox MB_OK &quot;Faild to run executable!&quot;<br />
+  Abort<br />
+<br />
+nonezeroexitcode:<br />
+  MessageBox MB_OK &quot;Executable returned exit code != 0&quot;<br />
+  Abort<br />
+<br />
+done:<br />
+<br />
+Also I think you used &quot;IfErrors&quot; wrongly!<br />
+<br />
+Your code says: IF errors THEN nothing ELSE goto label &quot;errors&quot;<br />
+But it should be: IF errors THEN goto label &quot;errors&quot; (ELSE nothing)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">cinvoice</div><div class="date">31st July 2008, 20:57</div></div><div class="posttext">Ow, thank you alot. It started working :) (By the way, the problem also was I messed up $INSTDIR and $EXEDIR)<br />
+<br />
+The error flag will only be raised if that executable could not be run (e.g. file not found). This is not related to the exit code at all<br />
+<br />
+Hm, I'm a bit condused by this - according to ExecWait description, <br />
+4.9.1.4 ExecWait<br />
+command [user_var(exit code)]<br />
+Execute the specified program and wait for the executed process to quit. See Exec for more information. If no output variable is specified ExecWait sets the error flag if the program executed returns a nonzero error code, or if there is an error. If an output variable is specified, ExecWait sets the variable with the exit code (and only sets the error flag if an error occurs; if an error occurs the contents of the user variable are undefined).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">31st July 2008, 21:08</div></div><div class="posttext">You are right. If you omit the variable, then ExecWait will indeed raise the error flag for a none-zero exit code. But then you cannot distinguish between an error (process could not be started) and a none-zero exit code (process did run, but returned a value != zero). It's your decision what you need. But make sure you use IfErrors correctly: The installer will jump to the first label when there was an error and it will jump  to the second label when there was NO error. The second label can be omitted, if not needed. See my code above ...</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

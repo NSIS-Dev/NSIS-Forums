@@ -1,0 +1,163 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Stack/Register Error: ${GetBetween}: NSIS Website, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Stack/Register Error: ${GetBetween}: NSIS Website NSIS Discussion" />
+	
+	<title> Stack/Register Error: ${GetBetween}: NSIS Website [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Stack/Register Error: ${GetBetween}: NSIS Website</div>
+<hr />
+<div class="pda"><a href="t-296293.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=296293">Stack/Register Error: ${GetBetween}: NSIS Website</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Andrew Wallo</div><div class="date">21st August 2008, 22:32</div></div><div class="posttext">The Developer center hosts this macro here:<br />
+<br />
+http://nsis.sourceforge.net/GetBetween:_Get_text_in_between_two_markers_in_a_file<br />
+<br />
+And if you search for GetBetween on the developer center you will find the page with this code:  [ Which I believe results in a stack corruption error of $R1,$R2.  If GetBetween is called repeatedly, you endup with your registers very confused.  My comments show the analysis of the error.  My Solution to the Code is at the bottom:<br />
+<br />
+<br />
+!macro GetBetween This AndThis In Return<br />
+Push &quot;${This}&quot;       ; This + Stack<br />
+Push &quot;${AndThis}&quot;    ; AndThis + This + Stack<br />
+Push &quot;${In}&quot;         ; In + AndThis + This + Stack<br />
+ Call GetBetween<br />
+Pop &quot;${Return}&quot;<br />
+!macroend<br />
+!define GetBetween &quot;!insertmacro GetBetween&quot;<br />
+ <br />
+Function GetBetween<br />
+ Exch $R0  ;  $R0_Old + AndThis + This + Stack<br />
+ Exch      ;  AndThis + $R0_Old + This + Stack<br />
+ Exch $R1  ;  $R1_Old + $R0_Old + This + Stack<br />
+ Exch 2    ;  This + $R0_Old + $R1_Old + Stack<br />
+ Exch $R2  ;  $R2_Old + $R0_OLD + $R1_Old + Stack<br />
+<br />
+           ## ERROR IS HERE.<br />
+ Exch 2   ; R1 R0 R2 + stack<br />
+ Push $R3 ; R3 R1 R0 R2 + stack<br />
+ Push $R4 ; R4 R3 R1 R0 R2 + stack<br />
+ Push $R5 ; R5 R4 R3 R1 R0 R2 + stack<br />
+ Push $R6 ; R6 R5 R4 R3 R1 R0 R2 + stack<br />
+ Push $R7 ; R7 R6 R5 R4 R3 R1 R0 R2 + stack<br />
+ Push $R8 ; R8 R7 R6 R5 R4 R3 R1 R0 R2 + stack<br />
+## Careful inspection of the rest of the function, <br />
+## shows zero stack maniplation to somehow fix<br />
+## the linear re-pop of the register list 8-0<br />
+ <br />
+ FileOpen $R6 $R0 r<br />
+ <br />
+ StrLen $R4 $R2<br />
+ StrLen $R3 $R1<br />
+ <br />
+ StrCpy $R0 &quot;&quot;<br />
+ <br />
+ Read1:<br />
+  ClearErrors<br />
+  FileRead $R6 $R7<br />
+  IfErrors Done<br />
+  StrCpy $R5 0<br />
+ <br />
+ FindMarker1:<br />
+  IntOp $R5 $R5 - 1<br />
+  StrCpy $R8 $R7 $R4 $R5<br />
+  StrCmp $R8 &quot;&quot; Read1<br />
+  StrCmp $R8 $R2 0 FindMarker1<br />
+   IntOp $R5 $R5 + $R4<br />
+   StrCpy $R7 $R7 &quot;&quot; $R5<br />
+ <br />
+  StrCpy $R5 -1<br />
+  Goto FindMarker2<br />
+ <br />
+ Read2:<br />
+  ClearErrors<br />
+  FileRead $R6 $R7<br />
+  IfErrors Done<br />
+  StrCpy $R5 -1<br />
+ <br />
+ FindMarker2:<br />
+  IntOp $R5 $R5 + 1<br />
+  StrCpy $R8 $R7 $R3 $R5<br />
+  StrCmp $R8 &quot;&quot; 0 +3<br />
+   StrCpy $R0 $R0$R7<br />
+  Goto Read2<br />
+  StrCmp $R8 $R1 0 FindMarker2<br />
+   StrCpy $R7 $R7 $R5<br />
+   StrCpy $R0 $R0$R7<br />
+ <br />
+ Done:<br />
+  FileClose $R6<br />
+ <br />
+ Pop $R8 ;R7 R6 R5 R4 R3 R1 R0 R2 + stack<br />
+ Pop $R7 ;R6 R5 R4 R3 R1 R0 R2 + stack<br />
+ Pop $R6 ;R5 R4 R3 R1 R0 R2 + stack<br />
+ Pop $R5 ;R4 R3 R1 R0 R2 + stack<br />
+ Pop $R4 ;R3 R1 R0 R2 + stack<br />
+ Pop $R3 ;R1 R0 R2 + stack<br />
+ Pop $R2 ;ERROR R0 R2 + stack<br />
+ Pop $R1 ;ERROR R2 + stack<br />
+ Exch $R0 ;ERROR + stack    <br />
+##( One more pop at macro level leaves stack alone, <br />
+## but registers are munged. ) <br />
+FunctionEnd<br />
+<br />
+<br />
+File Patch Above looks like:<br />
+&lt;snip&gt;<br />
+Function GetBetween<br />
+ Exch $R0 ;$R0_Old + AndThis + This + Stack<br />
+ Exch     ;AndThis + $R0_Old + This + Stack<br />
+ Exch $R1 ;$R1_Old + $R0_Old + This + Stack<br />
+ Exch 2   ;This + $R0_Old + $R1_Old + Stack<br />
+ Exch $R2 ;$R2_Old + $R0_OLD + $R1_Old + Stack<br />
+ Exch 2   ; $R1_Old + $R0_OLD + $R2_Old + Stack<br />
+ Exch     ; $R0_Old + $R1_OLD + $R2_Old + Stack<br />
+ Exch 2   ; $R2_Old + $R1_OLD + $R0_Old + Stack<br />
+ Push $R3 ; R3,R2,R1,R0,Stack<br />
+ Push $R4 ; R4,R3,R2,R1,R0,Stack<br />
+ Push $R5 ; R5,R4,R3,R2,R1,R0,Stack<br />
+ Push $R6 ; R6,R5,R4,R3,R2,R1,R0,Stack<br />
+ Push $R7 ; R7,R6,R5,R4,R3,R2,R1,R0,Stack<br />
+ Push $R8 ; R8,R7,R6,R5,R4,R3,R2,R1,R0,Stack<br />
+&lt;/snip&gt;<br />
+<br />
+<br />
+My VERY humble apologies if I have missed something, but I did the patch on my code and I no longer am having register corruption.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Andrew Wallo</div><div class="date">22nd August 2008, 23:08</div></div><div class="posttext">Confirmation?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Andrew Wallo</div><div class="date">25th August 2008, 18:41</div></div><div class="posttext">This page, needs to be corrected:  [ Per my previous post.] Where do I post this, if its not here?<br />
+<br />
+<br />
+nsis.sourceforge.net/GetBetween:_Get_text_in_between_two_markers_in_a_file <br />
+<br />
+The register order is corrupted when the code that is posted exits the macro.<br />
+<br />
+Thanks_<br />
+<br />
+Andrew Wallo</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th August 2008, 10:27</div></div><div class="posttext">You can edit the page directly. Make sure to leave a meaningful comment in the edit log.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Andrew Wallo</div><div class="date">18th December 2008, 18:43</div></div><div class="posttext">Page edited on the NSIS Wiki.  Not sure if I did it correctly.  Usually you have a debate page on a wiki.... but I just edited the main content with a proof comment and a patch comment.  If the group agrees it can consolodate the edit.<br />
+<br />
+_Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th December 2008, 18:57</div></div><div class="posttext">You have correctly identified and fixed the problem. You should fix the function itself rather than keep it as a patch. I'd just re-order the Pop calls and get rid of any unnecessary Exch calls, but both solutions are good.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

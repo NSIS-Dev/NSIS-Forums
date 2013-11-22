@@ -1,0 +1,120 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to pass value/parameter to uninstaller.exe, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to pass value/parameter to uninstaller.exe NSIS Discussion" />
+	
+	<title> How to pass value/parameter to uninstaller.exe [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to pass value/parameter to uninstaller.exe</div>
+<hr />
+<div class="pda"><a href="t-347405.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=347405">How to pass value/parameter to uninstaller.exe</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">LoGGoL</div><div class="date">26th August 2012, 13:33</div></div><div class="posttext">Hi all,<br />
+<br />
+Question: How can I pass certain parameters/values to uninstaller.exe?<br />
+<br />
+Description: I need to uninstall a plugin and remove the appropriate information from registry. The problem is that this plugin can be installed multiple times on PC (for a different releases of a certain program).<br />
+HKLM SOFTWARE\MyPlugin &quot;SoftwareV1.0&quot; &quot;MyPluginV2.0&quot;<br />
+HKLM SOFTWARE\MyPlugin &quot;SoftwareV2.0&quot; &quot;MyPluginV2.0&quot;<br />
+<br />
+The uninstaller should know which key/value should be removed, but I dont have the access to parameteres that were determined while installation (The user decides while installation if he want use the plugin for Software V1.0 or V2.0)<br />
+<br />
+Thanks in advance<br />
+LoGGoL<br />
+P.S. sorry for my english...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">26th August 2012, 13:48</div></div><div class="posttext">There are many ways to do this.<br />
+- Save the information in registry (make a string named after your version number, containing the exact path of your specific uninstall.exe, then in uninstall.exe enumerate all the strings looking for $EXEDIR.)<br />
+- Save the information in a inifile (same method, more or less)<br />
+- Append the information to the end of uninstall.exe using FileWrite/FileRead (these bytes are not covered by the internal CRC check, so you might want to add a parity byte or something)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoGGoL</div><div class="date">26th August 2012, 15:53</div></div><div class="posttext">Thanks MSG,<br />
+<br />
+I decided to put the a string that contains the full path of the uninstaller into the registry. It works now, but there is a (I guess cosmetique) issue:<br />
+<br />
+How can I remove double backslash from a string?<br />
+e.g. C:\HELLO\\WORLD<br />
+<br />
+Sometimes the rootpath entry in registry contains a backslash at the end and sometimes not. How can I remove it if it exist?<br />
+<br />
+thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">26th August 2012, 16:49</div></div><div class="posttext">Are you reading the path directly into $INSTDIR? It should automatically strip trailing back strokes if you do.<br />
+<br />
+E.g.<br />
+ReadRegStr $INSTDIR ...<br />
+StrCpy $INSTDIR $INSTDIR\MyDirectory<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">26th August 2012, 17:22</div></div><div class="posttext">Or for the more general case:<br />
+<br />
+<br />
+;  Remove trailing backslashes and spaces from a string<br />
+;  _outvar is the variable to write to, _input is any string.<br />
+;<br />
+;  Example:<br />
+;    StrCpy $2 &quot;c:\program files\longpath\&quot;<br />
+;    ${RemoveTrailingBackslashSpaces} $3 $2<br />
+;    # $2 is now: c:\program files\longpath\<br />
+;    # $3 is now: c:\program files\longpath<br />
+!macro _RemoveTrailingBackslashSpaces _outvar _input<br />
+  Push $R0<br />
+  Push $R1<br />
+    StrCpy $R0 &quot;${_input}&quot;<br />
+    StrCpy $R1 $R0 1 -1<br />
+    StrCmp $R1 '\' +2<br />
+    StrCmp $R1 ' ' 0 +3<br />
+    StrCpy $R0 $R0 -1<br />
+    goto -4<br />
+  Push $R0<br />
+  Exch 2<br />
+  pop $R0<br />
+  pop $R1<br />
+  pop ${_outvar}<br />
+!macroend<br />
+!define RemoveTrailingBackslashSpaces `!insertmacro _RemoveTrailingBackslashSpaces`</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">26th August 2012, 17:54</div></div><div class="posttext">An alternative:<br />
+<br />
+DetailPrint $R0 ; &quot;C:\path\ \ \\&quot;<br />
+<br />
+Push $R0<br />
+Exch $INSTDIR<br />
+Exch $INSTDIR<br />
+Pop $R0<br />
+<br />
+DetailPrint $R0 ; &quot;C:\path&quot;<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">26th August 2012, 18:53</div></div><div class="posttext">Yeah, for paths specifically that's probably the better idea.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoGGoL</div><div class="date">26th August 2012, 19:19</div></div><div class="posttext">Indeed, I solved this using GetParent and GetFileName, but the alternative using Push and Exch is much better.<br />
+<br />
+	StrCpy $0 &quot;C:\Path\\\&quot;<br />
+	${GetParent} $0 $R0<br />
+	${GetFileName} $0 $R1<br />
+	StrCpy $0 &quot;$R0\$R1&quot;<br />
+<br />
+Many thanks!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

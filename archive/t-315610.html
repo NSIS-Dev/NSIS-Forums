@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Require Windows XP Service Pack 2 (or later), media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Require Windows XP Service Pack 2 (or later) NSIS Discussion" />
+	
+	<title> Require Windows XP Service Pack 2 (or later) [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Require Windows XP Service Pack 2 (or later)</div>
+<hr />
+<div class="pda"><a href="t-315610.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=315610">Require Windows XP Service Pack 2 (or later)</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">drjasonharrison</div><div class="date">23rd December 2009, 01:45</div></div><div class="posttext">Hi,<br />
+<br />
+I've tried to use WinSxS_HasAssembly but I've found that it is to rigid in it's acceptance of the version of the MSCVR80.dll.  See http://nsis.sourceforge.net/WinSxS_QueryAssemblyInfo_to_check_if_assembly_is_installed<br />
+<br />
+I have on one machine version 8.0.50727.42 and on another 8.0.50727.762.  I need either of these to be acceptable.<br />
+<br />
+Can someone please explain what is happening in this code that would reject based on the rebuild version of the dll and how to fix that?<br />
+<br />
+-Jason<br />
+<br />
+System::Call &quot;sxs::CreateAssemblyCache(*i.R0,i0)i.r0&quot;<br />
+${If} $0 == 0<br />
+	System::Call '*(i 24,i0,l,i0,i0)i.R1' ;TODO,BUGBUG: check alloc success<br />
+	System::Call `$R0-&gt;4(i 0,w '$8',i $R1)i.r0` ;IAssemblyCache::QueryAssemblyInfo<br />
+	${If} $0 == 0<br />
+		System::Call '*$R1(i,i.r0)'<br />
+		IntOp $0 $0 &amp; 1 ;ASSEMBLYINFO_FLAG_INSTALLED=1<br />
+		${IfThen} $0 &lt;&gt; 0 ${|} StrCpy $9 1 ${|}<br />
+	${EndIf}<br />
+	System::Free $R1<br />
+	System::Call $R0-&gt;2() ;IAssemblyCache::Release<br />
+${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">msroboto</div><div class="date">23rd December 2009, 04:47</div></div><div class="posttext">Why don't you use Winver.nsh?<br />
+<br />
+Look it up in the wiki if my link doesn't work.<br />
+http://nsis.sourceforge.net/Include/WinVer.nsh <br />
+<br />
+${If} ${IsWinXP}<br />
+${AndIf} ${AtLeastServicePack} 2<br />
+     DetailPrint &quot;Running WinXP SP2 or above&quot;<br />
+${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">23rd December 2009, 12:20</div></div><div class="posttext">@drjasonharrison: That code itself does not really care about the specific version, it just asks windows. The only thing I could think of is to not check for the ASSEMBLYINFO_FLAG_INSTALLED flag, but just check if the call to IAssemblyCache::QueryAssemblyInfo succeeded or not.<br />
+<br />
+The code would then simply be:<br />
+<br />
+System::Call &quot;sxs::CreateAssemblyCache(*i.R0,i0)i.r0&quot;<br />
+${If} $0 == 0<br />
+System::Call '*(i 24,i0,l,i0,i0)i.R1' ;TODO,BUGBUG: check alloc success<br />
+System::Call `$R0-&gt;4(i 0,w '$8',i $R1)i.r0` ;IAssemblyCache::QueryAssemblyInfo<br />
+${If} $0 == 0<br />
+StrCpy $9 1<br />
+${EndIf}<br />
+System::Free $R1<br />
+System::Call $R0-&gt;2() ;IAssemblyCache::Release<br />
+${EndIf}<br />
+<br />
+(NOTE: I don't know anything or care about SxS (And the MS documentation about it sucks), just checking the return might give false positives (or not work at all) etc.)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">drjasonharrison</div><div class="date">23rd December 2009, 17:16</div></div><div class="posttext">@Anders<br />
+<br />
+Well, the code changes it's behaviour -- if the rebuild version does not match exactly then it fails.  However as you point out perhaps the issue is the system call care more.<br />
+<br />
+I believe the check against the version number occurs here:<br />
+<br />
+<br />
+System::Call '*$R1(i,i.r0)' <br />
+IntOp $0 $0 &amp; 1 ;ASSEMBLYINFO_FLAG_INSTALLED=1<br />
+ ${IfThen} $0 &lt;&gt; 0 ${|} StrCpy $9 1 ${|}<br />
+ <br />
+<br />
+However I don't understand what the ${|} operator is doing.  Is this documented somewhere?  It's rather hard to google or search the NSIS windows help for ${|}.<br />
+<br />
+-Jason</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">drjasonharrison</div><div class="date">23rd December 2009, 17:18</div></div><div class="posttext">@msroboto<br />
+<br />
+Thank you for recommending WinVer, I will try it.  Unfortunately my search on the NSIS website for &quot;service pack&quot; and other keywords brought me to the other solution.<br />
+<br />
+-Jason</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">drjasonharrison</div><div class="date">23rd December 2009, 17:52</div></div><div class="posttext">I'm trying this:<br />
+<br />
+	<br />
+var /GLOBAL osVersion<br />
+${If} ${IsWinXP}<br />
+${AndIf} ${AtLeastServicePack} 2<br />
+  StrCpy $osVersion 'WinXP SP2' <br />
+${Else}<br />
+  MessageBox MB_OK|MB_ICONEXCLAMATION &quot;Product requires Windows XP Service Pack 2 or later.&quot; 	    Abort<br />
+${EndIf}<br />
+${If} ${IsAtLeastVista}<br />
+  StrCpy $osVersion 'VistaOrLater'<br />
+${EndIf}<br />
+ <br />
+<br />
+But the NSIS compiler is complaining about the ${If} ${IsAtLeastVista} line:<br />
+<br />
+<br />
+Var: &quot;osVersion&quot;<br />
+!insertmacro: _If<br />
+!insertmacro: end of _If<br />
+!insertmacro: _And<br />
+!insertmacro: end of _And<br />
+StrCpy $osVersion &quot;WinXP SP2&quot; () ()<br />
+!insertmacro: _Else<br />
+!insertmacro: end of _Else<br />
+MessageBox: 48: &quot;Product requires Windows XP Service Pack 2 or later.&quot;<br />
+Abort: &quot;&quot;<br />
+!insertmacro: _EndIf<br />
+!insertmacro: end of _EndIf<br />
+!insertmacro: _If<br />
+!insertmacro: macro &quot;_If&quot; requires 4 parameter(s), passed 2!<br />
+<br />
+<br />
+Suggestions?<br />
+<br />
+-Jason</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">drjasonharrison</div><div class="date">23rd December 2009, 18:00</div></div><div class="posttext">Okay, found it.  I should have used ${AtLeastWinVista}.<br />
+<br />
+My trick was to put the ${IsAtLeastVista} on it's own line and then the compiler told me that it couldn't recognize that variable/macro.  Which led me to reading the WinVer.nsh documentation a bit closer.<br />
+<br />
+-Jason</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

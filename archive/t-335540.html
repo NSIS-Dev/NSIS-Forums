@@ -1,0 +1,168 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Endless Marquee in nsWindows popup, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Endless Marquee in nsWindows popup NSIS Discussion" />
+	
+	<title> Endless Marquee in nsWindows popup [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Endless Marquee in nsWindows popup</div>
+<hr />
+<div class="pda"><a href="t-335540.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=335540">Endless Marquee in nsWindows popup</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">hphantom</div><div class="date">3rd October 2011, 15:58</div></div><div class="posttext">Hi everyone,<br />
+<br />
+Am using the nsWindows plugin to create popups, and almost have the marquee working. My intention was to generate the marquee whenever some work is being done (function being called, etc), just so the user had some some that something was moving.<br />
+<br />
+I managed to get the popup to show just fine, but the marquee itself is not - it's just blank.<br />
+<br />
+This is the main page:<br />
+Function OnClickLookup<br />
+ EnableWindow $HWNDPARENT 1<br />
+ ${NSW_CreateWindow} $WINDOW &quot;Look up your key&quot; 1044<br />
+ ;set window size<br />
+ ${NSW_SetWindowSize} $WINDOW 400 200<br />
+ ${NSW_CenterWindow} $WINDOW $hwndparent<br />
+ <br />
+ ${NSW_CreateLabel} 40 90 80 20 &quot;Email Address:&quot;<br />
+  Pop $0<br />
+   <br />
+  ${NSW_CreateText} 140 90 200 20 $email<br />
+  Pop $emailTextBox<br />
+  <br />
+  ${NSW_CreateButton} 100 130 85 30 &quot;&amp;Find my key&quot;<br />
+  Pop $GETKEY<br />
+  ${NSW_OnClick} $GETKEY onClickGetKey<br />
+  <br />
+  ${NSW_Show}<br />
+FunctionEnd<br />
+<br />
+<br />
+This is the leave code (onClickGetKey):<br />
+Function onClickGetKey<br />
+  ${NSW_GetText} $fullNameTextBox $fullName<br />
+  ${NSW_GetText} $emailTextBox $email<br />
+  <br />
+    ; We require a valid email address to verify the activation, for all users<br />
+   push &quot;^[a-zA-Z][\w\.-]*[a-zA-Z0-9]@[a-zA-Z0-9][\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]$&quot;<br />
+   push $email<br />
+   SFNSIUtil::regMatch<br />
+   pop $R1 ;true/false<br />
+   ${IF} $R1 == &quot;false&quot; <br />
+   ${ORIF} $R1 == &quot;&quot;<br />
+    Messagebox MB_OK|MB_ICONEXCLAMATION &quot;Your email is invalid.&quot; IDOK errors<br />
+   ${ELSE}<br />
+   <br />
+    call Timer<br />
+  <br />
+    push $email<br />
+    push $productcode<br />
+    S:GetKey<br />
+    pop $0<br />
+    Push &quot; &quot; ;divider char<br />
+    Push $0 ;input string<br />
+    Call SplitFirstStrPart<br />
+    Pop $R0 ;1st part [&quot;string1&quot;]<br />
+ <br />
+    ${IF} $R0 == &quot;ERROR&quot;<br />
+    ${ORIF} $R0 == &quot;RPC&quot;<br />
+        call destroyTimerWindow<br />
+        Messagebox MB_OK|MB_ICONEXCLAMATION &quot;$0&quot;<br />
+    ${ELSE}<br />
+        call destroyTimerWindow<br />
+        MessageBox MB_OK|MB_SETFOREGROUND &quot;Your License Key has been sent to your email.&quot;        <br />
+    ${ENDIF}<br />
+  ${ENDIF}<br />
+  <br />
+  errors:<br />
+     StrCpy $R9 &quot;0&quot;<br />
+     Call RelGotoPage<br />
+FunctionEnd<br />
+<br />
+<br />
+And this is my timer code:<br />
+<br />
+Function Timer<br />
+ ${NSW_CreateWindow} $TIMER &quot;Submitting&quot; 1044<br />
+ ${NSW_SetWindowSize} $TIMER 250 50<br />
+ ${NSW_CenterWindow} $TIMER $WINDOW<br />
+  <br />
+ ${NSW_CreateProgressBar} 0 0 100% 100% &quot;Submitting&quot;<br />
+ Pop $hwnd<br />
+ ${NSW_AddStyle} $hwnd ${PBS_MARQUEE}<br />
+ <br />
+ ${NSW_CreateTimer} NSW_Timer.Callback 10<br />
+ ${NSW_Show}<br />
+FunctionEnd<br />
+ <br />
+Function NSW_Timer.Callback<br />
+   ${NSW_KillTimer} NSW_Timer.Callback ; Kill the timer<br />
+   SendMessage $hwnd ${PBM_SETMARQUEE} 1 50 ; start=1|stop=0 interval(ms)=+N<br />
+   ${NSW_Show}<br />
+FunctionEnd<br />
+<br />
+Function destroyTimerWindow<br />
+  ${NSW_DestroyWindow} $TIMER<br />
+FunctionEnd<br />
+<br />
+<br />
+I've also attached a screencap of what am seeing. Am thinking I have the wrong Window?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">3rd October 2011, 18:41</div></div><div class="posttext">This probably isn't working because the window is running in the same thread as your process and therefore the window cannot repaint (the window message loop is blocked). Also a progress bar is either in marque mode or it isn't. You don't need to send PBM_SETMARQUEE every so often; only once.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hphantom</div><div class="date">3rd October 2011, 19:07</div></div><div class="posttext">Ok, I fixed that part with the marquee mode, but am still stumped on the same thread/process. How can I find what thread/process the code is running in so I don't overlap them?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">4th October 2011, 06:14</div></div><div class="posttext">I think problem is in NSW. I did not looked into sources but if it is similar to nsDialogs all components [also the timer] are created in one thread = GUI thread which is bad.<br />
+<br />
+ How can I find what thread/process the code is running in so I don't overlap them?<br />
+<br />
+Normally when you start new thread you get its ID so every thread is unique. try using this ID to recognize correct thread.<br />
+Use my ThreadTimer plugin as reference: http://nsis.sourceforge.net/ThreadTimer_plug-in<br />
+<br />
+By the way I am developing new plug-in specially with this purpose - it creates new separated thread which shows window with Please wait... message and gif animation :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hphantom</div><div class="date">4th October 2011, 13:32</div></div><div class="posttext">I will definitely try your plug-in, Slappy.<br />
+<br />
+It's strange, I got it to work within 2 pop-ups, not 3. (So if I have a button to click and pops up a window, that gives me the marquee, but if I have a button to click, which pops up a window with another button to click, that doesn't pop up.)<br />
+<br />
+Edit: I tried the ThreadTimer, Slappy, but not sure why it's not working either. I dropped in the DLL into my plugins folder and linked it to my installer. I compiled/built the C code; and I copied your test code but it says that ThreadTimer is invalid. Am I missing something? Should there be an NSH/I header somewhere?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">5th October 2011, 07:17</div></div><div class="posttext">Edit: I tried the ThreadTimer, Slappy, but not sure why it's not working either. I dropped in the DLL into my plugins folder and linked it to my installer. I compiled/built the C code; and I copied your test code but it says that ThreadTimer is invalid. Am I missing something? Should there be an NSH/I header somewhere?<br />
+<br />
+Maybe you have problem with decorating functions? Try: http://forums.winamp.com/showthread.php?p=2807692#post2807692<br />
+<br />
+Anyway you can take an idea from that plug-in - creating new thread using _beginthreadex</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hphantom</div><div class="date">5th October 2011, 14:19</div></div><div class="posttext">Maybe you have problem with decorating functions? Try: http://forums.winamp.com/showthread.php?p=2807692#post2807692<br />
+<br />
+Anyway you can take an idea from that plug-in - creating new thread using _beginthreadex<br />
+<br />
+That's exactly the issue am having, all that extra fluff shows up.Start@@YAXPAUHWND__@@HPADPAPAU_stack_t@@PAUextra_parameters@@@Z<br />
+<br />
+<br />
+Is there any way to fix this (or any idea how to)?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">5th October 2011, 14:35</div></div><div class="posttext">http://forums.winamp.com/showpost.php?p=2807709&amp;postcount=16<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" silent and manual install at the same time, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  silent and manual install at the same time NSIS Discussion" />
+	
+	<title> silent and manual install at the same time [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  silent and manual install at the same time</div>
+<hr />
+<div class="pda"><a href="t-270240.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=270240">silent and manual install at the same time</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">JamesKiller</div><div class="date">26th April 2007, 23:11</div></div><div class="posttext">Hi,<br />
+<br />
+I have to complete this task:<br />
+<br />
+if a slient install is in progress at the time that the user runs a manual install, we need to display an appropriate message and possibly an hourglass image, and wait until the silent installer finishes.<br />
+during this time, the user should be able to press cancel button to exit the installer.<br />
+is there has some callback function?<br />
+Any thoughts?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">27th April 2007, 00:33</div></div><div class="posttext">Seems like all you'd have to do is create something in .onInit to detect whether or not an install was running based on whether its EXE was running.  If it was, you could setup a loop to wait until (a) the user canceled or (b) the process terminated (completed).<br />
+<br />
+To capture a user clicking &quot;cancel&quot;, I'd use something like the NXS plugin (http://nsis.sourceforge.net/Nxs_plug-in) since it has a cancel button already.  (Plus, you could keep all your logic contained within functions called from .OnInit).<br />
+<br />
+If you needed to know that it was a silent vs. just a normal install, then you might write to an INI file somewhere so that you could look for the process AND the presence of a setting in the ini file to go into 'loop mode' with your install.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JamesKiller</div><div class="date">27th April 2007, 17:46</div></div><div class="posttext">I am using this code to find whether or not the installer is running when users attempt to install.<br />
+System::Call &quot;kernel32::CreateMutexA(i 0, i 0, t '$(^Name)') i .r0 ?e&quot;<br />
+  Pop $0<br />
+  StrCmp $0 0 launch<br />
+   StrLen $0 &quot;$(^Name)&quot;<br />
+   IntOp $0 $0 + 1<br />
+  loop:<br />
+    FindWindow $1 '#32770' '' 0 $1<br />
+    IntCmp $1 0 found<br />
+    System::Call &quot;user32::GetWindowText(i r1, t .r2, i r0) i.&quot;<br />
+    StrCmp $2 &quot;$(^Name)&quot; 0 loop<br />
+ found:<br />
+<br />
+so if i found one installer is in silent mode, then I have to pop up a window <br />
+<br />
+nxs::Show /NOUNLOAD `$(^Name) Setup` /top `Setup installing something$\r$\nPlease wait...` /sub `$\r$\n$\r$\n Preparing...` /h 0 /pos 0 /max 100 /can 1 /end<br />
+<br />
+        Sleep 1000 <br />
+	nxs::getWindow /NOUNLOAD<br />
+	Pop $0                                       	GetDlgItem $1 $0 2                            	SendMessage $1 ${WM_SETTEXT} 1 &quot;STR:&amp;Quit&quot;    	StrCpy $1 -1<br />
+doloop:<br />
+   doSearch:<br />
+<br />
+	nxs::HasUserAborted /NOUNLOAD<br />
+	Pop $0                                        ; $0 now contains &quot;1&quot; if user clicked Cancel or &quot;0&quot; otherwise.<br />
+	StrCmp $0 1 destroy<br />
+<br />
+        nxs::Update /NOUNLOAD /sub &quot;$\r$\n$\r$\n $1% complite&quot; /pos $1 /end<br />
+        IntCmp $1 0 doloop<br />
+<br />
+destroy:<br />
+	nxs::Destroy<br />
+<br />
+************************************<br />
+for the doloop part, should I still use<br />
+System::Call &quot;kernel32::CreateMutexA(i 0, i 0, t '$(^Name)') i .r0 ?e&quot;<br />
+  Pop $0<br />
+  StrCmp $0 0 launch<br />
+   StrLen $0 &quot;$(^Name)&quot;<br />
+   IntOp $0 $0 + 1<br />
+<br />
+to find window again?<br />
+<br />
+could someone modify my code and make it working?<br />
+<br />
+Thank you.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JamesKiller</div><div class="date">27th April 2007, 20:42</div></div><div class="posttext">and use this snippet to test:<br />
+<br />
+     dloop:<br />
+<br />
+            FindWindow $1 '#32770' '' 0 $1<br />
+            MessageBox MB_OK $1<br />
+            IntCmp $1 0 destroy 0 0<br />
+            intop $R0 $R0 + 1<br />
+            MessageBox MB_OK $R0<br />
+            nxs::Update /NOUNLOAD /sub &quot;$\r$\n$\r$\n $R0 detects.&quot; /pos $R0 /end<br />
+<br />
+            nxs::HasUserAborted /NOUNLOAD<br />
+            Pop $0                                        ; $0 now contains &quot;1&quot; if user clicked Cancel or &quot;0&quot; otherwise.<br />
+            StrCmp $0 1 destroy<br />
+        goto dloop<br />
+<br />
+but only can loop for 7 times, after 7 time, <br />
+execute<br />
+FindWindow $1 '#32770' '' 0 $1<br />
+ then $1=0, but i found the installer in silent mode is still running....<br />
+<br />
+Any thoughts</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" REG_MULTI_SZ reader  problem, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  REG_MULTI_SZ reader  problem NSIS Discussion" />
+	
+	<title> REG_MULTI_SZ reader  problem [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  REG_MULTI_SZ reader  problem</div>
+<hr />
+<div class="pda"><a href="t-204100.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=204100">REG_MULTI_SZ reader  problem</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jfellis</div><div class="date">6th January 2005, 23:20</div></div><div class="posttext">Hi,<br />
+<br />
+I am trying to use the REG_MULTI_SZ reader posted in the Archives and am failing to get it to run for me.<br />
+<br />
+I would like to read the PagingFiles memory setting -- and then set them if they are not correct.  After I get the read method to work, I will try the writer.<br />
+<br />
+I only edited the three lines between the &quot;Edited this&quot; and &quot;Stop editing&quot;  AND I took out the 'bla' and put in the ${Value} about line 86:<br />
+System::Call &quot;${RegQueryValueEx}(r4, ${VALUE}, 0, 0, r1, r2) .r3&quot;<br />
+<br />
+I keep getting: &quot;Can't query registry value (2)[2]&quot;<br />
+<br />
+Also, where can I read about the meaning of a system call function like: System::Call &quot;*(i) i (0) .r0&quot;<br />
+I am having trouble understanding that call and similar ones.<br />
+<br />
+Thanks to all.<br />
+<br />
+<br />
+Here is the code:<br />
+<br />
+OutFile &quot;REG_MULTI_SZ Reader.exe&quot;<br />
+<br />
+Name &quot;REG_MULTI_SZ Reader&quot;<br />
+<br />
+ShowInstDetails show<br />
+<br />
+!define HKEY_CLASSES_ROOT        0x80000000<br />
+!define HKEY_CURRENT_USER        0x80000001<br />
+!define HKEY_LOCAL_MACHINE       0x80000002<br />
+!define HKEY_USERS               0x80000003<br />
+!define HKEY_PERFORMANCE_DATA    0x80000004<br />
+!define HKEY_PERFORMANCE_TEXT    0x80000050<br />
+!define HKEY_PERFORMANCE_NLSTEXT 0x80000060<br />
+!define HKEY_CURRENT_CONFIG      0x80000005<br />
+!define HKEY_DYN_DATA            0x80000006<br />
+<br />
+!define KEY_QUERY_VALUE          0x0001<br />
+!define KEY_ENUMERATE_SUB_KEYS   0x0008<br />
+<br />
+!define REG_MULTI_SZ             7<br />
+<br />
+!define RegOpenKeyEx     &quot;Advapi32::RegOpenKeyExA(i, t, i, i, i) i&quot;<br />
+!define RegQueryValueEx  &quot;Advapi32::RegQueryValueExA(i, t, i, i, i, i) i&quot;<br />
+!define RegCloseKey      &quot;Advapi32::RegCloseKeyA(i) i&quot;<br />
+<br />
+####### Edited this!<br />
+<br />
+!define ROOT_KEY         ${HKEY_LOCAL_MACHINE}<br />
+!define SUB_KEY          &quot;SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management&quot;<br />
+!define VALUE            &quot;PagingFiles&quot;<br />
+<br />
+####### Stop editing<br />
+<br />
+Section &quot;Read&quot;<br />
+  StrCpy $0 &quot;&quot;<br />
+  StrCpy $1 &quot;&quot;<br />
+  StrCpy $2 &quot;&quot;<br />
+  StrCpy $3 &quot;&quot;<br />
+  SetPluginUnload alwaysoff<br />
+  System::Call &quot;*(i) i (0) .r0&quot;<br />
+  System::Call &quot;*(i) i (0) .r1&quot;<br />
+  System::Call &quot;*(i) i (0) .r2&quot;<br />
+  System::Call &quot;${RegOpenKeyEx}(${ROOT_KEY}, '${SUB_KEY}', \<br />
+    0, ${KEY_QUERY_VALUE}|${KEY_ENUMERATE_SUB_KEYS}, r0) .r3&quot;<br />
+  	<br />
+  StrCmp $3 0 goon<br />
+    MessageBox MB_OK|MB_ICONSTOP &quot;Can't open registry key! ($3)&quot;<br />
+    Goto done<br />
+goon:<br />
+<br />
+  System::Call &quot;*$0(&amp;i4 .r4)&quot;<br />
+  System::Call &quot;${RegQueryValueEx}(r4, '${VALUE}', 0, r1, 0, r2) .r3&quot;<br />
+<br />
+  StrCmp $3 0 read<br />
+    MessageBox MB_OK|MB_ICONSTOP &quot;Can't query registry value! ($3)&quot;<br />
+    Goto done<br />
+<br />
+read:<br />
+<br />
+  System::Call &quot;*$1(&amp;i4 .r3)&quot;<br />
+<br />
+  StrCmp $3 ${REG_MULTI_SZ} multisz<br />
+    MessageBox MB_OK|MB_ICONSTOP &quot;Registry value no SZ_MULTI_SZ! ($3)&quot;<br />
+    Goto done<br />
+<br />
+multisz:<br />
+<br />
+  System::Call &quot;*$2(&amp;i4 .r3)&quot;<br />
+<br />
+  StrCmp $3 0 0 multiszalloc<br />
+    MessageBox MB_OK|MB_ICONSTOP &quot;Registry value empty! ($3)&quot;<br />
+    Goto done<br />
+<br />
+multiszalloc:<br />
+<br />
+  System::Free $1<br />
+  System::Alloc $3<br />
+  Pop $1<br />
+<br />
+  StrCmp $1 0 0 multiszget<br />
+    MessageBox MB_OK|MB_ICONSTOP &quot;Can't allocate enough memory! ($3)&quot;<br />
+    Goto done<br />
+<br />
+multiszget:<br />
+<br />
+  System::Call &quot;${RegQueryValueEx}(r4, ${VALUE}, 0, 0, r1, r2) .r3&quot;<br />
+<br />
+  StrCmp $3 0 multiszprocess<br />
+    MessageBox MB_OK|MB_ICONSTOP &quot;Can't query registry value! ($3)[2]&quot;<br />
+    Goto done<br />
+<br />
+multiszprocess:<br />
+<br />
+  StrCpy $4 $1<br />
+<br />
+  loop:<br />
+<br />
+    System::Call &quot;*$4(&amp;t${NSIS_MAX_STRLEN} .r3)&quot;<br />
+    StrCmp $3 &quot;&quot; done<br />
+    DetailPrint $3<br />
+    StrLen $5 $3<br />
+    IntOp $4 $4 + $5<br />
+    IntOp $4 $4 + 1<br />
+    Goto loop<br />
+<br />
+done:<br />
+<br />
+  System::Free $2<br />
+  System::Free $1<br />
+<br />
+  StrCmp $0 0 noClose<br />
+    System::Call &quot;${RegCloseKey}(r0)&quot;<br />
+<br />
+noClose:<br />
+<br />
+  SetPluginUnload manual<br />
+  System::Free $0<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th January 2005, 11:38</div></div><div class="posttext">I have removed 'bla' from Archive page. I have already fixed the script in the Useful Information section of the documentation, but apparently I forgot to fix it in the Archive.<br />
+<br />
+As for your error, try quoting ${VALUE}. It should work then.<br />
+<br />
+System::Call &quot;*(i) i (0) .r0&quot; creates a structure with one integer in it. It actually just allocates four bytes for an integer. You should be able to find information about that at the end of the System plug-in documentation.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jfellis</div><div class="date">7th January 2005, 17:19</div></div><div class="posttext">Thanks!!!<br />
+<br />
+You guys are a great help and NSIS is amazing.<br />
+<br />
+John</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

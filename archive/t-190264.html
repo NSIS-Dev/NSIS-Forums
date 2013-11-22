@@ -1,0 +1,134 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" File command, is this possible?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  File command, is this possible? NSIS Discussion" />
+	
+	<title> File command, is this possible? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  File command, is this possible?</div>
+<hr />
+<div class="pda"><a href="t-190264.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=190264">File command, is this possible?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Deliverator</div><div class="date">16th August 2004, 21:05</div></div><div class="posttext">I've posted this before but I can't find it.<br />
+<br />
+I have a directory structure as follows:<br />
+MAIN_DIR<br />
+---Client1<br />
+---Client2<br />
+---Client3<br />
+<br />
+I !define which client the installer is being compiled for.<br />
+<br />
+If there is a file called test.txt in MAIN_DIR and a file called test.txt in the Client1 directory, I want to include the one from Client1 only.<br />
+<br />
+If there is a file called test.txt in MAIN_DIR and not in the Client1 directory, I want to include the one from MAIN_DIR.<br />
+<br />
+In other words, if there is a file in the defined Client directory, it should override the one in the MAIN_DIR.<br />
+<br />
+Is this possible?<br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">16th August 2004, 22:37</div></div><div class="posttext">Did you try IfFileExists command?<br />
+<br />
+You should now also jump labels or Goto instruction.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">16th August 2004, 23:01</div></div><div class="posttext">IfFileExists, Delete and Rename commands are going to work for you in this case EXCEPT if you want to include it inside the installer as a File command.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">eccles</div><div class="date">16th August 2004, 23:46</div></div><div class="posttext">I've done something very much like this before.<br />
+!macro ClientFile FILE_NAME<br />
+  !system 'if exist ${CLIENT_DIR}\${FILE_NAME} \<br />
+              echo File ${CLIENT_DIR}\${FILE_NAME} &gt;$%TMP%\temp.nsh \<br />
+           else \<br />
+              echo File ${MAIN_DIR}\${FILE_NAME} &gt;$%TMP%\temp.nsh'<br />
+  !include $%TMP%\temp.nsh<br />
+!macroend<br />
+<br />
+<br />
+!insertmacro ClientFile test.txt<br />
+I've not tested the above, but it was something along those lines.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Deliverator</div><div class="date">17th August 2004, 20:05</div></div><div class="posttext">Thanks eccles.<br />
+<br />
+This is what I ended up with.<br />
+<br />
+All of the files in question end up in one temporary file which is then !includ(ed)<br />
+<br />
+${kCLIENT} is a !define that is set up in the BAT file that calls the installer.<br />
+<br />
+<br />
+<br />
+<br />
+# -----------------------------------------------------------------------------------------------------------<br />
+# MACROs for checking if the file should come from the specific client directory of the main directory.<br />
+# -----------------------------------------------------------------------------------------------------------<br />
+<br />
+# The name of the temporary file.<br />
+!define CLIENT_TEMP_FILE &quot;$%TMP%\temp.nsh&quot;<br />
+<br />
+# Initialize. Delete any existing temp file.<br />
+!macro InitClientFile<br />
+   !system 'del /q &quot;${CLIENT_TEMP_FILE}&quot;'<br />
+!macroend<br />
+<br />
+# Put a SetOutPath line before a list of files.<br />
+!macro AddPathClientFile THE_PATH<br />
+   !system 'echo. &gt;&gt;&quot;${CLIENT_TEMP_FILE}&quot;'<br />
+   !system 'echo SetOutPath &quot;${THE_PATH}&quot; &gt;&gt;&quot;${CLIENT_TEMP_FILE}&quot;'<br />
+!macroend<br />
+<br />
+# Accept the top-level directory and filename and decide whether to take the file<br />
+# from the CLIENT sub-directory or the main top-level directory.<br />
+!macro ClientFile FILE_DIRECTORY FILE_NAME<br />
+   !system 'if exist &quot;${FILE_DIRECTORY}\${kCLIENT}\${FILE_NAME}&quot; \<br />
+      (echo File &quot;${FILE_DIRECTORY}\${kCLIENT}\${FILE_NAME}&quot; &gt;&gt;&quot;${CLIENT_TEMP_FILE}&quot;) \<br />
+      else \<br />
+      echo File &quot;${FILE_DIRECTORY}\${FILE_NAME}&quot; &gt;&gt;&quot;${CLIENT_TEMP_FILE}&quot;'<br />
+!macroend<br />
+<br />
+# Add these file to the installer script.<br />
+!macro IncludeClientFile<br />
+   !include &quot;${CLIENT_TEMP_FILE}&quot;<br />
+!macroend<br />
+<br />
+# -----------------------------------------------------------------------------------------------------------<br />
+# END - MACROs for checking if the file should come from the specific client directory of the main directory.<br />
+# -----------------------------------------------------------------------------------------------------------<br />
+<br />
+<br />
+To use it in the installer:<br />
+<br />
+<br />
+   !insertmacro InitClientFile<br />
+<br />
+      !insertmacro AddPathClientFile &quot;$ApplicationDir\myDir&quot;<br />
+         !insertmacro ClientFile &quot;..\myDir&quot; &quot;aaa.txt&quot;<br />
+         !insertmacro ClientFile &quot;..\myDir&quot; &quot;bbb.txt&quot;<br />
+         !insertmacro ClientFile &quot;..\myDir&quot; &quot;ccc.txt&quot;<br />
+<br />
+      !insertmacro AddPathClientFile &quot;$ApplicationDir\myDir2&quot;<br />
+         !insertmacro ClientFile &quot;..\myDir2&quot; &quot;xxx.txt&quot;<br />
+         !insertmacro ClientFile &quot;..\myDir2&quot; &quot;yyy.txt&quot;<br />
+         !insertmacro ClientFile &quot;..\myDir2&quot; &quot;zzz.txt&quot;<br />
+<br />
+   !insertmacro IncludeClientFile</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">17th August 2004, 21:13</div></div><div class="posttext">I suggest you add it to the NSIS Archive (http://nsis.sourceforge.net/archive/nsisweb.php) (if you haven't already)!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

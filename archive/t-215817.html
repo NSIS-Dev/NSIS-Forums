@@ -1,0 +1,178 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Test connection to specific address/port, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Test connection to specific address/port NSIS Discussion" />
+	
+	<title> Test connection to specific address/port [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Test connection to specific address/port</div>
+<hr />
+<div class="pda"><a href="t-215817.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=215817">Test connection to specific address/port</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">PleaseKING</div><div class="date">12th May 2005, 14:19</div></div><div class="posttext">Hello all,<br />
+<br />
+  I am creating an installer with NSIS, and I would like to validate the SMTP server name user enters by connecting to port 25 of this server. This is fully automatic and gives some guarantee that the SMTP server is entered correctly. Is there any way to try to connect to specific IP address/port from NSIS?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">glory_man</div><div class="date">12th May 2005, 16:39</div></div><div class="posttext">There is IPDll (http://nsis.sourceforge.net/archive/viewpage.php?pageid=60) and you can try to use it. But I don't know about working with specific port. Try.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">PleaseKING</div><div class="date">12th May 2005, 17:01</div></div><div class="posttext">As far as I understand, IPDll is a thing to test IP addresses statically, just basing on some fixed rules, not trying to connect physically. But maybe I am wrong.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kike_velez</div><div class="date">16th June 2005, 13:05</div></div><div class="posttext">Hello<br />
+This function connect a socket to a ServerIP and Port and disconect this.<br />
+Useful if you want to know if a server service is running in a port. <br />
+Tested with windowsXp and Win98.<br />
+<br />
+<br />
+push &quot;ServerIP&quot;<br />
+push &quot;PortToConect&quot;<br />
+Call SocketToServerAndPort<br />
+pop $R0<br />
+<br />
+At this moment $R0 is 0 (conect to socket OK) or -1 (conect to socket not OK)<br />
+note : Socket Version Dll required 2.2 . If you want to change the version, change on WSAStartup function.<br />
+<br />
+Examples <br />
+<br />
+Section &quot;mysql&quot; mysql<br />
+          push &quot;127.0.0.1&quot;<br />
+          push &quot;3306&quot;<br />
+          Call SocketToServerAndPort<br />
+          pop $R0<br />
+          messagebox mb_ok &quot;Mysql : return $R0&quot;<br />
+SectionEnd<br />
+<br />
+Section &quot;web&quot; web<br />
+          push &quot;127.0.0.1&quot;<br />
+          push &quot;80&quot;<br />
+          Call SocketToServerAndPort<br />
+          pop $R0<br />
+          messagebox mb_ok &quot;Web : return $R0&quot;<br />
+SectionEnd<br />
+<br />
+Section &quot;smtp&quot; smtp<br />
+          push &quot;127.0.0.1&quot;<br />
+          push &quot;25&quot;<br />
+          Call SocketToServerAndPort<br />
+          pop $R0<br />
+          messagebox mb_ok &quot;Smtp : return $R0&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+Function SocketToServerAndPort<br />
+<br />
+Exch $0 ; PortToConect<br />
+Exch<br />
+Exch $1 ; ServeIP<br />
+Push $2 ; address struct wsadata<br />
+Push $3 ; WSAStartup return<br />
+Push $4 ; socket return<br />
+Push $5 ; ntohs return<br />
+Push $6 ; inet_addr<br />
+Push $7 ; addres struct sockaddr_in<br />
+Push $8 ; connect return ¡¡<br />
+push $9 ; WSACleanup return<br />
+push $R0 ; <br />
+push $R1 ;  Temp<br />
+push $R2 ;   &quot;<br />
+push $R3 ;  wVersion<br />
+push $R4 ; szDescription<br />
+push $R5 ; wHighVersion<br />
+push $R6 ; szSystemStatus<br />
+push $R7 ; iMaxSockets<br />
+push $R8 ; iMaxUdpDg<br />
+push $R9 ; lpVendorInfo<br />
+<br />
+<br />
+!define struct_wsadata  '(&amp;i2,&amp;i2,&amp;t257,&amp;t129,i,i,l)i'<br />
+System::Call '*${struct_wsadata} .r2' ; allocates memory for wsadata struct and writes address to $2<br />
+        ; 514 =2 + 256*2 = MAKEWORD (bLow,bHigh) = bLow + 256 * bHigh ==&gt; version socket<br />
+        ; note : Socket Version Dll required 2.2 or higher<br />
+System::Call 'ws2_32::WSAStartup(i 514 ,i r2)i .r3'<br />
+IntCmp 0 $3 0 DllNotOK DllNotOK<br />
+       System::Call '*$2${struct_wsadata}(.R3,.R4,.R5,.R6,.R7,.R8,.R9)'<br />
+       IntOp $R3 $R3 / 256<br />
+       IntOp $R1 $3 % 256<br />
+       IntOp $R4 $R4 % 256<br />
+       IntOp $R2 $R4 % 256<br />
+       ; From winsock.h :<br />
+       ; AF_INET                 = 2<br />
+       ; IPPROTO_TCP             = 6<br />
+       ; SOCK_STREAM             = 1<br />
+System::Call 'ws2_32::socket(i 2,i 1,i 6)i .r4'<br />
+<br />
+System::Call 'ws2_32::ntohs(i $0) i.r5'<br />
+System::Call 'ws2_32::inet_addr(t &quot;$1&quot;) i.r6'<br />
+<br />
+!define struct_sockaddr_in  '(&amp;i2,&amp;i2,&amp;i4,&amp;t8)i'<br />
+System::Call '*${struct_sockaddr_in} .r7' ; allocates memory for sockaddr_in struct and writes address to $7<br />
+System::Call '*$7${struct_sockaddr_in}(2,r5,r6,)' ;<br />
+<br />
+System::Call 'ws2_32::connect(i $4,i $7,i 16) i.r8'<br />
+<br />
+System::Call 'ws2_32::WSACleanup()i .r9 '<br />
+<br />
+;DetailPrint &quot;***********************&quot;<br />
+;DetailPrint &quot;Port = $0&quot;<br />
+;DetailPrint &quot;Server = $1&quot;<br />
+;DetailPrint &quot;Version = $R3.$R1&quot;<br />
+;DetailPrint &quot;HighVersion = $R4.$R2&quot;<br />
+;DetailPrint &quot;Description = $R5&quot;<br />
+;DetailPrint &quot;SystemStatus = $R6&quot;<br />
+;DetailPrint &quot;MaxSockets = $R7&quot;<br />
+;DetailPrint &quot;MaxUdpDg= $R8&quot;<br />
+;DetailPrint &quot;VendorInfo = $R9&quot;<br />
+;DetailPrint &quot;Connect return $8&quot;<br />
+;DetailPrint &quot;***********************&quot;<br />
+<br />
+System::Free $7<br />
+System::Free $2<br />
+<br />
+Goto done<br />
+<br />
+DllNotOK:<br />
+MessageBox mb_ok &quot;The WinSock DLL is unacceptable&quot;<br />
+Goto done<br />
+<br />
+done:<br />
+<br />
+Pop $R9<br />
+Pop $R8<br />
+Pop $R7<br />
+Pop $R6<br />
+Pop $R5<br />
+Pop $R4<br />
+Pop $R3<br />
+Pop $R2<br />
+Pop $R1<br />
+Pop $R0<br />
+Pop $9<br />
+Pop $7<br />
+Pop $6<br />
+Pop $5<br />
+Pop $4<br />
+Pop $3<br />
+Pop $2<br />
+Pop $1<br />
+Pop $0<br />
+Exch $8 ;Stack =  0 (conect to socket OK) or -1 (conect to socket not OK)<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">PleaseKING</div><div class="date">16th June 2005, 13:10</div></div><div class="posttext">Thanks a lot, that seems to be the one I need, will try that.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

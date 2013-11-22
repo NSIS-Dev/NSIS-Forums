@@ -1,0 +1,154 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" get process info, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  get process info NSIS Discussion" />
+	
+	<title> get process info [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  get process info</div>
+<hr />
+<div class="pda"><a href="t-305810.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=305810">get process info</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">820815</div><div class="date">28th April 2009, 14:55</div></div><div class="posttext">How can I get &quot;I/O Write Bytes&quot; info for process? :confused:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Static_VoiD</div><div class="date">29th April 2009, 01:28</div></div><div class="posttext">Oh, man. You can read some manual on this at MSDN. <br />
+Them use System plugin to call the DLL and function required.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">820815</div><div class="date">29th April 2009, 17:33</div></div><div class="posttext">MSDN :eek: <br />
+<br />
+If I could understand what is written there, I would not have to ask here</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">820815</div><div class="date">25th August 2010, 01:29</div></div><div class="posttext">So... http://msdn.microsoft.com/en-us/library/ms683218(v=VS.85).aspx<br />
+<br />
+System::Call 'kernel32::OpenProcess(i 1040, i 0, i $PID)i .r0'<br />
+<br />
+System::Alloc 48 ;6 counters * 8 bytes?<br />
+Pop $1<br />
+<br />
+System::Call 'kernel32::ProcessGetIOCounters(i r0, p r1)' ??? :hang:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">25th August 2010, 05:04</div></div><div class="posttext">hmmm... good question - seems like it should work (except that 'p' is incorrect... that's the online docs vs included docs mismatch thing.. you'd want 'i')...<br />
+<br />
+...except that it doesn't seem to.  Perhaps the struct size isn't quite right - but doesn't seem to be anything wrong with it...<br />
+<br />
+<br />
+OutFile &quot;test.exe&quot;<br />
+<br />
+!define PROCESS_QUERY_INFORMATION 0x0400<br />
+!define PROCESS_VM_READ 0x0010<br />
+<br />
+Section<br />
+	System::Call &quot;kernel32::GetCurrentProcessId(v)i.r0&quot;<br />
+	System::Call &quot;kernel32::OpenProcess(i${PROCESS_QUERY_INFORMATION}|${PROCESS_VM_READ}, i0, ir0) i.r1 ? e&quot;<br />
+	Pop $7<br />
+<br />
+<br />
+	System::Call &quot;*(l, l, l, l, l, l) i.r2&quot;<br />
+<br />
+	System::Call &quot;kernel32::GetProcessIoCounters(ir1, i.r2) i.r5 ? e&quot;<br />
+	Pop $6<br />
+	System::Call &quot;*$2(l.R1, l.R2, l.R3, l.R4, l.R5, l.R6)&quot;<br />
+	MessageBox MB_OK &quot;GetCurrentProcessId: $0$\nGetOpenProcess: $1$\nBuffer: $2$\nGetProcessIoCounters result: $5$\nGetLastError: $6$\n$\n[$R1][$R2][$R3][$R4][$R5][$R6]&quot;<br />
+	System::Free $2<br />
+SectionEnd<br />
+<br />
+<br />
+<br />
+---------------------------<br />
+Name Setup<br />
+---------------------------<br />
+GetCurrentProcessId: 5420<br />
+GetOpenProcess: 248<br />
+Buffer: 0 &lt;--- should remain pointer to struct address<br />
+GetProcessIoCounters result: 0 &lt;--- should be non-zero<br />
+GetLastError: 998<br />
+<br />
+[0][0][0][0][0][0]<br />
+---------------------------<br />
+OK   <br />
+---------------------------<br />
+<br />
+<br />
+No idea.. some System plugin wizard will hopefully step in %)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">gringoloco023</div><div class="date">25th August 2010, 07:51</div></div><div class="posttext">At least the following line should have a dot less on the second parameter. (it's a buffer 'out' so one has to supply the buffer handle)<br />
+System::Call &quot;kernel32::GetProcessIoCounters(ir1, ir2) i.r5 ? e&quot;<br />
+<br />
+Results:<br />
+GetCurrentProcessId: 700<br />
+GetOpenProcess: 204<br />
+Buffer: 1371680<br />
+GetProcessIoCounters result: 1<br />
+GetLastError: 80<br />
+<br />
+[82][3][2529][66090][11408][98746]<br />
+<br />
+I'm not sure what I'm exactly looking for, so it's a bit hard to confirm the shape of IO_COUNTERS Structure (http://msdn.microsoft.com/en-us/library/ms684125%28v=VS.85%29.aspx) to be right</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">25th August 2010, 12:30</div></div><div class="posttext">At least the following line should have a dot less on the second parameter. (it's a buffer 'out' so one has to supply the buffer handle)<br />
+System::Call &quot;kernel32::GetProcessIoCounters(ir1, ir2) i.r5 ? e&quot;<br />
+Oh pish.  Go figure.. I correlated the __out type as out in the System syntax, and not in.<br />
+<br />
+I'm not sure what I'm exactly looking for, so it's a bit hard to confirm the shape of IO_COUNTERS Structure (http://msdn.microsoft.com/en-us/library/ms684125%28v=VS.85%29.aspx) to be right<br />
+<br />
+Open up Task Manager, add the IO columns if needed, compare to those :)<br />
+<br />
+so, corrected code without the debuggery bits...<br />
+<br />
+OutFile &quot;test.exe&quot;<br />
+<br />
+!define PROCESS_QUERY_INFORMATION 0x0400<br />
+!define PROCESS_VM_READ 0x0010<br />
+<br />
+Section<br />
+	System::Call &quot;kernel32::GetCurrentProcessId(v)i.r0&quot;<br />
+	System::Call &quot;kernel32::OpenProcess(i${PROCESS_QUERY_INFORMATION}|${PROCESS_VM_READ}, i0, ir0) i.r1&quot;<br />
+<br />
+	System::Call &quot;*(l, l, l, l, l, l) i.r2&quot;<br />
+<br />
+	System::Call &quot;kernel32::GetProcessIoCounters(ir1, ir2)&quot;<br />
+<br />
+	System::Call &quot;*$2(l.R1, l.R2, l.R3, l.R4, l.R5, l.R6)&quot;<br />
+<br />
+	MessageBox MB_OK &quot;PID: $0$\n$\nI/O Reads: $R1$\nI/O Writes: $R2$\nI/O Other: $R3$\nI/O Read Bytes: $R4$\nI/O Write Bytes: $R5$\nI/O Other Bytes: $R6&quot;<br />
+	System::Free $2<br />
+SectionEnd<br />
+<br />
+<br />
+<br />
+---------------------------<br />
+Name Setup<br />
+---------------------------<br />
+PID: 3460<br />
+<br />
+I/O Reads: 75<br />
+I/O Writes: 3<br />
+I/O Other: 505<br />
+I/O Read Bytes: 66122<br />
+I/O Write Bytes: 11408<br />
+I/O Other Bytes: 157458<br />
+---------------------------<br />
+OK   <br />
+---------------------------</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">820815</div><div class="date">25th August 2010, 17:29</div></div><div class="posttext">Thank you! ;)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,454 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Trying to make nsProcess' process termination into suspension, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Trying to make nsProcess' process termination into suspension NSIS Discussion" />
+	
+	<title> Trying to make nsProcess' process termination into suspension [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Trying to make nsProcess' process termination into suspension</div>
+<hr />
+<div class="pda"><a href="t-290965.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=290965">Trying to make nsProcess' process termination into suspension</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">parasoul</div><div class="date">28th April 2008, 02:56</div></div><div class="posttext">I modified the nsProcess source trying to make it suspend processes rather than kill them. Apparently I'm failing miserably because nothing is getting suspended <br />
+<br />
+Here's source<br />
+<br />
+<br />
+/*****************************************************************<br />
+ *               nsProcess NSIS plugin v1.5                      *<br />
+ *                                                               *<br />
+ * 2006 Shengalts Aleksander aka Instructor (Shengalts@mail.ru)  *<br />
+ *                                                               *<br />
+ * Source function FIND_PROC_BY_NAME based                       *<br />
+ *   upon the Ravi Kochhar (kochhar@physiology.wisc.edu) code    *<br />
+ * Thanks iceman_k (FindProcDLL plugin) and                      *<br />
+ *   DITMan (KillProcDLL plugin) for point me up                 *<br />
+ *****************************************************************/<br />
+<br />
+<br />
+#define WIN32_LEAN_AND_MEAN<br />
+#include &lt;windows.h&gt;<br />
+#include &lt;Tlhelp32.h&gt;<br />
+#include &quot;ConvFunc.h&quot;<br />
+<br />
+/* Defines */<br />
+#define NSIS_MAX_STRLEN 1024<br />
+<br />
+#define SystemProcessInformation     5<br />
+#define STATUS_SUCCESS               0x00000000L<br />
+#define STATUS_INFO_LENGTH_MISMATCH  0xC0000004L<br />
+<br />
+typedef struct _SYSTEM_THREAD_INFO {<br />
+  FILETIME ftCreationTime;<br />
+  DWORD dwUnknown1;<br />
+  DWORD dwStartAddress;<br />
+  DWORD dwOwningPID;<br />
+  DWORD dwThreadID;<br />
+  DWORD dwCurrentPriority;<br />
+  DWORD dwBasePriority;<br />
+  DWORD dwContextSwitches;<br />
+  DWORD dwThreadState;<br />
+  DWORD dwUnknown2;<br />
+  DWORD dwUnknown3;<br />
+  DWORD dwUnknown4;<br />
+  DWORD dwUnknown5;<br />
+  DWORD dwUnknown6;<br />
+  DWORD dwUnknown7;<br />
+} SYSTEM_THREAD_INFO;<br />
+<br />
+typedef struct _SYSTEM_PROCESS_INFO {<br />
+  DWORD dwOffset;<br />
+  DWORD dwThreadCount;<br />
+  DWORD dwUnkown1[6];<br />
+  FILETIME ftCreationTime;<br />
+  DWORD dwUnkown2;<br />
+  DWORD dwUnkown3;<br />
+  DWORD dwUnkown4;<br />
+  DWORD dwUnkown5;<br />
+  DWORD dwUnkown6;<br />
+  WCHAR *pszProcessName;<br />
+  DWORD dwBasePriority;<br />
+  DWORD dwProcessID;<br />
+  DWORD dwParentProcessID;<br />
+  DWORD dwHandleCount;<br />
+  DWORD dwUnkown7;<br />
+  DWORD dwUnkown8;<br />
+  DWORD dwVirtualBytesPeak;<br />
+  DWORD dwVirtualBytes;<br />
+  DWORD dwPageFaults;<br />
+  DWORD dwWorkingSetPeak;<br />
+  DWORD dwWorkingSet;<br />
+  DWORD dwUnkown9;<br />
+  DWORD dwPagedPool;<br />
+  DWORD dwUnkown10;<br />
+  DWORD dwNonPagedPool;<br />
+  DWORD dwPageFileBytesPeak;<br />
+  DWORD dwPageFileBytes;<br />
+  DWORD dwPrivateBytes;<br />
+  DWORD dwUnkown11;<br />
+  DWORD dwUnkown12;<br />
+  DWORD dwUnkown13;<br />
+  DWORD dwUnkown14;<br />
+  SYSTEM_THREAD_INFO ati[ANYSIZE_ARRAY];<br />
+} SYSTEM_PROCESS_INFO;<br />
+<br />
+<br />
+/* Include conversion functions */<br />
+#define xatoi<br />
+#define xitoa<br />
+#include &quot;ConvFunc.h&quot;<br />
+<br />
+/* NSIS stack structure */<br />
+typedef struct _stack_t {<br />
+  struct _stack_t *next;<br />
+  char text[1];<br />
+} stack_t;<br />
+<br />
+stack_t **g_stacktop;<br />
+char *g_variables;<br />
+unsigned int g_stringsize;<br />
+<br />
+#define EXDLL_INIT()        \<br />
+{                           \<br />
+  g_stacktop=stacktop;      \<br />
+  g_variables=variables;    \<br />
+  g_stringsize=string_size; \<br />
+}<br />
+<br />
+/* Global variables */<br />
+char szBuf[NSIS_MAX_STRLEN];<br />
+<br />
+/* Funtions prototypes and macros */<br />
+int FIND_PROC_BY_NAME(char *szProcessName, BOOL bTerminate);<br />
+int popinteger();<br />
+void pushinteger(int integer);<br />
+int popstring(char *str, int len);<br />
+void pushstring(const char *str, int len);<br />
+<br />
+<br />
+/* NSIS functions code */<br />
+void __declspec(dllexport) _FindProcess(HWND hwndParent, int string_size,<br />
+                                      char *variables, stack_t **stacktop)<br />
+{<br />
+  EXDLL_INIT();<br />
+  {<br />
+    int nError;<br />
+<br />
+    popstring(szBuf, NSIS_MAX_STRLEN);<br />
+    nError=FIND_PROC_BY_NAME(szBuf, FALSE);<br />
+    pushinteger(nError);<br />
+  }<br />
+}<br />
+<br />
+void __declspec(dllexport) _KillProcess(HWND hwndParent, int string_size,<br />
+                                      char *variables, stack_t **stacktop)<br />
+{<br />
+  EXDLL_INIT();<br />
+  {<br />
+    int nError;<br />
+<br />
+    popstring(szBuf, NSIS_MAX_STRLEN);<br />
+    nError=FIND_PROC_BY_NAME(szBuf, TRUE);<br />
+    pushinteger(nError);<br />
+  }<br />
+}<br />
+<br />
+void __declspec(dllexport) _Unload(HWND hwndParent, int string_size,<br />
+                                      char *variables, stack_t **stacktop)<br />
+{<br />
+}<br />
+<br />
+BOOL WINAPI DllMain(HANDLE hInst, ULONG ul_reason_for_call, LPVOID lpReserved)<br />
+{<br />
+  return TRUE;<br />
+}<br />
+<br />
+int FIND_PROC_BY_NAME(char *szProcessName, BOOL bTerminate)<br />
+// Find the process &quot;szProcessName&quot; if it is currently running.<br />
+// This works for Win95/98/ME and also WinNT/2000/XP.<br />
+// The process name is case-insensitive, i.e. &quot;notepad.exe&quot; and &quot;NOTEPAD.EXE&quot;<br />
+// will both work. If bTerminate is TRUE, then process will be terminated.<br />
+//<br />
+// Return codes are as follows:<br />
+//   0   = Success<br />
+//   601 = No permission to terminate process<br />
+//   602 = Not all processes terminated successfully<br />
+//   603 = Process was not currently running<br />
+//   604 = Unable to identify system type<br />
+//   605 = Unsupported OS<br />
+//   606 = Unable to load NTDLL.DLL<br />
+//   607 = Unable to get procedure address from NTDLL.DLL<br />
+//   608 = NtQuerySystemInformation failed<br />
+//   609 = Unable to load KERNEL32.DLL<br />
+//   610 = Unable to get procedure address from KERNEL32.DLL<br />
+//   611 = CreateToolhelp32Snapshot failed<br />
+//<br />
+// Change history:<br />
+//   created  06/23/2000  - Ravi Kochhar (kochhar@physiology.wisc.edu)<br />
+//                            http://www.neurophys.wisc.edu/ravi/software/<br />
+//   modified 03/08/2002  - Ravi Kochhar (kochhar@physiology.wisc.edu)<br />
+//                          - Borland-C compatible if BORLANDC is defined as<br />
+//                            suggested by Bob Christensen<br />
+//   modified 03/10/2002  - Ravi Kochhar (kochhar@physiology.wisc.edu)<br />
+//                          - Removed memory leaks as suggested by<br />
+//                            Jonathan Richard-Brochu (handles to Proc and Snapshot<br />
+//                            were not getting closed properly in some cases)<br />
+//   modified 14/11/2005  - Shengalts Aleksander aka Instructor (Shengalts@mail.ru):<br />
+//                          - Combine functions FIND_PROC_BY_NAME and KILL_PROC_BY_NAME<br />
+//                          - Code has been optimized<br />
+//                          - Now kill all processes with specified name (not only one)<br />
+//                          - Cosmetic improvements<br />
+//                          - Removed error 632 (Invalid process name)<br />
+//                          - Changed error 602 (Unable to terminate process for some other reason)<br />
+//                          - BORLANDC define not needed<br />
+//   modified 04/01/2006  - Shengalts Aleksander aka Instructor (Shengalts@mail.ru):<br />
+//                          - Removed CRT dependency<br />
+//   modified 21/04/2006  - Shengalts Aleksander aka Instructor (Shengalts@mail.ru):<br />
+//                          - Removed memory leak as suggested by {_trueparuex^}<br />
+//                            (handle to hSnapShot was not getting closed properly in some cases)<br />
+//   modified 21/04/2006  - Shengalts Aleksander aka Instructor (Shengalts@mail.ru):<br />
+//                          - Removed memory leak as suggested by {_trueparuex^}<br />
+//                            (handle to hSnapShot was not getting closed properly in some cases)<br />
+//   modified 19/07/2006  - Shengalts Aleksander aka Instructor (Shengalts@mail.ru):<br />
+//                          - Code for WinNT/2000/XP has been rewritten<br />
+//                          - Changed error codes<br />
+//   modified 31/08/2006  - Shengalts Aleksander aka Instructor (Shengalts@mail.ru):<br />
+//                          - Removed memory leak as suggested by Daniel Vanesse<br />
+{<br />
+  char szName[MAX_PATH];<br />
+  OSVERSIONINFO osvi;<br />
+  HMODULE hLib;<br />
+  HANDLE hProc;<br />
+  ULONG uError;<br />
+  BOOL bFound=FALSE;<br />
+  BOOL bSuccess=FALSE;<br />
+  BOOL bFailed=FALSE;<br />
+  THREADENTRY32 te32 = {0};<br />
+<br />
+  // First check what version of Windows we're in<br />
+  osvi.dwOSVersionInfoSize=sizeof(OSVERSIONINFO);<br />
+  if (!GetVersionEx(&amp;osvi)) return 604;<br />
+<br />
+  if (osvi.dwPlatformId != VER_PLATFORM_WIN32_NT &amp;&amp;<br />
+      osvi.dwPlatformId != VER_PLATFORM_WIN32_WINDOWS)<br />
+    return 605;<br />
+<br />
+  if (osvi.dwPlatformId == VER_PLATFORM_WIN32_NT)<br />
+  {<br />
+    // WinNT/2000/XP<br />
+<br />
+    SYSTEM_PROCESS_INFO *spi;<br />
+    SYSTEM_PROCESS_INFO *spiCount;<br />
+    DWORD dwSize=0x4000;<br />
+    DWORD dwData;<br />
+	HANDLE hThread;<br />
+    ULONG (WINAPI *NtQuerySystemInformationPtr)(ULONG, PVOID, LONG, PULONG);<br />
+<br />
+    if (hLib=LoadLibraryA(&quot;NTDLL.DLL&quot;))<br />
+    {<br />
+      NtQuerySystemInformationPtr=(ULONG(WINAPI *)(ULONG, PVOID, LONG, PULONG))GetProcAddress(hLib, &quot;NtQuerySystemInformation&quot;);<br />
+<br />
+      if (NtQuerySystemInformationPtr)<br />
+      {<br />
+        while (1)<br />
+        {<br />
+          if (spi=LocalAlloc(LMEM_FIXED, dwSize))<br />
+          {<br />
+            uError=(*NtQuerySystemInformationPtr)(SystemProcessInformation, spi, dwSize, &amp;dwData);<br />
+<br />
+            if (uError == STATUS_SUCCESS) break;<br />
+<br />
+            LocalFree(spi);<br />
+<br />
+            if (uError != STATUS_INFO_LENGTH_MISMATCH)<br />
+            {<br />
+              uError=608;<br />
+              break;<br />
+            }<br />
+          }<br />
+          else<br />
+          {<br />
+            uError=608;<br />
+            break;<br />
+          }<br />
+          dwSize*=2;<br />
+        }<br />
+      }<br />
+      else uError=607;<br />
+<br />
+      FreeLibrary(hLib);<br />
+    }<br />
+    else uError=606;<br />
+<br />
+    if (uError != STATUS_SUCCESS) return uError;<br />
+<br />
+    spiCount=spi;<br />
+<br />
+    while (1)<br />
+    {<br />
+      if (spiCount-&gt;pszProcessName)<br />
+      {<br />
+        WideCharToMultiByte(CP_ACP, 0, spiCount-&gt;pszProcessName, -1, szName, MAX_PATH, NULL, NULL);<br />
+<br />
+        if (!lstrcmpi(szName, szProcessName))<br />
+        {<br />
+          // Process found<br />
+          bFound=TRUE;<br />
+<br />
+          if (bTerminate == TRUE)<br />
+          {<br />
+            // Open for termination<br />
+            if (hThread=OpenThread(THREAD_SUSPEND_RESUME, FALSE, te32.th32ThreadID))<br />
+            {<br />
+              if (SuspendThread(hThread == TRUE))<br />
+                bSuccess=TRUE;<br />
+              else<br />
+                bFailed=TRUE;<br />
+              CloseHandle(&amp;hThread);<br />
+            }<br />
+          }<br />
+          else break;<br />
+        }<br />
+      }<br />
+      if (spiCount-&gt;dwOffset == 0) break;<br />
+      spiCount=(SYSTEM_PROCESS_INFO *)((char *)spiCount + spiCount-&gt;dwOffset);<br />
+    }<br />
+    LocalFree(&amp;spi);<br />
+  }<br />
+  else<br />
+  {<br />
+    // Win95/98/ME<br />
+<br />
+    PROCESSENTRY32 pe;<br />
+    char *pName;<br />
+    HANDLE hSnapShot;<br />
+    BOOL bResult;<br />
+    HANDLE (WINAPI *CreateToolhelp32SnapshotPtr)(DWORD, DWORD);<br />
+    BOOL (WINAPI *Process32FirstPtr)(HANDLE, LPPROCESSENTRY32);<br />
+    BOOL (WINAPI *Process32NextPtr)(HANDLE, LPPROCESSENTRY32);<br />
+	HANDLE hThread;<br />
+<br />
+    if (hLib=LoadLibraryA(&quot;KERNEL32.DLL&quot;))<br />
+    {<br />
+      CreateToolhelp32SnapshotPtr=(HANDLE(WINAPI *)(DWORD, DWORD)) GetProcAddress(hLib, &quot;CreateToolhelp32Snapshot&quot;);<br />
+      Process32FirstPtr=(BOOL(WINAPI *)(HANDLE, LPPROCESSENTRY32)) GetProcAddress(hLib, &quot;Process32First&quot;);<br />
+      Process32NextPtr=(BOOL(WINAPI *)(HANDLE, LPPROCESSENTRY32)) GetProcAddress(hLib, &quot;Process32Next&quot;);<br />
+<br />
+      if (CreateToolhelp32SnapshotPtr &amp;&amp; Process32NextPtr &amp;&amp; Process32FirstPtr)<br />
+      {<br />
+        // Get a handle to a Toolhelp snapshot of all the systems processes.<br />
+        if ((hSnapShot=(*CreateToolhelp32SnapshotPtr)(TH32CS_SNAPPROCESS, 0)) != INVALID_HANDLE_VALUE)<br />
+        {<br />
+          // Get the first process' information.<br />
+          pe.dwSize=sizeof(PROCESSENTRY32);<br />
+          bResult=(*Process32FirstPtr)(hSnapShot, &amp;pe);<br />
+<br />
+          // While there are processes, keep looping and checking.<br />
+          while (bResult)<br />
+          {<br />
+            //Get file name<br />
+            for (pName=pe.szExeFile + lstrlen(pe.szExeFile) - 1; *pName != '\\' &amp;&amp; *pName != '\0'; --pName);<br />
+<br />
+            if (!lstrcmpi(++pName, szProcessName))<br />
+            {<br />
+              // Process found<br />
+              bFound=TRUE;<br />
+<br />
+              if (bTerminate == TRUE)<br />
+              {<br />
+                // Open for termination<br />
+				  if (hThread=OpenThread(THREAD_SUSPEND_RESUME, FALSE, te32.th32ThreadID))<br />
+            {<br />
+              if (SuspendThread(hThread == TRUE))<br />
+                bSuccess=TRUE;<br />
+              else<br />
+                bFailed=TRUE;<br />
+              CloseHandle(&amp;hThread);<br />
+                }<br />
+              }<br />
+              else break;<br />
+            }<br />
+            //Keep looking<br />
+            bResult=(*Process32NextPtr)(hSnapShot, &amp;pe);<br />
+          }<br />
+          CloseHandle(hSnapShot);<br />
+        }<br />
+        else uError=611;<br />
+      }<br />
+      else uError=610;<br />
+<br />
+      FreeLibrary(hLib);<br />
+    }<br />
+    else uError=609;<br />
+  }<br />
+<br />
+  if (bFound == FALSE) return 603;<br />
+  if (bTerminate == TRUE)<br />
+  {<br />
+    if (bSuccess == FALSE) return 601;<br />
+    if (bFailed == TRUE) return 602;<br />
+  }<br />
+  return 0;<br />
+}<br />
+<br />
+int popinteger()<br />
+{<br />
+  char szInt[32];<br />
+<br />
+  popstring(szInt, 32);<br />
+  return xatoi(szInt);<br />
+}<br />
+<br />
+void pushinteger(int integer)<br />
+{<br />
+  char szInt[32];<br />
+<br />
+  xitoa(integer, szInt, 0);<br />
+  pushstring(szInt, 32);<br />
+}<br />
+<br />
+//Function: Removes the element from the top of the NSIS stack and puts it in the buffer<br />
+int popstring(char *str, int len)<br />
+{<br />
+  stack_t *th;<br />
+<br />
+  if (!g_stacktop || !*g_stacktop) return 1;<br />
+  th=(*g_stacktop);<br />
+  lstrcpyn(str, th-&gt;text, len);<br />
+  *g_stacktop=th-&gt;next;<br />
+  GlobalFree((HGLOBAL)th);<br />
+  return 0;<br />
+}<br />
+<br />
+//Function: Adds an element to the top of the NSIS stack<br />
+void pushstring(const char *str, int len)<br />
+{<br />
+  stack_t *th;<br />
+<br />
+  if (!g_stacktop) return;<br />
+  th=(stack_t*)GlobalAlloc(GPTR, sizeof(stack_t) + len);<br />
+  lstrcpyn(th-&gt;text, str, len);<br />
+  th-&gt;next=*g_stacktop;<br />
+  *g_stacktop=th;<br />
+}<br />
+<br />
+<br />
+I believe I am suspending the (or a) thread correctly but obviously something is going wrong. Please help</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th April 2008, 03:23</div></div><div class="posttext">there can be more than one thread...<br />
+<br />
+http://www.codeproject.com/KB/threads/pausep.aspx</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

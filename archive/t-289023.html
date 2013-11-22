@@ -1,0 +1,160 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" copying files to HOMEPATH, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  copying files to HOMEPATH NSIS Discussion" />
+	
+	<title> copying files to HOMEPATH [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  copying files to HOMEPATH</div>
+<hr />
+<div class="pda"><a href="t-289023.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=289023">copying files to HOMEPATH</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">DocJunioR</div><div class="date">25th March 2008, 11:30</div></div><div class="posttext">hey there,<br />
+<br />
+i've got to install a java development package including some ant targets. <br />
+These ant targets have to be installed at %HOMEPATH%/.ant/lib.<br />
+<br />
+my function looks that way<br />
+<br />
+;--------------------------------<br />
+; --- Installieren der Ant-Tasks<br />
+;<br />
+; Returnwerte:<br />
+;   0 fÃ¼r fehlerfreie AusfÃ¼hrung<br />
+;   1 fÃ¼r fehlende Umgebungsvariablen<br />
+;<br />
+; Aufruf:<br />
+;   Call copyAntTasks<br />
+;   Pop $R0<br />
+;   IntCmp $R0 0 lbl_CopyAnt_OK<br />
+;      ; Fehlerbehandlung<br />
+;   lbl_CopyAnt_OK:<br />
+;      ; Weiter<br />
+;<br />
+Function copyAntTasks <br />
+<br />
+    ; Hole das Benutzer-Homeverzeichnis und breche bei Fehlern ab.<br />
+    ClearErrors<br />
+        ReadRegStr $R1 HKCU &quot;Volatile Environment&quot; &quot;HOMEPATH&quot; <br />
+    IfErrors 0 lbl_environment_geholt<br />
+        Push &quot;1&quot;    <br />
+        Goto lbl_copyAntTasks_ende<br />
+    <br />
+<br />
+;   lbl_environment_geholt:<br />
+;        ; Ant-Homeverzeichnis prÃ¼fen und ggf. erstellen<br />
+;        IfFileExists $R1\.ant lbl_antdir_exists<br />
+;            CreateDirectory $R1\.ant<br />
+    <br />
+;    lbl_antdir_exists:<br />
+;        ; Ant-Libverzeichnis prÃ¼fen und ggf. erstellen<br />
+;        IfFileExists $R1\.ant\lib lbl_antlib_exists<br />
+;            CreateDirectory $R1\.ant\lib<br />
+<br />
+    lbl_antlib_exists:<br />
+        ; Ant-Tasks kopieren    <br />
+        SetOutPath $R1; C:\temp<br />
+        File /r d:\install_jade\ant\*.*<br />
+;        Exec '&quot;COPY c:\temp\.ant %HOMEPATH%&quot;'<br />
+        Push &quot;0&quot;<br />
+        <br />
+    lbl_copyAntTasks_ende:<br />
+FunctionEnd<br />
+<br />
+<br />
+This function should be able to copy my files but it doesn't! I always get a write error while testing the install file.<br />
+<br />
+As you can see, I tried to copy by a shell copy, too but this didn't work at all. A copy &quot;by hand&quot; works, HOMEPATH doesn't seem to be write protected.<br />
+<br />
+Is it possible to set/unset a writ protection via nsis?<br />
+<br />
+what am I doing wrong?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">{_trueparuex^}</div><div class="date">25th March 2008, 15:02</div></div><div class="posttext">%HOMEPATH% doesn't have drive specified in it. So you should use %HOMEDRIVE%%HOMEPATH% to get the full path.<br />
+<br />
+Also I recommend that you use ReadEnvStr instruction instead of ReadRegStr to get the environment variables. Not that there's nothing wrong in the ReadRegStr method, but ReadEnvStr uses the proper APIs to get the environment variable.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">25th March 2008, 16:00</div></div><div class="posttext">Copy is an internal command built into CMD.exe and Command.com. Exec needs an actual file. That's probably why EXEC doesn't work for you. You could call it by saying ReadEnvStr $0 COMSPEC<br />
+ReadEnvStr $1 HOMEPATH<br />
+ExecWait '&quot;$0&quot; /c copy c:\temp\.ant &quot;$1&quot;'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th March 2008, 18:21</div></div><div class="posttext">whats wrong with CopyFiles ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">25th March 2008, 19:37</div></div><div class="posttext">Why not use $PROFILE?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DocJunioR</div><div class="date">26th March 2008, 10:58</div></div><div class="posttext">well, after solving some problems (concatenating two strings) I got it :) <br />
+here's the code- if so needs<br />
+<br />
+[code]<br />
+;--------------------------------<br />
+; --- Installieren der Ant-Tasks<br />
+;<br />
+; Returnwerte:<br />
+;   0 fÃ¼r fehlerfreie AusfÃ¼hrung<br />
+;   1 fÃ¼r fehlende Umgebungsvariablen<br />
+;<br />
+; Aufruf:<br />
+;   Call copyAntTasks<br />
+;   Pop $R0<br />
+;   IntCmp $R0 0 lbl_CopyAnt_OK<br />
+;      ; Fehlerbehandlung<br />
+;   lbl_CopyAnt_OK:<br />
+;      ; Weiter<br />
+;<br />
+Function copyAntTasks <br />
+    ; Hole das Benutzer-Homelaufwerk und breche bei Fehlern ab.<br />
+    ClearErrors<br />
+        ReadEnvStr $R2 &quot;HOMEDRIVE&quot;<br />
+    IfErrors 0 lbl_homedir_geholt<br />
+        DetailPrint &quot;HOMEDRIVE nicht lesbar&quot;<br />
+        Push &quot;1&quot;    <br />
+        Goto lbl_copyAntTasks_ende<br />
+        <br />
+    lbl_homedir_geholt:        <br />
+    ; Hole das Benutzer-Homeverzeichnis und breche bei Fehlern ab.<br />
+    ClearErrors<br />
+        ReadEnvStr $R3 &quot;HOMEPATH&quot;<br />
+    IfErrors 0 lbl_homepath_geholt<br />
+        DetailPrint &quot;HOMEPATH nicht lesbar&quot;<br />
+        Push &quot;1&quot;    <br />
+        Goto lbl_copyAntTasks_ende<br />
+    <br />
+   lbl_homepath_geholt:<br />
+        ; Ant-Tasks kopieren    <br />
+        ${StrCat} $R2 $R3 $R1<br />
+   <br />
+    DetailPrint &quot;Kopiere Ant-Tasks nach $R1&quot;<br />
+        <br />
+        SetOutPath $R1<br />
+        File /r d:\install_jade\ant\*.*<br />
+;        Exec '&quot;COPY c:\temp\.ant %HOMEPATH%&quot;'<br />
+        Push &quot;0&quot;<br />
+        <br />
+    lbl_copyAntTasks_ende:<br />
+FunctionEnd<br />
+[code]<br />
+<br />
+the macro is described here (http://forums.winamp.com/showthread.php?postid=1727755)<br />
+<br />
+thanks for helping :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">26th March 2008, 19:58</div></div><div class="posttext">I ask again - why use environment variables when you have $PROFILE?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

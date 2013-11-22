@@ -1,0 +1,198 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" ${__SECTION__} is not defined if section is hidden &quot;-&quot;, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  ${__SECTION__} is not defined if section is hidden &quot;-&quot; NSIS Discussion" />
+	
+	<title> ${__SECTION__} is not defined if section is hidden &quot;-&quot; [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  ${__SECTION__} is not defined if section is hidden &quot;-&quot;</div>
+<hr />
+<div class="pda"><a href="t-318047.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=318047">${__SECTION__} is not defined if section is hidden &quot;-&quot;</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">dbach</div><div class="date">29th March 2010, 10:15</div></div><div class="posttext">Hi forum users,<br />
+<br />
+this seems like a bug to me. When I hide a section like this ...<br />
+<br />
+Section &quot;-I am not shown&quot; HIDDENSEC<br />
+SectionEnd<br />
+<br />
+the define/var ${__SECTION__} will not be set. This is a bug, right? If not how to get the sectionname?<br />
+<br />
+Kind regards,<br />
+dbach</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">29th March 2010, 17:08</div></div><div class="posttext">Hidden sections are nameless, even if you give them a name. I filed a report about this issue ages ago, but it hasn't been fixed yet...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">30th March 2010, 04:32</div></div><div class="posttext">I don't think they're nameless - they're just textless.  This can almost be explained by ways of the SectionSetText function, which details that setting a section's text to &quot;&quot; (an empty string) will hide it.<br />
+<br />
+So when you specify...<br />
+<br />
+<br />
+Section &quot;-I am not shown&quot; HIDDENSEC<br />
+SectionEnd<br />
+<br />
+You're doing little more than making it easier for yourself, while browsing your source file, to identify sections.  The section ID will still be stored in ${HIDDENSEC}, though.  So you can do something like this...<br />
+<br />
+<br />
+!include &quot;MUI2.nsh&quot;<br />
+<br />
+OutFile &quot;test.exe&quot;<br />
+<br />
+setCompress off<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE Pre<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+<br />
+Section &quot;I am not shown&quot; HIDDENSEC<br />
+SectionEnd<br />
+<br />
+Function Pre<br />
+	SectionGetText ${HIDDENSEC} $0<br />
+	MessageBox MB_OK &quot;[$0]&quot;<br />
+	SectionSetText ${HIDDENSEC} &quot;&quot;<br />
+FunctionEnd<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+<br />
+Which will pop up the section's text, and then hide it on run-time.  Not sure what the point of that (getting the section text of a section that's going to be hidden) would be, though - but if you have a use for it.. go for it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dbach</div><div class="date">30th March 2010, 09:06</div></div><div class="posttext">I want to use something like this:<br />
+<br />
+<br />
+Var _day<br />
+Var _month<br />
+Var _year<br />
+Var _dayname<br />
+Var _hour<br />
+Var _minute<br />
+Var _second<br />
+!define SECTIONINFO '!insertmacro SECTIONINFO'<br />
+!macro SECTIONINFO<br />
+	${GetTime} &quot;&quot; &quot;L&quot; $_day $_month $_year $_dayname $_hour $_minute $_second ; $0=DD, $1=MM, $2=YYYY, $3=dayname, $4=hh, $5=mm, $6=ss<br />
+	ClearErrors<br />
+	LogText &quot;&quot;<br />
+	LogText &quot;------------------------------------------------------------------------------&quot;<br />
+	LogText &quot;${__SECTION__}&quot;<br />
+	LogText &quot;($_day.$_month.$_year $_hour:$_minute:$_second)&quot;<br />
+	Logtext &quot;------------------------------------------------------------------------------&quot;<br />
+!macroend<br />
+<br />
+<br />
+Section &quot;I am visible&quot; VISIBLESEC<br />
+   ${SECTIONINFO}<br />
+SectionEnd<br />
+<br />
+Section &quot;-I am hidden&quot; HIDDENSEC<br />
+   ${SECTIONINFO}<br />
+SectionEnd<br />
+<br />
+The first works, the second not. Is there a simple workaround so that I can contine use my macro without defining a pre?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">30th March 2010, 13:33</div></div><div class="posttext">no super-simple transparent work-around that I can think of.<br />
+<br />
+With the Pre function you have to remember to make the appropriate sections invisible - that's some manual editing and tracking.<br />
+<br />
+One alternative would be to add a parameter to your SECTIONINFO macro and supply the information yourself, a la:<br />
+<br />
+!macro SECTIONINFO SectionText<br />
+...<br />
+  LogText &quot;${SectionText}&quot;<br />
+...<br />
+!macroend<br />
+...<br />
+Section &quot;I am visible&quot; VISIBLESEC<br />
+   ${SECTIONINFO} &quot;I am visible&quot;<br />
+SectionEnd <br />
+<br />
+Section &quot;&quot; HIDDENSEC ; Section text not strictly needed here<br />
+  ${SECTIONINFO} &quot;I am hidden&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+But then you have to adjust all of your SECTIONINFO invokes.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dbach</div><div class="date">30th March 2010, 13:41</div></div><div class="posttext">Thanks Animaether,<br />
+<br />
+I guess I will change my SectionInfo Macro. :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">30th March 2010, 14:44</div></div><div class="posttext">You could in addition only use __SECTION__ if it is defined:<br />
+!ifdef __SECTION__<br />
+LogText &quot;${__SECTION__}&quot;<br />
+!else<br />
+LogText &quot;${MacroParam}&quot;<br />
+!endif<br />
+Save you repeating section names twice.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dbach</div><div class="date">30th March 2010, 14:59</div></div><div class="posttext">You could in addition only use __SECTION__ if it is defined:<br />
+!ifdef __SECTION__<br />
+LogText &quot;${__SECTION__}&quot;<br />
+!else<br />
+LogText &quot;${MacroParam}&quot;<br />
+!endif<br />
+Save you repeating section names twice.<br />
+<br />
+Stu<br />
+<br />
+Its doesn't work that way bcs. __SECTION__ is defined but empty. This works:<br />
+${If} &quot;${__SECTION__}&quot; != &quot;&quot;<br />
+LogText &quot;${__SECTION__}&quot;<br />
+${Else}<br />
+LogText &quot;${MacroParam}&quot;<br />
+${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">30th March 2010, 15:52</div></div><div class="posttext">wouldn't you still have to specify -something-, even if an empty string, for the macro, though?<br />
+<br />
+e.g.<br />
+<br />
+!include &quot;MUI2.nsh&quot;<br />
+<br />
+OutFile &quot;test.exe&quot;<br />
+<br />
+!macro SECTIONINFO SectionText<br />
+  MessageBox MB_OK &quot;${SectionText}&quot;<br />
+!macroend<br />
+!define SECTIONINFO `!insertmacro SECTIONINFO`<br />
+<br />
+Section &quot;I am not shown&quot; HIDDENSEC<br />
+	${SECTIONINFO}<br />
+SectionEnd<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+fails with: !insertmacro: macro &quot;SECTIONINFO&quot; requires 1 parameter(s), passed 0!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">30th March 2010, 16:36</div></div><div class="posttext">Yes of course.<br />
+<br />
+Edit: dbach you could instead do:<br />
+!if `${__SECTION__}` != ``<br />
+  LogText &quot;${__SECTION__}&quot;<br />
+!else<br />
+  LogText &quot;${MacroParam}&quot;<br />
+!endif<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

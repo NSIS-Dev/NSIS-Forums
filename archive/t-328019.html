@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" SimpleSC::RemoveService returns 1052 instead of 0., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  SimpleSC::RemoveService returns 1052 instead of 0. NSIS Discussion" />
+	
+	<title> SimpleSC::RemoveService returns 1052 instead of 0. [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  SimpleSC::RemoveService returns 1052 instead of 0.</div>
+<hr />
+<div class="pda"><a href="t-328019.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=328019">SimpleSC::RemoveService returns 1052 instead of 0.</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">sentromed</div><div class="date">2nd March 2011, 14:48</div></div><div class="posttext">Hello,<br />
+<br />
+I am changing my script to use SimpleSC instead of nsSCM.<br />
+All seems work except RemoveService.<br />
+<br />
+SimpleSC::RemoveService always returns 1052 (ERROR_INVALID_SERVICE_CONTROL) and it is not removed.<br />
+<br />
+nsSCM::Remove returns &quot;success&quot; and it is removed.<br />
+<br />
+Any ideas?<br />
+<br />
+PS. I am installing by 'SimpleSC::InstallService &quot;MyDrv&quot; &quot;My Driver&quot; &quot;1&quot; &quot;1&quot; &quot;$SYSDIR\Drivers\mydrv.sys&quot; &quot;&quot; &quot;&quot; &quot;&quot;'<br />
+<br />
+Thanks,<br />
+Valery.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">blh83</div><div class="date">3rd March 2011, 17:25</div></div><div class="posttext">This is sort of a stab in the dark.  First the obvious, make sure you are calling RemoveService with the name of your service.  In your case you should be calling 'SimpleSC::RemoveService &quot;MyDrv&quot;'.  <br />
+<br />
+Assuming you are doing this and it is not working, then my guess is that the service is not properly stopped.  According to MSDN, that error means &quot;The requested control code is not valid, or it is unacceptable to the service.&quot;  The code should be valid so it likely means the service is not accepting the control (most likely because it is not stopped).  Make sure you have code that is checking for the state of the service before trying to remove it.  If it says it is running or stopping then you can't call RemoveService and need to either try and resolve this in the installer or notify the user.  For example, in one of my installers I check for the existence of a service, get its status, try and stop it, if stop fails I try and kill its process and then stop it again, finally if it was successfully stopped I remove the service.  Here is example code with your service name put in (it is a little ugly and there are undoubtedly cleaner ways to do this but this was the first installer I wrote):<br />
+<br />
+!macro SERVICEUNINST un<br />
+ Function ${un}uninstallService<br />
+    SimpleSC::ExistsService &quot;myDrv&quot;<br />
+    Pop $0 ;check the error code<br />
+    ${IF} $0 == 0 ;the service exists<br />
+      SimpleSC::GetServiceStatus &quot;myDrv&quot;<br />
+      Pop $0 ;error code<br />
+      Pop $1 ;service status<br />
+      ${IF} $0 == 0 ;0 indicates success<br />
+      ${ANDIF} $1 == 4 ;4 = service is running<br />
+        SimpleSC::StopService &quot;myDrv&quot;<br />
+        Pop $0<br />
+        ${IF} $0 != 0 ;service could not be stopped, try killing the process<br />
+          Processes::FindProcess &quot;My Driver&quot;<br />
+          ${IF} $R0 != 1 ;process not found<br />
+            MessageBox MB_ICONSTOP &quot;Error stopping the service.  Please stop the service manually and then restart the uninstall process.&quot;<br />
+            Abort<br />
+          ${ELSE}<br />
+            Processes::KillProcess &quot;My Driver&quot;<br />
+            ${IF} $R0 != 1 ;process not killed<br />
+              MessageBox MB_ICONSTOP &quot;Error stopping the service.  Please stop the service manually and then restart the uninstall process.&quot;<br />
+              Abort<br />
+            ${ELSE} ;killed the process, now try stopping the service again<br />
+              SimpleSC::StopService &quot;myDrv&quot;<br />
+              Pop $0<br />
+              ${IF} $0 != 0 ;service could not be stopped<br />
+              MessageBox MB_ICONSTOP &quot;Error stopping the service.  Please stop the service manually and then restart the uninstall process.&quot;<br />
+              Abort<br />
+              ${ENDIF}<br />
+            ${ENDIF}<br />
+          ${ENDIF}<br />
+        ${ENDIF} ;if stop service<br />
+      ${ENDIF} ;if service running<br />
+      SimpleSC::GetServiceStatus &quot;myDrv&quot;<br />
+      Pop $0 ;error code<br />
+      Pop $1 ;service status<br />
+      ${IF} $0 == 0 ;0 indicates success<br />
+      ${ANDIF} $1 == 1 ;1 = service is stopped<br />
+          SimpleSC::RemoveService &quot;MyDrv&quot; ;delete the service<br />
+      ${ELSE}<br />
+          MessageBox MB_OK &quot;Service not removed from the system.  Please remove it manually using 'sc delete MyDrv' from a command line.&quot;<br />
+    ${ENDIF} ;if service exists  <br />
+  FunctionEnd<br />
+!macroend</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

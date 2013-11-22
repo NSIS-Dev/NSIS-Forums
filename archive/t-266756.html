@@ -1,0 +1,153 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" .onInstSuccess crashes, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  .onInstSuccess crashes NSIS Discussion" />
+	
+	<title> .onInstSuccess crashes [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  .onInstSuccess crashes</div>
+<hr />
+<div class="pda"><a href="t-266756.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=266756">.onInstSuccess crashes</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">theflashback</div><div class="date">28th February 2007, 04:17</div></div><div class="posttext">If I put a messagebox in .onInstSuccess function like<br />
+<br />
+MessageBox MB_OK &quot;Test&quot; and then when the message box<br />
+shows up I try to move it around holding its window title -the installer crashes. It is reproducable on all systems in all sample plugins that come with the NSIS installations.<br />
+<br />
+Help!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">28th February 2007, 06:07</div></div><div class="posttext">Unable to reproduce what you're referring, you better post a minimal example.<br />
+; The name of the installer<br />
+Name &quot;Example1&quot;<br />
+<br />
+; The file to write<br />
+OutFile &quot;example1.exe&quot;<br />
+<br />
+; The default installation directory<br />
+InstallDir $PROGRAMFILES\Example1<br />
+<br />
+;--------------------------------<br />
+<br />
+; Pages<br />
+<br />
+Page directory<br />
+Page instfiles<br />
+<br />
+;--------------------------------<br />
+<br />
+; The stuff to install<br />
+Section &quot;&quot; ;No components page, name is not important<br />
+<br />
+  ; Set output path to the installation directory.<br />
+  SetOutPath $INSTDIR<br />
+  <br />
+  ; Put file there<br />
+  File example1.nsi<br />
+  <br />
+SectionEnd ; end the section<br />
+<br />
+Function .onInstSuccess<br />
+StrCpy $0 0<br />
+start:<br />
+StrCmp $0 3 end<br />
+MessageBox MB_OK &quot;Success!&quot;<br />
+IntOp $0 $0 + 1<br />
+goto start<br />
+end:<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">theflashback</div><div class="date">28th February 2007, 06:42</div></div><div class="posttext">InstallDir &quot;$PROGRAMFILES\Test\&quot;<br />
+<br />
+Name &quot;Test&quot;<br />
+OutFile &quot;Test.exe&quot;<br />
+<br />
+Section -Start<br />
+<br />
+SetOutPath &quot;$INSTDIR&quot;<br />
+                           File &quot;..\..\..\Bin\Release\Test.dll&quot;<br />
+RegDLL &quot;$INSTDIR\Test.dll&quot;<br />
+<br />
+MessageBox MB_OK &quot;Test&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+Well, somehow when RegDLL is called, then MessageBox crashes the installer.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">28th February 2007, 06:53</div></div><div class="posttext">Provided that $INSTDIR has a valid path, it might be that for some reason regdll failed, check it with iferrors.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">theflashback</div><div class="date">28th February 2007, 07:03</div></div><div class="posttext">InstallDir &quot;$PROGRAMFILES\Test\&quot;<br />
+<br />
+Name &quot;Test&quot;<br />
+OutFile &quot;Test.exe&quot;<br />
+<br />
+Section -Start<br />
+<br />
+SetOutPath &quot;$INSTDIR&quot;<br />
+File &quot;..\..\..\Bin\Release\Test.dll&quot;<br />
+RegDLL &quot;$INSTDIR\Test.dll&quot;<br />
+iferrors _Errors _NoErrors<br />
+<br />
+_Errors:<br />
+MessageBox MB_OK &quot;RegDLL failed.&quot;<br />
+goto _Done<br />
+<br />
+_NoErrors:<br />
+MessageBox MB_OK &quot;RegDLL succeeded&quot;<br />
+goto _Done<br />
+<br />
+_Done:<br />
+MessageBox MB_OK &quot;Done&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+I always get &quot;RegDLL succeeded&quot; message. When I start moving the window around (message box), the installer crashes. <br />
+<br />
+HEEEEEEEEEEEEEEEEELP! Test.dll was created via Visual Studio C++ 2005 - DllRegisterServer() does not have anything but the standard stuff.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">28th February 2007, 07:10</div></div><div class="posttext">All I can say is that I'm unable to reproduce the problem even with a dll which has not DllRegisterServer and therefore returns error.<br />
+InstallDir &quot;$PROGRAMFILES\Test\&quot;<br />
+<br />
+Name &quot;Test&quot;<br />
+OutFile &quot;Test.exe&quot;<br />
+<br />
+Section -Start<br />
+<br />
+SetOutPath &quot;$INSTDIR&quot;<br />
+File &quot;${NSISDIR}\Plugins\LangDLL.dll&quot;<br />
+ClearErrors<br />
+RegDLL &quot;$INSTDIR\LangDLL.dll&quot;<br />
+IfErrors lb_error lb_success<br />
+lb_error:<br />
+MessageBox MB_OK &quot;Error&quot; IDOK end<br />
+lb_success:<br />
+MessageBox MB_OK &quot;Success&quot;<br />
+end:<br />
+SectionEnd<br />
+<br />
+Function .onInstSuccess<br />
+StrCpy $0 0<br />
+start:<br />
+StrCmp $0 3 end<br />
+MessageBox MB_OK &quot;Install Success!&quot;<br />
+IntOp $0 $0 + 1<br />
+goto start<br />
+end:<br />
+FunctionEnd NSIS 2.24</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

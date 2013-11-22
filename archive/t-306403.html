@@ -1,0 +1,227 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Correct way to redraw a label?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Correct way to redraw a label? NSIS Discussion" />
+	
+	<title> Correct way to redraw a label? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Correct way to redraw a label?</div>
+<hr />
+<div class="pda"><a href="t-306403.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=306403">Correct way to redraw a label?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">15th May 2009, 14:40</div></div><div class="posttext">Alright, back to that old topic...<br />
+<br />
+There's the camp of ShowWindow hide/show (flicker), so a more correct way would be invalidaterect or redrawwindow.<br />
+<br />
+I've been using invalidaterect in a ${RedrawControl} macro with apparent success for some time now, but now I ran into a problem with it.<br />
+<br />
+Basically I've got a GroupBox on which I place a Label.  Why do I do that?  Because I can't change the color of the text in a GroupBox - it's always happily blue.<br />
+<br />
+Of course that does bring other issues with it - such as Windows' UI drawing being.. suboptimal.  Suffice to say that there's several situation in which you might end up having the groupbox's label (a long string of spaces so as not to cut through the label control) being on top of the label control.<br />
+Despite the fact that the groupbox should have a transparent background, that now-underlying label control does not show through.<br />
+<br />
+So, I have to redraw that label control either periodically, or based on some event, or whatever.<br />
+<br />
+Now to the meat of this post.. I can't seem to redraw that label control properly with InvalidateRect or RedrawWindow.  As soon as I redraw the control, it essentially paints on top of itself.  That sounds like it's not so bad, until you're using font Smoothing or ClearType; the smoothing effect composites on top of itself, making the text look increasingly bold.. and increasingly jaggy.<br />
+<br />
+So below is a test script to play with...<br />
+<br />
+!addplugindir &quot;.&quot;<br />
+!addincludedir &quot;.&quot;<br />
+<br />
+!include &quot;nsDialogs.nsh&quot;<br />
+!include &quot;winmessages.nsh&quot;<br />
+!include &quot;logiclib.nsh&quot;<br />
+<br />
+!include &quot;MUI2.nsh&quot;<br />
+<br />
+OutFile &quot;test.exe&quot;<br />
+<br />
+var dialog<br />
+var hwnd<br />
+var null<br />
+<br />
+var text<br />
+var button.showhide<br />
+var button.invalidaterect<br />
+var button.redrawwindow<br />
+<br />
+Page custom test<br />
+<br />
+Function test<br />
+	nsDialogs::Create 1018<br />
+	Pop $dialog<br />
+<br />
+/*<br />
+	${NSD_CreateGroupBox} 0 0 100% 12% &quot;This is a test&quot;<br />
+	    Pop $hwnd<br />
+		SetCtlColors $hwnd 0xFF0000 transparent ; This doesn't work.<br />
+*/<br />
+	${NSD_CreateLabel} 0 0 100% 6% &quot;This is a test&quot;<br />
+		Pop $text<br />
+<br />
+	${NSD_CreateButton} 0 15% 30% 10% &quot;&amp;Show/Hide&quot;<br />
+		Pop $button.showhide<br />
+		${NSD_OnClick} $button.showhide button.showhide.onclick<br />
+<br />
+	${NSD_CreateButton} 0 30% 30% 10% &quot;&amp;InvalidateRect&quot;<br />
+		Pop $button.invalidaterect<br />
+		${NSD_OnClick} $button.invalidaterect button.invalidaterect.onclick<br />
+<br />
+	${NSD_CreateButton} 0 45% 30% 10% &quot;&amp;RedrawWindow&quot;<br />
+		Pop $button.redrawwindow<br />
+		${NSD_OnClick} $button.redrawwindow button.redrawwindow.onclick<br />
+<br />
+	nsDialogs::Show<br />
+FunctionEnd<br />
+<br />
+Function button.showhide.onclick<br />
+	Pop $hwnd<br />
+	ShowWindow $text ${SW_HIDE}<br />
+	SetCtlColors $text 0x008000 transparent<br />
+	ShowWindow $text ${SW_SHOW}<br />
+FunctionEnd<br />
+<br />
+Function button.invalidaterect.onclick<br />
+	Pop $hwnd<br />
+	SetCtlColors $text 0x800000 transparent<br />
+	System::Call &quot;user32::InvalidateRect(i,i,i)i ($text, 0, 1)&quot;<br />
+FunctionEnd<br />
+<br />
+<br />
+!ifndef RDW_INVALIDATE<br />
+	!define RDW_INVALIDATE 0x0001<br />
+	!define RDW_INTERNALPAINT 0x0002<br />
+	!define RDW_ERASE 0x0004<br />
+<br />
+	!define RDW_VALIDATE 0x0008<br />
+	!define RDW_NOINTERNALPAINT 0x0010<br />
+	!define RDW_NOERASE 0x0020<br />
+<br />
+	!define RDW_NOCHILDREN 0x0040<br />
+	!define RDW_ALLCHILDREN 0x0080<br />
+<br />
+	!define RDW_UPDATENOW 0x0100<br />
+	!define RDW_ERASENOW 0x0200<br />
+<br />
+	!define RDW_FRAME 0x0400<br />
+	!define RDW_NOFRAME 0x0800<br />
+!endif<br />
+<br />
+Function button.redrawwindow.onclick<br />
+	Pop $hwnd<br />
+	SetCtlColors $text 0x000080 transparent<br />
+	System::Call &quot;user32::RedrawWindow(i,i,i,i)i ($text, 0, 0, ${RDW_INVALIDATE}|${RDW_ERASE}|${RDW_UPDATENOW})&quot;<br />
+FunctionEnd<br />
+<br />
+Section<br />
+SectionEnd<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+<br />
+I've hotkeyed the buttons, so just press e.g. Alt+S to use the show/hide method (flickers), and Alt+I for InvalidateRect (font smoothing issue), Alt+R for RedrawWindow (font smoothing issue).<br />
+<br />
+I'm probably going to have to just drop the groupboxes (faking them about with bitmaps isn't exactly appealing either, as you might imagine) which would circumvent the problem in the first place.<br />
+<br />
+But I'm still curious as to what the correct way to redraw a label should be.  I've always had problems like SetCtlColors not working immediately, not even after an InvalidateRect (I guess because the next paint message gets 'halted' until the script finishes sometimes), but also always have been able to work around it.. but this one's got me baffled.<br />
+If this is just a bug in Windows and the only -real- way to redraw a control effectively is the ShowWindow method, then is there some way to prevent the flicker from it?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th May 2009, 15:39</div></div><div class="posttext">add some more flags to RedrawWindow, start with adding RDW_ERASENOW and maybe RDW_INTERNALPAINT</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">15th May 2009, 15:51</div></div><div class="posttext">had tried RDW_ERASENOW.. that didn't do much.<br />
+( ${RDW_INVALIDATE}|${RDW_ERASE}|${RDW_ERASENOW}|${RDW_UPDATENOW} )<br />
+<br />
+just tried RDW_INTERNALPAINT as well - still the ClearType compositing problem.<br />
+( ${RDW_INVALIDATE}|${RDW_ERASE}|${RDW_ERASENOW}|${RDW_UPDATENOW}|${RDW_INTERNALPAINT} )<br />
+<br />
+Removing RDW_UPDATENOW (when using RDW_ERASENOW) didn't work either.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th May 2009, 16:51</div></div><div class="posttext">could the leftover pixels be on the groupbox and not the label?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">15th May 2009, 17:37</div></div><div class="posttext">I ones created a 'label' with a textbox, by setting the textbox readonly and borderless.<br />
+Not sure what the parameters where, but you could give it a try.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">15th May 2009, 17:45</div></div><div class="posttext">Anders: there's no actual leftover pixels.. they're essentially the same pixels.  But because it's redrawing on top of those with partial transparency (font smoothing / cleartype), the text looks increasingly 'bold' and jagged.<br />
+<br />
+You can try the example, it should be complete and not require any external dependencies that don't ship with NSIS.<br />
+<br />
+jpderuiter: I'll give that a shot later</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th May 2009, 18:00</div></div><div class="posttext">Function button.redrawwindow.onclick<br />
+	Pop $hwnd<br />
+	SetCtlColors $text 0x000080 transparent<br />
+	FindWindow $0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+	System::Call &quot;user32::RedrawWindow(i,i,i,i)i ($0, 0, \<br />
+ 0,${RDW_INVALIDATE}|${RDW_ERASE}|${RDW_ERASENOW}|${RDW_ALLCHILDREN})&quot;<br />
+FunctionEnd<br />
+<br />
+maybe just calling InvalidateRect on the label and the dialog might be enough, too lazy to find the minimal amount of refresh combo that works</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">15th May 2009, 18:24</div></div><div class="posttext">Anders:<br />
+Unfortunately that re-introduces flickering (on all controls)<br />
+<br />
+jpderuiter:<br />
+Edit control at least doesn't suffer from the font smoothing/ClearType issue, so that's a good thing.  Apparently you can't give it a transparent background, so one would have to figure out the color used by the dialog background (if not custom).  In addition, the text is always selectable (doesn't respond to an OnClick to set focus away either), so there are some ifs-and-buts involved.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th May 2009, 18:45</div></div><div class="posttext">and<br />
+Pop $hwnd<br />
+	SetCtlColors $text 0x000080 transparent<br />
+	FindWindow $0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+	System::Call &quot;user32::RedrawWindow(i,i,i,i)i ($0, 0, 0,${RDW_INVALIDATE}|${RDW_ERASE})&quot;<br />
+?<br />
+<br />
+the problem is, the leftover pixels will not get erased since transparent gives you a hollow brush (with themes on, I'm not sure if the label will erase anything since there might be a gradient in the whole dialog and only the dialog could paint that, the only workaround I could think of is calling DrawThemeParentBackground() either in the COLOR msg or by subclassing )</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">15th May 2009, 21:03</div></div><div class="posttext">Hmmm, and how about this wild idea:<br />
+Use a transparent bitmap with your text as groupbox header instead of normal text.<br />
+http://msdn.microsoft.com/en-us/library/bb775951(VS.85).aspx<br />
+<br />
+Like:<br />
+	${NSD_CreateGroupBox} 0 0 100% 12% &quot;This is a test&quot;<br />
+	    Pop $hwnd<br />
+		${NSD_AddStyle} $hwnd &quot;${BS_BITMAP}&quot;<br />
+		System::Call 'user32::LoadImage(i 0, t &quot;c:\test.bmp&quot;, i ${IMAGE_BITMAP}, i 0, i 0, i ${LR_LOADTRANSPARENT}|${LR_CREATEDIBSECTION}|${LR_LOADFROMFILE}) i.s' <br />
+		Pop $6 <br />
+		SendMessage $hwnd ${BM_SETIMAGE} ${IMAGE_BITMAP} $6<br />
+Should set the background of the image to transparent according to msdn.<br />
+http://msdn.microsoft.com/en-us/library/ms648045.aspx</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">gintsgints</div><div class="date">9th September 2009, 08:41</div></div><div class="posttext">I have got it kind of working (with some flickering) like this:<br />
+<br />
+<br />
+Function hidecontrol<br />
+  SetCtlColors $TestHelpLabel1 0x000000 ${MUI_BKCOLOR}<br />
+  ShowWindow $TestHelpLabel1 ${SW_HIDE}<br />
+  ShowWindow $TestDialog ${SW_HIDE}<br />
+  System::Call &quot;user32::InvalidateRect(i,i,i)i ($TestHelpLabel1, 0, 1)&quot;<br />
+  System::Call &quot;user32::RedrawWindow(i,i,i,i)i ($TestHelpLabel1, 0, 0, ${RDW_INVALIDATE}|${RDW_ERASE}|${RDW_UPDATENOW})&quot;<br />
+  ShowWindow $TestDialog ${SW_SHOW}<br />
+FunctionEnd<br />
+<br />
+Function showcontrol<br />
+  ShowWindow $TestHelpLabel1 ${SW_SHOW}<br />
+  SetCtlColors $TestHelpLabel1 0x000000 transparent<br />
+FunctionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

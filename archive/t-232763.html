@@ -1,0 +1,137 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to write a function?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to write a function? NSIS Discussion" />
+	
+	<title> How to write a function? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to write a function?</div>
+<hr />
+<div class="pda"><a href="t-232763.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=232763">How to write a function?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">super-llooyd</div><div class="date">7th December 2005, 23:33</div></div><div class="posttext">sorry for the dummy question but NSIS still looks like martian to me (or worst, venusian!)...<br />
+<br />
+Anyway I found this in 'makensis.nsis':<br />
+======<br />
+  ReadRegStr $R0 HKCR &quot;.nsi&quot; &quot;&quot;<br />
+  StrCmp $R0 &quot;NSISFile&quot; 0 +2<br />
+    DeleteRegKey HKCR &quot;NSISFile&quot;<br />
+<br />
+  WriteRegStr HKCR &quot;.nsi&quot; &quot;&quot; &quot;NSIS.Script&quot;<br />
+  WriteRegStr HKCR &quot;NSIS.Script&quot; &quot;&quot; &quot;NSIS Script File&quot;<br />
+  WriteRegStr HKCR &quot;NSIS.Script\DefaultIcon&quot; &quot;&quot; &quot;$INSTDIR\makensisw.exe,1&quot;<br />
+  ReadRegStr $R0 HKCR &quot;NSIS.Script\shell\open\command&quot; &quot;&quot;<br />
+  StrCmp $R0 &quot;&quot; 0 no_nsiopen<br />
+    WriteRegStr HKCR &quot;NSIS.Script\shell&quot; &quot;&quot; &quot;open&quot;<br />
+    WriteRegStr HKCR &quot;NSIS.Script\shell\open\command&quot; &quot;&quot; 'notepad.exe &quot;%1&quot;'<br />
+  no_nsiopen:<br />
+======<br />
+<br />
+How could I:<br />
+1. make this a function which takes 3 parameter<br />
+1 para for extension (.nsis), 1 for app name (NSIS.Script), 1 for description (NSIS Script File)<br />
+(could you show me how to use the parameter as well)<br />
+<br />
+2. How could I call this function (once it is done)?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">super-llooyd</div><div class="date">7th December 2005, 23:57</div></div><div class="posttext">I also read on another post I should call that if I want the icon of my files to be updated without rebooting:<br />
+SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_DWORD, NULL, NULL);<br />
+<br />
+but if I write this in the NSIS file, that (of course) doesn't work, any tips?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dandaman32</div><div class="date">8th December 2005, 03:38</div></div><div class="posttext">In NSIS, functions don't take parameters.<br />
+<br />
+I know.  It's weird.<br />
+<br />
+You can use macros instead.  A macro's code is not called at runtime, it is inserted at compile time.  This makes some extra tricks possible.<br />
+<br />
+To make a macro:!macro NAME PARAM1 PARAM2 ; ... any additional params<br />
+  ; your code here...<br />
+  !echo &quot;Parameter 1 is ${PARAM1} (param2 is ${PARAM2})&quot;<br />
+!macroendAs you can see, referencing parameters is quite easy - you can do anything you want with these types of variables.  Any variable that has braces around it - like ${THIS_IS_A_SYMBOL} - can contain code, a string, a prefix such as &quot;un.&quot;, or anything - its value is set at compile time.  This allows you to (for example) make your own commands:!macro SOME_MACRO PARMS<br />
+  MessageBox MB_OK &quot;${PARMS}&quot;<br />
+!macroend<br />
+!define SomeMacro &quot;!insertmacro SOME_MACRO&quot;<br />
+<br />
+Section<br />
+  ${SomeMacro} &quot;This is the text that goes on the message box&quot;<br />
+SectionEndTo define a global symbol, use:!define SYMBOL_NAME &quot;Value&quot;In macros, the parameters are accessed the same way symbols are - but the macro parameters don't exist outside of the macro.<br />
+<br />
+And to refresh the shell icons: (use this only in a section or function)System::Call 'shell32.dll::SHChangeNotify(i, i, i, i) v (0x08000000, 0, 0, 0)'<br />
+<br />
+One last hint - code in macros is not processed (compiled) until the macro is inserted.  You can have any gibberish you want in a macro, as long as you don't insert it.<br />
+<br />
+-dandaman32</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">super-llooyd</div><div class="date">8th December 2005, 04:08</div></div><div class="posttext">thanks dandaman32, that's very helpfull....</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">8th December 2005, 11:00</div></div><div class="posttext">Well, functions do not take parameters as default, but you can do so by using the run-time stack along with a compile-time macro.<br />
+<br />
+Example:<br />
+<br />
+Function MyFunc<br />
+Exch $R0 ; get 3rd param<br />
+Exch<br />
+Exch $R2 ; get 2nd param<br />
+Exch<br />
+Exch 2<br />
+Exch $R2 ; get 1st param<br />
+Exch 2<br />
+Push $R3 ; save value of $R3 before use in this function<br />
+<br />
+  IntOp $R3 $R2 * $R1<br />
+  IntOp $R0 $R3 + $R0<br />
+<br />
+Pop $R3 ; set old value of $R3 back<br />
+Pop $R2<br />
+Pop $R1<br />
+Exch $R0 ; return output<br />
+FunctionEnd<br />
+<br />
+!macro MyFunc ReturnVar Param1 Param2 Param3<br />
+  Push &quot;${Param1}&quot;<br />
+  Push &quot;${Param2}&quot;<br />
+  Push &quot;${Param3}&quot;<br />
+    Call MyFunc<br />
+  Pop &quot;${ReturnVar}&quot;<br />
+!macroend<br />
+!define MyFunc '!insertmacro MyFunc'<br />
+<br />
+Section &quot;Call MyFunc&quot;<br />
+  ${MyFunc} $R0 10 9 3<br />
+  ; at this point, $R0 ==  93<br />
+SectionEnd<br />
+<br />
+<br />
+Yes it is long, but using a macro to insert the actual code (rather than placing the code inside a function) means that the code will be inserted again for each !insermacro instruction you use.<br />
+Placing the code in a function will mean that the code is only included once and this will decrease the installer overhead (in theory).<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">11th December 2005, 00:31</div></div><div class="posttext">Man, no wonder Afrow UK, you are a forum king!<br />
+<br />
+...this was helpfull info, even for me, to refresh my memory just in a night when I need it.. deep into debugging my NSIS script, thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">11th December 2005, 14:12</div></div><div class="posttext">in nsis functions work like in asm :)<br />
+they get their &quot;parameters&quot; by the stack.<br />
+<br />
+in oldschool nsis (below 1.x series), plugin calls worked the same way. in nsis2 this has been changed to the parameter syntax like used in other script languages, but just for plugin calls.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

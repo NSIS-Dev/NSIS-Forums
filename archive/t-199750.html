@@ -1,0 +1,293 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Unistall only installed files, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Unistall only installed files NSIS Discussion" />
+	
+	<title> Unistall only installed files [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Unistall only installed files</div>
+<hr />
+<div class="pda"><a href="t-199750.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=199750">Unistall only installed files</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Rookie12</div><div class="date">20th November 2004, 18:03</div></div><div class="posttext">can anybody write an exmaple script for me :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">20th November 2004, 18:35</div></div><div class="posttext">This has already been asked before. You can only do this by creating a list of files on installation (write to a file using FileOpen, FileWrite) and then read from this file on uninstallation and delete each file.<br />
+<br />
+e.g.<br />
+Var UninstLog<br />
+<br />
+; Add file macro<br />
+!macro File FileName<br />
+ File &quot;${FileName}&quot;<br />
+ FileWrite $UninstLog &quot;$OUTPATH\${FileName}$\r$\n&quot;<br />
+!macroend<br />
+!define File &quot;!insertmacro File&quot;<br />
+<br />
+Section -openlogfile<br />
+ FileOpen $UninstLog &quot;$INSTDIR\uninstall.log&quot; w<br />
+SectionEnd<br />
+<br />
+Section &quot;Install Main&quot;<br />
+<br />
+ SetOutPath $INSTDIR<br />
+ ${File} &quot;file1.ext&quot;<br />
+ ${File} &quot;file2.ext&quot;<br />
+ ${File} &quot;file3.ext&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+Section &quot;Install Other&quot;<br />
+<br />
+ SetOutPath &quot;$INSTDIR\Other&quot;<br />
+ ${File} &quot;file4.ext&quot;<br />
+ ${File} &quot;file5.ext&quot;<br />
+ ${File} &quot;file6.ext&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+Section -closelogfile<br />
+ FileClose $UninstLog<br />
+SectionEnd<br />
+<br />
+Section Uninstall<br />
+<br />
+ ; Can't uninstall if uninstall.log is missing!<br />
+ IfFileExists &quot;$EXEDIR\uninstall.log&quot; +3<br />
+  MessageBox MB_OK|MB_ICONSTOP &quot;uninstall.log not found!$\r$\nUninstallation cannot be done!&quot;<br />
+   Abort<br />
+<br />
+ Push $R0<br />
+ FileOpen $UninstLog &quot;$EXEDIR\uninstall.log&quot; r<br />
+<br />
+ LoopRead:<br />
+  ClearErrors<br />
+   FileRead $UninstLog $R0<br />
+   IfErrors LoopDone<br />
+<br />
+   Push $R0<br />
+    Call TrimNewLines<br />
+   Pop $R0<br />
+   Delete $R0<br />
+<br />
+  Goto LoopRead<br />
+ LoopDone:<br />
+ FileClose $UninstLog<br />
+ Pop $R0<br />
+<br />
+SectionEnd<br />
+<br />
+You will need the TrimNewLines function to be present also.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rookie12</div><div class="date">20th November 2004, 20:37</div></div><div class="posttext">how can i present TrimNewLines function ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">20th November 2004, 20:56</div></div><div class="posttext">TrimNewlines is in the NSIS Users Manual<br />
+<br />
+http://nsis.sourceforge.net/Docs/AppendixC.html#C.2</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rookie12</div><div class="date">20th November 2004, 21:04</div></div><div class="posttext">how can i use this in script?<br />
+<br />
+sorry i'm just 12 :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">20th November 2004, 21:25</div></div><div class="posttext">To use TrimNewlines, just insert the code into your script. Function TrimNewlines<br />
+   Exch $R0<br />
+   Push $R1<br />
+   Push $R2<br />
+   StrCpy $R1 0<br />
+ <br />
+ loop:<br />
+   IntOp $R1 $R1 - 1<br />
+   StrCpy $R2 $R0 1 $R1<br />
+   StrCmp $R2 &quot;$\r&quot; loop<br />
+   StrCmp $R2 &quot;$\n&quot; loop<br />
+   IntOp $R1 $R1 + 1<br />
+   IntCmp $R1 0 no_trim_needed<br />
+   StrCpy $R0 $R0 $R1<br />
+ <br />
+ no_trim_needed:<br />
+   Pop $R2<br />
+   Pop $R1<br />
+   Exch $R0<br />
+ FunctionEnd For example, insert it at the end of the code Afrow UK provided.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rookie12</div><div class="date">20th November 2004, 21:41</div></div><div class="posttext">Call must be used with function names starting with &quot;un.&quot; in the uninstall section.<br />
+Usage: Call function_name | [:label_name]<br />
+Error in script &quot;I:\Documents and Settings\Administrator\Desktop\unistallonlyinstalled\example.nsi&quot; on line 52 -- aborting creation process<br />
+<br />
+error at &quot;Call TrimNewLines&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rookie12</div><div class="date">20th November 2004, 22:09</div></div><div class="posttext">i've used un.TrimNewLines and FileWrite $INSTDIR &quot;$OUTPATH\${FileName}$\r$\n&quot; so no more problem about making setup but now uninstall.log is empty</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rookie12</div><div class="date">20th November 2004, 22:52</div></div><div class="posttext">Script on Basic.nsi, but unistaller doesnt work.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">20th November 2004, 23:13</div></div><div class="posttext">Sorry I updated my code above after you must have copied it. I have made some alterations so you'll have to copy and paste it again.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">20th November 2004, 23:38</div></div><div class="posttext">Sorry about the &quot;un.TrimNewlines&quot; problem - I did not look at the code to see where the TrimNewlines function was being used.<br />
+<br />
+In your script the &quot;FileOpen&quot; command will fail to create the uninstall.log file if the $INSTDIR folder does not exist. One way to fix this is to change the -openlogfile section:Section -openlogfile<br />
+   SetOutPath $INSTDIR<br />
+   FileOpen $UninstLog &quot;$INSTDIR\uninstall.log&quot; w<br />
+SectionEndAnother problem is that the &quot;File&quot; macro uses $OUTPATH instead of $OUTDIR (you should have got some warnings about this when you compiled the script, eg unknown variable/constant &quot;OUTPATH\file1.ext&quot; detected, ignoring (macro:File:2)).<br />
+<br />
+To fix this change the line toFileWrite $UninstLog &quot;$OUTDIR\${FileName}$\r$\n&quot;These two changes will let your installer create the uninstsall.log file with the correct data.<br />
+<br />
+You'll need to add some code to the uninstaller to make it delete the uninstall.log file, the uninstall.exe program, the empty folders and the registry data (have another look at the original Basic.nsi script to see how to do this).<br />
+<br />
+<br />
+Another thing that might cause problems is that the &quot;File&quot; macro can store the wrong information if you include a path instead of just a filename, e.g.<br />
+<br />
+${File} &quot;path\file7.ext&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rookie12</div><div class="date">20th November 2004, 23:52</div></div><div class="posttext">Var UninstLog<br />
+<br />
+; Add file macro<br />
+!macro File FileName<br />
+ File &quot;${FileName}&quot;<br />
+ FileWrite $UninstLog &quot;$OUTPATH\${FileName}$\r$\n&quot;<br />
+!macroend<br />
+!define File &quot;!insertmacro File&quot;<br />
+<br />
+Section -openlogfile<br />
+ FileOpen $UninstLog &quot;$INSTDIR\uninstall.log&quot; w<br />
+SectionEnd<br />
+<br />
+Section &quot;Install Main&quot;<br />
+<br />
+ SetOutPath $INSTDIR<br />
+ ${File} &quot;file1.ext&quot;<br />
+ ${File} &quot;file2.ext&quot;<br />
+ ${File} &quot;file3.ext&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+Section &quot;Install Other&quot;<br />
+<br />
+ SetOutPath &quot;$INSTDIR\Other&quot;<br />
+ ${File} &quot;file4.ext&quot;<br />
+ ${File} &quot;file5.ext&quot;<br />
+ ${File} &quot;file6.ext&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+Section -closelogfile<br />
+ FileClose $UninstLog<br />
+SectionEnd<br />
+<br />
+Section Uninstall<br />
+<br />
+ ; Can't uninstall if uninstall.log is missing!<br />
+ IfFileExists &quot;$INSTDIR\uninstall.log&quot; +3<br />
+  MessageBox MB_OK|MB_ICONSTOP &quot;uninstall.log not found!$\r$\nUninstallation cannot be done!&quot;<br />
+   Abort<br />
+<br />
+ Push $R0<br />
+ FileOpen $UninstLog &quot;$INSTDIR\uninstall.log&quot; r<br />
+<br />
+ LoopRead:<br />
+  ClearErrors<br />
+   FileRead $UninstLog $R0<br />
+   IfErrors LoopDone<br />
+<br />
+   Push $R0<br />
+    Call un.TrimNewLines<br />
+   Pop $R0<br />
+   Delete $R0<br />
+<br />
+  Goto LoopRead<br />
+ LoopDone:<br />
+ FileClose $UninstLog<br />
+ Pop $R0<br />
+<br />
+SectionEnd<br />
+<br />
+ Function un.TrimNewlines<br />
+   Exch $R0<br />
+   Push $R1<br />
+   Push $R2<br />
+   StrCpy $R1 0<br />
+ <br />
+ loop:<br />
+   IntOp $R1 $R1 - 1<br />
+   StrCpy $R2 $R0 1 $R1<br />
+   StrCmp $R2 &quot;$\r&quot; loop<br />
+   StrCmp $R2 &quot;$\n&quot; loop<br />
+   IntOp $R1 $R1 + 1<br />
+   IntCmp $R1 0 no_trim_needed<br />
+   StrCpy $R0 $R0 $R1<br />
+ <br />
+ no_trim_needed:<br />
+   Pop $R2<br />
+   Pop $R1<br />
+   Exch $R0<br />
+ FunctionEnd<br />
+<br />
+<br />
+i've used this code, only problem with $OUTPATH<br />
+<br />
+this is contents of uninstall.log<br />
+<br />
+<br />
+$OUTPATH\file1.ext<br />
+$OUTPATH\file2.ext<br />
+$OUTPATH\file3.ext<br />
+$OUTPATH\file4.ext<br />
+$OUTPATH\file5.ext<br />
+$OUTPATH\file6.ext</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rookie12</div><div class="date">20th November 2004, 23:57</div></div><div class="posttext">Originally posted by pengyou <br />
+Sorry about the &quot;un.TrimNewlines&quot; problem - I did not look at the code to see where the TrimNewlines function was being used.<br />
+<br />
+In your script the &quot;FileOpen&quot; command will fail to create the uninstall.log file if the $INSTDIR folder does not exist. One way to fix this is to change the -openlogfile section:Section -openlogfile<br />
+   SetOutPath $INSTDIR<br />
+   FileOpen $UninstLog &quot;$INSTDIR\uninstall.log&quot; w<br />
+SectionEndAnother problem is that the &quot;File&quot; macro uses $OUTPATH instead of $OUTDIR (you should have got some warnings about this when you compiled the script, eg unknown variable/constant &quot;OUTPATH\file1.ext&quot; detected, ignoring (macro:File:2)).<br />
+<br />
+To fix this change the line toFileWrite $UninstLog &quot;$OUTDIR\${FileName}$\r$\n&quot;These two changes will let your installer create the uninstsall.log file with the correct data.<br />
+<br />
+You'll need to add some code to the uninstaller to make it delete the uninstall.log file, the uninstall.exe program, the empty folders and the registry data (have another look at the original Basic.nsi script to see how to do this).<br />
+<br />
+<br />
+Another thing that might cause problems is that the &quot;File&quot; macro can store the wrong information if you include a path instead of just a filename, e.g.<br />
+<br />
+${File} &quot;path\file7.ext&quot;<br />
+  <br />
+<br />
+ok i've used $OUTDIR for $OUTPATH, so it works completely. Thanx for your helps :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">21st November 2004, 12:26</div></div><div class="posttext">Ah yes sorry about that. I meant to put $OUTDIR but I put $OUTPATH instead sorry :D<br />
+<br />
+I never actually tested the code (although I should have). It was written here and then.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rookie12</div><div class="date">25th November 2004, 23:14</div></div><div class="posttext">is this possible for registry strings too?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

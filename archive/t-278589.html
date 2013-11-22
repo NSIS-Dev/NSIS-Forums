@@ -1,0 +1,132 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to change the  process owner of the installer?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to change the  process owner of the installer? NSIS Discussion" />
+	
+	<title> How to change the  process owner of the installer? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to change the  process owner of the installer?</div>
+<hr />
+<div class="pda"><a href="t-278589.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=278589">How to change the  process owner of the installer?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">giriraj</div><div class="date">10th October 2007, 13:02</div></div><div class="posttext">Hi.<br />
+As a part of my project i am supposed to create a new Windows User with Administrator privileges.<br />
+So far i have succeeded in that.<br />
+Next what my task is for the process &quot;installer.exe&quot;; (i.e the currently running installer) to change its owner from the logged on user to the newly created user.<br />
+In short i want to change the owner of the current process.<br />
+<br />
+Any help in this regard would be greatly appreciated.<br />
+<br />
+And by the way,this whole NSIS thing is simply outstanding stuff.Kudos to the development team for such a fantastic effort.<br />
+<br />
+Regards,<br />
+Giriraj.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">10th October 2007, 13:55</div></div><div class="posttext">I don't think you can change a process owner/user on the fly. You probably have to start another instance of the same process by calling CreateProcessAsUser or one of the other CreateProcessAs/With api's with the system plugin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">giriraj</div><div class="date">11th October 2007, 05:37</div></div><div class="posttext">Thanks a lot Anders for your information.<br />
+Is it possible for you to give an example for the same.<br />
+I am a newbie in this awesome technology called NSIS.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">11th October 2007, 10:42</div></div><div class="posttext">I don't think you can change a process owner/user on the flyActually you can but it does not seem to be a supported feature (!). Seems to work up to Server 2k3 but is broken in Vista, according to this (http://forums.microsoft.com/MSDN/ShowPost.aspx?PostID=1034817&amp;SiteID=1) page. If the calling thread has the SE_ASSIGNPRIMARYTOKEN_NAME privilege, one can use NtSetInformationProcess to change the thread's primary token and as such the security context of the owner.<br />
+<br />
+@giriraj<br />
+You need to call LogonUser (http://msdn2.microsoft.com/en-us/library/aa378184.aspx) to get a primary token for the new user, convert the resulting impersonation token to a primary one with DuplicateTokenEx  (http://msdn2.microsoft.com/en-us/library/aa446617.aspx) then call CreateProcessAsUser  (http://msdn2.microsoft.com/en-us/library/ms682429.aspx) with the new token, in order to start a new process of the program.<br />
+<br />
+Alternatively you can call CreateProcessWithTokenW (http://msdn2.microsoft.com/en-us/library/ms682434.aspx) or the CreateProcessWithLogonW (http://msdn2.microsoft.com/en-us/library/ms682431.aspx) APIs as anders suggested.<br />
+<br />
+I'll try to put this together on a script if time permits, unless someone has it ready.<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">giriraj</div><div class="date">11th October 2007, 10:59</div></div><div class="posttext">It would be really helpful to me if you can put up an example.<br />
+I am yet to get conversant with the terminologies involved in the System calls made through NSIS.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">11th October 2007, 11:56</div></div><div class="posttext">Then this is an excellent opportunity to get conversant with the system API calls. Start with this (http://nsis.sourceforge.net/Authenticate_User) LogonUser example and its MSDN (http://msdn2.microsoft.com/en-us/library/aa378184.aspx) description and move to the other API calls. What you are after is rather involved as there are many little details to pay attention to...<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">11th October 2007, 16:38</div></div><div class="posttext">@giriraj<br />
+After reading the MSDN info on the functions that are mentioned in this thread, I think that the easiest way to start a new process with your new account is by calling from your installer CreateProcessWithLogonW (http://msdn2.microsoft.com/en-us/library/ms682431.aspx).<br />
+<br />
+Here is a minimal script to get you started:<br />
+!define LOGON_WITH_PROFILE  0x00000001<br />
+!define LOGON_NETCREDENTIALS_ONLY  0x00000002<br />
+!define CREATE_DEFAULT_ERROR_MODE  0x04000000<br />
+!define CREATE_NEW_CONSOLE  0x00000010<br />
+!define CREATE_NEW_PROCESS_GROUP  0x00000200<br />
+!define strPROCESS_INFORMATION  (i,i,i,i)<br />
+<br />
+SetCompressor /SOLID lzma<br />
+!include &quot;MUI.nsh&quot;<br />
+!include &quot;LogicLib.nsh&quot;<br />
+<br />
+OutFile &quot;TEST.exe&quot;<br />
+InstallDir &quot;$PLUGINSDIR&quot;<br />
+<br />
+Section -Ext<br />
+MessageBox MB_OK|MB_ICONINFORMATION &quot;Starting Notepad as another user:&quot;<br />
+System::Alloc ${NSIS_MAX_STRLEN}<br />
+Pop $R0<br />
+System::Call 'Advapi32::CreateProcessWithLogonW(w &quot;test&quot;,w &quot;.&quot;,w &quot;1234&quot;,i ${LOGON_WITH_PROFILE},w &quot;$SYSDIR\notepad.exe&quot;,w &quot;&quot;,i ${CREATE_DEFAULT_ERROR_MODE}|${CREATE_NEW_CONSOLE}|${CREATE_NEW_PROCESS_GROUP},,w &quot;$SYSDIR\&quot;,,i R0)i.R6 ?e'<br />
+Pop $9<br />
+${If} $R6 == 0<br />
+  MessageBox MB_OK|MB_ICONSTOP &quot;Got an error code of '$9'&quot;<br />
+  Quit<br />
+${EndIf}<br />
+System::Call '*$R0${strPROCESS_INFORMATION}(.R1,.R2,.R3,.R4)'<br />
+MessageBox MB_OK|MB_ICONEXCLAMATION &quot;The new process started!$\nProcess handle: $R1$\nProcess thread: $R2$\nProcessID: $R3$\nThreadID: $R4$\n&quot;<br />
+MessageBox MB_OK|MB_ICONINFORMATION &quot;Press OK to terminate the original process&quot;<br />
+  Quit<br />
+SectionEnd<br />
+<br />
+Function .onInit<br />
+  InitPluginsDir<br />
+FunctionEnd<br />
+It will start notepad in the security context of the user test with password 1234 (Replace those with your new admin user's values) and will then exit. <br />
+<br />
+Go over the notes on the MSDN page, maybe your scenario needs some extra bits, but the above should be a good starting point.<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">giriraj</div><div class="date">17th October 2007, 07:17</div></div><div class="posttext">Thanks a lot CF.<br />
+I was able to run your sample code and the notepad's owner was actually the new user i specified.<br />
+But then i got stuck.<br />
+What i specifically need is that whatever  files are installed by the installer ,all of those files should have their preferences(for e.g file owner) set to the new user i just created(new user is created through the same installer process).I mean all these have to be performed through single instance of the running installer.<br />
+I was looking for a way to do this through &quot;CreateProcessWithLogonW&quot;. But i haven't found a way yet.<br />
+I hope i am able to put forth my problem appropriately.<br />
+<br />
+Giriraj.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">giriraj</div><div class="date">17th October 2007, 07:20</div></div><div class="posttext">And just to add something more.<br />
+I have created a plug-in that encrypts a string using Win32Crypto API in VC(i am new to VC too :) ).<br />
+Is there any place i can post my plug-in for others to use.?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">17th October 2007, 10:48</div></div><div class="posttext">Ownership of files/folders you can set from within the installer using the AccessControl (http://nsis.sourceforge.net/AccessControl_plug-in) plugin...<br />
+<br />
+Also you may want to have a look at the remarks at the end of the CreateProcessWithLogon (http://msdn2.microsoft.com/en-us/library/ms682431.aspx) MSDN page:By default, CreateProcessWithLogonW does not load the specified user profile into the HKEY_USERS registry key. This means that access to information in the HKEY_CURRENT_USER registry key may not produce results that are consistent with a normal interactive logon. It is your responsibility to load the user registry hive into HKEY_USERS before calling CreateProcessWithLogonW, by using LOGON_WITH_PROFILE, or by calling the LoadUserProfile function. ...<br />
+<br />
+What this means is that you can run your program at the security context of your new user, however the user's profile is not loaded and his/her hive is not present in the registry. Changes that you would like to reflect to this user's program preferences will not be saved unless you load the user's profile...<br />
+<br />
+You can attach your plugin on this (or another) thread or you can create a wiki (http://nsis.sourceforge.net/Category:Plugins) page for it (some related information can be found here (http://nsis.sourceforge.net/Wiki_Information))<br />
+<br />
+CF</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Extract file depending on language, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Extract file depending on language NSIS Discussion" />
+	
+	<title> Extract file depending on language [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Extract file depending on language</div>
+<hr />
+<div class="pda"><a href="t-138150.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=138150">Extract file depending on language</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">matricen</div><div class="date">7th June 2003, 03:31</div></div><div class="posttext">Here is a little newbie question. Is it possible to extract files with my Modern NSIS installer depenping on which language the user has choosen? - If, then how would it look like?<br />
+<br />
+(My installer includes to different languages)<br />
+<br />
+e.g.<br />
+<br />
+  SetOutPath &quot;$INSTDIR\&quot;<br />
+  File &quot;language1.txt&quot;<br />
+  File &quot;language2.txt&quot;<br />
+<br />
+If user has chosen language1, then I only want the language1.txt to be extracted and not language2.txt. (Same thing other way around)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">7th June 2003, 09:04</div></div><div class="posttext">$LANGUAGE gets set to the language name so you could do: (not tested)File &quot;$LANGUAGE.txt&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th June 2003, 11:03</div></div><div class="posttext">As $LANGUAGE is a runtime variable this will not work. You should use something like this:<br />
+<br />
+StrCmp $LANGUAGE ${LANG_ENGLISH} 0 notEnglish<br />
+  File &quot;english file.txt&quot;<br />
+notEnglish: StrCmp $LANGUAGE ${LANG_FRENCH} 0 notFrench<br />
+  File &quot;french file.txt&quot;<br />
+notFrench:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">7th June 2003, 17:03</div></div><div class="posttext">and...<br />
+Is there a way to detect the user's PC language?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MoNKi</div><div class="date">7th June 2003, 18:58</div></div><div class="posttext">Lobo Lunar, I think that I found a way to detect the user language, please, test it with other languages, i only tested it with the spanish language.<br />
+<br />
+OutFile &quot;AutoLanguage.exe&quot;<br />
+<br />
+LoadLanguageFile &quot;${NSISDIR}\Contrib\Language files\English.nlf&quot;<br />
+Name &quot;AutoLanguage English&quot;<br />
+LoadLanguageFile &quot;${NSISDIR}\Contrib\Language files\Spanish.nlf&quot;<br />
+Name &quot;AutoLanguage Spanish&quot;<br />
+<br />
+; Puts in stack the user LANG_ID<br />
+Function GetUserLangId<br />
+	Push $R0<br />
+	System::Call 'Kernel32::GetUserDefaultLCID(v) i() .r10'<br />
+	IntOp $R0 $R0 &amp; &quot;2047&quot;<br />
+	Exch $R0<br />
+FunctionEnd	<br />
+	<br />
+<br />
+Function .onInit<br />
+	Call GetUserLangId<br />
+	Pop $R0<br />
+	MessageBox MB_OK &quot;User LANG_ID = $R0&quot;<br />
+<br />
+	StrCmp $R0 ${LANG_SPANISH} 0 notSpanish<br />
+		MessageBox MB_OK &quot;Spanish&quot;<br />
+		Goto finishLang<br />
+notSpanish:<br />
+		MessageBox MB_OK &quot;English&quot;	<br />
+finishLang:<br />
+	Abort<br />
+<br />
+FunctionEnd<br />
+<br />
+Section &quot;&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">7th June 2003, 19:10</div></div><div class="posttext">Display in my machine (Windows ME):<br />
+<br />
+User LANG_ID = 10<br />
+English<br />
+<br />
+<br />
+[edit]<br />
+<br />
+OutFile &quot;AutoLanguage.exe&quot;<br />
+Name &quot;DetectLanguage&quot;<br />
+<br />
+<br />
+; Puts in stack the user LANG_ID<br />
+Function GetUserLangId<br />
+	Push $R0<br />
+System::Call 'Kernel32::GetSystemDefaultLangID(v) i() .r10'<br />
+	Exch $R0<br />
+FunctionEnd	<br />
+	<br />
+<br />
+Function .onInit<br />
+Call GetUserLangId<br />
+Pop $R0<br />
+<br />
+MessageBox MB_OK &quot;$R0&quot; <br />
+;here mine return: <br />
+2058=LANG_SPANISH|SUBLANG_SPANISH_MEXICAN<br />
+Quit	<br />
+FunctionEnd<br />
+<br />
+Section &quot;&quot;<br />
+SectionEnd<br />
+<br />
+Now, must compare with the tool in &quot;${NSISDIR}\bin\MakeLangID.exe&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MoNKi</div><div class="date">7th June 2003, 19:26</div></div><div class="posttext">In my windows xp it shows &quot;User LANG_ID=1034&quot; :(<br />
+I'll read MSDN more carefully for another way.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MoNKi</div><div class="date">7th June 2003, 20:01</div></div><div class="posttext">I have read your edit now. Well, your way is better (but with GetUserDefaultLangID bacause a single user can change his default lang), now I get 3082 (SUBLANG_MODERN). We need to associate each SUBLANG with the &quot;NORMAL&quot;. I think this can work:<br />
+<br />
+; Puts in stack the user LANG_ID<br />
+Function GetUserLangId<br />
+	Push $R0<br />
+	System::Call 'Kernel32::GetUserDefaultLangID(v) i() .r10'<br />
+	Exch $R0<br />
+FunctionEnd	<br />
+<br />
+Function ConvertLangIdToNeutral<br />
+	Exch $R0<br />
+	IntOp $R0 $R0 &amp; &quot;1023&quot;<br />
+	Exch $R0<br />
+FunctionEnd<br />
+<br />
+Function .onInit<br />
+	Call GetUserLangId<br />
+	Call ConvertLangIdToNeutral<br />
+	Pop $R0<br />
+<br />
+	MessageBox MB_OK &quot;User NEUTRAL_LANG_ID = $R0&quot;<br />
+<br />
+	Push ${LANG_SPANISH}<br />
+	Call ConvertLangIdToNeutral<br />
+	Pop $R1	<br />
+	StrCmp $R0 $R1 0 notSpanish<br />
+		MessageBox MB_OK &quot;Spanish&quot;<br />
+		Goto finishLang<br />
+notSpanish:<br />
+		MessageBox MB_OK &quot;Default Language&quot;	<br />
+finishLang:<br />
+	Abort<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">7th June 2003, 20:15</div></div><div class="posttext">This convertion, MoNKi, give to me:<br />
+<br />
+The return of GetUserLangId:<br />
+1046 | LANG_PORTUGUESE | SUBLANG_PORTUGUESE_BRAZILIAN<br />
+<br />
+The return of ConvertLangIdToNeutral:<br />
+22 | LANG_PORTUGUESE | SUBLANG_NEUTRAL</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MoNKi</div><div class="date">7th June 2003, 20:24</div></div><div class="posttext">:up: Works!<br />
+<br />
+Well if there is a .nlf for SUBLANG_PORTUGUESE_BRAZILIAN there is no need to use the function to convert it to neutral, but if there is no nlf file use it for a default portuguese file.<br />
+<br />
+First compare your LANGID with all sublangs that are translated and then use the ConvertLangIdToNeutral to use a default for all non translated sublangs.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">7th June 2003, 20:38</div></div><div class="posttext">Language Neutral=10<br />
+Spanish...seems to work :up: :)<br />
+<br />
+check this site of other countries codes:<br />
+http://www.science.co.il/Language-Locale-Codes.asp?s=decimal</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MoNKi</div><div class="date">7th June 2003, 21:54</div></div><div class="posttext">I have created a script that uses a macro, it should detect spanish, english, portuguese and portuguese_brazilian. Please deguix test it and tell me if it works with portuguese_brazilian. And if it works, can i upload to the archive the script or need somebody with admin rights?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MoNKi</div><div class="date">7th June 2003, 21:57</div></div><div class="posttext">Sorry, forgot the attach</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">7th June 2003, 22:57</div></div><div class="posttext">Ok! Works!<br />
+And if it works, can i upload to the archive the script or need somebody with admin rights?<br />
+<br />
+You can upload, registering in the Archive (to be with your name) or like anonymous (but can be changed by everyone).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">7th June 2003, 23:01</div></div><div class="posttext">You cannot upload files unless you have admin rights but this doesn't affect your ability to create pages of text including scripts and anything else you might want to write about :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th June 2003, 14:26</div></div><div class="posttext">The user's language is detected by NSIS, the closest language in the instsaller's language table is choosen and its ID is set in $LANGUAGE. If you want to get the language name use a LangString with the language's name as the value for each language. Example:<br />
+<br />
+LangString language_name ${LANG_ENGLISH} &quot;English&quot;<br />
+LangString language_name ${LANG_FRENCH} &quot;French&quot;<br />
+# ...<br />
+<br />
+If you want language names of languages that are not present in the installer use the code above.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MoNKi</div><div class="date">8th June 2003, 14:37</div></div><div class="posttext">Kichik are you sure? If i delete the onInit function of the language.nsi example (I not select a language) it not detect that I am using spanish.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th June 2003, 14:47</div></div><div class="posttext">Yes MoNKi, it should choose the current language the user is using. NSIS uses GetUserDefaultLangID. If it can't find a perfect match for both the main language and the sublanguage it looks for match in the main language alone. If it can't find a match there either it takes the first language - &quot;the default language&quot;.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MoNKi</div><div class="date">8th June 2003, 14:48</div></div><div class="posttext">NSIS says that my langid is 1033 (LANG_ENGLISH, SUBLANG_ENGLISH_US), Spanish is 1034, and i'm using SUBLANG_SPANISH_MODERN (3082).<br />
+<br />
+I'm loading all language files, including spanish, and it don't works.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th June 2003, 15:42</div></div><div class="posttext">Fixed in latest CVS version. It was broken since Ui.c version 1.14 and we are now at 1.149...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MoNKi</div><div class="date">8th June 2003, 15:48</div></div><div class="posttext">Ok now works, thanks kichik. No need of complicated scripts.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

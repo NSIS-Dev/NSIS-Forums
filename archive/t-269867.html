@@ -1,0 +1,109 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Vista and large installer causes long CD spin, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Vista and large installer causes long CD spin NSIS Discussion" />
+	
+	<title> Vista and large installer causes long CD spin [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Vista and large installer causes long CD spin</div>
+<hr />
+<div class="pda"><a href="t-269867.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=269867">Vista and large installer causes long CD spin</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">haigha</div><div class="date">20th April 2007, 16:38</div></div><div class="posttext">I've been using NSIS installer for a number of years.  Thanks for all the great work and community support guys :)<br />
+<br />
+Recently, we've run into a problem on Vista.  Our installer is huge (~650 MB) because it contains lots of videos.  We use compression so that we can fit more videos on a CD than otherwise (LZMA is quite nice in this regard).<br />
+<br />
+The problem is that on Vista when we insert the CD it spins for about three or four minutes before running our installer and then it seems to copy the installer to the hard drive taking several more minutes.  This is not a problem we have seen on any other Windows version.<br />
+<br />
+I spent some time on this yesterday, including updating to the latest version of NSIS, and came up with the workaround of creating a separate archive with the video files and calling it with the command:<br />
+<br />
+ExecWait '&quot;$EXEDIR\7z.exe&quot; x Videos.zip &quot;-o$INSTDIR&quot; -r -aos -psecret'<br />
+<br />
+instead of including the videos in the main installer.<br />
+<br />
+While this works, it isn't as elegant as I'd like because it pops up a CMD window and also it requires including 7z.exe and 7z.dll on the CD.  Since this functionality is already built into NSIS, I'm wondering if there is a better way to achieve having the videos in a separate archive and if it's possible to show the results in the NSIS installer progress window rather than the external CMD window.<br />
+<br />
+Thanks for any ideas.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">haigha</div><div class="date">20th April 2007, 16:42</div></div><div class="posttext">Let me add:<br />
+<br />
+- this problem happens on a variety of machines here and on customer machines so it doesn't seem to be AntiVirus or AntiSpyware related<br />
+<br />
+- I tried an NFR copy of Setup Factory I have for grins and it exhibits the same problem with a large installer;  I won't be using SF since NSIS is superior IMO</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">20th April 2007, 17:30</div></div><div class="posttext">We've been testing Vista at our workplace (not with NSIS, but for our own InstallShield and MSI-based installations.)<br />
+<br />
+I've noticed when we right-click and choose &quot;run as administrator&quot;, it takes a long time finally give the &quot;cancel/allow&quot; prompt.  But mostly this has been in our own installations.<br />
+<br />
+Since none of our installations are currently signed.  My theory is that Vista seems to be checking the entire file for  signatures before it displays the prompt.  However, I've not had a change to really thoroughly research the problem.  (Our installations aren't that big, so the problem has been minimal.)  <br />
+<br />
+I just thought I'd pass this along in case it might help you get a solution.  (Maybe a test would be to disable UAC on a Vista machine and see if you still get the same results.)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sheik</div><div class="date">20th April 2007, 17:34</div></div><div class="posttext">Now, I have *no* idea whats causing the problem, but while you wait for one of the big guys to give you suggestions,<br />
+this *sounds* like the problem with the Installer needing something embedded in the installer that wasn't &quot;reserved&quot;, hence it has to sit there and chug away uncompressing everything before being able to run your installer...<br />
+<br />
+Are all the files you need to run your Installer options &quot;reserved&quot; ?<br />
+<br />
+Specifically, using &quot;ReserveFile&quot; on all your .ini, plugins, etc?<br />
+<br />
+Scott</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">20th April 2007, 18:22</div></div><div class="posttext">As already said, it's probably Vista looking for some kind of signature. It might be the digital authenticode signature and it might be a signature telling it to run in compatibility mode. The first might be solved by signing the installer using a certificate. The second can be solved by adding a manifest with RequestExecutionLevel.<br />
+<br />
+NSIS doesn't support external compressed files, so if you want to use those, keep the 7z.exe line but run it with nsExec so it won't show the command prompt.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">haigha</div><div class="date">20th April 2007, 20:22</div></div><div class="posttext">Thanks for the ideas.<br />
+<br />
+I did try digitally signing the installer yesterday and it had no effect on the slow startup.  I also tried turning off the crcCheck but it didn't affect the start up time either.<br />
+<br />
+However, I didn't see the RequestExecutionLevel stuff until I had finished separating the videos into an archive and using 7zip yesterday.  I just tried that with the videos back inside the installer and I still have the long delay with it signed and RequestExecutionLevel set to admin.<br />
+<br />
+I tried out nsExec::ExecToLog command.  One problem with it is that there seems to be a buffer on the output.  I set tried setting the timeout to various values 1000 ms and it still takes a number of seconds before there is any output and it seems to come in spurts (1k or 2k?) (this may be a problem with 7z.exe only doing buffered output when it is not connected to CMD's stdout?).<br />
+<br />
+I found that a further limitation of using the external archive is that NSIS no longer knows how big the install size is (the install size now shows incorrectly in Add/Remove programs).<br />
+<br />
+Does anybody have more ideas?<br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">haigha</div><div class="date">20th April 2007, 20:27</div></div><div class="posttext">Additions:<br />
+<br />
+I hadn't heard of the ReserveFile option that Sheik mentions but if that were the problem I would not expect it to only occur on Vista.<br />
+<br />
+I haven't disabled UAC on the Vista machine since this needs to work with it enabled but it may be a good test to help isolate the problem.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">21st April 2007, 00:34</div></div><div class="posttext">you can set the installsize manually (http://nsis.sourceforge.net/Docs/Chapter4.html#4.6.1.1).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">haigha</div><div class="date">21st April 2007, 01:20</div></div><div class="posttext">I'm not sure I understand your point.  From reading the docs, the AddSize only changes the size of a section.  If you're referring to the wrong size being displayed in the Add/Remove programs section, it is showing 8.6 GB for some reason there but the install is under 800 MB.  I do not use AddSize in my script.<br />
+<br />
+Originally posted by Yathosho <br />
+you can set the installsize manually (http://nsis.sourceforge.net/Docs/Chapter4.html#4.6.1.1).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">21st April 2007, 10:34</div></div><div class="posttext">Yathosho was talking about the size that appears in the components page and the directory page as the required installation size. The Add/Remove size is explained by Raymond Chen on his blog (http://blogs.msdn.com/oldnewthing/archive/2004/07/09/178342.aspx).<br />
+<br />
+Try passing -bd to 7z.exe so it'd stop buffering the output. It seems like it should do the trick, but I wasn't able to get it working.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">haigha</div><div class="date">22nd April 2007, 22:45</div></div><div class="posttext">Thanks for the info.  The -bd flag didn't improve things for the 7z output.  For now, I think it will be preferable to use the regular ExecWait command even though it's uglier.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

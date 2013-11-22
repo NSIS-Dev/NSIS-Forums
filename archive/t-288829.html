@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problem with InstallDirRegKey, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problem with InstallDirRegKey NSIS Discussion" />
+	
+	<title> Problem with InstallDirRegKey [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problem with InstallDirRegKey</div>
+<hr />
+<div class="pda"><a href="t-288829.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=288829">Problem with InstallDirRegKey</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">fluidz91</div><div class="date">21st March 2008, 16:28</div></div><div class="posttext">Hello,<br />
+<br />
+I found in NSIS\Examples\bigtest.nsi an example that uses InstallDirRegKey <br />
+<br />
+InstallDirRegKey HKLM &quot;Software\NSISTest\BigNSISTest&quot; &quot;&quot;<br />
+<br />
+When i test the script $INSTDIR is not set properly. I changed the script to<br />
+<br />
+InstallDirRegKey HKLM &quot;Software\NSISTest\BigNSISTest&quot; &quot;Install_Dir&quot;<br />
+<br />
+And now $INSTDIR is set to the correct path read on the registry.<br />
+I tried to put InstallDirRegKey in my own script but $INSTDIR is always set to InstallDir.<br />
+I found a workaround in NSIS Manual that consists of<br />
+<br />
+Function .onInit<br />
+...<br />
+   ReadRegStr $INSTDIR HKLM &quot;${REGKEY}&quot; Path<br />
+   StrCmp $INSTDIR &quot;&quot; label1 label2<br />
+...<br />
+FunctionEnd<br />
+<br />
+But i was wondering why i was not able to make InstallDirRegKey work...<br />
+If anyone has an idea what i could do wrong.<br />
+<br />
+i used EclipseNSIS wizard to make my script with MUI interface<br />
+<br />
+<br />
+...<br />
+!define REGKEY &quot;SOFTWARE\${COMPANY}\$(^Name)&quot;<br />
+...<br />
+InstallDir &quot;$PROGRAMFILES\$(^Name)\&quot;<br />
+InstallDirRegKey HKLM &quot;${REGKEY}&quot; &quot;Path&quot;<br />
+...<br />
+<br />
+<br />
+I also used dumpstate::debug to set breakpoint to see what was the value of $INSTDIR and found it was set to InstallDir but was unable to debug InstallDirRegKey.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">21st March 2008, 17:26</div></div><div class="posttext">Example fixed.<br />
+<br />
+As for your code, do you have a WriteRegStr there as well?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fluidz91</div><div class="date">21st March 2008, 17:40</div></div><div class="posttext">Hi kichik !<br />
+<br />
+Extract of my nsi script :<br />
+<br />
+Section -post SEC0002<br />
+    ...<br />
+    WriteRegStr HKLM &quot;${REGKEY}&quot; Path $INSTDIR<br />
+    ...<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">21st March 2008, 17:41</div></div><div class="posttext">Have you verified it's written there?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fluidz91</div><div class="date">21st March 2008, 17:56</div></div><div class="posttext">For me it is written in the registry at the right place.<br />
+I guess if it wasn't, the code below i use as a workaround wouldn't work, would it ? :<br />
+<br />
+ReadRegStr $INSTDIR HKLM &quot;${REGKEY}&quot; Path<br />
+<br />
+<br />
+More information :<br />
+&quot;${REGKEY}&quot; contains spaces<br />
+Tried entry_name with and without quotes<br />
+makensis version 2.17</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">{_trueparuex^}</div><div class="date">21st March 2008, 19:00</div></div><div class="posttext">The language string $(^Name) doesn't work in InstallDirRegKey because lang strings aren't initialized at the point InstallDirRegKey is called.<br />
+<br />
+So instead of geting the InstallDir from key Software\NSISTest\BigNSISTest it's trying to get it from key Software\NSISTest\$(^Name)<br />
+<br />
+If you want to use $(^Name) in the key. Use ReadRegStr $INSTDIR HKLM &quot;${REGKEY}&quot; after .onInit is called.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fluidz91</div><div class="date">25th March 2008, 10:48</div></div><div class="posttext">Thank you very much {_trueparuex^} ! i have now my explanation why i couldn't use InstallDirRegKey.<br />
+I already used ReadRegStr .onInit as a workaround...<br />
+<br />
+Thx All again !</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fluidz91</div><div class="date">26th March 2008, 16:59</div></div><div class="posttext">i just realized that it means that the Wizard of EclipseNSIS has a bug because it adds the lines :<br />
+<br />
+...<br />
+!define REGKEY &quot;SOFTWARE\$(^Name)&quot;<br />
+...<br />
+InstallDirRegKey HKLM &quot;${REGKEY}&quot; Path<br />
+<br />
+<br />
+Is it posible to access constant/variable &quot;Name&quot; otherwise by $(^Name) ? I tried ${Name} but didn't work.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

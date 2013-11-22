@@ -1,0 +1,219 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Plugin problem, CoInitialize() fails.., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Plugin problem, CoInitialize() fails.. NSIS Discussion" />
+	
+	<title> Plugin problem, CoInitialize() fails.. [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Plugin problem, CoInitialize() fails..</div>
+<hr />
+<div class="pda"><a href="t-261204.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=261204">Plugin problem, CoInitialize() fails..</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">joe131</div><div class="date">6th December 2006, 13:49</div></div><div class="posttext">Hi All,<br />
+<br />
+I'm trying to get a plugin DLL working that uses several<br />
+&quot;functions&quot;, but it has problems..<br />
+<br />
+The first call to CoInitialize() fails..<br />
+<br />
+	hr = CoInitialize(NULL);<br />
+	if ( hr != S_OK )<br />
+	{<br />
+		printf(&quot;CoInitialize() Failed\n&quot;);<br />
+		reply = &quot;CoInitialize() Failed&quot;;<br />
+		goto Create_Exit;		<br />
+	}<br />
+<br />
+I first wrote, compiled, and ran them all, by themselves,<br />
+and they all worked.<br />
+<br />
+for each I use:<br />
+<br />
+extern &quot;C&quot; void __declspec(dllexport) CreateUser(HWND hwndParent, int string_size,<br />
+	char *variables, stack_t **stacktop)<br />
+{<br />
+	char *reply = &quot;Failed&quot;;		// Default..<br />
+<br />
+	g_hwndParent = hwndParent;<br />
+<br />
+	EXDLL_INIT();<br />
+<br />
+}<br />
+<br />
+And finish with:<br />
+<br />
+BOOL WINAPI DllMain(HANDLE hInst, ULONG ul_reason_for_call, LPVOID lpReserved)<br />
+{<br />
+  g_hInstance = (HINSTANCE)hInst;<br />
+	return TRUE;<br />
+}<br />
+<br />
+It has all the right includes, and the DLL compiles and<br />
+links okay.<br />
+<br />
+So is there anything special that I need to add to it<br />
+to get it to &quot;work&quot;?<br />
+<br />
+The file is .cpp, because the compiler and linker seem<br />
+to be much happier with that than using a .c<br />
+<br />
+None of the functions require any input.<br />
+<br />
+I'm using a Microsoft compiler and linker..<br />
+<br />
+<br />
+Thanks,<br />
+<br />
+Joe S.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">6th December 2006, 16:19</div></div><div class="posttext">IMHO, it is best to compile an NSIS example plugin first.<br />
+For this download the NSIS source! via nightly TARball or cvs.<br />
+<br />
+then take a look in ( \cvs\nsis\NSIS\Contrib\ExDLL\ )<br />
+<br />
+.. and see if you can get that exmaple working.<br />
+add some of your code to this plugin and see if all still works... then move on to your own full plugin...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">joe131</div><div class="date">6th December 2006, 17:44</div></div><div class="posttext">Excellent idea!  I'll try it.<br />
+<br />
+Thanks,<br />
+<br />
+Joe S.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">joe131</div><div class="date">6th December 2006, 19:20</div></div><div class="posttext">No luck.. :-(<br />
+<br />
+Here's a &quot;simple&quot; full example that compiles and links<br />
+okay, but will fail..<br />
+<br />
+<br />
+#include &lt;windows.h&gt;<br />
+<br />
+#define _WIN32_DCOM<br />
+<br />
+#include &lt;Wbemidl.h&gt;<br />
+#include &quot;activeds.h&quot;<br />
+#include &lt;objbase.h&gt;	// Co..<br />
+#include &lt;oleauto.h&gt;	// SysAllocString()<br />
+<br />
+#include &quot;stdio.h&quot;<br />
+<br />
+#include &quot;exdll.h&quot;<br />
+<br />
+<br />
+<br />
+HINSTANCE g_hInstance;<br />
+<br />
+HWND g_hwndParent;<br />
+<br />
+extern &quot;C&quot; void __declspec(dllexport) getComputerName(HWND hwndParent, int string_size,<br />
+	char *variables, stack_t **stacktop)<br />
+{<br />
+  g_hwndParent=hwndParent;<br />
+<br />
+  EXDLL_INIT();<br />
+<br />
+  	char computerNameBuf[100];<br />
+	<br />
+	HRESULT hr = S_OK;<br />
+	<br />
+	IADsWinNTSystemInfo *pNtSys = NULL;<br />
+	<br />
+	BSTR bstrComputer = NULL;<br />
+	hr = CoInitialize(NULL);<br />
+	if ( hr != S_OK )<br />
+	{<br />
+//		printf(&quot;CoInitialize() Failed\n&quot;);<br />
+		goto GetComputerName_Exit;		<br />
+	}<br />
+<br />
+	hr = CoCreateInstance(CLSID_WinNTSystemInfo,<br />
+		NULL,<br />
+		CLSCTX_INPROC_SERVER,<br />
+		IID_IADsWinNTSystemInfo,<br />
+		(void**)&amp;pNtSys);<br />
+	if ( hr != S_OK )<br />
+	{<br />
+//		printf(&quot;CoCreateInstance() Failed\n&quot;);<br />
+		goto GetComputerName_Exit; 		<br />
+	}<br />
+	<br />
+//	printf(&quot;CoCreateInstance() OK\n&quot;);<br />
+	<br />
+	hr = pNtSys-&gt;get_ComputerName(&amp;bstrComputer);<br />
+	if ( hr != S_OK )<br />
+	{<br />
+//		printf(&quot;get_ComputerName() Failed\n&quot;);<br />
+		goto GetComputerName_Exit; 		<br />
+	}<br />
+<br />
+//	printf(&quot;get_ComputerName() OK\n&quot;);<br />
+	<br />
+	sprintf(computerNameBuf, &quot;%s&quot;, bstrComputer); <br />
+//	printf(&quot;computerNameBuf: '%S'\n&quot;, computerNameBuf);<br />
+	<br />
+<br />
+	SysFreeString(bstrComputer);<br />
+<br />
+	pushstring(computerNameBuf);<br />
+		<br />
+<br />
+GetComputerName_Exit:<br />
+<br />
+	if ( pNtSys != NULL )<br />
+	{<br />
+		pNtSys-&gt;Release();<br />
+	}<br />
+  <br />
+	CoUninitialize();<br />
+}<br />
+<br />
+<br />
+<br />
+BOOL WINAPI DllMain(HANDLE hInst, ULONG ul_reason_for_call, LPVOID lpReserved)<br />
+{<br />
+  g_hInstance = (HINSTANCE)hInst;<br />
+	return TRUE;<br />
+}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th December 2006, 18:56</div></div><div class="posttext">NSIS already calls OleInitialize for plug-ins, which internally calls CoInitializeEx. When COM is already initialized for a certain thread, CoInitlaize returns S_FALSE. It's not a real failure, just a notice so you won't call CoUninitialize.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">7th December 2006, 21:29</div></div><div class="posttext">Actually, you should call CoUninitialize for each time you call CoInitialize[Ex]. If you test with the SUCCEEDED macro instead of testing for S_OK everything should be ok</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">joe131</div><div class="date">8th December 2006, 12:27</div></div><div class="posttext">Man!  You're right!<br />
+<br />
+I changed all my:<br />
+<br />
+        if ( hr != S_OK )<br />
+<br />
+tests to use<br />
+<br />
+	if ( ! SUCCEEDED(hr) )<br />
+<br />
+and most everything started to work! lol Doh! :-)<br />
+<br />
+Sometimes I'd rather use what the macro tries to<br />
+do internally, directly, testing for S_OK,<br />
+but I guess in this case it came back and bit me.. lol :-)<br />
+<br />
+Thanks so much everybody!!<br />
+<br />
+Joe S.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

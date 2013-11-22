@@ -1,0 +1,162 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" intermittent crashes and anomalies, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  intermittent crashes and anomalies NSIS Discussion" />
+	
+	<title> intermittent crashes and anomalies [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  intermittent crashes and anomalies</div>
+<hr />
+<div class="pda"><a href="t-313766.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=313766">intermittent crashes and anomalies</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">umeca74</div><div class="date">13th October 2009, 11:54</div></div><div class="posttext">Hi<br />
+<br />
+I have a rather simple NSIS installer based on installoptions with intermittent faults. <br />
+<br />
+whenever i change the payload (the actual files, executable, help files etc) chances are that creating the installer (compiling the NSIS script) will fail with a crash especially when I use the LZMA/solid compressor. Take this example from today:<br />
+<br />
+1. attempt to compile script with LZMA -&gt; CRASH!<br />
+2. same script with default compressor -&gt; OK!<br />
+3. straight after step #2, retry compile with LZMA -&gt; OK!<br />
+<br />
+what on earth could cause such a behaviour without me touching anything? To clarify what crashes is the NSIS compiler, and no installer EXE file is output<br />
+<br />
+even when the installer is created it isn't always reliable. I have some checks for 64 bit windows using x64.nsh. My old installer was fine with it, now the same installer with the new payload can't recognize 64 bit windows unless it's run from an elevated process (!)<br />
+<br />
+what is the cause of this randomness?<br />
+where can i get the latest version of UPX.EXE?<br />
+<br />
+thanks<br />
+nikos</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th October 2009, 12:33</div></div><div class="posttext">Which version of NSIS? What are the crash details?<br />
+<br />
+UPX is on upx.sf.net.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">umeca74</div><div class="date">17th October 2009, 13:34</div></div><div class="posttext">I have downloaded the latest NSIS version and the latest UPX. So far I have not seen any crashes during compilation but this 64 bit detection code doesn't work still: (within Function .onInit):<br />
+<br />
+<br />
+!include &quot;x64.nsh&quot;<br />
+${If} ${RunningX64}<br />
+!ifdef WIN64<br />
+	SetRegView 64<br />
+	;${DisableX64FSRedirection} not required?<br />
+!else<br />
+	MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 'There is a specific 64 bit xplorerÂ² version$\r$\nFor details click zabkat.com/x2-64bit.htm $\r$\nProceed with 32 bit installation anyway?' IDYES noprob<br />
+	Quit<br />
+noprob:<br />
+!endif<br />
+${Else}<br />
+!ifdef WIN64<br />
+	MessageBox MB_OK|MB_ICONSTOP 'This is the 64 bit xplorerÂ² installer$\r$\nPlease download the 32 bit version from zabkat.com/ $\r$\nClick Ok to quit Setup.'<br />
+	Quit<br />
+!endif<br />
+${EndIf}<br />
+<br />
+<br />
+when I !define WIN64 the installer doesn't detect 64 bit windows so I just get a messagebox saying that &quot;this is the 64 bit installer please get the 32 bit version...&quot; which means that ${If} ${RunningX64} didn't detect the OS properly!<br />
+<br />
+any tips?<br />
+thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">redxii</div><div class="date">18th October 2009, 07:21</div></div><div class="posttext">Try this instead, I have a headache following that. !ifdef is a compiler command, not a runtime command. I only tested on Vista and XP 32-bit and the 64-bit program installer is able to detect that I'm not running X64 without elevated privileges. As expected when I tried to install 64-bit xplorerÂ² on 32-bit it blocked installation.<br />
+<br />
+<br />
+!include x64.nsh<br />
+<br />
+Function .onInit<br />
+  ;This is for the 64-bit program installer, tell the user to download the 32-bit version if not running 64-bit because you can't run 64-bit binaries on a 32-bit OS<br />
+!ifdef WIN64<br />
+    ${IfNot} ${RunningX64}<br />
+      MessageBox MB_OK|MB_ICONSTOP &quot;This is the 64 bit xplorerÂ² installer$\r$\nPlease download the 32 bit version from zabkat.com/ $\r$\nClick Ok to quit Setup.&quot;<br />
+      Abort<br />
+    ${EndIf}<br />
+<br />
+ ;If WIN64 is NOT defined, creates the 32-bit installer, warn that a 64-bit version is available if executed on 64-bit OS<br />
+!else<br />
+  ${If} ${RunningX64}<br />
+    MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 &quot;There is a specific 64 bit xplorerÂ² version$\r$\nFor details click zabkat.com/x2-64bit.htm $\r$\nProceed with 32 bit installation anyway?&quot; IDYES noprob<br />
+    Abort<br />
+    noprob:<br />
+  ${EndIf}<br />
+!endif<br />
+<br />
+FunctionEnd<br />
+I hope that is what you're looking for. You may also want something like this:<br />
+<br />
+!ifdef WIN64<br />
+  OutFile &quot;xplorer2-64bit.exe&quot;<br />
+!else<br />
+  OutFile &quot;xplorer2-32bit.exe&quot;<br />
+!endif<br />
+<br />
+Also, from x64.nsh on redirection:<br />
+<br />
+; DisableX64FSRedirection disables file system redirection.<br />
+; EnableX64FSRedirection enables file system redirection.<br />
+;<br />
+;   SetOutPath $SYSDIR<br />
+;   ${DisableX64FSRedirection}<br />
+;   File some.dll # extracts to C:\Windows\System32<br />
+;   ${EnableX64FSRedirection}<br />
+;   File some.dll # extracts to C:\Windows\SysWOW64<br />
+;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">umeca74</div><div class="date">19th October 2009, 17:44</div></div><div class="posttext">I tried this &quot;inside out&quot; approach but it fails all the same<br />
+<br />
+the weird thing is that if people run the installer from the desktop it fails, but if they open a 64 bit browser like xplorer2 and run the installer from in there there are no problems whatsoever</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">redxii</div><div class="date">19th October 2009, 20:14</div></div><div class="posttext">I'd ask to see the entire script, but that might not be possible.. and inquire if you are using some stripped/butchered version of Windows (such as with nLite or vLite) or might have any programs running, usually security programs, that might be causing the behavior.<br />
+<br />
+And I don't see any upx.exe included with NSIS, have you tried it without using UPX at all?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">umeca74</div><div class="date">21st October 2009, 18:17</div></div><div class="posttext">ok it was a weird one but I've got it<br />
+<br />
+in essense it was a faulty goto<br />
+<br />
+FindWindow $0 &quot;STATIC&quot; &quot;xplorer2_CommPort&quot;<br />
+IsWindow $0 0 +4<br />
+MessageBox MB_OK|MB_ICONEXCLAMATION &quot;xplorerÂ² is already running$\r$\nPress &lt;Alt+X&gt; to quit xplorerÂ²&quot;<br />
+; try to quit xplorer2 window anyway<br />
+SendMessage $0 ${WM_COMMAND} 57602 0<br />
+<br />
+${If} ${RunningX64}<br />
+...<br />
+<br />
+<br />
+it looks like the +4 jump didn't count comment lines (where's that documented?) so I removed the +4 and introduced a label instead and all is well (!)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">21st October 2009, 19:17</div></div><div class="posttext">it looks like the +4 jump didn't count comment lines (where's that documented?)It is documented in the &quot;Relative Jumps&quot; section in the manual: http://nsis.sourceforge.net/Docs/Chapter4.html#4.4<br />
+<br />
+Note that relative jumps specify the number of INSTRUCTIONS to jump not the number of lines in your script (see the manual for details). Note also the part where the manual mentions using &quot;macro insertion&quot; and relative jumps.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">umeca74</div><div class="date">21st October 2009, 20:00</div></div><div class="posttext">right, so it _is_ documented but very confusing regardless. Half the statements you use in the script are counted in jumps and half not? What a derranged concept!? :)<br />
+<br />
+now i'm going to have to double check 1000 lines of installer code to double check what other jumps have gone wrong like that :(<br />
+<br />
+thanks for clearing this up</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">21st October 2009, 20:18</div></div><div class="posttext">You could always do a Regular Expression Search using  Notepad++.<br />
+[+-][0-9]</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

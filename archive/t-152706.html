@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Uninstall Problem, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Uninstall Problem NSIS Discussion" />
+	
+	<title> Uninstall Problem [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Uninstall Problem</div>
+<hr />
+<div class="pda"><a href="t-152706.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=152706">Uninstall Problem</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">stonkers</div><div class="date">15th October 2003, 15:39</div></div><div class="posttext">I'm having the same problem as:<br />
+<br />
+This Dude (http://forums.winamp.com/showthread.php?s=&amp;threadid=152400&amp;highlight=Uninstall) <br />
+<br />
+When my uninstall runs, it gets rid of the registry entries and the uninstall file itself, but not the files or directory.  I'm not entirely positive I'm doing it right (I created these files originally with NSIS Workbench and have modified them from there.  Here's the basic gist:<br />
+<br />
+;NSIS Script For Centre Web<br />
+<br />
+;Backgound Colors<br />
+BGGradient 800080 000000 FFFFFF<br />
+BrandingText &quot; &quot;<br />
+<br />
+;Title Of Your Application<br />
+Name &quot;MyApp&quot;<br />
+<br />
+;Do A CRC Check<br />
+CRCCheck On<br />
+<br />
+;Output File Name<br />
+OutFile &quot;Install.exe&quot;<br />
+<br />
+;The Default Installation Directory<br />
+InstallDir &quot;$PROGRAMFILES\MyApp&quot;<br />
+<br />
+;The text to prompt the user to enter a directory<br />
+DirText &quot;Please select the folder below&quot;<br />
+<br />
+Section &quot;Install&quot;<br />
+  ;Install Files<br />
+  SetOutPath $INSTDIR<br />
+  SetCompress Auto<br />
+  SetOverwrite IfNewer<br />
+  File /r &quot;D:\MyStageDir\*.*&quot;<br />
+<br />
+  ; Write the uninstall keys for Windows<br />
+  WriteRegStr HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\MyApp&quot; &quot;DisplayName&quot; &quot;MyApp (remove only)&quot;<br />
+  WriteRegStr HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\MyApp&quot; &quot;UninstallString&quot; &quot;$INSTDIR\Uninst.exe&quot;<br />
+WriteUninstaller &quot;Uninst.exe&quot;<br />
+SectionEnd<br />
+<br />
+Section &quot;Shortcuts&quot;<br />
+  ;Add Shortcuts<br />
+SectionEnd<br />
+<br />
+UninstallText &quot;This will uninstall MyApp from your system&quot;<br />
+<br />
+Section Uninstall<br />
+  ;Delete Files<br />
+  Delete &quot;$INSTDIR\*.*&quot;<br />
+<br />
+  ;Delete Uninstaller And Unistall Registry Entries<br />
+  Delete &quot;$INSTDIR\Uninst.exe&quot;<br />
+  DeleteRegKey HKEY_LOCAL_MACHINE &quot;SOFTWARE\MyApp&quot;<br />
+  DeleteRegKey HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\MyApp&quot;<br />
+  RMDir &quot;$INSTDIR&quot;<br />
+SectionEnd<br />
+<br />
+;-------------------------------- <br />
+;Installer Functions <br />
+<br />
+Function .onInit<br />
+<br />
+  ReadRegStr $R0 HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\MyApp&quot; &quot;UninstallString&quot;<br />
+  StrCmp $R0 &quot;&quot; done<br />
+<br />
+  MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \<br />
+  &quot;MyApp is already installed. $\n$\nClick `OK` to remove the \<br />
+  previous version or `Cancel` to cancel this upgrade.&quot; \<br />
+  IDOK uninst<br />
+  Abort<br />
+  <br />
+;Run the uninstaller<br />
+uninst:<br />
+  ClearErrors<br />
+  ExecWait '&quot;$R0&quot; _?=$INSTDIR' ;Do not copy the uninstaller to a temp file<br />
+<br />
+  <br />
+done:<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stonkers</div><div class="date">15th October 2003, 16:16</div></div><div class="posttext">Actually my problem is a bit simpler than his.  The delete isn't recursive.  The command:<br />
+<br />
+Delete &quot;$INSTDIR\*.*&quot;<br />
+<br />
+Only gets the files directly under $INSTDIR and when it does the:<br />
+<br />
+RMDir &quot;$INSTDIR&quot;<br />
+<br />
+It fails because there are files and directories underneath.  Any help?<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">15th October 2003, 16:19</div></div><div class="posttext">If you wish to remove $INSTDIR and all of its contents, then use:<br />
+<br />
+RMDir /r &quot;$INSTDIR&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stonkers</div><div class="date">16th October 2003, 21:15</div></div><div class="posttext">Doesn't seem to be working afro-dude.  I just changed the uninstall section line from<br />
+<br />
+RMDir &quot;$INSTDIR&quot;<br />
+<br />
+to<br />
+<br />
+RMDir /r &quot;$INSTDIR&quot;<br />
+<br />
+The $INSTDIR doesn't go away and a lot of folders and files stick around underneath that.  Any clue?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">16th October 2003, 21:25</div></div><div class="posttext">Maybe the $INSTDIR is not correct here, you have to detect it in the Uninstall Functions or Sections. The value of $INSTDIR variable in installation, is not detected automatically in Uninstall! [EDIT] To detect it, try reading the installation string in registry or INI files.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">16th October 2003, 21:32</div></div><div class="posttext">Are you sure these files are not in use? Can you delete them manually?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Select which screens to display within MUI, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Select which screens to display within MUI NSIS Discussion" />
+	
+	<title> Select which screens to display within MUI [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Select which screens to display within MUI</div>
+<hr />
+<div class="pda"><a href="t-176838.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=176838">Select which screens to display within MUI</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">b_avery@yahoo.c</div><div class="date">16th April 2004, 08:08</div></div><div class="posttext">Is it possible to select which screens to display as part of the Modern UI.<br />
+<br />
+For example below if DontInstall is false then just finish:<br />
+<br />
+;--------------------------------<br />
+;Modern UI Configuration<br />
+<br />
+  !define MUI_WELCOMEPAGE  <br />
+  !define MUI_LICENSEPAGE<br />
+StrCmp DontInstall 'false' DontInstallPage<br />
+  !define MUI_DIRECTORYPAGE<br />
+  !define MUI_ABORTWARNING<br />
+  !define MUI_UNINSTALLER<br />
+  !define MUI_UNCONFIRMPAGE<br />
+DontInstallPage:<br />
+  !define MUI_FINISHPAGE  <br />
+<br />
+<br />
+But I get:<br />
+<br />
+Error: command StrCmp not valid outside section or function</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Davion</div><div class="date">16th April 2004, 08:37</div></div><div class="posttext">I know how to do this with an Installoptions Dialog<br />
+<br />
+you just have to write this part of Code at the beginning of the Page function:<br />
+<br />
+!insertmacro MUI_INSTALLOPTIONS_READ $SHOW &quot;IO_PAGE.ini&quot; &quot;Field 1&quot; &quot;State&quot;<br />
+StrCmp $R1 &quot;1&quot; +2 0<br />
+Abort<br />
+<br />
+If the Value of &quot;state&quot; in &quot;Field 1&quot; is '1' it proceeds showing the page because jumps over the abort-instruction  <br />
+if the value isnt '1' it proceeds with abort and so it goes to the next function<br />
+<br />
+Check the Readme in the contrib\InstallOptions Folder for further information about the IO Dialogs<br />
+<br />
+hope this helps</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">b_avery@yahoo.c</div><div class="date">16th April 2004, 08:45</div></div><div class="posttext">This is okay for a custom page, but it's for all the other pages I don't want to display</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">evilO</div><div class="date">16th April 2004, 08:50</div></div><div class="posttext">Hi :)<br />
+<br />
+Yes it is possible, but not that way.. You should : <br />
+<br />
+<br />
+1) Sets the flags and values you need, using define. For instance: <br />
+<br />
+!define MUI_ABORTWARNING<br />
+!define MUI_FINISHPAGE_SHOWREADME<br />
+<br />
+2) Set the order of *all* the pages of your installer,<br />
+no matter which page are displayed or not, using<br />
+insertmacro and NOT define<br />
+<br />
+; Installer<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+!insertmacro MUI_PAGE_LICENSE   &quot;c:\blabla\MyLicenceFile.txt&quot;<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!insertmacro MUI_PAGE_FINISH<br />
+<br />
+; Uninstaller<br />
+!insertmacro MUI_UNPAGE_CONFIRM<br />
+!insertmacro MUI_UNPAGE_INSTFILES<br />
+<br />
+<br />
+3) For each page you have three functions. From the doc: <br />
+(http://nsis.sourceforge.net/Docs/)<br />
+<br />
+4.5.3 Callbacks<br />
+<br />
+Each built-in page has three callback functions. The pre-function, the show-creation function and the leave-function. The pre-function is called right before the page is created, the show-function is called right after it is created and before it is shown and the leave-function is called right after the user has pressed the next button and before the page is left.<br />
+<br />
+    * The pre-function allows you to skip the page using Abort.<br />
+    * The show-function allows you to tweak the page's user interface with CreateFont, SetCtlColors, SendMessage and others.<br />
+    * The leave-function allows you to force the user to stay on the current page using Abort.<br />
+<br />
+<br />
+The function you need is the &quot;pre-function&quot;. Let's say you want to skip the directory page: <br />
+<br />
+<br />
+- First you have to define the &quot;pre-function&quot; associated with the Directory page.<br />
+<br />
+Insert <br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE MyDirectoryPage_Pre<br />
+<br />
+Before<br />
+<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+<br />
+<br />
+- Then you test the value in this function:<br />
+<br />
+<br />
+Function MyDirectoryPage_Pre<br />
+  StrCmp DontInstall true 0 end<br />
+    Abort<br />
+<br />
+  end:<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+<br />
+Ok I think that's it.. Oh, and which version of NSIS do you use ? I've noticed your macros<br />
+have &quot;old&quot; names... Maybe you should download the last version... <br />
+<br />
+evilO/Olive</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">b_avery@yahoo.c</div><div class="date">16th April 2004, 10:37</div></div><div class="posttext">Great, many thanks  :-)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" ReadRegStr on 64 bit WinXP, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  ReadRegStr on 64 bit WinXP NSIS Discussion" />
+	
+	<title> ReadRegStr on 64 bit WinXP [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  ReadRegStr on 64 bit WinXP</div>
+<hr />
+<div class="pda"><a href="t-234908.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=234908">ReadRegStr on 64 bit WinXP</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ddod</div><div class="date">6th January 2006, 20:50</div></div><div class="posttext">I have an installer that I need to run on both the 32 bit and 64 versions of windows. Everything seems to work great except that the ReadRegStr doesn't seem to return anything under the 64 bit version.<br />
+<br />
+Here is the code<br />
+<br />
+ReadRegStr $0 HKLM &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products\4F1E2E1CD3D64DA40A02AE386949B0F8\InstallProperties&quot; &quot;DisplayName&quot;<br />
+<br />
+<br />
+I know this registry entry exist and is a string.  It returns a value fine under the 32 bit version but not under the 64 bit version.<br />
+<br />
+What am I missing or is this command just not compatible with the 64bit version?  If compatability is and issue is there another option for checking a registry entry?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ddod</div><div class="date">6th January 2006, 20:55</div></div><div class="posttext">I just tried a simpler entry and it returned it fine.  Pulling hair out why it wouldn't like the other...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ddod</div><div class="date">6th January 2006, 21:10</div></div><div class="posttext">OK here is the problem.  Since the NSIS installer compiles as a 32 bit app, the 64bit OS directs all interaction to a special portion of the registry.<br />
+<br />
+There appears to be a special 32 bit bit fork in the registry located at <br />
+HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node<br />
+So when I run the ReadRegStr command it appears to only be able to access the entries under this fork in the registry.<br />
+<br />
+But I need to get the info from the real registry.  Anyone?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th January 2006, 13:26</div></div><div class="posttext">You can write a simple 64-bit executable that'd read this registry key, and execute it from the installer. You can also use the System plug-in to manually read the registry, using the KEY_WOW64_64KEY flag (0x100) when creating the key.<br />
+<br />
+The wiki contains an example (http://nsis.sourceforge.net/REG_MULTI_SZ_Reader) of reading the registry with the System plug-in. It's a bit more complicated than what you need, as it reads REG_MULTI_SZ, but the general idea is there.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ddod</div><div class="date">17th January 2006, 20:18</div></div><div class="posttext">Thanks for the reply (sorry for the delay, I have been away).  The example appears to be for a 32 bit system.  I am sure there is something there that I need to see but I am not seeing it.  You mention a KEY_WOW64_64KEY flag but I am not sure were to implement this key.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">17th January 2006, 20:54</div></div><div class="posttext">It's a flag for RegOpenKeyEx (http://msdn.microsoft.com/library/en-us/sysinfo/base/regopenkeyex.asp). You pass it in the samDesired parameter along with KEY_QUERY_VALUE and friends.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ovatsus</div><div class="date">29th August 2008, 19:53</div></div><div class="posttext">Hi,<br />
+<br />
+I'm having the same problem. I passed KEY_WOW64_64KEY but I'm still getting the values on the 32 bit registry<br />
+<br />
+Can you please help?<br />
+<br />
+Best Regards,<br />
+Gustavo Guerra</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Huette</div><div class="date">24th August 2009, 08:32</div></div><div class="posttext">Hi,<br />
+<br />
+i can't manage to get registry-values on 64bit, too.<br />
+<br />
+I'm testing on Windows Vista x64.<br />
+<br />
+Maybe someone can help me out?<br />
+<br />
+This is my code:<br />
+<br />
+<br />
+var ROOT_KEY<br />
+var SUB_KEY<br />
+var VALUE<br />
+<br />
+!define RegOpenKeyEx &quot;Advapi32::RegOpenKeyEx(i, t, i, i, *i) i&quot;<br />
+!define RegQueryValueEx  &quot;Advapi32::RegQueryValueEx(i, t, i, *i, i, *i) i&quot;<br />
+<br />
+!define KEY_QUERY_VALUE 0x0001<br />
+!define KEY_ENUMERATE_SUB_KEYS 0x0008<br />
+!define KEY_WOW64_64KEY 0x100<br />
+!define REG_SZ 1<br />
+<br />
+Function ReadReg64<br />
+Pop $R2<br />
+Pop $R1<br />
+Pop $R0<br />
+StrCpy $ROOT_KEY $R0<br />
+StrCpy $SUB_KEY $R1<br />
+StrCpy $VALUE $R2<br />
+<br />
+<br />
+StrCpy $0 &quot;&quot;<br />
+StrCpy $1 &quot;&quot;<br />
+StrCpy $2 &quot;&quot;<br />
+StrCpy $3 &quot;&quot;<br />
+<br />
+SetPluginUnload alwaysoff<br />
+<br />
+System::Call &quot;${RegOpenKeyEx}($ROOT_KEY, '$SUB_KEY', \<br />
+    0, ${KEY_QUERY_VALUE}|${KEY_WOW64_64KEY}, .r0) .r3&quot;<br />
+    <br />
+MessageBox MB_OK &quot;Result of RegOpenKeyEx: $3&quot;<br />
+<br />
+System::Alloc 4096<br />
+Pop $1<br />
+<br />
+System::Call &quot;${RegQueryValueEx}(r0, '$VALUE', 0, ${REG_SZ} , r1, 4096) .r3&quot;<br />
+<br />
+MessageBox MB_OK &quot;Result of RegQueryValueEx: $3&quot;<br />
+<br />
+MessageBox MB_OK &quot;Value: $1&quot;<br />
+<br />
+System::Free $1<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+As &quot;Result of RegOpenKeyEx i always get 0 and as &quot;Result of RegQueryValueEx&quot; 0, too, which means, that there were no errors. But when i try to show the value, i see the adress of $1, not the correct value of my reg-key.<br />
+<br />
+Testing it on Windows 2000 x86 (without the KEY_WOW64_64KEY flag) brought the same results.<br />
+<br />
+Cheers,<br />
+HÃ¼tte</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">24th August 2009, 15:03</div></div><div class="posttext">$1 is a pointer to a string, you would have to &quot;extract&quot; it with a system struct call...but...things have changed since this thread was started, NSIS now has SetRegView</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Huette</div><div class="date">24th August 2009, 16:35</div></div><div class="posttext">SetRegView! That's cool. Thank you! <br />
+<br />
+I still use NSIS 2.27 because i don't want to dismiss HM NIS Edit. But now it's time for an update.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">24th August 2009, 17:58</div></div><div class="posttext">HM Nis edit works with every version after that, it just might be missing some of the new keywords, but there is a updated syntax file if you search around</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

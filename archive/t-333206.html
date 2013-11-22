@@ -1,0 +1,172 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" UAC and launching an exe on Finish, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  UAC and launching an exe on Finish NSIS Discussion" />
+	
+	<title> UAC and launching an exe on Finish [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  UAC and launching an exe on Finish</div>
+<hr />
+<div class="pda"><a href="t-333206.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=333206">UAC and launching an exe on Finish</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">SJSJ</div><div class="date">5th August 2011, 07:48</div></div><div class="posttext">Hello,<br />
+<br />
+I have an installer which uses UAC plugin which has <br />
+<br />
+1. RequestExecutionLevel set to user.<br />
+2. privileges raised in onInit using UAC plugin.  <br />
+3. to launch an exe in the INSTALLDIR in the Finish page. This exe installs the application as a Windows Service, which is shortly started in the next step<br />
+4. UMUI for pages. <br />
+<br />
+On Windows7, when the exe is launched by the NSIS installer using nsExec::ExecToLog, the service is installed and started without any error. Eventually, the service should start a web service, which it is not. I suspect, starting the webservice requires Administrator privileges to store config data in system folders.<br />
+<br />
+Currently, when I run the exe through command line by choosing &quot;Run as administrator&quot;, the application works fine, the web service starts and there are no permission issues. But when I run the application by starting it as a service (manually from Windows Services or through script), it does not seem to start the web service. <br />
+<br />
+Is this an UAC issue? <br />
+Since installer is elevated, will it not run the exe also in elevated mode? <br />
+How do I launch the exe and give it suficient privilege?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">5th August 2011, 09:07</div></div><div class="posttext">probably not an answer to your question, but i've noticed there can be different behaviour when using Exec or nsExec. i have previously found myself in the situation that an installer with admin rights would execute an application (which also required admin rights) with one command (Exec) but not the other (nsExec).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">SJSJ</div><div class="date">5th August 2011, 09:34</div></div><div class="posttext">Thank you for the quick response!<br />
+Yes, I have tried it using Exec too. It is the same behaviour, at least in this case.<br />
+As I mentioned, even when I start the service from Windows Services directly, the application does not start the web service. <br />
+So I doubt if it is do with how we launch it from script! <br />
+What I would like to know is if this is a case of UAC blocking the app? If so, will the UAC plugin help me in anyway to launch the application with right privileges.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">5th August 2011, 13:14</div></div><div class="posttext">If a child process is created from an elevated process, that child process will be elevated too.<br />
+<br />
+That actually is a problem, if the installer needs elevation, but you want to launch the application in non-elevated mode.<br />
+<br />
+With &quot;RequestExecutionLevel Admin&quot; you make the installer (and all its child processes!) execute in elevated mode.<br />
+<br />
+All the purpose of the UAC plugin is: Have the installer run elevated, but still be able to launch child-processes non-elevated.<br />
+<br />
+UAC plugin does this by running two instances of the installer. The &quot;outer&quot; non-elevated one and the &quot;inner&quot; elevated one.<br />
+<br />
+The &quot;inner&quot; instance is the actual installer instance, but it can ask the &quot;outer&quot; instance to do things in a non-elevated way.<br />
+<br />
+In your case you probably do NOT want this behavior, as you want the child process to be elevated (just like your installer).<br />
+<br />
+So I don't see why you need to use the UAC plugin, rather than a simple &quot;RequestExecutionLevel Admin&quot; :confused:<br />
+<br />
+<br />
+BTW: If your installer is not running elevated (i.e. &quot;RequestExecutionLevel User&quot; + no UAC plug-in) and you try to launch an application that explicitly requires elevation (by embedded Manifest), then Exec() will simply fail. You need to use ShellExec with &quot;runas&quot; verb instead...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">5th August 2011, 18:43</div></div><div class="posttext">also have a look at this recent topic (http://forums.winamp.com/showthread.php?t=332228)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">5th August 2011, 20:45</div></div><div class="posttext">You need to use ShellExec with &quot;runas&quot; verb instead...<br />
+<br />
+If the exe has a manifest you don't really need the runas verb, the shell will detect it for you. (on NT5 you need the verb, but there you can &quot;elevate&quot; with a non admin user also so...)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">5th August 2011, 22:02</div></div><div class="posttext">Don't Vista and higher ignore the levelrequest in the manifest when UAC is turned off?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">5th August 2011, 22:17</div></div><div class="posttext">Don't Vista and higher ignore the levelrequest in the manifest when UAC is turned off?<br />
+<br />
+Well, if UAC is turned off (generally a bad idea!), then &quot;elevation&quot; is not needed/possible.<br />
+<br />
+UAC works with two access tokens:<br />
+One &quot;full&quot; token which contains the full rights of the user account and a second &quot;limited&quot; token with minimum rights.<br />
+<br />
+By default an application get's the &quot;limited&quot; token. Via elevation it can get the &quot;full&quot; token instead.<br />
+<br />
+Without UAC, however, there only is a single &quot;default&quot; token...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">5th August 2011, 22:29</div></div><div class="posttext">Well, if UAC is turned off (generally a bad idea!), then &quot;elevation&quot; is not needed/possible.<br />
+<br />
+UAC works with two access tokens:<br />
+One &quot;full&quot; token which contains the full rights of the user account and a second &quot;limited&quot; token with minimum rights.<br />
+<br />
+By default an application get's the &quot;limited&quot; token. Via elevation it can get the &quot;full&quot; token instead.<br />
+<br />
+Without UAC, however, there only is a single &quot;default&quot; token...<br />
+Hmm, UAC probably did introduce the term elevation... But I was referring to running at higher privileges, regardless of whether UAC was involved or not. If elevation is something else, what's a good shorthand for 'running as admin'? &gt;_&gt;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">5th August 2011, 23:33</div></div><div class="posttext">When UAC is off, the runas verb is broken on NT6 (It works on NT5 but you can use a non admin user in the combo box)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">6th August 2011, 00:41</div></div><div class="posttext">Hmm, UAC probably did introduce the term elevation... But I was referring to running at higher privileges, regardless of whether UAC was involved or not. If elevation is something else, what's a good shorthand for 'running as admin'? &gt;_&gt;<br />
+<br />
+Well, I think, on pre-Vista systems running &quot;as admin&quot; means running as a different user, if the logged on user doesn't have admin rights. On these systems the process always gets the full rights of the user. The only way to prevent processes from getting full rights on these systems was logging in with some &quot;limited&quot; user account. And only if you did that, you'd have to run certain processes &quot;as admin&quot;.<br />
+<br />
+With UAC you no longer need to use &quot;limited&quot; user accounts. Running &quot;elevated&quot; means giving the process the full rights of the user. And it's required even for &quot;admin&quot; users. That's because, with UAC enabled, processes get only limited rights by default - even if run by a user with full admin rights. So you can use safely use an &quot;admin&quot; account for regular work. At least that's the theory...<br />
+<br />
+When UAC is off, the runas verb is broken on NT6 (It works on NT5 but you can use a non admin user in the combo box)<br />
+<br />
+In my experience it will trigger an UAC dialog :confused:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">6th August 2011, 01:29</div></div><div class="posttext">On these systems the process always gets the full rights of the user. <br />
+Not 100% true, you can give a admin token to CreateRestrictedToken or the Safer API and create a process that does not have admin rights (The (run as dialog) protect my computer checkbox on XP/2003), but from a security point of view this was not enough because of shatter attacks and other issues. The NT6 limited token is probably similar to this but with the added security of UIPI (and IL) and session 0 isolation...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">SJSJ</div><div class="date">8th August 2011, 05:33</div></div><div class="posttext">Thank you, all, for your responses.<br />
+I used UAC plugin and &quot;RequestExecutionLevel user&quot; because the installer process needed to install it for a user, create shortcuts for local user etc.<br />
+Only the exe called in the finish page needed an admin privilege. <br />
+<br />
+One more strange observation which I failed to mention in my post was that this problem occured only during a first-time install. After installation, the first time the application is run as service, the service starts, it calls the exe, but the exe fails to launch the web service. <br />
+<br />
+Once the service is restarted, everything starts working again - including the web service. Similarly, if I uninstall the first installation and install once again, there is no problem seen in running the web service. <br />
+<br />
+Now, I am beginning to think there is Access control involved too.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">8th August 2011, 12:22</div></div><div class="posttext">Thank you, all, for your responses.<br />
+I used UAC plugin and &quot;RequestExecutionLevel user&quot; because the installer process needed to install it for a user, create shortcuts for local user etc.<br />
+<br />
+How does this prevent you from using &quot;RequestExecutionLevel admin&quot; ???<br />
+<br />
+UAC elevation generally will not run the installer with a different user account, but run the process with the full rights of the current user account - instead of giving the process only small subset of the current user's rights. Elevation is required even for &quot;unrestricted&quot; (admin) user accounts. Still the (elevated) installer process will run in the context of the current user account.<br />
+<br />
+See here:<br />
+http://forums.winamp.com/showpost.php?p=2792787&amp;postcount=8<br />
+<br />
+AFAIK UAC elevation would only trigger a &quot;Login&quot; (aka run as a different user) dialog, instead of the normal &quot;Elevation&quot; dialog, if the installer is run by a user with an &quot;restricted&quot; (non-admin) user account. But then the problem is not UAC, but the fact the current user simply doesn't have the required rights to install (and therefore shouldn't be running the installer anyway).<br />
+<br />
+Also it might make much sense to create shortcuts for ALL (http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.7.7) users, rather than for a single user who happened to run the installer.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">8th August 2011, 13:49</div></div><div class="posttext">Now you're just making things complicated. He/she needs admin access to register a service. Elevating will get that access. It doesn't matter whether the access is given by UAC to a UAC-protected adminlevel user, or by secondary logon to an admin user parallel to the current user.<br />
+<br />
+So using the UAC plugin to elevate the installer works just fine for what he wants to do: Installing an app at userlevel, and installing a service as admin.<br />
+<br />
+(Whether or not that's a good thing to do is an entirely different matter. I don't know much about services but afaik they run for all users. In that case the app should probably also be installed for all users...)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">8th August 2011, 14:16</div></div><div class="posttext">Now you're just making things complicated. He/she needs admin access to register a service. Elevating will get that access. It doesn't matter whether the access is given by UAC to a UAC-protected adminlevel user, or by secondary logon to an admin user parallel to the current user.<br />
+<br />
+Hmm, I think it does make a difference for $SMPROGRAMS (in &quot;user&quot; shell context), which was one of his concerns...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">8th August 2011, 16:24</div></div><div class="posttext">No, anything user-level should be done in the outer instance (userlevel instance) of the installer. It doesn't matter whether the inner instance (admin instance) is the same user or a different one.<br />
+<br />
+(Of course you shouldn't do anything in user shellcontext in the admin instance. But that's pretty much a given. You use the admin instance to make system-wide changes, not to create shortcuts in an admin profile...)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">SJSJ</div><div class="date">12th August 2011, 09:55</div></div><div class="posttext">Thanks for your replies.<br />
+The problem seems to have occured in another portion of the code. The web service was trying to create temp config files inside system32\config\systemprofile\appdata when it didn't have sufficient privileges. <br />
+Fixed it by providing an accessible temp dir and things worked. <br />
+<br />
+A special note of thanks to all of you who responded to my query. NSIS forum rocks!!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Using UAC.dll based on folder selected and OS, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Using UAC.dll based on folder selected and OS NSIS Discussion" />
+	
+	<title> Using UAC.dll based on folder selected and OS [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Using UAC.dll based on folder selected and OS</div>
+<hr />
+<div class="pda"><a href="t-327927.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=327927">Using UAC.dll based on folder selected and OS</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">divyaa</div><div class="date">28th February 2011, 13:07</div></div><div class="posttext">I have an installer which needs to prompt for Admin User Name and Password only in case the OS(Vista/Win7...etc) requires this for Program Files. If the user changes the install location to some other folder, then this prompt should not come up. <br />
+<br />
+What I am trying to say is I need to elevate the user level only in case the selected folder is Program Files and only if the OS needs it. <br />
+<br />
+I have gone through the NSIS Wiki, and this forum :confused:but am not able to find a working solution. <br />
+<br />
+I always end up getting  -&gt; Unable to elevate, error . <br />
+<br />
+I would really appreciate if someone has a working example, or some ideas on how to achieve this, as this is really blocking my work.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th February 2011, 14:37</div></div><div class="posttext">What you are requesting does not make sense:<br />
+<br />
+1) 2000/XP/2003 should also prompt for username/pwd since you can't write to ProgramFiles as a standard user<br />
+<br />
+2) Where would you store uninstall info? HKLM or HKCU, just based on installdir?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">1st March 2011, 08:54</div></div><div class="posttext">Actually what he's requesting does make sense. If you recall, that's exactly what I did using your plugin. And as I recall, you correctly noted that that is not what the plugin is designed for. :)<br />
+<br />
+divyaa, what you want to do is not easy at all, because you'll run into a lot of issues that are not trivial to overcome. Here's what I ended up doing:<br />
+1) Call for elevation only when the user does something that will require admin.<br />
+2) Upon elevation, make the inner instance synchronize all important variables and component states. Then jump to the page that the user elevated from.<br />
+3) Be careful not to mix up userlevel (HKCU) and adminlevel (HKLM) installs! It's one of the two, never both. Probably the only case where you may mix them is if you need admin to grant alluser access on a directory, but still want a userlevel install.<br />
+<br />
+Things to take into account:<br />
+- To test if a directory is writable, use: http://forums.winamp.com/showthread.php?t=317018<br />
+- I had trouble hiding the outer instance after elevation from an installer page. Solution: http://nsis.pastebin.com/hY8zmviQ<br />
+- Page skipping into a conditional page (custom page code with an ${If} clause) is a disaster. Solution: http://forums.winamp.com/showthread.php?t=316154<br />
+- Mixed mode installation is easy, using the UAC plugin. Mixed mode UNinstallation is more difficult, because when uninstall is run from ARP it will automatically elevate, no matter what executionlevel is requested. Solution: http://forums.winamp.com/showthread.php?t=277801<br />
+<br />
+Kudos to the guru: Most of these tricks are inspired by Anders.  :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">1st March 2011, 14:30</div></div><div class="posttext">No it does not make sense, changing from single user to all user install just based on the destination directory is crazy! But yeah, I never said it was not possible.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">1st March 2011, 15:25</div></div><div class="posttext">Heh, I suppose that much is true. But using a fully mixedmode installer I can still do userlevel singleuser installation even after elevation. You just have to jump through a lot more hoops to get the installation script working properly. (Basically the installer ends up circumventing folder protection, while otherwise staying userlevel.)<br />
+<br />
+And on the other hand, the 'elevate only for admin tasks' concept is very user-friendly, and I'm happy that more and more applications are starting to support it. It doesn't really work the same way for installers, but I think I got pretty close, from an end-user's perspective.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">divyaa</div><div class="date">3rd March 2011, 06:34</div></div><div class="posttext">Thanks for your time and replies.<br />
+<br />
+I might have confused in posting the question. I agree that the solution should be independent of OS type. Restating the actual problem again,<br />
+<br />
+Need to elevate to admin, only if user has chosen the InstallDir as Program Files, otherwise, need to run normally.<br />
+<br />
+Also, would store the uninstall info in HKLM.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">3rd March 2011, 09:19</div></div><div class="posttext">Ok, now you're really not making sense. You cannot store in HKLM without elevation, because you cannot store in HKLM without admin access. If you want an all-user install (that is the same thing as an HKLM install), you must always make sure you have admin rights.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">poiru</div><div class="date">3rd March 2011, 18:42</div></div><div class="posttext">You should present users with a Portable and Standard install checkboxes, instead of guessing what they're trying to do from the path.<br />
+<br />
+If you want a working example, check the Rainmeter installer. Source are available at http://code.google.com/p/rainmeter/source/browse/trunk/Install/Installer.nsi<br />
+<br />
+Not pretty, but it works fine on all systems.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

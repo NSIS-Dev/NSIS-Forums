@@ -1,0 +1,114 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Exec, elevation on Vista, and .msu files, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Exec, elevation on Vista, and .msu files NSIS Discussion" />
+	
+	<title> Exec, elevation on Vista, and .msu files [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Exec, elevation on Vista, and .msu files</div>
+<hr />
+<div class="pda"><a href="t-306303.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=306303">Exec, elevation on Vista, and .msu files</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Sigivald</div><div class="date">12th May 2009, 23:12</div></div><div class="posttext">So we have this installer. It wants to run on Vista and download and install Windows Installer 4.5 as a shiny .msu file.<br />
+<br />
+It does what's expected on XP (so I know the download works and the installer is basically correct).<br />
+<br />
+In Vista, the ExecWait on the .msu downloaded fails silently. Some flailing around eventually got it to admit it was failing because it wasn't running as Administrator.<br />
+<br />
+This is odd, since the installer itself elevates (prompt and everything) and can write to the Program Files directory.<br />
+<br />
+All the documentation I can *find* suggests that it should exec programs as Administrator... but evidently it isn't? <br />
+<br />
+I just spent a few hours trying to get the UAC addin to help; it did not. Running from the elevated UAC version of the installer produced the same result, as did explicitly setting UAC::RunElevated and/or using UAC::ShellExecWait.<br />
+<br />
+I've also tried explicitly Exec'ing and ShellExec'ing wusa.exe, with no difference.<br />
+<br />
+Has anyone else found and solved this? Is it some weird problem with .msu files?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">13th May 2009, 00:28</div></div><div class="posttext">forget about the uac plugin, it does the opposite of what you want.<br />
+<br />
+ExecWait should work, are you using /quiet ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sigivald</div><div class="date">13th May 2009, 03:07</div></div><div class="posttext">Yeah, the bit about UAC was just to show that we've tried everything we can think of, even forcing/confirming elevation and the like.<br />
+<br />
+We are using /quiet (and /noreboot), yes.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sigivald</div><div class="date">13th May 2009, 20:22</div></div><div class="posttext">Turns out using nsExec::ExecToLog and explicitly using cmd.exe fixed it.<br />
+<br />
+Why that should be so, while normal Exec doesn't work (but does for the other things we exec) is unclear. I blame some weird thing about the MSU or wusa.exe.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dipak_darji17</div><div class="date">19th December 2009, 09:19</div></div><div class="posttext">Hi Friends...<br />
+Myself Dipak Darji.. From India (Vadodara)..<br />
+This is my first post on this site..<br />
+<br />
+Let's talk about the issue..<br />
+yes.. .MSU files are not allowed to run in anyways from NSIS.. except calling complicated api functions..<br />
+I've another way to run .MSU file..<br />
+<br />
+Just create batch file (*.bat) in temp folder through nsis ..<br />
+<br />
+start &quot;&quot; wusa &quot;&lt;MSU files full path with file name&gt;&quot;<br />
+<br />
+.. Later on run this batch file when required as below,<br />
+<br />
+Execwait &quot;$temp\&lt;batch file name&gt;&quot;<br />
+..<br />
+<br />
+<br />
+See below full code to write batch file and run the same..<br />
+<br />
+<br />
+Push &quot;$temp\RunMSU.Bat&quot;<br />
+Strcpy $strInstallPath &quot;&lt;full path to msu file with file name&gt;&quot;<br />
+         Strcpy $0 &quot;$temp\RunMSU.Bat&quot;<br />
+         FileOpen $0 $0 w #open file<br />
+         FileSeek $0 0 END #go to end<br />
+         FileWrite $0 &quot;echo off&quot;<br />
+         FileWriteByte $0 &quot;13&quot;<br />
+         FileWriteByte $0 &quot;10&quot;<br />
+         FileWrite $0 &quot;start $\&quot;$\&quot; wusa $\&quot;$strInstallPath$\&quot;&quot;<br />
+         FileClose $0<br />
+         Execwait &quot;$temp\RunMSU.bat&quot;<br />
+<br />
+<br />
+..<br />
+All the best.. :up: <br />
+Hope this will resolve your problem..<br />
+;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Squirre1</div><div class="date">1st March 2011, 20:45</div></div><div class="posttext">I just had to post on this... I was scowering all over the web for a solution... This is what I have identified above and beyond what everyone else has commented on regarding the use of wusa.exe (WUSA - Windows Update Standalone Installer).<br />
+<br />
+The errors and failures that everyone is receiving is in relation to the MUI or language pack not being available... The wusa.exe.mui is a dependency to wusa.exe and has to be located in the appropriate language folder off the root of the folder the EXE is located in, for example.<br />
+<br />
+Some_Root_Folder\wusa.exe<br />
+Some_Root_Folder\en-US\wusa.exe.mui<br />
+<br />
+If you include the above in your package, there should not be any issues.. With just about any newly compiled Windows 7 / Vista command line exe, you can just about guarantee it will have a corresponding MUI that has a great chance of being a dependency. For example, netdom.exe requires the appropriate netdom.exe.mui as well.<br />
+<br />
+Please let me know if you try this method and continue to have issues.<br />
+<br />
+Thanks,<br />
+<br />
+Squirre1<br />
+<br />
+*Note* when included them in my package, it was:<br />
+INSTALL_SOURCE\wusa.exe<br />
+INSTALL_SOURCE\en-US\wusa.exe.mui</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Can System do this?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Can System do this? NSIS Discussion" />
+	
+	<title> Can System do this? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Can System do this?</div>
+<hr />
+<div class="pda"><a href="t-141538.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=141538">Can System do this?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">8th July 2003, 18:47</div></div><div class="posttext">It would be handy if I could DetailPrint 4 lines of text for current status, and then if something fails, then I want to be able to remove just those 4 lines, but not the rest of the text from the log window, and print the status once again (4 lines).<br />
+<br />
+Is this possible?<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ramon18</div><div class="date">8th July 2003, 23:42</div></div><div class="posttext">Hi,<br />
+<br />
+You can use this two functions to accomplish this task;<br />
+Ofcourse this functions only have effect while inside sections.<br />
+<br />
+<br />
+######################################<br />
+!define LVM_GETITEMCOUNT        0x1004<br />
+!define LVM_DELETEITEM          0x1008<br />
+######################################<br />
+; This function delete one element from the details view<br />
+; Push the index of the elemnet to delete before call<br />
+Function DeleteDetailViewItem<br />
+  exch $0<br />
+  push $1<br />
+  FindWindow $1 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+  GetDlgItem $1 $1 0x3F8 ; This is the Control ID of the details view<br />
+  SendMessage $1 ${LVM_DELETEITEM} $0 0<br />
+  pop $1<br />
+  pop $0<br />
+FunctionEnd<br />
+<br />
+; This function get the count of entries from the details view<br />
+; You must Pop the result value after call<br />
+Function GetDetailViewItemCount<br />
+  push $1<br />
+  FindWindow $1 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+  GetDlgItem $1 $1 0x3F8 ; This is the Control ID of the details view<br />
+  SendMessage $1 ${LVM_GETITEMCOUNT} 0 0 $1<br />
+  exch $1<br />
+FunctionEnd<br />
+<br />
+<br />
+Usage example:<br />
+<br />
+<br />
+Section Dummy<br />
+<br />
+  DetailPrint &quot;Copying file A...&quot;<br />
+  StrCpy $0 &quot;success!&quot;<br />
+  MessageBox MB_YESNO &quot;Generate copy errors?&quot; IDNO +2<br />
+  StrCpy $0 &quot;failure!&quot;<br />
+  push $0 ; save<br />
+    call GetDetailViewItemCount<br />
+    pop $0<br />
+    intop $0 $0 - 1 ; decrement to delete last entry<br />
+    push $0<br />
+    call DeleteDetailViewItem<br />
+  pop $0 ; restore<br />
+  DetailPrint &quot;Copying file A...$0&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+As you can see, you can use this functions to delete any entry(ies) you want :)<br />
+<br />
+Hope this help,good luck<br />
+Ramon</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th July 2003, 18:59</div></div><div class="posttext">If this is not already on the archive, may I add it?<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th July 2003, 19:02</div></div><div class="posttext">This is what I want to do<br />
+Will this work?<br />
+<br />
+Section Dummy<br />
+<br />
+  DetailPrint &quot;This line stays!&quot;<br />
+<br />
+  DetailPrint &quot;line 1&quot;<br />
+  DetailPrint &quot;line 2&quot;<br />
+  DetailPrint &quot;line 3&quot;<br />
+  DetailPrint &quot;line 4&quot;<br />
+<br />
+Call GetDetailViewItemCount<br />
+Pop $0<br />
+<br />
+Push $0<br />
+Call DeleteDetailViewItem<br />
+<br />
+IntOp $0 $0 - 1<br />
+<br />
+Push $0<br />
+Call DeleteDetailViewItem<br />
+<br />
+IntOp $0 $0 - 1<br />
+<br />
+Push $0<br />
+Call DeleteDetailViewItem<br />
+<br />
+IntOp $0 $0 - 1<br />
+<br />
+Push $0<br />
+Call DeleteDetailViewItem<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ramon18</div><div class="date">10th July 2003, 09:57</div></div><div class="posttext">No it won't work, because you don't decrement the value returned by GetDetailViewItemCount, ie:<br />
+<br />
+ Suppose you have 3 items on details view:<br />
+   &quot;Line 1&quot; -&gt; Index is 0<br />
+   &quot;Line 2&quot; -&gt; Index is 1<br />
+   &quot;Line 3&quot; -&gt; Index is 2<br />
+<br />
+ But GetDetailViewItemCount returns 3, if you want to delete last entry you must decrement the returned value to get 2, witch is the correct index to &quot;Line 3&quot;, you see?<br />
+<br />
+ I can change the function &quot;DeleteDetailViewItem&quot; so the input param is not ZERO based, if you want?<br />
+<br />
+ btw, use this macros to accomplish what you need:<br />
+<br />
+<br />
+!macro DELETE_LAST_ENTRY<br />
+  push $0<br />
+  Call GetDetailViewItemCount<br />
+  Pop $0<br />
+  IntOp $0 $0 - 1 ; decrement to get the right index of last entry<br />
+  Push $0<br />
+  Call DeleteDetailViewItem<br />
+  pop $0<br />
+!macroend<br />
+<br />
+<br />
+then in your dummy section:<br />
+<br />
+DetailPrint &quot;This line stays!&quot;<br />
+<br />
+DetailPrint &quot;line 1&quot;<br />
+DetailPrint &quot;line 2&quot;<br />
+DetailPrint &quot;line 3&quot;<br />
+DetailPrint &quot;line 4&quot;<br />
+<br />
+!insertmacro DELETE_LAST_ENTRY ;delete &quot;line 4&quot;<br />
+!insertmacro DELETE_LAST_ENTRY ;delete &quot;line 3&quot;<br />
+!insertmacro DELETE_LAST_ENTRY ;delete &quot;line 2&quot;<br />
+!insertmacro DELETE_LAST_ENTRY ;delete &quot;line 1&quot;<br />
+<br />
+<br />
+PS: if you want to add it to the archive, feel free to add it, sorry I have no time now<br />
+<br />
+good luck,<br />
+Ramon</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th July 2003, 20:23</div></div><div class="posttext">I put up this page with 2 new functions on it.<br />
+One deletes lines from the end of the log window, and the other deletes lines from the top.<br />
+<br />
+http://nsis.sourceforge.net/archive/nsisweb.php?page=350&amp;instances=0<br />
+<br />
+Works great too!<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

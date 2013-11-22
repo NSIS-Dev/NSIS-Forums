@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" programatically changing pages?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  programatically changing pages? NSIS Discussion" />
+	
+	<title> programatically changing pages? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  programatically changing pages?</div>
+<hr />
+<div class="pda"><a href="t-141867.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=141867">programatically changing pages?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">fromcat2me</div><div class="date">11th July 2003, 18:59</div></div><div class="posttext">hey, new to this thread.<br />
+<br />
+I'm making an installer whose first page (custom page using IO) replaces the &quot;back&quot; and &quot;next&quot; buttons. I want the &quot;next&quot; button to run some code and exit (this works). I want the &quot;back&quot; button to continue onto the next page. Is this possible?<br />
+<br />
+One solution I though of (if you can't just jump around to different pages, which is what i hope i can do) is to put a dummy page before it (so it goes back to it) which sets a global var, so the next time through the func i can just return, but if i hit &quot;back&quot; it keeps going back and back and back (somehow the state isnt' getting cleared?)<br />
+<br />
+so basically<br />
+<br />
+Page custom dummy1 &quot;&quot;<br />
+Page custom dummy2 &quot;&quot;<br />
+Page custom realFunction<br />
+<br />
+if user hits &quot;back&quot; in realFunction<br />
+and dummy1 and 2 do nothing<br />
+shouldn't it go<br />
+<br />
+dummy1<br />
+dummy2<br />
+realFunction (back)<br />
+dummy2<br />
+realFunction<br />
+<br />
+?<br />
+<br />
+instead i get<br />
+<br />
+dummy1<br />
+dummy2<br />
+realFunction (back)<br />
+dummy2<br />
+dummy1<br />
+<br />
+any help appreciated</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">11th July 2003, 19:10</div></div><div class="posttext">There is a way to do this.<br />
+Have a dummy page before you're real page.<br />
+<br />
+In you're dummy page put &quot;Abort&quot; in the main creation function.<br />
+<br />
+In you're real page use this:<br />
+<br />
+Function MyDialog<br />
+InstallOptions::dialog &quot;mydialog.ini&quot;<br />
+Pop $R0<br />
+StrCmp $R0 &quot;success&quot; exit ;next<br />
+StrCmp $R0 &quot;back&quot; back ;back<br />
+StrCmp $R0 &quot;cancel&quot; exit ;back<br />
+<br />
+back:<br />
+### Add you're function/script here ###<br />
+<br />
+exit:<br />
+FunctionEnd<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fromcat2me</div><div class="date">11th July 2003, 19:16</div></div><div class="posttext">I would do this, but what i want the &quot;back&quot; button to do is continue with the other pages in the installer. I can't seem to get rid of the fact that &quot;back&quot; was hit.<br />
+<br />
+the structure i was thinking (similar) was<br />
+<br />
+Page custom blankFunc<br />
+Page custom MyCustomFunc<br />
+Page components <br />
+Page directory<br />
+Page instfiles<br />
+<br />
+where MyCustomFunc should have <br />
+<br />
+InstallOptions::dialog test.ini<br />
+Pop $R1<br />
+<br />
+StrCmp $R1 &quot;back&quot; &quot;endLabel&quot; &quot;quitLabel&quot;<br />
+<br />
+quitLabel:<br />
+; do some stuff<br />
+Quit<br />
+<br />
+endLabel: ; continue onto Page components<br />
+Function End<br />
+<br />
+<br />
+but, this doesn't continue at all, it goes back to the blankFunc page, and after blankFunc gets called it'll try and go to the page before that!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">12th July 2003, 03:21</div></div><div class="posttext">does this help?<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=141102</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">12th July 2003, 11:50</div></div><div class="posttext">Ah ok.<br />
+I have another idea.<br />
+Do this:<br />
+<br />
+Page custom blankFunc &quot;&quot; &quot; - A blank page!&quot;<br />
+Page custom MyCustomFunc &quot;&quot; &quot; - My title&quot;<br />
+<br />
+Function blankFunc<br />
+FunctionEnd<br />
+<br />
+Function MyCustomFunc <br />
+InstallOptions::dialog &quot;mydialog.ini&quot; <br />
+Pop $R0 <br />
+StrCmp $R0 &quot;success&quot; success ;next <br />
+StrCmp $R0 &quot;back&quot; back ;back <br />
+StrCmp $R0 &quot;cancel&quot; exit ;back <br />
+<br />
+success: <br />
+### Add you're function/script here ### <br />
+Goto exit<br />
+<br />
+back:<br />
+Abort<br />
+<br />
+exit: <br />
+FunctionEnd <br />
+<br />
+<br />
+The should work...<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">12th July 2003, 14:07</div></div><div class="posttext">Lacking a better idea, let the hacking begin. See attached script.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

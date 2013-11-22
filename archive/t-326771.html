@@ -1,0 +1,151 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" No return to installer after installing dotenet 4.0, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  No return to installer after installing dotenet 4.0 NSIS Discussion" />
+	
+	<title> No return to installer after installing dotenet 4.0 [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  No return to installer after installing dotenet 4.0</div>
+<hr />
+<div class="pda"><a href="t-326771.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=326771">No return to installer after installing dotenet 4.0</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">hawkmaster</div><div class="date">2nd February 2011, 10:23</div></div><div class="posttext">Hello,<br />
+<br />
+I have found this function to check if dotnet framework is installed.<br />
+<br />
+ <br />
+Function GetDotNETVersion<br />
+  Push $0<br />
+  Push $1<br />
+ <br />
+  System::Call &quot;mscoree::GetCORVersion(w .r0, i ${NSIS_MAX_STRLEN}, *i) i .r1 ?u&quot;<br />
+  StrCmp $1 &quot;error&quot; 0 +2<br />
+    StrCpy $0 &quot;not found&quot;<br />
+ <br />
+  Pop $1<br />
+  Exch $0<br />
+FunctionEnd<br />
+<br />
+Now I want that user can choose to install dotnet 4 or not.<br />
+I tried this in the &quot;onInit&quot; function.<br />
+The framework was installed fine but it ends with &quot;You need to restart computer&quot;.<br />
+I clicked on &quot;no&quot; and nothing else happens.<br />
+There was no return to the NSIS installer to install the rest and other components.<br />
+<br />
+What did I wrong?<br />
+<br />
+<br />
+Function .onInit<br />
+  InitPluginsDir<br />
+  File /oname=$PLUGINSDIR\AdditionalTasksPage.ini &quot;AdditionalTasksPage.ini&quot;<br />
+  <br />
+  !insertmacro MUI_LANGDLL_DISPLAY<br />
+  <br />
+  StrCpy $1 ${InstallMySQL} ; Option 1 is selected by default<br />
+  <br />
+  Call GetDotNETVersion<br />
+  Pop $0<br />
+  ${If} $0 == &quot;not found&quot;<br />
+    ;MessageBox MB_OK|MB_ICONSTOP &quot;.NET runtime library is not installed.&quot;<br />
+    ;Abort<br />
+	<br />
+	MessageBox MB_YESNO &quot;The Microsoft .NET Framework v4.0 Is Not Currently Installed, Install Now?$\n$\nThis component is required, clicking -No- will cause the installer to exit.&quot; IDYES true IDNO false<br />
+	true:<br />
+	Banner::show /NOUNLOAD /set 76 &quot;Please wait..&quot; &quot;Installng .NET Framework v4.0...&quot;<br />
+	SetOutPath &quot;$PLUGINSDIR&quot;<br />
+	File /r &quot;dotNetFx40_Full_x86_x64.exe&quot;<br />
+	ExecWait '&quot;$PLUGINSDIR\dotNetFx40_Full_x86_x64.exe&quot;'<br />
+	Banner::destroy<br />
+	false:<br />
+	Quit<br />
+	<br />
+  ${EndIf}<br />
+ <br />
+  StrCpy $0 $0 &quot;&quot; 1 # skip &quot;v&quot;<br />
+ <br />
+  ${VersionCompare} $0 &quot;4.0&quot; $1<br />
+  ${If} $1 == 2<br />
+    ;MessageBox MB_OK|MB_ICONSTOP &quot;.NET runtime library v4.0 or newer is required. You have $0.&quot;<br />
+    ;Abort<br />
+	<br />
+	MessageBox MB_YESNO &quot;The Microsoft .NET Framework v4.0 or newer is required. You have $0, Install Now?$\n$\nThis component is required, clicking -No- will cause the installer to exit.&quot; IDYES doinstall IDNO donotinstall<br />
+	doinstall:<br />
+	Banner::show /NOUNLOAD /set 76 &quot;Please wait..&quot; &quot;Installng .NET Framework v4.0...&quot;<br />
+	SetOutPath &quot;$PLUGINSDIR&quot;<br />
+	File /r &quot;dotNetFx40_Full_x86_x64.exe&quot;<br />
+	ExecWait '&quot;$PLUGINSDIR\dotNetFx40_Full_x86_x64.exe&quot;'<br />
+	Banner::destroy<br />
+	donotinstall:<br />
+	Quit<br />
+  ${EndIf}<br />
+  <br />
+FunctionEnd<br />
+<br />
+<br />
+regards<br />
+Hans</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">msroboto</div><div class="date">2nd February 2011, 17:56</div></div><div class="posttext">http://msdn.microsoft.com/en-us/library/ee390831.aspx#command_lineoptions<br />
+<br />
+I run the 3.5 install with /q /norestart options<br />
+If I do the install I also set the <br />
+SetRebootFlag true<br />
+<br />
+Then at the end in onInstSuccess  - I do something like this.<br />
+<br />
+${If} ${RebootFlag}    <br />
+            MessageBox MB_YESNO|MB_ICONQUESTION &quot;The install requires a reboot. Reboot now?&quot; IDNO noreboot<br />
+            Reboot<br />
+    ${EndIf}    <br />
+    noreboot:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hawkmaster</div><div class="date">2nd February 2011, 18:53</div></div><div class="posttext">Hi<br />
+thank you for your help<br />
+the dotnet 4 is now installed in silent mode<br />
+I tried to make<br />
+<br />
+Section<br />
+SetRebootFlag true<br />
+SectionEnd<br />
+<br />
+${If} ${RebootFlag}<br />
+MessageBox MB_YESNO|MB_ICONQUESTION &quot;The install requires a reboot. Reboot now?&quot; IDNO noreboot<br />
+Reboot<br />
+${EndIf}<br />
+noreboot: <br />
+<br />
+But now at the end of the installer I have the option to reboot twice<br />
+one time with a radio buttton and then the msbox where ask to reboot<br />
+<br />
+hm?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hawkmaster</div><div class="date">2nd February 2011, 18:59</div></div><div class="posttext">The other little problem was that now with the rebootFlag at the end I am asked for reboot but I do not see the the MUI_Finish page<br />
+<br />
+define MUI_FINISHPAGE_RUN_FUNCTION Launch<br />
+!define MUI_FINISHPAGE_RUN_NOTCHECKED<br />
+!define MUI_FINISHPAGE_RUN_TEXT &quot;Starting&quot;<br />
+!define MUI_FINISHPAGE_SHOWREADME &quot;$INSTDIR\readme.txt&quot;<br />
+!insertmacro MUI_PAGE_FINISH</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">msroboto</div><div class="date">2nd February 2011, 19:04</div></div><div class="posttext">Well maybe you need to put the code somewhere else in your installer.<br />
+<br />
+I'm not sure on the dual reboot message maybe you don't need anything extra maybe it will just happen for you.  When they answer the question I am doing the reboot right there.  Maybe you need to do something else in your case or call it later.<br />
+<br />
+I have an older installer that was migrated to MUI.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

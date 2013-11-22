@@ -1,0 +1,74 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Set an event during uninstall, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Set an event during uninstall NSIS Discussion" />
+	
+	<title> Set an event during uninstall [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Set an event during uninstall</div>
+<hr />
+<div class="pda"><a href="t-250472.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=250472">Set an event during uninstall</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jasonhi</div><div class="date">6th July 2006, 01:28</div></div><div class="posttext">I'm trying to use System::call to set an event while uinstalling which will cause my application to quit. <br />
+<br />
+I've seen references to ways of checking if a process is running, however for many users being told that something is running doesn't help them figure out how to remove the program. And killing the process seems fairly evil too. So I'd rather build a mechanism into my app to nicely exit.<br />
+<br />
+Here's a code snippet:<br />
+<br />
+System::Call &quot;kernel32::OpenEventA(i 1048578, i 0, t 'myAppShutdownEvent') i .r0&quot;<br />
+IntCmp $0 0 eventNotFound <br />
+System::Call &quot;kernel32::SetEventA( i r0 ) i .r1&quot;<br />
+goto processNotRunning<br />
+<br />
+eventNotFound:<br />
+...<br />
+processNotRunning:<br />
+...<br />
+<br />
+It seems like this should work, but I get a questionable value back in $0 from OpenEvent (usually a number between 100-200). Clearly that's not null, but its a pretty low number for a handle too. (My C++ test program that sets this event typically gets a handle value in the 4000 range (i.e. $ff4 most of the time today...).<br />
+<br />
+And SetEvent is definitely not setting the event with that return as the handle.<br />
+<br />
+I'm sure its something obvious I'm missing, but I can't figure it out, and haven't been able to find anything similar enough already asked or in the FAQs to get past this.<br />
+<br />
+Thanks!<br />
+...Jason</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">6th July 2006, 09:56</div></div><div class="posttext">It might be an idea to replace 1048578 with the actual constants that you used with mod signs in between. I'm sure you've got the value right, but it's worth a try.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mr Inches</div><div class="date">6th July 2006, 14:46</div></div><div class="posttext">By inspection, your permissions value looks OK, being a combination of SYNCHRONIZE (0x00100000L) and EVENT_MODIFY_STATE (0x0002). I suggest that you make these two values into NSIS !defines and use these in your code as this will greatly improve its readability.<br />
+<br />
+If OpenEvent fails it sets the system error value, which you can retrieve from the System plugin by using the '?e' option as part of the return value section of the call (if my memory serves - it is mentioned in the doco for the System plugin). This will give you some clues as to what is amiss.<br />
+<br />
+Common reasons for the OpenEvent failing (apart from the obvious such as Event does not exist) include inheritance issues i.e. trying to open an event that the parent process does not mark for its children to inherit, not opening the Event with sufficient permissions, and an invalid permissions value.<br />
+<br />
+You really need that information from GetLastError to determine what exactly is going on.<br />
+<br />
+BTW: What you are doing is defnitely possible - I have done it from completely within NSIS, using an Event to pass control from one instance of a NSIS program to another instance of the same program; all done with System plugin calls.<br />
+<br />
+Duncan</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jasonhi</div><div class="date">11th July 2006, 00:08</div></div><div class="posttext">Duncan, <br />
+<br />
+It appears GetLastError is returning 126 (ERROR_MOD_NOT_FOUND). Since kernel32.dll clearly isn't missing, I'm not sure this helps any...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th July 2006, 15:25</div></div><div class="posttext">The System plug-in itself usually raises ERROR_MOD_NOT_FOUND with some LoadLibrary calls. This is why you should use the &quot;?e&quot; modifier, instead of calling GetLastError with System.dll itself. Have you used the modifier or GetLastError directly?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

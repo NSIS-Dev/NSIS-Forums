@@ -1,0 +1,109 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Use the default Vista font?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Use the default Vista font? NSIS Discussion" />
+	
+	<title> Use the default Vista font? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Use the default Vista font?</div>
+<hr />
+<div class="pda"><a href="t-285009.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=285009">Use the default Vista font?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">vbguy</div><div class="date">15th January 2008, 02:50</div></div><div class="posttext">Is there a chance that NSIS can be fixed to use the default font for the OS instead of &quot;MS Shell Dlg&quot; or &quot;MS Shell Dlg 2&quot; fonts. For instance the default on Vista is Segoe UI 9.75pt.<br />
+<br />
+The setting is stored in the Advanced Appearance dialog; the &quot;Message Box Text&quot;.<br />
+<br />
+I did a bit of research and I found out that the only way you can retrieve the User's Font and Font size preferences (Vista and above) is by using the GetThemeFont API.<br />
+<br />
+(From: msdn2.microsoft.com/en-us/library/aa511282.aspx )<br />
+<br />
+And here's the MSDN page for the GetThemeFont API:<br />
+<br />
+msdn2.microsoft.com/en-us/library/bb759745(VS.85).aspx<br />
+<br />
+I know this will probably take a big code change, but the Font subtleties would be a nice thing to have in NSIS.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th January 2008, 09:22</div></div><div class="posttext">the problem afaik, is that not only is it a different font (if that was the only problem, MS Shell Dlg would have worked) it is also a different size, so you need a special set of dialog resources just for Vista (or tweak the resource in memory)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">vbguy</div><div class="date">15th January 2008, 15:20</div></div><div class="posttext">Originally posted by Anders <br />
+the problem afaik, is that not only is it a different font (if that was the only problem, MS Shell Dlg would have worked) it is also a different size, so you need a special set of dialog resources just for Vista (or tweak the resource in memory)  <br />
+<br />
+Well, doesn't NSIS already do that on non-Vista systems? That is, isn't the the installer dialog (and all its children like buttons, etc.) dynamically resized based on the user's font selection and DPI selection?<br />
+<br />
+Because if it already does dynamically resize, then it's just a matter of reading in the user's font preference using the GetThemeFont API for Vista+ systems.<br />
+<br />
+If NSIS doesn't dynamically resize based on font size and DPI settings, then perhaps this is a bigger problem that needs to be addressed first.<br />
+<br />
+Though, this is easy for a backseat programmer to say. If I have some time I might start fiddling with the source to see if I can come up with anything.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th January 2008, 16:03</div></div><div class="posttext">MS Shell Dlg maps to MS Sans Serif on 9x/NT4 and Tahoma on 2k/XP. NSIS does not do any kind of font selection, its done by the dialog manager. <br />
+<br />
+NSIS dialog resources (like most) contain the line: FONT 8, &quot;MS Shell Dlg&quot;<br />
+this is part of the problem, Segoe must be used at 9pt and larger to look good. Dialog/control size is based on dialog units, and dialog units are based on the size of the current font. So, you can't change the font after the dialog has been created since its created with a 8pt font size.<br />
+<br />
+I don't know a good solution.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">vbguy</div><div class="date">15th January 2008, 19:20</div></div><div class="posttext">Originally posted by Anders <br />
+MS Shell Dlg maps to MS Sans Serif on 9x/NT4 and Tahoma on 2k/XP. NSIS does not do any kind of font selection, its done by the dialog manager. <br />
+<br />
+NSIS dialog resources (like most) contain the line: FONT 8, &quot;MS Shell Dlg&quot;<br />
+this is part of the problem, Segoe must be used at 9pt and larger to look good. Dialog/control size is based on dialog units, and dialog units are based on the size of the current font. So, you can't change the font after the dialog has been created since its created with a 8pt font size.<br />
+<br />
+I don't know a good solution.  <br />
+<br />
+I've been looking around some in MSDN blogs and the MSDN library, and found that there isn't a silver bullet. There's no equivalent to &quot;MS Shell Dlg&quot; for Vista's Segoe UI, and if you hard code Segoe UI you lose pre-Vista OS's (i.e. a majority of the users).<br />
+<br />
+There's some interesting discussion here:<br />
+http://blogs.msdn.com/michkap/archive/2006/06/11/626100.aspx<br />
+<br />
+Is there a way to modify the dialog resource's font before it's loaded, that way all child controls inherit the set font? If that were possible, then the only other (mountainous) hurdle would be to scale the dialog size, buttons size, and text box sizes.<br />
+<br />
+It seems even the easy solutions are a lot of work. I'd forgotten how much a pain working with raw windows resource is. C# has softened me.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">17th January 2008, 10:19</div></div><div class="posttext">There is: you have to set &quot;MS Shell Dlg 2&quot; in dialog resources. And for e.g. the MUI you can select a different modiyfied dialog resource, see somewhere in documentation. <br />
+<br />
+TIP:<br />
+Somtimes if you install fonts, the Windows fontcache get corrupted. Clear you fontcache on the machine you test your installer on.<br />
+<br />
+Best to test your script on a separate clean PC, where you know nothing is tweaked or otherwise broken.<br />
+<br />
+Give a sample script and I'll see what I can do...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">17th January 2008, 11:29</div></div><div class="posttext">AFAIK, MS Shell Dlg 2 does not translate into Segoe UI</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">vbguy</div><div class="date">17th January 2008, 15:14</div></div><div class="posttext">Originally posted by onad <br />
+There is: you have to set &quot;MS Shell Dlg 2&quot; in dialog resources. And for e.g. the MUI you can select a different modiyfied dialog resource, see somewhere in documentation. <br />
+<br />
+TIP:<br />
+Somtimes if you install fonts, the Windows fontcache get corrupted. Clear you fontcache on the machine you test your installer on.<br />
+<br />
+Best to test your script on a separate clean PC, where you know nothing is tweaked or otherwise broken.<br />
+<br />
+Give a sample script and I'll see what I can do...  <br />
+<br />
+I don't have a script, I was suggesting that maybe in a future version of NSIS the installer would automatically detect the user's selected font on Vista (and newer OS) and adjust the dialog accordingly.<br />
+<br />
+Originally posted by Anders <br />
+AFAIK, MS Shell Dlg 2 does not translate into Segoe UI <br />
+<br />
+That's right, it doesn't. Nor does the original &quot;MS Shell Dlg&quot; pseudofont.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

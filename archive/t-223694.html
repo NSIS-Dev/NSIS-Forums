@@ -1,0 +1,240 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" &quot;Space required&quot; rounding, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  &quot;Space required&quot; rounding NSIS Discussion" />
+	
+	<title> &quot;Space required&quot; rounding [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  &quot;Space required&quot; rounding</div>
+<hr />
+<div class="pda"><a href="t-223694.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=223694">&quot;Space required&quot; rounding</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">10th August 2005, 11:18</div></div><div class="posttext">It seems that NSIS actually truncates extra digits of the value. For example, if all files require 1.59 MB of disk space, NSIS displays &quot;Space required: 1.5MB&quot;.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">11th August 2005, 18:00</div></div><div class="posttext">Does anybody believe that such behaviour is normal?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">11th August 2005, 18:04</div></div><div class="posttext">It doesn't truncate digits, but it does round file sizes to 1024 bytes to simulate the space it'll take on the hard disk. The real block size is unknown at compile time, so this value was selected as a compromise.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">11th August 2005, 20:05</div></div><div class="posttext">I've tested it again: 9 files with total size 1656142 bytes (including 2 zero-length files) plus uninstaller (32325 bytes). NSIS reports &quot;Space required: 1.5MB&quot; :(<br />
+<br />
+BTW, should I manually add uninstaller size to program size?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">11th August 2005, 20:52</div></div><div class="posttext">My mistake, it does round down the number to contain only one digit after the decimal dot. The code in charge is located in the SetSizeText function in Source\exehead\Ui.c.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">12th August 2005, 06:52</div></div><div class="posttext">__Slightly modified version of you function will round sizes up:<br />
+<br />
+<br />
+static void NSISCALL SetSizeText(int dlgItem, int prefix, unsigned kb)<br />
+{<br />
+  char scalestr[32], byte[32];<br />
+  unsigned sh=0;<br />
+  int scale=LANG_KILO;<br />
+<br />
+  if (kb &gt;= 1024*1024) { sh=20; scale=LANG_GIGA; kb+=(1&lt;&lt;20)/10; }<br />
+  else if (kb &gt;= 1024) { sh=10; scale=LANG_MEGA; kb+=(1&lt;&lt;10)/10; }<br />
+<br />
+  wsprintf(<br />
+    GetNSISString(g_tmp,prefix)+mystrlen(g_tmp),<br />
+    &quot;%u.%u%s%s&quot;,<br />
+    kb&gt;&gt;sh,<br />
+    ((kb*10)&gt;&gt;sh)%10,<br />
+    GetNSISString(scalestr,scale),<br />
+    GetNSISString(byte,LANG_BYTE)<br />
+  );<br />
+<br />
+  my_SetDialogItemText(m_curwnd,dlgItem,g_tmp);<br />
+}<br />
+<br />
+__The problem is that a free space needs to be rounded down and, therefore, this function must have two versions or additional parameter:<br />
+<br />
+<br />
+static void NSISCALL SetSizeText(int dlgItem, int prefix, unsigned kb, bool RoundUp)<br />
+{<br />
+  char scalestr[32], byte[32];<br />
+  unsigned sh=0;<br />
+  int scale=LANG_KILO;<br />
+<br />
+  if (kb &gt;= 1024*1024) { sh=20; scale=LANG_GIGA; }<br />
+  else if (kb &gt;= 1024) { sh=10; scale=LANG_MEGA; }<br />
+<br />
+  if (RoundUp) { kb+=(1&lt;&lt;sh)/10; }<br />
+<br />
+  wsprintf(<br />
+    GetNSISString(g_tmp,prefix)+mystrlen(g_tmp),<br />
+    &quot;%u.%u%s%s&quot;,<br />
+    kb&gt;&gt;sh,<br />
+    ((kb*10)&gt;&gt;sh)%10,<br />
+    GetNSISString(scalestr,scale),<br />
+    GetNSISString(byte,LANG_BYTE)<br />
+  );<br />
+<br />
+  my_SetDialogItemText(m_curwnd,dlgItem,g_tmp);<br />
+}<br />
+<br />
+__If you don't want to increase size of exehead, please at least increase number of digits after the decimal point: replace &quot;((kb*10)&gt;&gt;sh)%10&quot; with &quot;((kb*100)&gt;&gt;sh)%100&quot;. BTW, this construction in its current state fails with sizes&gt;409.5GB (with two digits after point it fails after 40.95GB), so consider using a 64-bit number:<br />
+<br />
+(UINT)((((UINT64)kb*100)&gt;&gt;sh)%100)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">12th August 2005, 09:01</div></div><div class="posttext">And probably you will save few bytes by eliminating &quot;else&quot; construction:<br />
+<br />
+  if (kb &gt;= 1024) { sh=10; scale=LANG_MEGA; }<br />
+  if (kb &gt;= 1024*1024) { sh=20; scale=LANG_GIGA; }</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">16th August 2005, 09:33</div></div><div class="posttext">May I hope that you make necessary changes yourself or should I make them locally in the every next version?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th August 2005, 20:30</div></div><div class="posttext">I'll take a look after 2.09.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">29th August 2005, 17:13</div></div><div class="posttext">Up ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">3rd September 2005, 17:05</div></div><div class="posttext">Doctor, people ignore me :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">3rd September 2005, 17:11</div></div><div class="posttext">Doctor, people keep pushing me even though they know I only have the weekends to work on NSIS and those are normally used for other things than work :(<br />
+<br />
+Not to be bitching or anything, I like working on NSIS. But come on... Did I say I'll look at it the second I finish releasing 2.09?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">4th September 2005, 07:41</div></div><div class="posttext">Ok. Sorry for the pressure.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th September 2005, 13:13</div></div><div class="posttext">roundUp added to CVS and will be in 2.10. Thanks.<br />
+<br />
+BTW, this construction in its current state fails with sizes&gt;409.5GB (with two digits after point it fails after 40.95GB)Actually, it's limited at 4TB, because it's counted in kilobytes, not bytes.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">9th September 2005, 18:24</div></div><div class="posttext">Thanks for the changes (really!).<br />
+<br />
+Actually, it's limited at 4TB, because it's counted in kilobytes, not bytes.It is multilplied by 10 and then divided back, so limit is 409.5GB.<br />
+<br />
+P.S. Maybe the &quot;roundUp&quot; parameter of type BOOL instead of the &quot;int&quot; will be more consistent?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th September 2005, 20:21</div></div><div class="posttext">You're right. I was actually thinking of the total limit, while you were, quite obviously, talking about the corruption of the digit after the decimal dot.<br />
+<br />
+64-bit integer is quite expensive, so I've trimmed the overflowing part of the number using a mask:    (((kb &amp; 0x00FFFFFF) * 10) &gt;&gt; sh) % 10, // 0x00FFFFFF mask is used to<br />
+                                           // prevent overflow that causes<br />
+                                           // bad resultsI'm having second thoughts about the rounding up. It doesn't make any sense to round up just the required size and round down the available size. It causes a weird situation where if the available and required sizes are the same, they may not be displayed as such. Even more, the required size displays as bigger than the available size, yet the installation is allowed because they're equal. They should both be rounded using the same method. Why do you think the available size should be rounded down?<br />
+<br />
+I've replaced int with BOOL, but not for consistency. Most of the code in NSIS uses int. However, it does make sense to use BOOL.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">12th September 2005, 09:23</div></div><div class="posttext">The trick with the mask will not work :( For example, 0x1FFFFFF is decimal 33554431, but 0xFFFFFF is decimal 16777215. You will lose the real decimal digits even sooner than without the mask.<br />
+<br />
+64-bit arithmetics in our case is not very expensive, because 64-bit MUL and DIV are provided by 32-bit x86 instruction set and 64-bit shift can be simulated by two instructions (SHRD and SHR). Indeed, most complilers (including your MSVC) will generate far from optimal code for 64-bit arithmetics, but if you have no objections, you can use inline assembly:<br />
+<br />
+unsigned fraction;<br />
+//---<br />
+__asm<br />
+	{<br />
+	mov eax,kb<br />
+	mov ebx,10<br />
+	mov ecx,sh<br />
+	mul ebx<br />
+	shrd eax,edx,cl<br />
+	shr edx,cl<br />
+	div ebx<br />
+	mov fraction,edx<br />
+	}<br />
+<br />
+<br />
+As for rounding direction... Overestimate of available space is dangerous as well as underestimate of required space ;)<br />
+<br />
+I can suggest another solution. Yes, different rounding is not ideal. The only more or less acceptable in both cases method is rounding to nearest, so we can strip this inconvenient &quot;roundUp&quot; parameter and adjust the bias:<br />
+kb+=(1&lt;&lt;(sh-1))/10;orkb+=(1&lt;&lt;sh)/20;<br />
+I think the second variant is more rational.<br />
+<br />
+<br />
+The final version may be looking like this:<br />
+<br />
+static void NSISCALL SetSizeText(int dlgItem, int prefix, unsigned kb)<br />
+{<br />
+  char scalestr[32], byte[32];<br />
+  unsigned sh=0;<br />
+  unsigned fraction;<br />
+  int scale=LANG_KILO;<br />
+<br />
+  if (kb &gt;= 1024) { sh=10; scale=LANG_MEGA; }<br />
+  if (kb &gt;= 1024*1024) { sh=20; scale=LANG_GIGA; }<br />
+<br />
+  kb+=(1&lt;&lt;sh)/20;<br />
+<br />
+  __asm<br />
+  {<br />
+    mov eax,kb<br />
+    mov ebx,10<br />
+    mov ecx,sh<br />
+    mul ebx<br />
+    shrd eax,edx,cl<br />
+    shr edx,cl<br />
+    div ebx<br />
+    mov fraction,edx<br />
+  }<br />
+<br />
+  wsprintf(<br />
+    GetNSISString(g_tmp,prefix)+mystrlen(g_tmp),<br />
+    &quot;%u.%u%s%s&quot;,<br />
+    kb&gt;&gt;sh,fraction,<br />
+    GetNSISString(scalestr,scale),<br />
+    GetNSISString(byte,LANG_BYTE)<br />
+  );<br />
+<br />
+  my_SetDialogItemText(m_curwnd,dlgItem,g_tmp);<br />
+}<br />
+<br />
+<br />
+P.S. Should not we display two digits after the point while using rounding to nearest?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th September 2005, 19:10</div></div><div class="posttext">0x1FFFFFF and 0xFFFFFF may not translate to the same number in decimal, but their modulo by a number that is a power of 2, as long as it's not larger than 0x00800000, is the same. And to get the the digit after the decimal point, that's exactly what needs to be done. The bits that affect the calculation are in the mask. The attached example C file shows that calculating this using 64-bit numbers and the mask gives the exact same result.<br />
+<br />
+The code the compiler creates for 64-bit arithmetic is expensive. If you compile the attached example, you'll see that it calls three functions called __allmul, __allshr and __allrem. The code size is over 3 times larger than the mask code.<br />
+<br />
+Inline assembly is out of the question. It will make the code even more complicated, it's not platform and compiler independent and I'm not sure 64-bit MUL and DIV are not only available on newer processors (though I haven't checked this one).<br />
+<br />
+Rounding to the nearest is indeed the best solution. I'll take a look at it over the weekend. Two digits after the decimal point is too much in my opinion.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">13th September 2005, 20:38</div></div><div class="posttext">You are right - the mask trick is working. Forget about 64-bit calculations (at least for a few years ;)).<br />
+<br />
+BTW, MUL to 64-bit result and DIV with a 64-bit dividend was supported even by 8086/8088 processors.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">16th September 2005, 17:05</div></div><div class="posttext">New uniform rounding uploaded to CVS. Sadly, no mask tricks this time to reduce the size.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">17th September 2005, 12:58</div></div><div class="posttext">Great! NSIS is improving every day ;)<br />
+<br />
+no mask tricks this time to reduce the size<br />
+What did you mean? The 0x00FFFFFF mask is still there.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">17th September 2005, 13:14</div></div><div class="posttext">That mask is still there, but I couldn't find any nice tricks for the rounding.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ippi</div><div class="date">17th September 2005, 13:21</div></div><div class="posttext">What can be simpler than a simple biasing?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">17th September 2005, 13:22</div></div><div class="posttext">I don't know, I couldn't find it.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

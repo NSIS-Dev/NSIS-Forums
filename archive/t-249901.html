@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" ReadINIStr and WriteINIStr, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  ReadINIStr and WriteINIStr NSIS Discussion" />
+	
+	<title> ReadINIStr and WriteINIStr [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  ReadINIStr and WriteINIStr</div>
+<hr />
+<div class="pda"><a href="t-249901.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=249901">ReadINIStr and WriteINIStr</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">28th June 2006, 18:51</div></div><div class="posttext">It seems that I cannot get ReadIniStr or WriteIniStr to work inside of a function call. These calls should work fine, because MUI_INSTALLOPTIONS_x...x uses it, and calling it from a function works fine. <br />
+So... is the case that the string and section need to exist in order for me to write to them?<br />
+If I cancel the installer before it completes, will the values not get written to the INI file?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">28th June 2006, 18:53</div></div><div class="posttext">It doesn't matter whether the command is inside a section or a function, there must be a bug in your script. What is the purpose of the function you are writing?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">28th June 2006, 19:03</div></div><div class="posttext">For example:<br />
+<br />
+ReadIniStr $R1 &quot;.\slavenetpaths.ini&quot; &quot;ManualPaths&quot; &quot;NumEntries&quot;<br />
+WriteINIStr &quot;$EXEDIR/slavenetpaths.ini&quot; &quot;ManualPaths&quot; &quot;NumEntries&quot; &quot;$R2&quot;<br />
+All do not work.<br />
+<br />
+However<br />
+WriteIniStr &quot;$EXEDIR/slavenetpaths.ini&quot; &quot;ManualPaths&quot; &quot;Slave $2&quot; &quot;$3&quot;<br />
+Does claims no errors even though it didn't work.<br />
+<br />
+slavenetpaths.ini is in the exedir. <br />
+I notice that alot of people ReserveFile their ini, and then extract it later. Also I notice that the installoptions ini files are not updated with default values whenever I quit the installer early. Neither does it update them when I actually complete the installer...<br />
+(annoying)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">28th June 2006, 19:41</div></div><div class="posttext">I don't know why... but it just started working... (grr). I just put...<br />
+ReadIniStr $R1 &quot;.\slavenetpaths.ini&quot; &quot;ManualPaths&quot; &quot;NumEntries&quot;<br />
+removed some broken code around it (that had NOTHING to do with it), and I also added entries in my INI file. &quot;NumEntries&quot; was added. However it seems to have no problem adding and deleting the entries now. ... weird.<br />
+I'm now having a problem with:<br />
+<br />
+SendMessage $1 ${CB_GETLBTEXT} $0 &quot;STR:$3&quot; $4<br />
+<br />
+$4, of course returns the size of the string returned. BUT $3 doesn't contain anything.<br />
+StrCpy $3 &quot;                                                                    &quot;<br />
+SendMessage $1 ${CB_GETLBTEXT} $0 &quot;STR:$3&quot; $4<br />
+Also doesn't work. It doesn't &quot;fill up&quot; $3.<br />
+<br />
+SendMessage $1 ${CB_GETLBTEXT} $0 &quot;$3&quot; $4<br />
+Makes $4 contain -1, which is error.<br />
+<br />
+This message is really expecting a POINTER to a string buffer for $3. Is there something I can do to make this work? (short of writing an external C++ program?)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">28th June 2006, 19:44</div></div><div class="posttext">I'm posting a new thread about this.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">29th June 2006, 13:53</div></div><div class="posttext">Probably the fact that you use forward strokes (/) instead of back strokes.<br />
+<br />
+Edit: And you should really stop using relative paths.<br />
+<br />
+e.g.<br />
+SetOutPath &quot;C:\&quot;<br />
+ReadINIStr $R0 &quot;.\file.ini&quot; ...<br />
+will only work if file.ini is in C:\<br />
+<br />
+Lets say you just happened to SetOutPath $INSTDIR first, then file.ini would then have to be in $INSTDIR to work.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mr Inches</div><div class="date">29th June 2006, 15:01</div></div><div class="posttext">Regarding your second problem, it may be that the &quot;STR:&quot; form of parameter for SendMessage is for passing strings in only e.g for WM_SETTEXT or similar.<br />
+<br />
+You could try using the System plug-in to make the call to SendMessage, it will allow you to pass the LPSTR parameter expected by CB_GETLBTEXT.<br />
+<br />
+Duncan</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">29th June 2006, 15:05</div></div><div class="posttext">is there some documentation for the system plugin? How do I make calls to it regularly? (is there some sort of loading call I need to make?)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">30th June 2006, 11:29</div></div><div class="posttext">System's documentation is located at Docs\System.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">shouman</div><div class="date">2nd July 2006, 12:46</div></div><div class="posttext">Visit the wiki page of NSIS.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

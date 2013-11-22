@@ -1,0 +1,123 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Silent install with error level, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Silent install with error level NSIS Discussion" />
+	
+	<title> Silent install with error level [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Silent install with error level</div>
+<hr />
+<div class="pda"><a href="t-285403.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=285403">Silent install with error level</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">RegShoe</div><div class="date">21st January 2008, 14:49</div></div><div class="posttext">I'm trying to create a silent installer, which returns an errorlevel if there where any errors during the installation.<br />
+<br />
+I've found some useful information in the manual and forums here, but I still have some questions.<br />
+<br />
+I found that I can use &quot;SetSilent&quot; to prevent my script from asking for some user interaction. So if the installer is not able to overwrite a file, e.g. if the process is sill running, does this mean the file is skipped and the installer continues with the next file? And in this case, is there any error level set?<br />
+And if so, can I get this error level with &quot;GetErrorLevel&quot;? But how do I return this value when the script is finished?<br />
+<br />
+I hope anyone can help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">21st January 2008, 15:14</div></div><div class="posttext">copied from NSIS manual,<br />
+The File command sets the error flag if overwrite mode is set to 'try' and the file could not be overwritten, or if the overwrite mode is set to 'on' and the file could not be overwritten and the user selects ignore.<br />
+Something like this should do the trick,<br />
+.....<br />
+FileOpen $0 '$TEMP\setup.log' w<br />
+ClearErrors<br />
+File 'somefile.ext'<br />
+IfErrors 0 +2<br />
+FileWrite $0 'somefile.ext failed$\r$\n'<br />
+File 'someother.ext'<br />
+IfErrors 0 +2<br />
+FileWrite $0 'someother.ext failed$\r$\n'<br />
+.......<br />
+FileClose $0<br />
+.......<br />
+ClearErrors<br />
+FileOpen $0 '$TEMP\setup.log' r<br />
+loop:<br />
+FileRead $0 '$1'<br />
+IfErrors done<br />
+MessageBox MB_OK '$1'<br />
+goto loop<br />
+done:<br />
+FileClose $0<br />
+.....</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RegShoe</div><div class="date">22nd January 2008, 08:55</div></div><div class="posttext">Thanks for your reply. <br />
+<br />
+I've tried this... but I still get no return value from my installer.<br />
+<br />
+My installer code looks like this:<br />
+<br />
+	SetOverwrite try<br />
+	SetAutoClose true<br />
+	SetSilent silent<br />
+<br />
+	ClearErrors<br />
+<br />
+	File /r &quot;folder\*.*&quot;<br />
+	IfErrors 0 +2<br />
+	SetErrorLevel 17   ; set to something other than -1 0 1 2<br />
+<br />
+	GetErrorLevel $0<br />
+<br />
+	IfErrors 0 +2<br />
+	MessageBox MB_OK '$0'<br />
+<br />
+ <br />
+<br />
+So if a file can not be overwritten (SetOverWrite try), i would expect to have the error level set to 17 and after the process displayed in my messagebox.<br />
+I have an executable in my install dir running when starting the installer, so it cannot be written to. But I don't get any response from my installer.<br />
+<br />
+If I do not set the error level, I get a -1 (error level never set) displayed in my messagebox.<br />
+<br />
+What is wrong?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RegShoe</div><div class="date">22nd January 2008, 11:00</div></div><div class="posttext">Hmmmm... I've tried to echo the error level as described here (http://forums.winamp.com/showthread.php?postid=2081769#post2081769) , and it works. <br />
+<br />
+But I still wonder why this error level isn't displayed in my messagebox.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">22nd January 2008, 11:57</div></div><div class="posttext">SetOverwrite try<br />
+	SetAutoClose true<br />
+	SetSilent silent<br />
+<br />
+	ClearErrors<br />
+<br />
+	File /r &quot;folder\*.*&quot;<br />
+	IfErrors 0 +2<br />
+	SetErrorLevel 17   ; set to something other than -1 0 1 2<br />
+<br />
+	GetErrorLevel $0<br />
+<br />
+	StrCmp $0 &quot;-1&quot; +2<br />
+	MessageBox MB_OK '$0'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">22nd January 2008, 14:51</div></div><div class="posttext">@RegShoe File /r &quot;File /r &quot;folder\*.*&quot;<br />
+	IfErrors 0 +2<br />
+	SetErrorLevel 17   ; set to something other than -1 0 1 2<br />
+<br />
+	GetErrorLevel $0<br />
+<br />
+	IfErrors 0 +2<br />
+	MessageBox MB_OK '$0'&quot; You are using IfErrors twice to check a single error. That doesn't work because IfErrors resets the error flag (http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.4.9). RedWine's code will work because he is checking data that is set (or not set) depending on the error condition.<br />
+<br />
+Don</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,295 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" user selects silent vs normal install, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  user selects silent vs normal install NSIS Discussion" />
+	
+	<title> user selects silent vs normal install [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  user selects silent vs normal install</div>
+<hr />
+<div class="pda"><a href="t-270797.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=270797">user selects silent vs normal install</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jackkoho</div><div class="date">7th May 2007, 18:34</div></div><div class="posttext">I am trying to do what I stated in the subject.  Currently, I am using an InstallOptions page for the user to select custom vs express install.  However, I can't use Silent inside a function and I can't use conditionals outside a function.  So I'm not quite sure how to approach this.<br />
+<br />
+I have tried using InstType but it rewrites my SF_SELECTED flags to 0 when I have them set in .onInit.<br />
+<br />
+Jack</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">goldy1064</div><div class="date">7th May 2007, 21:51</div></div><div class="posttext">According to the documentation here (http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.14.16), you may only set the installer silent during .onInit.<br />
+<br />
+To get around this, you would need a secondary installer that could wrap around your primary.  The wrapper installer would just display the custom InstallOptions page you want and pass either a /S or not to the primary installer.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">theblazingangel</div><div class="date">7th May 2007, 22:49</div></div><div class="posttext">perhaps:<br />
+<br />
+1) use the leave function for your install options page to set a global variable which will tell the rest of the script whether it's in normal/express mode<br />
+2) use the pre function for other pages to detect express mode, and if so just execute the code and use abort to skip the page (silent)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jackkoho</div><div class="date">8th May 2007, 20:53</div></div><div class="posttext">this wrapper installer idea is pretty crazy but I am going to give it a shot.  Will let you know on any progress.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jackkoho</div><div class="date">9th May 2007, 17:26</div></div><div class="posttext">The wrapper idea worked!<br />
+<br />
+Here is my code from the wrapper:<br />
+<br />
+<br />
+;--------------------------------<br />
+<br />
+;Include Modern UI<br />
+<br />
+!include &quot;MUI.nsh&quot;<br />
+<br />
+!include &quot;zipdll.nsh&quot;<br />
+<br />
+!include LogicLib.nsh<br />
+<br />
+<br />
+<br />
+;--------------------------------<br />
+<br />
+;General<br />
+<br />
+Name &quot;xxx - v0.9.12&quot;<br />
+<br />
+OutFile &quot;xxxtest-wrapper.exe&quot;<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+;--------------------------------<br />
+<br />
+;Interface Settings<br />
+<br />
+!define MUI_HEADERIMAGE<br />
+<br />
+!define MUI_HEADERIMAGE_BITMAP &quot;header.bmp&quot; ; optional<br />
+<br />
+!define MUI_ABORTWARNING<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+;--------------------------------<br />
+<br />
+;Pages<br />
+<br />
+!insertmacro MUI_PAGE_LICENSE &quot;ct_license.txt&quot;<br />
+<br />
+Page custom customvsexpress<br />
+<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+<br />
+!insertmacro MUI_DEFAULT MUI_FINISHPAGE_TEXT &quot;finishpage text&quot;<br />
+<br />
+!insertmacro MUI_DEFAULT MUI_FINISHPAGE_TITLE &quot;finishpagetitle&quot;<br />
+<br />
+!insertmacro MUI_PAGE_FINISH<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+;--------------------------------<br />
+<br />
+;Languages<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+  ReserveFile &quot;iotest.ini&quot;<br />
+<br />
+  !insertmacro MUI_RESERVEFILE_INSTALLOPTIONS<br />
+<br />
+<br />
+<br />
+;--------------------------------<br />
+<br />
+;Variables<br />
+<br />
+<br />
+<br />
+  Var INI_EXPRESS<br />
+<br />
+  Var INI_CUSTOM  <br />
+<br />
+  <br />
+<br />
+#--------------<br />
+<br />
+;Installer Sections<br />
+<br />
+<br />
+<br />
+Function customvsexpress<br />
+<br />
+  !insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;iotest.ini&quot;<br />
+<br />
+  !insertmacro MUI_HEADER_TEXT &quot;$(TEXT_IO_TITLE)&quot; &quot;$(TEXT_IO_SUBTITLE)&quot;<br />
+<br />
+  !insertmacro MUI_INSTALLOPTIONS_READ $INI_CUSTOM &quot;iotest.ini&quot; &quot;Field 1&quot; &quot;State&quot;<br />
+<br />
+  !insertmacro MUI_INSTALLOPTIONS_READ $INI_EXPRESS &quot;iotest.ini&quot; &quot;Field 2&quot; &quot;State&quot;<br />
+<br />
+   MessageBox MB_OK &quot;$INI_CUSTOM $INI_EXPRESS&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+Section &quot;xxx&quot; xxx<br />
+<br />
+#call customvsexpress<br />
+<br />
+File setupxxxjacktest.exe<br />
+<br />
+StrCmp $INI_CUSTOM &quot;1&quot; custom silent<br />
+<br />
+custom: <br />
+<br />
+ExecWait &quot;setupxxxjacktest.exe&quot;<br />
+<br />
+goto end<br />
+<br />
+silent:<br />
+<br />
+ExecWait &quot;setupxxxjacktest.exe /S&quot;<br />
+<br />
+end:<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+ <br />
+<br />
+Function .onInit<br />
+<br />
+System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;CamerTutorMutex&quot;) i .r1 ?e'<br />
+<br />
+Pop $R0<br />
+<br />
+StrCmp $R0 0 +3<br />
+<br />
+  MessageBox MB_OK|MB_ICONEXCLAMATION &quot;The installer is already running.&quot;<br />
+<br />
+  Abort<br />
+<br />
+ <br />
+<br />
+  Pop $0<br />
+<br />
+ ClearErrors<br />
+<br />
+	<br />
+<br />
+	!insertmacro MUI_INSTALLOPTIONS_EXTRACT &quot;iotest.ini&quot;<br />
+<br />
+<br />
+<br />
+	<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+<br />
+LangString TEXT_IO_TITLE ${LANG_ENGLISH} &quot;Express vs. Custom Install&quot;<br />
+<br />
+LangString TEXT_IO_SUBTITLE ${LANG_ENGLISH} &quot;This page allows the user to choose between an express and custom install.&quot;<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+Notice how I left the license page and finish page in the wrapper.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jackkoho</div><div class="date">9th May 2007, 17:27</div></div><div class="posttext">sorry for all the extra space, that was my first time posting code</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jackkoho</div><div class="date">9th May 2007, 17:28</div></div><div class="posttext">the one downside to this is that I have some execwaits in my wrapped program that have to install OTHER programs which somewhat ruins the silent experience.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MarkA</div><div class="date">4th December 2008, 13:44</div></div><div class="posttext">Hi,<br />
+I have a similar problem in that I would like to be able to automatically decide whether to run a setup as silent or not.<br />
+<br />
+I have a wrapper 'setup.exe' where the user selects which components they would like to install. This works perfectly well. However I would also like to be able to offer the components as separate install files and under this circumstance then the install file should not be silent.<br />
+<br />
+In my wrapper I can add /S to the exec, but how do I make the setup file take notice and not show the welcome page, etc.<br />
+<br />
+Scenario 1 (CD install)<br />
+ Wrapper.exe (user select components)<br />
+  run setup1.exe /S (No Welcome page, etc is displayed)<br />
+  run setup2.exe /S (No Welcome page, etc is displayed)<br />
+<br />
+Scenario 2 (Web install)<br />
+ User downloads setup1.exe and runs setup1.exe<br />
+ Welcome page, etc is displayed.<br />
+<br />
+The idea is so that I don't have to keep in sync to separate versions of the same setup.<br />
+<br />
+<br />
+many thanks<br />
+Mark</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">chivalri</div><div class="date">4th December 2008, 18:17</div></div><div class="posttext">Here is what I have done to allow an installer to function in a not silent but not interactive manner.<br />
+<br />
+I have my installer setup so that if I run without any command line variables, it runs as usual; however, if I add a /qb command line option then in onInit I set a variable NonInteractive to &quot;1&quot;.<br />
+<br />
+Then I use:<br />
+<br />
+# Installer pages<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE dirPre<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE dirPre<br />
+!insertmacro MUI_PAGE_LICENSE VILicAgreement.txt<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE dirPre<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE dirPre<br />
+!insertmacro MUI_PAGE_STARTMENU Application $StartMenuGroup<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE dirPre<br />
+!insertmacro MUI_PAGE_FINISH<br />
+!insertmacro MUI_UNPAGE_CONFIRM<br />
+!insertmacro MUI_UNPAGE_INSTFILES<br />
+<br />
+Function dirPre<br />
+    StrCmp $NonInteractive &quot;1&quot; 0 noskip<br />
+    Abort<br />
+noskip:<br />
+FunctionEnd<br />
+<br />
+<br />
+This causes the installer to run and display the status of what is going on but it does not interact with the user and closes automatically when done.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MarkA</div><div class="date">5th December 2008, 08:36</div></div><div class="posttext">Hi,<br />
+thanks for the reply. <br />
+I will make some more tests a post the solution when I have it working.<br />
+<br />
+regs<br />
+Mark</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

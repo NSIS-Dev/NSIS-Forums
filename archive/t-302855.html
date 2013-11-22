@@ -1,0 +1,107 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" registry::SaveValue ?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  registry::SaveValue ? NSIS Discussion" />
+	
+	<title> registry::SaveValue ? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  registry::SaveValue ?</div>
+<hr />
+<div class="pda"><a href="t-302855.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=302855">registry::SaveValue ?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">nsnb</div><div class="date">6th February 2009, 20:55</div></div><div class="posttext">I could find registry::SaveKey in the Registry NSIS plugin<br />
+(by Instructor), but I couldn't find a registry::SaveValue.<br />
+<br />
+Is there a plugin or a function that achieves this level of granularity?<br />
+<br />
+That is, saving a .REG that contains only a desire value in a registry key, not all values in that key.<br />
+<br />
+Is there such a plugin/function?<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">7th February 2009, 04:01</div></div><div class="posttext">Just read the documentation that comes with the plugin.  ({registry::Write})<br />
+<br />
+Or, search the NSIS help for WriteRegStr, WriteRegBin, WriteRegDWORD, etc.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">7th February 2009, 14:24</div></div><div class="posttext">If you really want to save it as a .REG file, first read the value the normal way, then create the .REG file with FileOpen,FileWrite and FileClose</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">nsnb</div><div class="date">8th February 2009, 16:01</div></div><div class="posttext">Originally posted by Comperio <br />
+Just read the documentation that comes with the plugin.  ({registry::Write})<br />
+<br />
+Or, search the NSIS help for WriteRegStr, WriteRegBin, WriteRegDWORD, etc. These write into the registry. I want to read from the registry and write to a file (REGEDIT4 format).<br />
+<br />
+<br />
+Originally posted by Anders <br />
+If you really want to save it as a .REG file, first read the value the normal way, then create the .REG file with FileOpen,FileWrite and FileClose Yes, that is exactly what I meant. I was hoping that there is a single line statement like ${registry::SaveKey} that does that but it seems there is no escape of having to write something more elaborate.<br />
+<br />
+I am thinking of perhaps adding this function to the Registry plugin 3.5. However, I have never written an NSIS plugin, so it may take me some time to learn how to do this.<br />
+<br />
+It seems that a crude (ugly) hack that would implement this is to simply copy the function _SaveKey() in registry.c, rename it to _SaveValue, then add an if statement at line 948 to make RegWriteType conditional upon matching the value name.<br />
+<br />
+Any other tips are welcome.<br />
+<br />
+BTW, which compiler is recommended for producing the DLL (i.e. without having to require the VC6, VC2005 or VC2008 redistributable)?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">8th February 2009, 17:15</div></div><div class="posttext">From nsnb<br />
+I want to read from the registry and write to a file (REGEDIT4 format)<br />
+Sorry, I misunderstood your question earlier.<br />
+<br />
+If you didn't want to modify the registry plugin code itself, you could just create your own registry header file by wrapping the registry read and create file functions into a macro and then creating a !define named &quot;registry::SaveValue&quot;. If you put all this into your own header file, then you can include your header in lieu of the registry header.<br />
+<br />
+example:##add this just to ensure your header doesn't get added more than once<br />
+!fndef myRegistryHeader <br />
+<br />
+   !define registry::SaveValue &quot;!insertmacro Registry::SaveValue _param1 _param2 _param3&quot;<br />
+<br />
+   !macro Registry::SaveValue _param1 _param2 _param3<br />
+      ; may have to add parameters here<br />
+      ; see Registry.nsh to see how macros are structured<br />
+<br />
+      ; ...<br />
+      ; [add registry code here]<br />
+      ; ...<br />
+   !macroend<br />
+<br />
+!endif<br />
+<br />
+In your macro, use the code from the registry plugin.  Then, in your script, just include your new registry header instead of the default &quot;Registry.nsh&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">nsnb</div><div class="date">8th February 2009, 17:32</div></div><div class="posttext">Comperio, thanks for this tip. If I fail to modify the plugin itself, I will certainly go this route (I am a little more confident authoring new code using NSIS rather than hack somebody else's code in C).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">nsnb</div><div class="date">9th February 2009, 01:21</div></div><div class="posttext">Time to give back to this great community. :)<br />
+<br />
+Attached please find my hack for the Registry Plugin which implements the functionality after which I sought in my original message.<br />
+<br />
+Basically, all what I did was copying verbatim the function SaveKey (in registry.c), renaming the copy to SaveValue, then modifying the line:<br />
+            RegWriteType(hFileWrite, szValue, dwType, szString, dwSizeString); to:<br />
+        if ( !lstrcmpi(szValue, szValueAsked) )<br />
+            RegWriteType(hFileWrite, szValue, dwType, szString, dwSizeString);<br />
+szValueAsked is defined as global in the beginning of registry.c:char szValueAsked[MAX_PATHLEN];Also, right at the beginning of the function I added (in the right order):    popstring(szValueAsked, NSIS_MAX_STRLEN); /* name of single value to be saved */<br />
+ <br />
+<br />
+This essentially creates a new registry.dll (attached) that contains ${registry::SaveValue} with the calling parameters as described in the attached readme.txt. Attached also find the corresponding registry.nsh.<br />
+<br />
+I am sure that the original author of this package can do much better job than I did, but I needed this quickly so I implemented it in the most &quot;quick &amp; dirty&quot; manner.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DrDan</div><div class="date">23rd February 2009, 14:00</div></div><div class="posttext">This is just what I was looking for in that plugin!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

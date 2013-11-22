@@ -1,0 +1,155 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" LockedList plugin and FindProcess macros, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  LockedList plugin and FindProcess macros NSIS Discussion" />
+	
+	<title> LockedList plugin and FindProcess macros [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  LockedList plugin and FindProcess macros</div>
+<hr />
+<div class="pda"><a href="t-320667.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=320667">LockedList plugin and FindProcess macros</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">underline</div><div class="date">9th July 2010, 11:31</div></div><div class="posttext">Thanks to Afrow UK for it's great LockedList plugin.<br />
+<br />
+I use this plugin to find running processes using macros which can be very useful on some situations. I write next macros which seems works as expected but I still need experts confirmation if there can be any issue using it as macros.<br />
+<br />
+!macro _IsProcessRunning _a _b _t _f<br />
+  LockedList::FindProcess &quot;${_b}&quot;<br />
+  Pop $R0<br />
+  !insertmacro _!= $R0 &quot;&quot; `${_t}` `${_f}`<br />
+!macroend<br />
+!define IsProcessRunning `&quot;&quot; IsProcessRunning`<br />
+<br />
+<br />
+# and can be used as:<br />
+<br />
+${If} ${IsProcessRunning} &quot;notepad.exe&quot;<br />
+       MessageBox MB_OK &quot;notepad is running!&quot;<br />
+${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th July 2010, 13:09</div></div><div class="posttext">The only problem there is if $R0 != &quot;&quot; then you should be doing another 2 Pop's to empty the stack. It is bad practice not to. Perhaps though I could add a /yesno switch which will just push yes or no onto the stack instead?<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">underline</div><div class="date">9th July 2010, 13:37</div></div><div class="posttext">Stu, your suggestion should fix that issue. If you do it please let me know.<br />
+<br />
+So based on your suggestion the macros should looks like below in order to empty the stack?<br />
+<br />
+!macro _IsProcessRunning _a _b _t _f<br />
+  LockedList::FindProcess &quot;${_b}&quot;<br />
+  Pop $R0<br />
+  Pop $R0<br />
+  Pop $R0<br />
+  !insertmacro _!= $R0 &quot;&quot; `${_t}` `${_f}`<br />
+!macroend<br />
+!define IsProcessRunning `&quot;&quot; IsProcessRunning`<br />
+<br />
+<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">9th July 2010, 15:28</div></div><div class="posttext">You also need to protect the $R0 value in case it is used prior to calling the macro.<br />
+<br />
+Something like this. <br />
+!macro _IsProcessRunning _a _b _t _f<br />
+    ## Protect $R0<br />
+        Push $R0<br />
+        <br />
+    ## Search for the process<br />
+        LockedList::FindProcess &quot;${_b}&quot;<br />
+        Pop $R0<br />
+        StrCmp $R0 '' 0 +3<br />
+        Pop $R0<br />
+        Goto `${_f}`<br />
+    <br />
+    ## Pops unused FindProcess values from stack<br />
+        Pop $R0<br />
+        Pop $R0<br />
+    <br />
+    ## Restore $R0 to previous value<br />
+        Pop $R0<br />
+    <br />
+    ## Process was Found<br />
+        Goto `${_t}`<br />
+!macroend<br />
+!define IsProcessRunning `&quot;&quot; IsProcessRunning`I haven't tested it but it looks right ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th July 2010, 16:07</div></div><div class="posttext">Yes that looks right Zinthose. I guess you don't need _a or _b any more.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">underline</div><div class="date">9th July 2010, 20:24</div></div><div class="posttext">Seems that  LockedList::FindProcess  works only if the process name is Case Sensitive else the plugin will not return the path or process description?<br />
+<br />
+Just try:    LockedList::FindProcess Notepad.exe</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th July 2010, 10:02</div></div><div class="posttext">Ah that's a bug thanks (or rather, I'm not converting the input string to lower case). Will fix and add the /yesno switch.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th July 2010, 11:07</div></div><div class="posttext">Update the plug-in. Your macro can look like this:<br />
+<br />
+!macro _IsProcessRunning _a _b _t _f<br />
+  !insertmacro _LOGICLIB_TEMP<br />
+  LockedList::FindProcess /yesno `${_b}`<br />
+  Pop $_LOGICLIB_TEMP<br />
+  !insertmacro _== $_LOGICLIB_TEMP yes `${_t}` `${_f}`<br />
+!macroend<br />
+!define IsProcessRunning `&quot;&quot; IsProcessRunning`<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">underline</div><div class="date">10th July 2010, 13:50</div></div><div class="posttext">Stu,<br />
+<br />
+Thanks for the macros!<br />
+<br />
+The bug with LockedList::FindProcess Case Sensitive is not fully fixed!<br />
+<br />
+Now it works with Notepad.exe process but if the running process has Uper Case letter(s) inside it's name (Example: WinRAR.exe) then the plugin will fail. Just try:<br />
+<br />
+LockedList::FindProcess WinRAR.exe<br />
+LockedList::FindProcess winrar.exe<br />
+<br />
+Now the running process is not detected anymore! With previous plugin were detected but no path or description returned! Now there is no detection! Please check with WinRAR.exe<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th July 2010, 14:00</div></div><div class="posttext">Should be fixed now.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">underline</div><div class="date">10th July 2010, 14:06</div></div><div class="posttext">Thanks! Please let me know when the plugin is fixed and I will test it again.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th July 2010, 16:11</div></div><div class="posttext">When I said it should be fixed now I had already uploaded it (v1.7 RC4).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">underline</div><div class="date">10th July 2010, 16:19</div></div><div class="posttext">Ya, you were just to fast with fixing and uploading...<br />
+<br />
+Now everything looks as expected!<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

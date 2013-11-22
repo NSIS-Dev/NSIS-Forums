@@ -1,0 +1,132 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How can I do something when NSIS compiler terminates?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How can I do something when NSIS compiler terminates? NSIS Discussion" />
+	
+	<title> How can I do something when NSIS compiler terminates? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How can I do something when NSIS compiler terminates?</div>
+<hr />
+<div class="pda"><a href="t-118963.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=118963">How can I do something when NSIS compiler terminates?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">rarefluid</div><div class="date">24th December 2002, 17:54</div></div><div class="posttext">Hi people!<br />
+<br />
+I'm calling the NSIS compiler from a VisualBasic exe which is basically a GUI for making an installer for a specific program.<br />
+I have a lot of trouble with the ShellExecuteA excution of the compiler to make the installer, but it works now.<br />
+What need is that the compiler gives some kind of feedback when he has finished making the exe. A messagebox or an ShellExecute to open the output folder or something...<br />
+My GUI-program may have already terminated and I can't let it wait for 10 minutes till a big installer file finished compiling...<br />
+<br />
+Any (simple) ideas?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">24th December 2002, 18:06</div></div><div class="posttext">For now you can use CreateProcess and WaitForSingle object instead of ShellExecute. Later you will be able to pass /NOTIFYHWND to makensis.exe and it will let you know when it finishes, what is the output script, and what's the input script. Mayeb some other stuff later...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rarefluid</div><div class="date">24th December 2002, 18:11</div></div><div class="posttext">Sorry to bother, but<br />
+Do you have a short example... ;-)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">24th December 2002, 18:20</div></div><div class="posttext">Not in VB... :(<br />
+<br />
+But NSIS uses it for ExecWait (see Source\exehead\exec.c line 835) so you can look in the C source and try to see what you can get from it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rarefluid</div><div class="date">24th December 2002, 18:27</div></div><div class="posttext">Because VisualBasic is a major pain in the a$%&amp; when it comes to using API functions... ;-)<br />
+Thank you anyways...<br />
+<br />
+<br />
+case EW_EXECUTE:<br />
+      {<br />
+        HANDLE hProc;<br />
+        char *buf0=process_string_fromparm_tobuf(0x00);<br />
+        log_printf2(&quot;Exec: command=\&quot;%s\&quot;&quot;,buf0);<br />
+        update_status_text_from_lang(LANG_EXECUTE,buf0);<br />
+<br />
+        hProc=myCreateProcess(buf0,state_output_directory);<br />
+<br />
+        if (hProc)<br />
+        {<br />
+          log_printf2(&quot;Exec: success (\&quot;%s\&quot;)&quot;,buf0);<br />
+          if (parm1)<br />
+          {<br />
+            DWORD lExitCode;<br />
+            while (WaitForSingleObject(hProc,100) == WAIT_TIMEOUT)<br />
+            {<br />
+              static MSG msg;<br />
+              while (PeekMessage(&amp;msg,NULL,WM_PAINT,WM_PAINT,PM_REMOVE))<br />
+                DispatchMessage(&amp;msg);<br />
+            }<br />
+            GetExitCodeProcess(hProc, &amp;lExitCode);<br />
+<br />
+            if (parm2&gt;=0) myitoa(var2,lExitCode);<br />
+            else if (lExitCode) exec_errorflag++;<br />
+          }<br />
+          CloseHandle( hProc );<br />
+        }<br />
+        else<br />
+        {<br />
+          exec_errorflag++;<br />
+          log_printf2(&quot;Exec: failed createprocess (\&quot;%s\&quot;)&quot;,buf0);<br />
+        }<br />
+      }<br />
+    return 0;<br />
+ <br />
+<br />
+This is it... OK<br />
+Another question : What errorcodes does NSIS return on success or errors... Would be good to know... Are they round some where the files (ah, yes sure they are...)? Where?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rarefluid</div><div class="date">24th December 2002, 18:41</div></div><div class="posttext">If anyone except me is interested,<br />
+M$ has a good article about this in the Knowledge base:<br />
+<br />
+HOWTO: Use a 32-Bit Application to Determine When a Shelled Process Ends<br />
+http://support.microsoft.com/default.aspx?scid=kb;EN-US;129796<br />
+<br />
+Does exactly this... Enjoy...<br />
+Still I hate VB... ;-)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">24th December 2002, 18:43</div></div><div class="posttext">It's all in MakeNSISw... It basically returns 0 if everything is ok, and 1 otherwise.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">24th December 2002, 19:27</div></div><div class="posttext">In the latest CVS version makensis sends WM_COPYDATA messages to a window specified by /NOTIFYHWND hwnd in the command line. Possible dwData values are:<br />
+<br />
+enum {<br />
+  MAKENSIS_NOTIFY_SCRIPT, // script full path<br />
+  MAKENSIS_NOTIFY_WARNING, // warning<br />
+  MAKENSIS_NOTIFY_ERROR, // error<br />
+  MAKENSIS_NOTIFY_OUTPUT // output full path<br />
+};<br />
+<br />
+MAKENSIS_NOTIFY_SCRIPT = 0, grows by 1 for each other define in the enum.<br />
+<br />
+The lpData value is set according to dwData.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rarefluid</div><div class="date">24th December 2002, 19:39</div></div><div class="posttext">Thanks. I already did it with the createprocess stuff...<br />
+Works ok...<br />
+Maybe I'll try implementing the method of listening to a WM_COPYDATA message, as it is a better way.<br />
+Later...<br />
+<br />
+Merry Christmas + Happy New Year!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">24th December 2002, 19:42</div></div><div class="posttext">Hmm... You will have to wait on the new stuf, I am having problems with CVS :(<br />
+<br />
+Merry Christmas and a Happy New Year! Ho Ho Ho :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">24th December 2002, 20:37</div></div><div class="posttext">Aight, Joost uploaded it.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

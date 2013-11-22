@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" System32 and SysWOW64 are mutually exclusive, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  System32 and SysWOW64 are mutually exclusive NSIS Discussion" />
+	
+	<title> System32 and SysWOW64 are mutually exclusive [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  System32 and SysWOW64 are mutually exclusive</div>
+<hr />
+<div class="pda"><a href="t-358045.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=358045">System32 and SysWOW64 are mutually exclusive</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">25th March 2013, 14:21</div></div><div class="posttext">Hi,<br />
+A strange thing (bug?) happens, when you install and uninstall on Windows 7 64-bit with 'Run as administractor' into the following directories:<br />
+<br />
+'C:\Windows\SysWOW64\MacroMed\Flash\FlashPlayerTrust\'<br />
+'C:\Windows\System32\MacroMed\Flash\FlashPlayerTrust\'<br />
+<br />
+writing to both folders consecutively. Unicode and Ansi compilers.<br />
+<br />
+You can to write to one but not both folders. Or, you can work-around the problem by writing to one place and copying from there to the other.<br />
+<br />
+Notice I say 'you', because I think this is a bug. Prove me wrong (please), and I would be very happy.<br />
+<br />
+When you have installed to SysWOW64 and System32, by copying, take your pick. You can uninstall from SysWOW64 or uninstall from System32. Consecutively -- I haven't tried it another way -- SysWOW64 thinks it's System32 and vice versa. <br />
+<br />
+    StrCpy $SYS_DIR &quot;$WINDIR\SysWOW64&quot; #<br />
+    StrCpy $SYS__DIR &quot;$WINDIR\System32&quot; #<br />
+<br />
+    StrCpy $R0 &quot;$SYS_DIR\Macromed\Flash\FlashPlayerTrust&quot; #<br />
+    Delete &quot;$R0\trust25032013.cfg&quot;<br />
+    RMDir $R0<br />
+    StrCpy $R1 &quot;$SYS__DIR\Macromed\Flash\FlashPlayerTrust&quot; #<br />
+    IfFileExists &quot;$R1&quot; 0 +5<br />
+    Delete &quot;$R1\trust25032013.cfg&quot;<br />
+    RMDir $R1<br />
+Pending a bug-fix, can anybody A) verify/reproduce the bug, B) think of another way to uninstall both files? It doesn't have to be consecutively. Any fix would be immensely appreciated, great. Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">25th March 2013, 15:19</div></div><div class="posttext">I found a solution in another thread in the form a system call:<br />
+<br />
+    StrCpy $R0 &quot;$SYS_DIR\Macromed\Flash\FlashPlayerTrust&quot; #<br />
+    Delete &quot;$R0\trust25032013.cfg&quot;<br />
+    RMDir $R0<br />
+    System::Call kernel32::Wow64DisableWow64FsRedirection(*i.r0) i.r1 ; !! solution !!<br />
+    StrCpy $R1 &quot;$SYS__DIR\Macromed\Flash\FlashPlayerTrust&quot; #<br />
+    IfFileExists &quot;$R1\trust25032013.cfg&quot; 0 +5<br />
+    Delete &quot;$R1\trust25032013.cfg&quot;<br />
+    RMDir $R1Thanks.<br />
+<br />
+Which leaves only: Why can you copy to both locations, but write only to one? (Without Wow64DisableWow64FsRedirection, I mean.)<br />
+<br />
+Edit: Does the problem also exist on Windows 8 64-bit, Vista 64-bit, XP 64-bit, ... ?<br />
+<br />
+Edit II: The certificate enables Flash to JavaScript communication. Installing it for 64-bit became necessary with IE10, that looks for &quot;FlashPlayerTrust&quot; under SysWOW64 only. Nonetheless, if other 64-bit OSes support IE10 and have a similar issue to the one described, changing the system folder, Wow64 redirection should be disabled on all of those systems. I don't like doing it, as I do not entirely trust system calls.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">25th March 2013, 16:40</div></div><div class="posttext">You have to do it because the installer is 32-bit so by default gets redirected to SysWOW64. There is an x64.nsh which you can use ${DisableX64FSRedirection} from.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th March 2013, 16:51</div></div><div class="posttext">...and remember to turn it back as soon as possible! Only filesystem stuff like File/IfFileExists/GetAttributes/Delete/Find*/RMDir should be performed when it is active, ExecShell etc might fail...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">25th March 2013, 18:24</div></div><div class="posttext">Looking good :) :<br />
+    StrCpy $SYS_DIR &quot;$WINDIR\SysWOW64&quot; #<br />
+    StrCpy $SYS__DIR &quot;$WINDIR\System32&quot; #<br />
+<br />
+    StrCpy $R0 &quot;$SYS_DIR\Macromed\Flash\FlashPlayerTrust&quot; #<br />
+    Delete &quot;$R0\trust25032013.cfg&quot;<br />
+    RMDir $R0<br />
+    ${If} ${RunningX64}<br />
+    ${AndIf} ${AtLeastWinVista}<br />
+      ${DisableX64FSRedirection}<br />
+      StrCpy $R1 &quot;$SYS__DIR\Macromed\Flash\FlashPlayerTrust&quot; #<br />
+      IfFileExists &quot;$R1\trust25032013.cfg&quot; 0 +3 ; jumps to EnableX64FSRedirection<br />
+      Delete &quot;$R1\trust25032013.cfg&quot;<br />
+      RMDir $R1<br />
+      ${EnableX64FSRedirection}<br />
+    ${EndIF}IE10 is supported on the following operating systems and platforms, say Microsoft: Windows 8, Windows Server 2012, Windows 7 SP1, Windows Server 2008 R2 with SP1, but you never know. I got a feeling they'll be rolling out a Vista version come the next Service Pack.<br />
+<br />
+I still find it strange that CopyFiles worked without redirection. It must be doing something right.<br />
+<br />
+Thank you.<br />
+<br />
+Edit: IE10 checks System32, and not the other way around. Formerly SysWOW64 was the place to put trust files.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th March 2013, 19:55</div></div><div class="posttext">System32 is the native/64 bit folder, a 32 bit program gets System32 redirected to SysWOW64...</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

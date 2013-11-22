@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Can't abstract all variables in Registry Edit/Delete Call...HKLM must be clear text?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Can't abstract all variables in Registry Edit/Delete Call...HKLM must be clear text? NSIS Discussion" />
+	
+	<title> Can't abstract all variables in Registry Edit/Delete Call...HKLM must be clear text? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Can't abstract all variables in Registry Edit/Delete Call...HKLM must be clear text?</div>
+<hr />
+<div class="pda"><a href="t-296289.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=296289">Can't abstract all variables in Registry Edit/Delete Call...HKLM must be clear text?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Andrew Wallo</div><div class="date">21st August 2008, 20:51</div></div><div class="posttext">[ Preface, I realize that I now have three distinct discussions on abstracting variables out of compile time and into runtime.... I'll stop posting threads now until I get them resolved, but they ARE all different issues....]<br />
+<br />
+Evidentially I am pushing the boundaries of the programming language a bit here in desiring a greater abstraction than exists..... but why does an enumerated string ( HKLM/HKCU etc ) not get resolved at runtime if the remaining parameters that are getting passed to it can be?  Seems to be an oversight in the kernal's handling of those parameters.... should just have a case statement resolve the variable... just like it does for the keys...<br />
+<br />
+This is a limitation that makes the alter registry calls much less flexible....<br />
+<br />
+<br />
+; $R1 is set to &quot;HKLM&quot;<br />
+; $R2 is set to &quot;SomeRegistryKey\SomeCustomProgram&quot;<br />
+; $R3 is set to &quot;SomeEntryName&quot;<br />
+; $R4 is set to &quot;13523&quot;  ( a value ) <br />
+<br />
+# THIS PASSES COMPILE<br />
+        DeleteRegValue HKLM $R2 $R3 <br />
+<br />
+# THIS DOES NOT<br />
+        DeleteRegValue $R1 $R2 $R3 <br />
+<br />
+#SAME WITH THIS:<br />
+WriteRegStr HKLM $R2 $R3 $R4 <br />
+# VERSUS THIS:<br />
+WriteRegStr $R1 $R2 $R3 $R4 <br />
+<br />
+<br />
+So it becomes impossible to keep a pure log entry of the registry items that were edited.  You'd have to group them by HKLM etc... or $SWITCH handle the parameter when you called the DeleteRegValue, WriteRegStr, ReadRegStr etc...<br />
+<br />
+$Switch $R1<br />
+ $Case &quot;HKLM&quot;<br />
+   DeleteRegValue HKLM $R2 $R3<br />
+ $Case &quot;HKCU&quot;<br />
+   DeleteRegValue HKCU $R2 $R3<br />
+ $Case &quot;HKCU&quot;<br />
+   DeleteRegValue HKCC $R2 $R3<br />
+<br />
+  ....Etc. Etc. Etc.<br />
+<br />
+I feel like I'm at the point where I need to start pushing on the ceiling a bit.  How do I learn to change/edit expand the part of the programming that controls these functions? Or is the base NSIS kernal only edited by submission and conseses?<br />
+<br />
+_Thanks...[ going silent now till I get some answers.]</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">21st August 2008, 21:13</div></div><div class="posttext">It is so that the hkey can be verified at compiletime (I don't agree with this design, but it is the way it works ATM) you can use the registry plugin as a workaround</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Andrew Wallo</div><div class="date">21st August 2008, 21:15</div></div><div class="posttext">Example of the handling I need to do to get my abstraction to compile.  It seems unnecessary.... but if I understood why the compiler required the Enumeration I probably would understand the languages limitations a bit better.  This compiled:<br />
+<br />
+[CODE; Because GetBetween only uses files as sources.... ( stupid, that I'm using that here, but I am.... )<br />
+      ${GetBetween} &quot;&lt;NEW&gt;&quot; &quot;&lt;/NEW&gt;&quot; &quot;$1\SRS_TempFile.txt&quot; $4  ; Get the file name between the file tags of the read_line_in-&gt;$2 and stick it in $4<br />
+      ${GetBetween} &quot;&lt;ROOT&gt;&quot; &quot;&lt;/ROOT&gt;&quot; &quot;$R1\SRS_TempFile.txt&quot; $R1  ; Get the file name between the file tags of the read_line_in-&gt;$2 and stick it in $R2<br />
+      ${GetBetween} &quot;&lt;KEY&gt;&quot; &quot;&lt;/KEY&gt;&quot; &quot;$1\SRS_TempFile.txt&quot; $R2  ; Get the file name between the file tags of the read_line_in-&gt;$2 and stick it in $4<br />
+      ${GetBetween} &quot;&lt;SUBKEY&gt;&quot; &quot;&lt;/SUBKEY&gt;&quot; &quot;$1\SRS_TempFile.txt&quot; $R3  ; Get the file name between the file tags of the read_line_in-&gt;$2 and stick it in $R3<br />
+      ${GetBetween} &quot;&lt;VALUE&gt;&quot; &quot;&lt;/VALUE&gt;&quot; &quot;$1\SRS_TempFile.txt&quot; $R4  ; Get the file name between the file tags of the read_line_in-&gt;$2 and stick it in $R4<br />
+<br />
+<br />
+      StrCmp $4 &quot;1&quot; 0 SRS_RESTORE_WRITE ; if the new marker is set to 1 then a rollback means remove it entirely.....<br />
+        ${Switch} $R1<br />
+            ${Case} &quot;HKLM&quot;<br />
+                DeleteRegValue HKLM $R2 $R3 <br />
+            ${Case} &quot;HKCR&quot;<br />
+               DeleteRegValue HKCR $R2 $R3<br />
+            ${Case} &quot;HKCU&quot;<br />
+               DeleteRegValue HKCU $R2 $R3<br />
+             ${Case} &quot;HKU&quot;<br />
+               DeleteRegValue HKU $R2 $R3<br />
+             ${Case} &quot;HKCC&quot;<br />
+                DeleteRegValue HKCC $R2 $R3<br />
+             ${Case} &quot;HKDD&quot;<br />
+                DeleteRegValue HKDD $R2 $R3 <br />
+            ${Case} &quot;HKPD&quot;<br />
+               DeleteRegValue HKPD $R2 $R3<br />
+             ${Case} &quot;SHCTX&quot;<br />
+               DeleteRegValue SHCTX $R2 $R3<br />
+         ${EndSwitch}<br />
+        Goto SRS_RESTORE_ReadLine[/CODE]</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Andrew Wallo</div><div class="date">21st August 2008, 21:39</div></div><div class="posttext">!macro SetRegistry_with_RollbackControl _RootKey _RegistryKey _SubKey _Value<br />
+<br />
+  WriteRegStr ${_RootKey} ${_RegistryKey} ${_SubKey} ${_Value}<br />
+<br />
+!macroend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">21st August 2008, 22:06</div></div><div class="posttext">The root key cannot be a variable.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">21st August 2008, 22:13</div></div><div class="posttext">But it can be SHCTX.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Andrew Wallo</div><div class="date">21st August 2008, 22:52</div></div><div class="posttext">It IS a variable.  Its just an enumerated, restricted pre-defined set of acceptable values and it should beable to say, OH... variable... that resolves to... and if it can't resolve at runtime it throws an error the same as if the KEY didn't exist.....<br />
+<br />
+The system compiler call SHOULD take runtime resolution of that variable, just like it can for the REST of the variables.  <br />
+<br />
+If this annoyed me enough.... What do I need to read to learn how I go about changing it?... more as an exercise of becoming a god-like NSIS designer....than anything else.  A few cumbersome casestatements aren't really worth it... but just SAY I wanted to......<br />
+<br />
+_Andrew</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

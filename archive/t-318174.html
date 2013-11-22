@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How do I store a resource file in setup, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How do I store a resource file in setup NSIS Discussion" />
+	
+	<title> How do I store a resource file in setup [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How do I store a resource file in setup</div>
+<hr />
+<div class="pda"><a href="t-318174.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=318174">How do I store a resource file in setup</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">spsarolkar</div><div class="date">5th April 2010, 13:25</div></div><div class="posttext">I am creating an installer for deploying a web application on server. <br />
+<br />
+Here is a script<br />
+<br />
+!define PRODUCT_NAME &quot;App Deploy&quot;<br />
+!define PRODUCT_VERSION &quot;1.0&quot;<br />
+!define PRODUCT_PUBLISHER &quot;ZippySoft&quot;<br />
+ <br />
+SetCompressor lzma<br />
+ <br />
+;!include &quot;UserManagement.nsh&quot;<br />
+ <br />
+ <br />
+; MUI 1.67 compatible ------<br />
+!include &quot;MUI.nsh&quot;<br />
+ <br />
+; MUI Settings<br />
+!define MUI_ABORTWARNING<br />
+;!define MUI_ICON &quot;${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico&quot;<br />
+ <br />
+; Welcome page<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+; Components page<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+; Instfiles page<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+; Finish page<br />
+!insertmacro MUI_PAGE_FINISH<br />
+ <br />
+; Language files<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+ <br />
+; Reserve files<br />
+!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS<br />
+ <br />
+; MUI end ------<br />
+ <br />
+Name &quot;${PRODUCT_NAME} ${PRODUCT_VERSION}&quot;<br />
+OutFile &quot;AppDeploy.exe&quot;<br />
+InstallDir &quot;$PROGRAMFILES\App Deploy&quot;<br />
+ShowInstDetails show<br />
+<br />
+;Section -SETTINGS<br />
+;  SetOutPath &quot;$INSTDIR&quot;<br />
+;  SetOverwrite ifnewer<br />
+;SectionEnd<br />
+<br />
+;Section &quot;JDK&quot; SEC01<br />
+;  File &quot;Prerequisites\jdk-1_5_0_15-windows-i586-p.exe&quot;<br />
+;  ExecWait &quot;$INSTDIR\jdk-1_5_0_15-windows-i586-p.exe&quot;<br />
+;SectionEnd<br />
+<br />
+;System::Call 'Kernel32::SetEnvironmentVariableA(t, t) i(&quot;name&quot;, &quot;value&quot;).r0'<br />
+;StrCmp $0 0 error<br />
+; ExecWait ProgThatReadsEnv.exe<br />
+;  Goto done<br />
+;error:<br />
+;  MessageBox MB_OK &quot;Can't set environment variable&quot;<br />
+;done:<br />
+ <br />
+;Section &quot;Tomcat&quot; SEC02<br />
+;  File &quot;Prerequisites\apache-tomcat-6.0.16.exe&quot;<br />
+;  ExecWait &quot;$INSTDIR\apache-tomcat-6.0.16.exe&quot;<br />
+;SectionEnd<br />
+<br />
+Section &quot;Data Submission Tool&quot; SEC03<br />
+	File &quot;Prerequisites\DataSubmissionToolFinal.war&quot;<br />
+	CopyFiles `$INSTDIR\DataSubmissionToolFinal.war` `c:\DataSubmissionToolFinal.war`<br />
+	StrCpy $0 &quot;$INSTDIR\DataSubmissionToolFinal.war&quot; ;Path of copy file from<br />
+	StrCpy $1 &quot;c:\DataSubmissionToolFinal.war&quot;   ;Path of copy file to<br />
+	StrCpy $2 1 ; only 0 or 1, set 0 to overwrite file if it already exists<br />
+	System::Call 'kernel32::CopyFile(t r0, t r1, b r2) l'<br />
+	Pop $0 ; pops a bool.  if overwrite is off and there is a file then error will be 1<br />
+SectionEnd<br />
+<br />
+But for some reason DataSubmissionToolFinal.war file is not getting copied to c:\<br />
+<br />
+which I am specifying at line<br />
+<br />
+File &quot;Prerequisites\DataSubmissionToolFinal.war&quot;<br />
+	CopyFiles `$INSTDIR\DataSubmissionToolFinal.war` `c:\DataSubmissionToolFinal.war`<br />
+<br />
+What is the exact procedure to copy file present in setup to some physical path (Just like XCopy)<br />
+<br />
+thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">5th April 2010, 14:00</div></div><div class="posttext">There's a couple of things that might be going wrong there...<br />
+<br />
+From the script as you have it pasted above...<br />
+<br />
+1. In the &quot;-Settings&quot; section, you have your `;  SetOutPath &quot;$INSTDIR&quot;` commented out.   This means that $OUTDIR is null by the time the &quot;Data Submission Tool&quot; hits the File command is null/empty/nothing.<br />
+<br />
+2. Are you sure that the file actually exists in the location &quot;$INSTDIR\DataSubmissionToolFinal.war&quot; before you try to copy the file?  Use IfFileExists to make sure that your installer can see it there.<br />
+<br />
+3. Are you sure that you, or rather your installer, can write to the C root?  Under some accounts and some OS's - especially after a SysAdmin decides to lock things down - you can't write to the C (and/or boot drive) root.<br />
+<br />
+If all the above checks out, then the code as you have it should be fine.  I would comment out the system call just so you can work on one problem at a time (and I suppose it would really just duplicate the behavior of CopyFiles anyway?)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" GetFileTime failing, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  GetFileTime failing NSIS Discussion" />
+	
+	<title> GetFileTime failing [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  GetFileTime failing</div>
+<hr />
+<div class="pda"><a href="t-69120.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=69120">GetFileTime failing</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">davidbau</div><div class="date">18th December 2001, 14:17</div></div><div class="posttext">Hi all, I'm trying to detect when a DLL I'm installing is already installed and identical, so that I don't have to worry about overwriting it when Windows is keeping it open and locked.<br />
+<br />
+  GetFileTimeLocal DQSDTools.dll $1 $2<br />
+  GetFileTime $INSTDIR\DQSDTools.dll $3 $4<br />
+  IfErrors isdifferent<br />
+  IntCmpU $1 $3 test3 isdifferent isdifferent<br />
+  test3:<br />
+  IntCmpU $2 $4 register isdifferent isdifferent<br />
+<br />
+But GetFileTime fails precisely because the DLL is open and locked!<br />
+<br />
+Is this because GetFileTime needs to be able to get an open handle on the file? Does it seem like NSIS should use FindFirstFile instead?  <br />
+<br />
+Dave</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">davidbau</div><div class="date">18th December 2001, 15:14</div></div><div class="posttext">Here's a patch for exec.c that uses FindFirstFile instead of GetFileTime. It seems to work great for me:<br />
+<br />
+#ifdef NSIS_SUPPORT_GETFILETIME<br />
+    case EW_GETFILETIME:<br />
+      {<br />
+        WIN32_FIND_DATA ffd;<br />
+        HANDLE hfind;<br />
+        char *highout=g_usrvars[parms[1]];<br />
+        char *lowout=g_usrvars[parms[2]];<br />
+        process_string_fromtab(buf,parms[0]);<br />
+        exec_errorflag++;<br />
+        *lowout=*highout=0;<br />
+        hfind=FindFirstFile(buf,&amp;ffd);<br />
+        if (hfind != INVALID_HANDLE_VALUE)<br />
+        {<br />
+          myitoa(lowout,ffd.ftLastWriteTime.dwLowDateTime);<br />
+          myitoa(highout,ffd.ftLastWriteTime.dwHighDateTime);<br />
+          exec_errorflag--;<br />
+        }<br />
+        CloseHandle(hfind);<br />
+      }</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">18th December 2001, 20:16</div></div><div class="posttext">Cool, I'm going to integrate this with 1.91. It's interesting to note that the old way would work also, if I made it use 0 instead of GENERIC_READ, I think. But this is nice because we can use wildcards. <br />
+<br />
+-Justin</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

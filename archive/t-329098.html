@@ -1,0 +1,120 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Installer Corrupt, Bad Opcode, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Installer Corrupt, Bad Opcode NSIS Discussion" />
+	
+	<title> Installer Corrupt, Bad Opcode [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Installer Corrupt, Bad Opcode</div>
+<hr />
+<div class="pda"><a href="t-329098.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=329098">Installer Corrupt, Bad Opcode</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Rajada</div><div class="date">30th March 2011, 05:05</div></div><div class="posttext">This installer is a mess. The code is huge, long and serves a bunch of intricate functions. I get the &quot;installer corrupt, bad opcode&quot; error when I try to run the installation part (up to that point it is fine). I barely understand the syntax of NSIS, so I'm guessing I made a stupid mistake somewhere along those lines. Sorry about the wall-o-text; I have no idea where the problem lies. I'm certain all the required files are there. Does this forum not have line-wrapping for code snippets? I'll remove the HUGE file lists (replaced with '...', because I doubt they are the problem.<br />
+<br />
+Any help would be greatly appreciated.<br />
+<br />
+[edit - Moderation]<br />
+Changed code block to an attachment</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">30th March 2011, 07:38</div></div><div class="posttext">Aaaaaaa!<br />
+Use PasteBin or Attach your .nsi file, do not paste so huge codes!!<br />
+<br />
+Errors:<br />
+1. Add label Skip to section Essential Files<br />
+2. Your error is in function ReplaceLineStr<br />
+I do not have required files so I assume there is some parameter missing on the stack so the Exch fails.<br />
+<br />
+<br />
+Exch $R0 ; string to replace that whole line with &lt;&lt;&lt;&lt; HERE is the error because<br />
+MessageBox MB_OK $R0        I cannot see this MessageBox</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rajada</div><div class="date">30th March 2011, 08:00</div></div><div class="posttext">Sorry, I'm really trying to understand this. Its a far cry from the OOP I'm used to...<br />
+<br />
+So my first guess at what you mean is Essential files is missing the skip line at the end of the section. This is because Essential Files are required no matter what in the installer. But do I still need a skip?<br />
+<br />
+As for the second part, I'm not sure what you're saying. Do I need to make that part look like you typed it? Literally throwing that message box line after the Exch line? I need more specifics, but thank you so much still for being helpful.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">30th March 2011, 09:11</div></div><div class="posttext">Invalid Opcode usually means stack corruption. You're pushing or popping (or exch'ing) values incorrectly. This is what T.Slappy meant, the Exch commands in your ReplaceLineStr function aren't correct.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rajada</div><div class="date">30th March 2011, 09:28</div></div><div class="posttext">Okay, well that tells me nothing unfortunately. I pretty much inherited this project so it isn't like I've been working with this stuff for long. I frankly have not the slightest clue what this function is supposed to do, which is probably why I don't even see the error to begin with. Its weird that this should pop up though. Perhaps I received a slightly outdated version of the source used because the previous released installer works fine. Regardless, I'm really new to this, I need slightly less technical explanations.<br />
+<br />
+According to this (http://nsis.sourceforge.net/Replace_line_that_starts_with_specified_string), that function is fine.<br />
+<br />
+This (http://nsis.sourceforge.net/ConfigRead) is the other major function with stacking. The version there has two differences from mine:<br />
+<br />
+Example:<br />
+<br />
+IfErrors error<br />
+...<br />
+<br />
+	StrCpy $0 ''<br />
+<br />
+<br />
+<br />
+<br />
+Mine:<br />
+<br />
+IfErrors empty<br />
+...<br />
+empty:<br />
+	StrCpy $0 ''<br />
+<br />
+<br />
+Does it matter? Also, should the functions be defined at the begging of my script to work properly? And also someone please tell me if the Skip label is needed for the non-optional essential files and why.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">30th March 2011, 11:46</div></div><div class="posttext">Does it matter? Also, should the functions be defined at the begging of my script to work properly?<br />
+No and no.<br />
+<br />
+If you had done a single search through your sourcecode, looking for 'ReplaceLineStr', you would have found that the code calls the function four times, but does it once without pushing the variables to the stack first. Obviously, you cannot 'Exch $R0' from the stack if the stack doesn't contain anything.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rajada</div><div class="date">30th March 2011, 18:08</div></div><div class="posttext">Oh how did that get there? Gosh I feel stupid. Plus HMNSIS' search function doesn't work, so that's another thing I figured out. I get it though, its like having an accessed none, its just the odd order and syntax that throws me. See, I'm used to calling functions at the same time as defining the input variables, for example DoThis(var1, var2). Now, being unfamiliar with this code, I need to determine if that first call extraneous or not. I don't see a reason for it to be there, but I want to be sure I didn't maybe accidentally remove the variables or some other equally dumb mistake.<br />
+<br />
+You know, the older version doesn't have that line, how it got there I have no idea, but I'm pretty sure I get this a lot better now. From what you've said about the error itself it really does sound like this is the problem. If this works it will be a relief, I thought I was going to have to spend weeks troubleshooting it. Funny how I can be so proficient with OOP based languages but this stuff just throws me through a loop. But thanks for being patient with me guys.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">30th March 2011, 20:06</div></div><div class="posttext">Feel free to try nsL (sticky topic).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rajada</div><div class="date">30th March 2011, 22:54</div></div><div class="posttext">Yeah I got it working 100% with your help, thanks guys. Now I have to go back to my complicated, ten-thousand line OOP project that  by some miracle I understand enough to debug myself. Wish me luck. XP</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rajada</div><div class="date">31st March 2011, 05:18</div></div><div class="posttext">Shoot, one last problem. I re-compiled this on a Windows 7 32 bit OS and if I try to take it over to my XP computer it fails the integrity check and has no icon, just shows up as the default exe icon. What's going on?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">31st March 2011, 05:51</div></div><div class="posttext">If the integrity check fails, the file probably isn't integral anymore. If you want to check manually, you could of course do a manual CRC or MD5 check on the file. But most probably you didn't copy the file correctly.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rajada</div><div class="date">31st March 2011, 06:44</div></div><div class="posttext">Zipping it got it over uncorrupted, but still no icon on XP. DO I need to set that up separately than the main icon or something?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">31st March 2011, 06:56</div></div><div class="posttext">Only Windows Vista and 7 support very very large icons, so if that's all you have then you should add a smaller one. Are you sure this isn't just some icon caching issue?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rajada</div><div class="date">31st March 2011, 07:42</div></div><div class="posttext">I probably don't have a small one. Where would I find some help on how to define different icons for different OS's?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">31st March 2011, 09:01</div></div><div class="posttext">There are various free icon editors up on sourceforge. Google is your friend. What you want to do is make a multi-icon with different sizes. (And different color depths?)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Rajada</div><div class="date">31st March 2011, 18:42</div></div><div class="posttext">Ok, yeah, I've used an icon editor before for this same thing, but I'll look into multi icons. Thanks!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

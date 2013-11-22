@@ -1,0 +1,120 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Rich text file not display in License page, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Rich text file not display in License page NSIS Discussion" />
+	
+	<title> Rich text file not display in License page [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Rich text file not display in License page</div>
+<hr />
+<div class="pda"><a href="t-315254.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=315254">Rich text file not display in License page</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jdt2oo7</div><div class="date">11th December 2009, 07:03</div></div><div class="posttext">Hi all,<br />
+<br />
+Please see code below.<br />
+<br />
+I am using the addLicense from the forum to display EULA file according to user's selection.<br />
+The problem I am having is that: it always display the default file (en-US).<br />
+<br />
+I know for a fact that it went to the right country comparison in the If/ElseIf statements by using MessageBox to verify.<br />
+<br />
+Seem like it couldn't find the file in the statement &quot;FileOpen $0 $EXEDIR\${LIC_NAME1} r&quot;.<br />
+<br />
+Any idea? Thanks for your help!<br />
+<br />
+-----------------------------<br />
+<br />
+!define LIC_NAME1 &quot;..\doc\eula\da-DK.rtf&quot;<br />
+!define LIC_NAME2 &quot;..\doc\eula\de-DE.rtf&quot;<br />
+!define LIC_NAME3 &quot;..\doc\eula\el-GR.rtf&quot;<br />
+<br />
+; License page<br />
+!define MUI_LICENSEPAGE_CHECKBOX<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW addLicense<br />
+!insertmacro MUI_PAGE_LICENSE &quot;..\doc\eula\en-US.rtf&quot;<br />
+<br />
+LangString Denmark ${LANG_FRENCH} &quot;Denmark&quot;	<br />
+LangString Germany ${LANG_FRENCH} &quot;Germany&quot;<br />
+LangString Greece ${LANG_FRENCH} &quot;Greece&quot;<br />
+<br />
+Function addLicense<br />
+  ClearErrors<br />
+<br />
+  ; Display EULA base on user's selection<br />
+  ${If} $Country S== $(Denmark)<br />
+    FileOpen $0 $EXEDIR\${LIC_NAME1} r<br />
+  ${ElseIf} $Country S== $(Germany)<br />
+    FileOpen $0 $EXEDIR\${LIC_NAME2} r<br />
+  ${ElseIf} $Country S== $(Greece)<br />
+    FileOpen $0 $EXEDIR\${LIC_NAME3} r<br />
+	<br />
+    IfErrors exit<br />
+    System::Call 'kernel32::GetFileSize(i r0, i 0) i .r1'<br />
+    IntOp $1 $1 + 1 ; for terminating zero<br />
+    System::Alloc $1<br />
+    Pop $2<br />
+    System::Call 'kernel32::ReadFile(i r0, i r2, i r1, *i .r3, i 0)'<br />
+    FileClose $0<br />
+    FindWindow $0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+    GetDlgItem $0 $0 1000<br />
+    SendMessage $0 ${EM_SETLIMITTEXT} $1 0<br />
+    SendMessage $0 ${WM_SETTEXT} 0 $2<br />
+    System::Free $2<br />
+<br />
+exit:<br />
+ <br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">11th December 2009, 08:56</div></div><div class="posttext">Again, you're mixing up &quot;compile-time&quot; files and &quot;runtime&quot; files.<br />
+<br />
+!insertmacro MUI_PAGE_LICENSE &quot;..\doc\eula\en-US.rtf&quot;This refers to a file at compile-time. The path is relative to the NSI script file. The file will be embedded inside the installer and automatically extracted as needed<br />
+<br />
+<br />
+!define LIC_NAME1 &quot;..\doc\eula\da-DK.rtf&quot;<br />
+...<br />
+FileOpen $0 $EXEDIR\${LIC_NAME1} rThis refers to a file accessed at runtime. The path is relative to $EXEDIR = the installer EXE directory. The file must already exist on the target computer which runs the installer.<br />
+<br />
+<br />
+I think what you want to do is embed several license files in the installer, extract them at runtime and then choose the adequate one:<br />
+<br />
+InitPluginsDir<br />
+SetOutPath &quot;$PLUGINSDIR&quot; ; let's use a temporary folder<br />
+File /r &quot;..\doc\eula&quot;  ; this embed all the files in that directory and will extract them at runtime<br />
+${If} $Country S== $(Denmark)<br />
+FileOpen $0 &quot;$PLUGINSDIR\eula\da-DK.rtf&quot; r<br />
+...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jdt2oo7</div><div class="date">11th December 2009, 16:02</div></div><div class="posttext">Thanks Wizou! I need to pay attention to compile time and runtime stuff then.<br />
+<br />
+So, when I use this:<br />
+!insertmacro MUI_PAGE_LICENSE &quot;..\doc\eula\en-US.rtf&quot;<br />
+<br />
+it will embed the file?<br />
+<br />
+And, when I use this:<br />
+!define LIC_NAME1 &quot;..\doc\eula\da-DK.rtf&quot;<br />
+<br />
+It only points that file's location, and not embed the file?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">11th December 2009, 17:00</div></div><div class="posttext">Yes, it's because !insertmacro MUI_PAGE_LICENSE is a MUI macro which relies on instructions LicenseData and LicenseLangString, and these instructions embed the given files into the installer, just like the File instruction.<br />
+<br />
+If I'm correct, outside these 3 specific instructions, all other paths encountered in NSIS scripts are just pointing to location on target PC at run-time and do not lead to a file being embedded into the installer..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jdt2oo7</div><div class="date">11th December 2009, 17:57</div></div><div class="posttext">Thanks Wizou!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

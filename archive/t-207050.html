@@ -1,0 +1,98 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Pb : Change wallpaper using System plugin, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Pb : Change wallpaper using System plugin NSIS Discussion" />
+	
+	<title> Pb : Change wallpaper using System plugin [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Pb : Change wallpaper using System plugin</div>
+<hr />
+<div class="pda"><a href="t-207050.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=207050">Pb : Change wallpaper using System plugin</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Kemenaran</div><div class="date">6th February 2005, 17:28</div></div><div class="posttext">Hi,<br />
+<br />
+I'm trying to change windows wallpaper with the SystemParametersInfo (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/sysinfo/base/systemparametersinfo.asp) API. I've tried :<br />
+<br />
+System::Call 'user32.dll::SystemParametersInfo(i 20, i 0, t &quot;C:\wall.jpg&quot;, i 0) i'<br />
+<br />
+But I only get a white-wallpaper... Output of the function is '0' (failed), and GetLastError sends me '126 : ERROR_MOD_NOT_FOUND The specified module could not be found'<br />
+<br />
+Any ideas ? Thanks !</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">6th February 2005, 18:18</div></div><div class="posttext">1. SystemParametersInfoA<br />
+2. jpeg support presents in the Active Desktop (may be also in XP?), try bmp first<br />
+3. SPIF_SENDCHANGE<br />
+4. Redraw desktop.<br />
+After this should work :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">6th February 2005, 18:44</div></div><div class="posttext">1. SystemParametersInfoAYou don't need to put an &quot;A&quot; in front of it because System plugin detects automatically if it's needed.<br />
+<br />
+3. SPIF_SENDCHANGEAnd SPIF_UPDATEINIFILE only if you want the file to appear on &quot;Display Properties&quot;.<br />
+<br />
+4. Redraw desktop.You don't need to redraw it manually. The function already does this job for you.<br />
+<br />
+This function requires a bitmap file. (.jpg is not supported here)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Kemenaran</div><div class="date">6th February 2005, 19:55</div></div><div class="posttext">Just tried with a bmp file, worked perfectly.<br />
+<br />
+Thanks a lot ! :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">7th February 2005, 07:15</div></div><div class="posttext">You don't need to redraw it manually. The function already does this job for you.<br />
+<br />
+My beta-testers said that they have few situations when wallpaper update require manual redraw (Active desktop, Win 98, wallpaper removing, may be others, I cannot remember precisely now), so I still advise to use something like<br />
+<br />
+  System::Call 'user32.dll::RedrawWindow(i 0, i 0, i 0, i 0x0085) i .r1'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nebulus</div><div class="date">12th February 2005, 22:22</div></div><div class="posttext">If there any way to change the wallpaper with a successful refresh using active desktop - html and/or files other than a BMP? I've been trying to make a rich desktop installer for forever and just can't get it to work.<br />
+<br />
+By rich desktop, I mean an HTML file loaded with VBScript that also uses flash in the page. Any help would be greatly appreciated!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">13th February 2005, 06:53</div></div><div class="posttext">http://forums.winamp.com/showthread.php?s=&amp;postid=1386259#post1386259<br />
+I saw &quot;create IActiveDesktop interface&quot; in the KichiK' script, but this may serve as a base only for your task. May be easier to write a plug-in. AD works with all types supported by current IE. You can add html as &quot;desktop component&quot; with pActiveDesktop-&gt;AddDesktopItem() method and set wallpaper using pActiveDesktop-&gt;SetWallpaper() (2 different parts of AD). Or you can set jpeg image as a background of your AD &quot;html component&quot;. A lot of samples in Inet.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nebulus</div><div class="date">10th August 2005, 18:47</div></div><div class="posttext">There's a way to change wallpaper using VBScript and the Windows Scriptig Host object, but it's kinda dirty. It'll add anything to the desktop - jpg, bmp, html... Here's some code:<br />
+<br />
+Dim WallPaper<br />
+Dim WP : WP   = &quot;C:\Windows\Web\Wallpaper\test.html&quot;<br />
+Set WallPaper = CreateObject(&quot;WScript.Shell&quot;)<br />
+With WallPaper<br />
+     .Regwrite &quot;HKCU\Control Panel\Desktop\WallPaper&quot;, WP<br />
+     .Run &quot;control desk.cpl&quot; ' run display properties<br />
+     WScript.Sleep 50<br />
+     .AppActivate &quot;Desktop Properties&quot; ' activate desktop tab<br />
+     WScript.Sleep 50<br />
+     If WP = &quot;&quot; Then<br />
+     	For I = 0 to 20<br />
+      	 	WScript.Sleep 50<br />
+	     	.SendKeys &quot;{up}&quot; ' move the selectiong up to &quot;none&quot;<br />
+	    Next<br />
+     Else<br />
+	     WScript.Sleep 50<br />
+	     .SendKeys &quot;{up}&quot; ' toggle the selection up<br />
+	     WScript.Sleep 50<br />
+     	.SendKeys &quot;{down}&quot; ' then toggle down (we've now selected the wallpaper)<br />
+     End If<br />
+     WScript.Sleep 50<br />
+     .SendKeys &quot;~&quot; ' hit OK<br />
+End With<br />
+Set WallPaper = nothing</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

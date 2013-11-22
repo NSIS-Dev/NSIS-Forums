@@ -1,0 +1,94 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Hidden ExecShell Program, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Hidden ExecShell Program NSIS Discussion" />
+	
+	<title> Hidden ExecShell Program [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Hidden ExecShell Program</div>
+<hr />
+<div class="pda"><a href="t-103409.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=103409">Hidden ExecShell Program</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">malone</div><div class="date">3rd September 2002, 19:26</div></div><div class="posttext">Ive got an old skool DOS command line program that I need to execute during the install. Im currently using ExecShell but windows brings up a big ugly DOS window while it runs. The program takes a while to run and many of my users who have never seen a DOS prompt before actually close the window with unfortunate results.<br />
+<br />
+I found out about SW_SHOWMINIMIZED but prefrably Id like a way to hide it entirely (maybe a SW_HIDDEN option). We used to use an installer that did this but NSIS is superior in ever other way. Anyone know of a solution?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">prodangle</div><div class="date">3rd September 2002, 20:20</div></div><div class="posttext">Another problem I came across when doing something similar was in Win95/98 the DOS window didn't automatically close after the program had completed.  I solved this by extracting a .pif file next to the program which was configured to make the window close automatically after running, if anyone knows of a neater way of doing this I too would appreciate it :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">3rd September 2002, 20:34</div></div><div class="posttext">These might be helpful (or not)<br />
+<br />
+START /Dworkingdir /MIN /WAIT commandstring<br />
+CMD /C commandstring</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th September 2002, 08:30</div></div><div class="posttext">The best solution would be writing a small DLL that does the same as MakeNSISw only without the log. If you wish it to log into your NSIS log window you will have to process the output for line breaks and insert it item by item to the NSIS log.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">malone</div><div class="date">4th September 2002, 10:16</div></div><div class="posttext">Thanks for the replies. I had a look at the &quot;start&quot; command, but in its current state it only seems to be able to minimise the window. A quick search on google groups show people with the same problem as me. Apparently start.exe is quite capable of hidding windows (it just has to send a different parameter to one function) but theres no switch for it.<br />
+<br />
+Google groups thread (http://groups.google.com/groups?hl=en&amp;lr=&amp;ie=UTF-8&amp;threadm=8os7k3%24pec%241%40nnrp1.deja.com&amp;rnum=10&amp;prev=/groups%3Fhl%3Den%26lr%3D%26ie%3DISO-8859-1%26q%3Dpatch%2Bstart.exe%26btnG%3DGoogle%2BSearch) <br />
+<br />
+They even patched the exe to do it. But I dont really want to patch other peoples exes or have to include a version in my installer.<br />
+<br />
+I also found a program called runh (http://www.scripthorizon.com/library/utilities/runh.zip)    that hides windows. Im gonna use that for now but it'd be much neater to have it part of nsis.<br />
+<br />
+Im not much of a windows coder but looking at the makensisw source it looks like you can do it pretty much with the following lines of code<br />
+<br />
+GetStartupInfo(&amp;si);<br />
+si.dwFlags = STARTF_USESTDHANDLES|STARTF_USESHOWWINDOW;<br />
+si.wShowWindow = SW_HIDE;<br />
+CreateProcess(NULL,g_script,NULL,NULL,TRUE,CREATE_NEW_CONSOLE,NULL,NULL,&amp;si,&amp;pi);<br />
+<br />
+(where g_script has the path to the exe in it)<br />
+<br />
+Would it be possible to include something like that into nsis?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Daab</div><div class="date">4th September 2002, 10:35</div></div><div class="posttext">Ooh yeah, I can't believe I forgot about that.<br />
+<br />
+I had the same problem, and I wrote 2 separate tiny apps:<br />
+RunHidden - executes a given command line and hides the window<br />
+Hide - looks for a specified window and hides it<br />
+<br />
+The second one is useful for programs that spawn shells on their own (would you believe Microsoft does that too?!). I Exec the program, and then hide that program's specific shell windows.<br />
+<br />
+But this gets nasty if I want to use ExecWait - then I still have to use Exec, and run a loop within the script that does the hiding every 10 milliseconds or so while the program is running (so then I need to detect when the program finished as well...).<br />
+<br />
+Anyway, I too will really like to see an optional /HIDE switch for Exec and ExecWait that uses SW_HIDE.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">4th September 2002, 11:07</div></div><div class="posttext">Add a feature request to the tracker at the SF site. I look at that list when deciding what to work on next.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rainwater</div><div class="date">5th September 2002, 17:33</div></div><div class="posttext">nsExec.dll is now in cvs.  It allows you to execute command-line based programs and it captures the output (with-out a dos box).  This plugin should be available in the next release or you can download in from cvs at sourceforge.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bdfy</div><div class="date">7th February 2005, 22:16</div></div><div class="posttext">Sorry to bump old topic but IMHO it's still relevant question.<br />
+Now SW_HIDE parameter is availble for ExecShell , but I have to use ExecWait and can't use this... What shall I do ? I looked throgh help file , but found nothing ...:(<br />
+BTW,in Inno it looks as<br />
+[Run]<br />
+;Filename: &quot;{app}\cyrfonts.bat&quot;; StatusMsg: &quot;bla-bla&quot;; Flags: runhidden<br />
+What's the analogue ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">8th February 2005, 08:30</div></div><div class="posttext">For DOS application use program files\nsis\contrib\nsExec or http://forums.winamp.com/showthread.php?s=&amp;threadid=181442 plug-in.<br />
+For Win apps it is possible to get process handle from ShellExecuteEx and use WaitForSingelObject to wait for process exit, but this require System plug-in usage experience. You can search in the archive http://nsis.sourceforge.net/archive/browse.php for script samples.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bdfy</div><div class="date">8th February 2005, 11:18</div></div><div class="posttext">2Takhir<br />
+OK, I replied in your topic. It's a pitty , but your plugin doesn't help:(</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

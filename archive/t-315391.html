@@ -1,0 +1,160 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Copying 64-bit DLL to SYSDIR on W7-64, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Copying 64-bit DLL to SYSDIR on W7-64 NSIS Discussion" />
+	
+	<title> Copying 64-bit DLL to SYSDIR on W7-64 [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Copying 64-bit DLL to SYSDIR on W7-64</div>
+<hr />
+<div class="pda"><a href="t-315391.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=315391">Copying 64-bit DLL to SYSDIR on W7-64</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">davo123</div><div class="date">16th December 2009, 17:35</div></div><div class="posttext">I'm trying to install both a Win32 and Win64 version of a DLL into SYSDIR on a Windows 7 64-bit machine. The 32-bit works, but the 64-bit doesn't.<br />
+<br />
+I'm using x64.nsh and the test code below (compiled on a 32-bit XP machine). The file MyDLL64.dll is NOT installed even though it displays as being copied and no error is detected. The file MyDLL32.dll shows up in both C:\Windows\System32 and in C:\Windows\SysWOW64, but seems to be the same file because if you delete one, the other goes too (as expected). A complete search of the system shows no MyDLL64.dll file anywhere at all.<br />
+<br />
+This is a simple DLL with no registration required, so  simple file copy is sufficient. I don't need the complexity of InstallLib (I've tried that - it gives the same behaviour anyway).<br />
+<br />
+Any suggestions as to what I'm doing wrong, or a workaround?<br />
+<br />
+<br />
+!include x64.nsh<br />
+outfile testwin64dll.exe<br />
+RequestExecutionLevel admin<br />
+Section Test<br />
+	${If} ${RunningX64}<br />
+		MessageBox MB_OK &quot;Running on X64&quot;<br />
+	${Else} <br />
+		MessageBox MB_OK &quot;Running on (32-bit) x86&quot;<br />
+	${EndIf}<br />
+	DetailPrint &quot;${__TIMESTAMP__}&quot;<br />
+	<br />
+	SetOutPath $SYSDIR<br />
+	<br />
+	; 32-bit install:<br />
+	${EnableX64FSRedirection}<br />
+	File MyDLL32.dll  # extracts to C:\Windows\SysWOW64 -- OK<br />
+	IfErrors 0 +2<br />
+		DetailPrint &quot;Failed to copy MyDLL32.dll&quot;<br />
+	<br />
+	; 64-bit install:<br />
+	${DisableX64FSRedirection}<br />
+	File MyDLL64.dll  # extracts to C:\Windows\System32 -- NO IT DOESN'T!<br />
+	IfErrors 0 +2<br />
+		DetailPrint &quot;Failed to copy MyDLL64.dll&quot;<br />
+	<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">redxii</div><div class="date">16th December 2009, 22:16</div></div><div class="posttext">Strange, I compiled the code and it copied MyDLL32.dll to syswow64 and MyDLL64.dll to system32 with no copies. Using 2.46.<br />
+<br />
+Though a couple of things.. NSIS has built-in to throw an error message if the file can't be copied. So that part is probably not needed.<br />
+<br />
+You ${EnableX64FSRedirection} after ${DisableX64FSRedirection}, because the installers are 32-bit they go into the 32-bit folders already (Program Files (x86), SysWOW64, etc) unless you have 64-bit files you need to disable redirection and enable it again when you're done.<br />
+<br />
+SetOutPath &quot;$SYSDIR&quot;<br />
+<br />
+${If} ${RunningX64}<br />
+&amp;nbsp;&amp;nbsp;${DisableX64FSRedirection}<br />
+&amp;nbsp;&amp;nbsp;File MyDLL64.dll<br />
+&amp;nbsp;&amp;nbsp;${EnableX64FSRedirection}<br />
+${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">davo123</div><div class="date">17th December 2009, 14:53</div></div><div class="posttext">I tried your simpler example and the same thing happened - it said it had copied, didn't throw an error, but the file wasn't there.<br />
+<br />
+However, the first time I did it I forgot the SetOutPath $SYSDIR line and it copied MyDLL64.dll into C:\, so the problem must be with System32 itself.<br />
+<br />
+Is there some protection setting in W7 that stops DLL's being copied into System32? Something like Windows File Protection in reverse.<br />
+<br />
+It's a brand new W7 system straight out of the box with UAC at default level.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">davo123</div><div class="date">17th December 2009, 16:52</div></div><div class="posttext">A bit more research and what do we find: the Wow64EnableWow64FsRedirection Function used by x64.nsh has problems and &quot;may not work reliably when there are nested calls. Therefore, this function has been replaced by the Wow64DisableWow64FsRedirection and Wow64RevertWow64FsRedirection functions.&quot; See MSDN ref aa365744(VS.85).aspx<br />
+<br />
+http://msdn.microsoft.com/en-us/library/aa365744%28VS.85%29.aspx<br />
+<br />
+Perhaps x64.nsh may need a little touch up. I'll experiment with it tomorrow if I can find the time.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">redxii</div><div class="date">17th December 2009, 20:51</div></div><div class="posttext">I'm not sure about that, but I have noticed odd things about file manipulation in Win 7. Like un/installers or regular programs being unable to remove/overwrite files. Like if I uninstall Qt it leaves phantom files behind, can't be deleted no matter what. Or I am unable to install Steam because it couldn't overwrite files.<br />
+<br />
+All MS had to tell me was a canned &quot;you might have a virus&quot; reply.<br />
+<br />
+I also have a DX redist installer and as far I could tell there were no problems with 64-bit files.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">davo123</div><div class="date">18th December 2009, 01:16</div></div><div class="posttext">Still no luck. I've tried two further experiments (code below) and I've tried turning off UAC, and rebooting between calls. <br />
+<br />
+The first experiment is to check the return value from Wow64EnableWow64FsRedirection (it should be true)<br />
+<br />
+<br />
+!include x64.nsh<br />
+outfile testwin64dllraw-old.exe<br />
+RequestExecutionLevel admin<br />
+Section Test<br />
+	DetailPrint &quot;${__TIMESTAMP__}&quot;<br />
+	<br />
+	SetOutPath &quot;$SYSDIR&quot;<br />
+	<br />
+	${If} ${RunningX64}<br />
+		StrCpy $0 0<br />
+		StrCpy $1 0<br />
+		System::Call kernel32::Wow64EnableWow64FsRedirection(i0) i.r1<br />
+		DetailPrint &quot;Enable(FALSE) returns $1&quot;<br />
+		File MyDLL64.dll<br />
+		System::Call kernel32::Wow64EnableWow64FsRedirection(i1) i.r1<br />
+		DetailPrint &quot;Enable(TRUE) returns $1&quot;<br />
+	${EndIf}<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+Both calls return false indicating that the call failed (or I've got the System::Call syntax wrong!). But NSIS thinks it's copied the file OK.<br />
+<br />
+Likewise, this code using the new recommended functions also returns false in both cases.<br />
+<br />
+<br />
+!include x64.nsh<br />
+outfile testwin64dllraw.exe<br />
+RequestExecutionLevel admin<br />
+Section Test<br />
+	DetailPrint &quot;${__TIMESTAMP__}&quot;<br />
+	<br />
+	SetOutPath &quot;$SYSDIR&quot;<br />
+	<br />
+	${If} ${RunningX64}<br />
+		StrCpy $0 0<br />
+		StrCpy $1 0<br />
+		System::Call kernel32::Wow64DisableWow64FsRedirection(*i.r0) i.r1<br />
+		DetailPrint &quot;Disable returns $1&quot;<br />
+		DetailPrint &quot;OldValue=$0&quot;<br />
+		File MyDLL64.dll<br />
+		System::Call kernel32::Wow64RevertWow64FsRedirection(i.r0) i.r1<br />
+		DetailPrint &quot;Revert returns $1&quot;<br />
+	${EndIf}<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+If the calls are failing then it could explain the behaviour of NSIS appearing to copy the 64-bit DLL to System32 but Windows is actually sending it of to NUL-land.<br />
+<br />
+The paranoid might suspect yet another ploy to encourage us to migrate to their bl*sted Windows Installer. If I've made a mistake in the System::Call syntax or if someone would like to suggest another test, I'd be happy to try it.<br />
+<br />
+Meanwhile I'll try and work out some weasel words for my app documentation for X64 users.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">davo123</div><div class="date">23rd December 2009, 09:41</div></div><div class="posttext">Mmm, yes, it was working after all. A lesson learnt: if you really hate the useless Windows Explorer that comes with W7, then don't use a _32-bit_ explorer substitute or file-search program. These don't &quot;see&quot; the proper Windows\System32 directory. They are re-directed automatically by WoW64 to the 32-bit view, Hence the duplicate behaviour described above and the apparent lack of copying.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

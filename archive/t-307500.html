@@ -1,0 +1,666 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Installer doesn't delete icons in Start Menu Group, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Installer doesn't delete icons in Start Menu Group NSIS Discussion" />
+	
+	<title> Installer doesn't delete icons in Start Menu Group [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Installer doesn't delete icons in Start Menu Group</div>
+<hr />
+<div class="pda"><a href="t-307500.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=307500">Installer doesn't delete icons in Start Menu Group</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">headlock</div><div class="date">19th June 2009, 15:03</div></div><div class="posttext">Hello everyone and huge thanks to NSIS community for doing a great job.<br />
+<br />
+The project I'm working in is using NSIS and recently it was found that uninstaller doesn't do it's job correctly. Our installer supports multi user installation mode. The problem is that the uninstaller doesn't delete icons on the desktop and in the start menu group when installing application for the current user. I've found that the reason of it is that $SMPROGRAMS == AllUsers.<br />
+<br />
+Here is the code:<br />
+<br />
+...<br />
+!define PRODUCT_UNINST_ROOT_KEY &quot;SHCTX&quot;<br />
+<br />
+!define MULTIUSER_EXECUTIONLEVEL Highest <br />
+!define MULTIUSER_MUI<br />
+!define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY<br />
+!insertmacro MULTIUSER_PAGE_INSTALLMODE<br />
+...<br />
+Section Uninstall <br />
+  ...<br />
+  #$SMPROGRAMS points to AllUsers<br />
+  RMDir /r &quot;$SMPROGRAMS\${MANUFACTURER}\${PRODUCT_NAME}$suffix&quot;<br />
+  RMDir &quot;$SMPROGRAMS\${MANUFACTURER}&quot;<br />
+  .. <br />
+SectionEnd<br />
+<br />
+Do I need to set the context of $SMPROGRAMS manually. If yes than how do I get the installation mode used in installer?<br />
+Can someone help me please? I would appreciate it very much.<br />
+<br />
+p.s: sorry for my English, i know it's not perfect :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">redxii</div><div class="date">19th June 2009, 18:26</div></div><div class="posttext">I'm confused, are you trying to remove the shortcuts during install? The Uninstall section is used for creating the uninstaller (use WriteUninstaller to make the uninstaller .exe, placed in the installer code), uninstall sections aren't executed in the installer. Otherwise you use SetShellVarContext before using $SMPROGRAMS or other shell folders to specify current or all users.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">headlock</div><div class="date">22nd June 2009, 09:18</div></div><div class="posttext">Thanks for your reply, redxii.<br />
+No, I don't try to remove shortcuts during the install process. Section 'Uninstall' is used for the uninstaller. I suppose that when user installs the application, installer writes to registry depending on what install mode has been chosen. It will write to HKLM if install mode is 'all users' or to HKCU is it's only for current user. Then, when <br />
+uninstaller is executed I suppose it should define how to initialize $SMPROGRAMS by itself. Otherwise, if it doesn't I need to implement some dummy logic like:<br />
+<br />
+!if ${ROOT} == 'HKLM'<br />
+    SetShellVarContext all<br />
+!else if ${ROOT} == 'HKCU'<br />
+    SetShellVarContext current<br />
+<br />
+In this case, how do I know the registry root of the installed application?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">22nd June 2009, 12:42</div></div><div class="posttext">The value of $MultiUser.InstallMode will be AllUsers or CurrentUser. I guess we need a SetShellVarContext push and SetShellVarContext pop.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">22nd June 2009, 14:28</div></div><div class="posttext">I have been thinking about the need for something like this also, it might be a good idea to be able to push/pop all the settings (SetShellVarContext,SetDetailsPrint,SetRegView etc)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">headlock</div><div class="date">22nd June 2009, 17:16</div></div><div class="posttext">Thanks, Afrow UK! Unfortunetely that didn't help me ...<br />
+Here is my code:<br />
+<br />
+!define MULTIUSER_EXECUTIONLEVEL Highest <br />
+!define MULTIUSER_INSTALLMODE_COMMANDLINE<br />
+<br />
+#if uncomment this line $MultiUser.InstallMode will always be == 'CurrentUser'<br />
+#!define MULTIUSER_INSTALLMODE_DEFAULT_CURRENTUSER<br />
+<br />
+!define MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY &quot;Software\${MANUFACTURER}\${PRODUCT_NAME}$suffix&quot;<br />
+!define MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUENAME &quot;Install_Dir&quot;<br />
+!define MULTIUSER_INSTALLMODE_INSTDIR &quot;${PRODUCT_NAME}$suffix&quot;<br />
+!define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY &quot;Software\${MANUFACTURER}\${PRODUCT_NAME}$suffix&quot;<br />
+!define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_VALUENAME &quot;Install_Mode&quot;<br />
+!define MULTIUSER_MUI<br />
+...<br />
+Section Uninstall<br />
+...<br />
+ ${If} $MultiUser.InstallMode == 'AllUsers'<br />
+      SetShellVarContext all<br />
+  ${ElseIf} $MultiUser.InstallMode == 'CurrentUser'<br />
+      SetShellVarContext current<br />
+  ${EndIf}<br />
+<br />
+RMDir /r &quot;$SMPROGRAMS\${MANUFACTURER}\${PRODUCT_NAME}$suffix&quot;<br />
+RMDir &quot;$SMPROGRAMS\${MANUFACTURER}&quot;<br />
+.. <br />
+SectionEnd.<br />
+<br />
+Perhaps I forgot something to do...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">22nd June 2009, 20:26</div></div><div class="posttext">I think you misunderstand. You just need to SetShellVarContext current before deleting the shortcuts. I posted what I did because you may want to know what to set back with SetShellVarContext afterwards.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">phungus420</div><div class="date">2nd July 2009, 10:36</div></div><div class="posttext">Hello, I have a similar problem.  I'm not quite following what the solution is though from this thread.  Any chance you could go in greater detail.<br />
+<br />
+For me, it's slightly different.  Everything in my installer works, except for the uninstalling for the start menu shortcut.  The other shortcuts (quciklaunch and desktop) are removed no problem, along with the core of the mod.<br />
+<br />
+For reference here is the code I am using (well the bits that are pertinant):<br />
+<br />
+...<br />
+  Var INSTDIR1 ; Mods<br />
+  Var StartMenuFolder<br />
+<br />
+...<br />
+  !insertmacro MUI_PAGE_DIRECTORY<br />
+  !insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder<br />
+<br />
+  Section &quot;Start Menu Shortcut&quot; Section4<br />
+  	!insertmacro MUI_STARTMENU_WRITE_BEGIN Application<br />
+		CreateDirectory &quot;$SMPROGRAMS\$StartMenuFolder&quot;<br />
+	!insertmacro MUI_STARTMENU_WRITE_END<br />
+    CreateShortCut &quot;$SMPROGRAMS\$StartMenuFolder\${NAME}.lnk&quot; &quot;$INSTDIR1\Civ4BeyondSword.exe&quot; ...<br />
+  SectionEnd<br />
+<br />
+  Section &quot;Uninstall&quot;<br />
+	<br />
+    ...<br />
+    ;Delete Start Menu Shortcut<br />
+	!insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder<br />
+	    Delete &quot;$SMPROGRAMS\$StartMenuFolder\${NAME}.lnk&quot;<br />
+	    RMDir &quot;$SMPROGRAMS\$StartMenuFolder&quot;<br />
+    ...<br />
+  SectionEnd<br />
+<br />
+<br />
+Now I can't at all figure out what's wrong with that.  It installs fine, everything in this script works (even the optional add on stuff I have in other parts of the code), just the danged uninstaller refuses to remove the Start Menu shortcut.  (also I replaced the icon stuff and beginning of the uninstall section with a ... because it was running off the screen, and works fine)<br />
+<br />
+Anyone have any idea how to fix this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">phungus420</div><div class="date">3rd July 2009, 04:58</div></div><div class="posttext">Well I've split the uninstaller into seperate sections, and added:<br />
+<br />
+SetShellVarContext &quot;current&quot;<br />
+<br />
+To both the onInit and un.onInit (also tried SetShellVarContext &quot;all&quot;), and still no dice.<br />
+<br />
+Anyone have any clue what is wrong with my Uninstaller?  Everything works except the blasted Start Menu refuses to be deleted.  :hang: <br />
+<br />
+Here is my unistaller code if that helps:<br />
+<br />
+;Uninstaller Section<br />
+<br />
+  Section &quot;un.Core&quot; SecUnCore<br />
+<br />
+    ;Delete Files<br />
+    RMDir /r &quot;$0\${MOD_LOC}\*.*&quot;<br />
+    ;Remove the installation directory<br />
+    RMDir &quot;$0\${MOD_LOC}&quot;<br />
+    ;Delete Desktop Shortcut<br />
+    Delete &quot;$DESKTOP\${NAME}.lnk&quot;<br />
+    ;Delete Quicklaunch Shortcut<br />
+    Delete &quot;$QUICKLAUNCH\${SHORT_NAME}.lnk&quot;<br />
+  SectionEnd<br />
+<br />
+  Section &quot;-un.StartMenu&quot; SecUnStartMenu<br />
+<br />
+    ;Delete Start Menu Shortcut<br />
+    !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder<br />
+    Delete &quot;$SMPROGRAMS\$StartMenuFolder\${NAME}.lnk&quot;<br />
+    RMDir &quot;$SMPROGRAMS\$StartMenuFolder&quot;<br />
+  SectionEnd<br />
+<br />
+  Section &quot;-un.Registry&quot; SecUnRegistry<br />
+<br />
+    DeleteRegValue &quot;${MOD_REG_ROOT}&quot; &quot;Software\${MOD_LOC}&quot; &quot;Start Menu&quot;<br />
+    DeleteRegKey HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\${MOD_LOC}&quot;<br />
+  SectionEnd<br />
+  <br />
+  Section &quot;-un.Uninstaller&quot; SecUnUninstaller<br />
+	<br />
+	# delete uninstaller<br />
+	Delete &quot;$INSTDIR\Uninstall.exe&quot;<br />
+  SectionEnd<br />
+<br />
+  Function un.onInit<br />
+<br />
+    ;get mod install path of from the registy<br />
+    SetShellVarContext &quot;current&quot;<br />
+    ReadRegStr $0 HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\${MOD_LOC}&quot; &quot;ModInstDir&quot;<br />
+  FunctionEnd<br />
+<br />
+I've searched and searched, and been getting help from a programmer who is pretty versed in the NSIS installer on the CivFanatics forums, and no clues come up.  It just doesn't work...<br />
+<br />
+:(<br />
+<br />
+Also one thing that might help would be to have a print statement to tell me what exactly the uninstaller is trying to do, that causes it to fail.  Is there anyway to set up print statements in NSIS?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">phungus420</div><div class="date">3rd July 2009, 08:59</div></div><div class="posttext">Well I was able to get logging to work (with some help).  The issue is that when you select the folder to install the start menu to, it doesn't relate this information.<br />
+<br />
+$StartMenuFolder should be returning SELECTEDFOLDER/${MOD_LOC}, but instead only returns ${MOD_LOC}<br />
+<br />
+I thought this was the whole purpose of <br />
+MUI_STARTMENU_GETFOLDER Application $StartMenuFolder<br />
+<br />
+Anyone know how to get it to pull the selected folder the user chooses when installing?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">phungus420</div><div class="date">3rd July 2009, 12:19</div></div><div class="posttext">Man this is driving me nuts, I've been hammering away at it all day.  My head is about to explode.  I can set up another variable, like so:<br />
+<br />
+  Section &quot;Start Menu Shortcut&quot; Section4<br />
+	!insertmacro MUI_STARTMENU_WRITE_BEGIN Application<br />
+	CreateDirectory &quot;$SMPROGRAMS\$StartMenuFolder&quot;<br />
+	CreateShortCut &quot;$SMPROGRAMS\$StartMenuFolder ...<br />
+	!insertmacro MUI_STARTMENU_WRITE_END<br />
+	StrCpy $StartMenuFolder1 &quot;$SMPROGRAMS\$StartMenuFolder&quot;<br />
+	!define START_MENU_FOLDER &quot;$StartMenuFolder1&quot;<br />
+  SectionEnd<br />
+<br />
+But there seems to be no way to reference it in the uninstaller.  Everytime I do, it just comes up blank if I check it.  Everything I try I'm just stuck with this in the Install section, with no way to reference it in the uninstall section....</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">phungus420</div><div class="date">3rd July 2009, 13:40</div></div><div class="posttext">Well I tried a really hacky work around, that I'm not sure how or why it failed.  Basically I had it write the Variable to a text file it would create on install.  This worked, and the document contained the correct path.  Then I set it to read that file in the uninstaller.  For some reason if I used a user variable, the script failed to compile.  If I used one of the default variables like $R1, it compiled, but there was nothing inside it after it was told to read the file.  So strange, I was sure that would work.  And it's not like Read and Write code is hard, I can't see what's wrong with it (or why using a user variable would fail to compile, but using a default variable would not).  For reference this is what I mean:<br />
+<br />
+  !define START_MENU_HACK &quot;StartMenuHack.txt&quot;  ;Do not change this block<br />
+...<br />
+<br />
+<br />
+  Var HackStartMenu<br />
+<br />
+...<br />
+<br />
+	StrCpy $StartMenuFolder1 &quot;$SMPROGRAMS\$StartMenuFolder&quot;<br />
+        FileOpen $4 &quot;$INSTDIR\Mods\${MOD_LOC}\${START_MENU_HACK}&quot; w<br />
+        FileWrite $4 &quot;$StartMenuFolder1&quot;<br />
+        FileClose $4<br />
+<br />
+<br />
+Above all works, was checked, it wrote the file with the correct path.<br />
+<br />
+    FileOpen $R4 &quot;$INSTDIR\Mods\${MOD_LOC}\${START_MENU_HACK}&quot; r<br />
+    FileRead $R4 $HackStartMenu<br />
+    FileClose $R4<br />
+    Delete &quot;$HackStartMenu\${NAME}.lnk&quot;<br />
+    RMDir &quot;$HackStartMenu&quot;<br />
+Now the above failed to compile.  Complaiend about the FileRead $R4 $HackStartMenu, and said something about the user variable.  But the strange thing was using $R2 compiled.  But when I checked what was inside of it, it just came out blank.  And I did move this to the top of the uninstall functions to make sure the folder wasn't deleted before it had a chance to read it.<br />
+<br />
+I think I'm out of ideas now.  Help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">phungus420</div><div class="date">4th July 2009, 06:34</div></div><div class="posttext">Got it to work finally.  I had to write the StartMenu path to the registry.  Now just one minor detail left, but guess I'll start a new thread on it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">4th July 2009, 12:02</div></div><div class="posttext">I was about to go onto what I meant earlier but then I've realised what your problem is. If you'd read the Multi User readme properly you would have saved yourself a lot of hassle.<br />
+<br />
+<br />
+!define MULTIUSER_EXECUTIONLEVEL Highest<br />
+!include MultiUser.nsh<br />
+<br />
+...<br />
+<br />
+Function .onInit<br />
+  !insertmacro MULTIUSER_INIT<br />
+FunctionEnd<br />
+<br />
+Function un.onInit<br />
+  !insertmacro MULTIUSER_UNINIT<br />
+FunctionEnd<br />
+<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hürnen</div><div class="date">18th October 2010, 15:52</div></div><div class="posttext">Hi Afrow UK<br />
+<br />
+I'd like to resume this thread, as I've got some problems too. I worked through the Multi User readme, but still don't get it.<br />
+<br />
+I'll describe two scenarios, in both of which I am an admin user on XP.<br />
+1: <br />
+Install the application &quot;for anyone using this computer&quot;. Shortcuts are created in C:\Documents and Settings\All Users\Startmenu\Programs\MyApp<br />
+Now I execute the uninstaller and everything (including shortcuts) is removed as expected.<br />
+<br />
+2:<br />
+Install the application &quot;just for me&quot;. Shortcuts are created in C:\Documents and Settings\myUser\Startmenu\Programs\MyApp<br />
+Now I execute the uninstaller but the shortcuts won't get deleted. The uninstaller tries to remove shortcuts in C:\Documents and Settings\All Users\Startmenu\Programs\MyApp, but there are none.<br />
+<br />
+I assume the default &quot;installation mode&quot; in the uninstaller is &quot;AllUsers&quot;, if the uninstaller is executed by an admin.<br />
+<br />
+I see two solutions:<br />
+<br />
+ a check box in the uninstaller for allUsers/currentUser or<br />
+ I have to manually save the &quot;installation mode&quot; during installation in the registry and read it back during uninstallation and then call SetShellVarContext with that value.<br />
+<br />
+<br />
+Is there a simpler solution? Or I am completely of the track? :igor:<br />
+<br />
+Thanks,<br />
+Remo</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th October 2010, 16:36</div></div><div class="posttext">The 2nd solution is the correct one (I believe MultiUser will do it for you if you set the correct defines) Or for my take on this: http://www.nsis.pastebin.com/PmiY8DuZ</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JackN</div><div class="date">25th October 2010, 19:17</div></div><div class="posttext">I am trying to tailor http://www.nsis.pastebin.com/PmiY8DuZ to install a java app with several .jar libs and a dll. After making the changes I got the nsis compile warning:<br />
+<br />
+uninstall function &quot;un.StrStr&quot; not referenced - zeroing code (0-33) out<br />
+<br />
+So I tried http://www.nsis.pastebin.com/PmiY8DuZ no changes but got the same warning. Anyone able to point me in the right direction?<br />
+<br />
+The 2nd solution is the correct one (I believe MultiUser will do it for you if you set the correct defines) Or for my take on this: http://www.nsis.pastebin.com/PmiY8DuZ</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">25th October 2010, 19:55</div></div><div class="posttext">After making the changes I got the nsis compile warning:<br />
+uninstall function &quot;un.StrStr&quot; not referenced - zeroing code (0-33) out<br />
+<br />
+That warning is fairly benign (thus being a warning, rather than an error).<br />
+<br />
+The String Functions header uses Functions for some of its musclework.  Functions can't be shared between Installer and Uninstaller, so both are defined when you use ${StrStr} to initialize the functions.<br />
+<br />
+If you then subsequently not actually call the uninstaller version of that Function anywhere from the uninstaller, NSIS will throw that warning out there.<br />
+<br />
+Unless you really, really need to save a few bytes (those zeroes compress nicely, of course), I wouldn't worry about it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JackN</div><div class="date">25th October 2010, 20:32</div></div><div class="posttext">Uninstaller still does not delete icons in Start Menu Group or from the desktop. Do I need to delete these items explicitly? Do I need to define MUI_FINISHPAGE_RUN? This is the output from the installer followed by a script modified from http://www.nsis.pastebin.com/PmiY8DuZ:<br />
+<br />
+Delete file: C:\Program Files (x86)\MyApp\MyApp.ico<br />
+Delete file: C:\Program Files (x86)\MyApp\MyApp.jar<br />
+Delete file: C:\Program Files (x86)\MyApp\lib\jcommon-1.0.16.jar<br />
+Delete file: C:\Program Files (x86)\MyApp\lib\jfreechart-1.0.13.jar<br />
+Delete file: C:\Program Files (x86)\MyApp\lib\Serialio.jar<br />
+Remove folder: C:\Program Files (x86)\MyApp\lib\<br />
+Delete file: C:\Program Files (x86)\MyApp\uninstall.exe<br />
+Remove folder: C:\Program Files (x86)\MyApp\<br />
+Completed<br />
+!define APPNAME &quot;MyApp&quot;<br />
+!define REGUINSTKEY &quot;{82e9dffd-fcec-4ba6-b912-a595644cf080}&quot; ; guidgen.com<br />
+<br />
+!include x64.nsh<br />
+<br />
+OutFile &quot;Setup_${APPNAME}.exe&quot;<br />
+Name &quot;${APPNAME}&quot;<br />
+<br />
+!define MULTIUSER_EXECUTIONLEVEL Highest<br />
+!define MULTIUSER_INSTALLMODE_COMMANDLINE<br />
+!define MULTIUSER_INSTALLMODE_InstDir &quot;${APPNAME}&quot;<br />
+<br />
+Var SMDir ;Start menu folder<br />
+<br />
+!define MULTIUSER_MUI<br />
+!include MUI2.nsh<br />
+!include MultiUser.nsh<br />
+<br />
+!macro WriteUninstData name data<br />
+push &quot;${data}&quot;<br />
+push &quot;${name}&quot;<br />
+call WriteUninstData<br />
+!macroend<br />
+<br />
+!macro ReadUninstData outvar name<br />
+push &quot;${name}&quot;<br />
+call un.ReadUninstData<br />
+!if &quot;${outvar}&quot; != &quot;&quot;<br />
+pop ${outvar}<br />
+!endif<br />
+!macroend<br />
+<br />
+Function .onInit<br />
+!insertmacro MULTIUSER_INIT<br />
+FunctionEnd<br />
+<br />
+Function un.onInit<br />
+;MULTIUSER_UNINIT does NOT do The Right Thing(TM), so we roll our own<br />
+!insertmacro MULTIUSER_INIT_TEXTS<br />
+UserInfo::GetAccountType<br />
+Pop $MultiUser.Privileges<br />
+!insertmacro ReadUninstData $1 IMode<br />
+${If} $1 = 0<br />
+	call un.MultiUser.InstallMode.CurrentUser<br />
+${Else}<br />
+	${If} $MultiUser.Privileges != Admin<br />
+		MessageBox MB_ICONSTOP &quot;$(^Name)${MULTIUSER_INIT_TEXT_ADMINREQUIRED}&quot;<br />
+		SetErrorLevel 740 ;ERROR_ELEVATION_REQUIRED<br />
+		Quit<br />
+	${EndIf}<br />
+	call un.MultiUser.InstallMode.AllUsers<br />
+${EndIf}<br />
+FunctionEnd<br />
+<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+!insertmacro MULTIUSER_PAGE_INSTALLMODE<br />
+#!insertmacro MUI_PAGE_COMPONENTS ;This example does not have separate components<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+!insertmacro MUI_PAGE_STARTMENU 0 $SMDir<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+###TODO:!define MUI_FINISHPAGE_RUN &quot;$InstDir\MyApp.exe&quot;<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW PageFinShow<br />
+!insertmacro MUI_PAGE_FINISH<br />
+<br />
+!insertmacro MUI_UNPAGE_WELCOME<br />
+!insertmacro MUI_UNPAGE_CONFIRM<br />
+!insertmacro MUI_UNPAGE_INSTFILES<br />
+<br />
+!insertmacro MUI_LANGUAGE English<br />
+<br />
+Function PageFinShow<br />
+!ifdef MUI_FINISHPAGE_RUN<br />
+;When installmode != CurrentUser, we could end up running something as the wrong user...<br />
+${If} $MultiUser.InstallMode != CurrentUser<br />
+	SendMessage $mui.FinishPage.Run ${BM_SETCHECK} 0 0<br />
+!if 1<br />
+	EnableWindow $mui.FinishPage.Run 0<br />
+!else<br />
+	ShowWindow $mui.FinishPage.Run 0<br />
+!endif<br />
+${EndIf}<br />
+!endif<br />
+FunctionEnd<br />
+<br />
+<br />
+Section &quot;Required Files&quot;<br />
+SectionIn RO<br />
+SetOutPath $InstDir<br />
+WriteUninstaller &quot;$InstDir\uninstall.exe&quot;<br />
+;Save install mode<br />
+StrCpy $1 &quot;0&quot; <br />
+${IfThen} $MultiUser.InstallMode == AllUsers ${|} StrCpy $1 &quot;1&quot;  ${|}<br />
+!insertmacro WriteUninstData IMode $1<br />
+<br />
+File ${APPNAME}.ico<br />
+File dist\${APPNAME}.jar<br />
+CreateDirectory &quot;$InstDir\lib&quot;<br />
+File /oname=lib\jcommon-1.0.16.jar dist\lib\jcommon-1.0.16.jar<br />
+File /oname=lib\jfreechart-1.0.13.jar dist\lib\jfreechart-1.0.13.jar<br />
+File /oname=lib\Serialio.jar dist\lib\Serialio.jar<br />
+WriteUninstaller $InstDir\Uninstall.exe<br />
+; Check OS for proper jspWin.dll<br />
+${If} ${RunningX64}<br />
+	File /oname=$SYSDIR\jspWin.dll dll\64b\jspWin.dll<br />
+${Else}<br />
+	File /oname=$SYSDIR\jspWin.dll dll\32b\jspWin.dll<br />
+${EndIf}<br />
+<br />
+; Check for Java Runtime Environment (JRE)<br />
+${If} ${RunningX64} <br />
+	${DisableX64FSRedirection} <br />
+	${Unless} ${FileExists} &quot;$SYSDIR\javaw.exe&quot; <br />
+		ExecWait '&quot;jre-6u22-windows-x64.exe&quot;'<br />
+	${EndUnless} <br />
+	${EnableX64FSRedirection} <br />
+${Else}  <br />
+	${Unless} ${FileExists} &quot;$SYSDIR\javaw.exe&quot; <br />
+		ExecWait '&quot;jre-6u22-windows-i586-s.exe&quot;'<br />
+	${EndUnless} <br />
+${EndIf}  <br />
+WriteRegStr SHCTX &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\${REGUINSTKEY}&quot; UninstallString '&quot;$InstDir\uninstall.exe&quot;'<br />
+WriteRegStr SHCTX &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\${REGUINSTKEY}&quot; DisplayName &quot;${APPNAME}&quot;<br />
+SectionEnd<br />
+<br />
+Section -StartMenu<br />
+!insertmacro MUI_STARTMENU_WRITE_BEGIN 0<br />
+CreateDirectory &quot;$SMPrograms\$SMDir&quot;<br />
+###TODO: CreateShortcut &quot;$SMPrograms\$SMDir\${APPNAME}.lnk&quot; '&quot;$InstDir\MyApp.exe&quot;'<br />
+CreateDirectory &quot;$SMPrograms\$SMDir&quot;<br />
+CreateShortCut &quot;$SMPrograms\$SMDir\${APPNAME}.lnk&quot; &quot;$SYSDIR\javaw.exe&quot; &quot;-jar ${APPNAME}.jar&quot; &quot;$INSTDIR\${APPNAME}.ico&quot;<br />
+CreateShortCut &quot;$SMPrograms\$SMDir\Uninstall ${APPNAME}.lnk&quot; &quot;$INSTDIR\Uninstall.exe&quot; &quot;$INSTDIR\${APPNAME}.ico&quot;<br />
+CreateShortCut &quot;$DESKTOP\${APPNAME}.lnk&quot; &quot;$SYSDIR\javaw.exe&quot; &quot;-jar ${APPNAME}.jar&quot; &quot;$INSTDIR\${APPNAME}.ico&quot;<br />
+;We need to save the startmenu folder so we can remove the shortcut in the uninstaller<br />
+!insertmacro WriteUninstData SMDir $SMDir<br />
+!insertmacro MUI_STARTMENU_WRITE_END<br />
+SectionEnd<br />
+<br />
+Section Uninstall<br />
+!insertmacro ReadUninstData $SMDir SMDir<br />
+${If} $InstDir != &quot;&quot;<br />
+	Delete &quot;$InstDir\${APPNAME}.ico&quot;<br />
+	Delete &quot;$InstDir\${APPNAME}.jar&quot;<br />
+	RMDir /r &quot;$InstDir\lib&quot;<br />
+${EndIf}<br />
+${If} $SMDir != &quot;&quot;<br />
+	Delete &quot;$SMPrograms\$SMDir\${APPNAME}.lnk&quot;<br />
+	RMDir &quot;$SMPrograms\$SMDir&quot;<br />
+${EndIf}<br />
+DeleteRegKey SHCTX &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\${REGUINSTKEY}&quot;<br />
+Delete &quot;$InstDir\uninstall.exe&quot;<br />
+RMDir &quot;$InstDir&quot;<br />
+Delete &quot;$DESKTOP\MyApp.lnk&quot;<br />
+SectionEnd<br />
+<br />
+Function WriteUninstData<br />
+Exch $1<br />
+push $0<br />
+Exch 2<br />
+FileOpen $0 &quot;$InstDir\uninstall.exe&quot; a<br />
+FileSeek $0 0 END<br />
+FileWrite $0 &quot;$\n$1&gt;&quot;<br />
+pop $1<br />
+FileWrite $0 $1<br />
+FileClose $0<br />
+pop $1<br />
+pop $0<br />
+FunctionEnd<br />
+<br />
+Function Un.ReadUninstData<br />
+Exch $9<br />
+Push $0<br />
+Push $1<br />
+Push $2<br />
+Push $3<br />
+FileOpen $0 &quot;$EXEPATH&quot; r<br />
+StrCpy $3 2<br />
+${Do}<br />
+	IntOp $3 $3 + 1<br />
+	FileSeek $0 -$3 END $1<br />
+	${If} $3 &gt; 9999 ;${If} $1 &lt; 33000<br />
+		StrCpy $9 &quot;&quot; ;failed<br />
+		${Break}<br />
+	${EndIf}<br />
+	FileRead $0 $1<br />
+	StrLen $2 $9<br />
+	IntOp $2 $2 + 1<br />
+	StrCpy $2 $1 $2<br />
+	${If} $2 == &quot;$9&gt;&quot;<br />
+		StrLen $2 $9<br />
+		IntOp $2 $2 + 1<br />
+		StrCpy $9 $1 &quot;&quot; $2<br />
+		${Do}<br />
+			StrCpy $1 $9 1 -1<br />
+			${If} $1 != &quot;$\n&quot;<br />
+			${AndIf} $1 != &quot;$\r&quot;<br />
+				${Break}<br />
+			${EndIf}<br />
+			StrCpy $9 $9 -1<br />
+		${Loop}<br />
+		${Break}<br />
+	${EndIf}<br />
+${Loop}<br />
+pop $3<br />
+pop $2<br />
+pop $1<br />
+pop $0<br />
+Exch $9<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">redxii</div><div class="date">25th October 2010, 21:45</div></div><div class="posttext">Just off the bat.. since you are using MultiUser for a mixed admin/non-admin install are you checking for the correct context? $SMPrograms will either be the currently logged in user's start menu if SetShellVarContext is set to 'current' (default) and it looks as if you are intending to remove all users' start menu. The same goes for $DESKTOP, its location too will depend on SetShellVarContext.<br />
+<br />
+One way is to check a string in HKCU or HKLM to see which exists, then set un.MultiUser.InstallMode.AllUsers or un.MultiUser.InstallMode.CurrentUser accordingly. You have to check HKLM and HKCU explicitly you can't use SHCTX.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th October 2010, 22:49</div></div><div class="posttext">The warning is there because multiuser.nsh wants it, but since its uninstaller handling is broken (IMHO) I use some custom stuff and the function that uses un.StrStr never gets called. I'm guessing you could !define UnStrStr_INCLUDED before including multiuser.nsh and then undef it again.<br />
+<br />
+The normal way to deal with a problem like this is to messagebox the path in the uninstaller and make sure it is correct like redxii suggests.<br />
+<br />
+But there is a bigger problem here, why are you using a dual mode script (single and all users) when you are installing files in $sysdir, only admins can do that so normal users will not be able to install without errors!<br />
+<br />
+As a final note, adding a desktop shortcut in the startmenu section is well, not kind to your users, just add a desktop shortcut section and a components page</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JackN</div><div class="date">26th October 2010, 14:07</div></div><div class="posttext">Ok: back to basics since I need to complete this. I don't need MultiUser or Admin, I was just following the example in http://www.nsis.pastebin.com/PmiY8DuZ hoping to get to a quick solution. I've gone back to something simpler that installs properly but uninstall is only partial. SMPrograms icons are still not being deleted. I have been programming in embedded environments for some time but I am very new to application programming and desktop environments. I am developing on Vista 64 but need to target XP and Vista 32 and 64 installs. I don't need all the bells and whistles in this 1.0 distribution but it would be nice if I could get it to uninstall properly. What is the simplest method to repair the uninstall to include SMPrograms?<br />
+<br />
+Install details:<br />
+ <br />
+Output folder: C:\Program Files (x86)\MyApp<br />
+Extract: MyApp.ico... 100%<br />
+Extract: MyApp.jar... 100%<br />
+Create folder: C:\Program Files (x86)\MyApp\lib<br />
+Extract: lib\jcommon-1.0.16.jar... 100%<br />
+Extract: lib\jfreechart-1.0.13.jar... 100%<br />
+Extract: lib\Serialio.jar... 100%<br />
+Created uninstaller: C:\Program Files (x86)\MyApp\Uninstall.exe<br />
+Extract: C:\Windows\system32\jspWin.dll... 100%<br />
+Create folder: C:\Users\jackn\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\MyApp<br />
+Create shortcut: C:\Users\jackn\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\MyApp\MyApp.lnk<br />
+Create shortcut: C:\Users\jackn\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\MyApp\Uninstall MyApp.lnk<br />
+Completed<br />
+Uninstall details:<br />
+<br />
+Delete file: C:\Program Files (x86)\MyApp\MyApp.ico<br />
+Delete file: C:\Program Files (x86)\MyApp\MyApp.jar<br />
+Delete file: C:\Program Files (x86)\MyApp\Uninstall.exe<br />
+Delete file: C:\Program Files (x86)\MyApp\lib\jcommon-1.0.16.jar<br />
+Delete file: C:\Program Files (x86)\MyApp\lib\jfreechart-1.0.13.jar<br />
+Delete file: C:\Program Files (x86)\MyApp\lib\Serialio.jar<br />
+Remove folder: C:\Program Files (x86)\MyApp\lib\<br />
+Remove folder: C:\Program Files (x86)\MyApp\<br />
+Remove folder: C:\Users\jackn\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\MyApp\<br />
+Completed<br />
+<br />
+!define APPNAME &quot;MyApp&quot;<br />
+!define REGUINSTKEY &quot;{ce9c1ec4-7410-4376-bf7e-4abf0bd9f0ac}&quot; ; guidgen.com<br />
+!include x64.nsh<br />
+OutFile &quot;Setup_${APPNAME}.exe&quot;<br />
+Name &quot;${APPNAME}&quot;<br />
+InstallDir &quot;$PROGRAMFILES\${APPNAME}&quot;<br />
+DirText &quot;Please choose install directory&quot;<br />
+<br />
+Section &quot;Install&quot;<br />
+SetOutPath $InstDir<br />
+File ${APPNAME}.ico<br />
+File dist\${APPNAME}.jar<br />
+CreateDirectory &quot;$InstDir\lib&quot;<br />
+File /oname=lib\jcommon-1.0.16.jar dist\lib\jcommon-1.0.16.jar<br />
+File /oname=lib\jfreechart-1.0.13.jar dist\lib\jfreechart-1.0.13.jar<br />
+File /oname=lib\Serialio.jar dist\lib\Serialio.jar<br />
+WriteUninstaller $InstDir\Uninstall.exe<br />
+; Check OS for proper jspWin.dll<br />
+${If} ${RunningX64}<br />
+	File /oname=$SYSDIR\jspWin.dll dll\64b\jspWin.dll<br />
+${Else}<br />
+	File /oname=$SYSDIR\jspWin.dll dll\32b\jspWin.dll<br />
+${EndIf}<br />
+; Check for Java Runtime Environment (JRE)<br />
+${If} ${RunningX64} <br />
+	${DisableX64FSRedirection} <br />
+	${Unless} ${FileExists} &quot;$SYSDIR\javaw.exe&quot; <br />
+		ExecWait '&quot;jre-6u22-windows-x64.exe&quot;'<br />
+	${EndUnless} <br />
+	${EnableX64FSRedirection} <br />
+${Else}  <br />
+	${Unless} ${FileExists} &quot;$SYSDIR\javaw.exe&quot; <br />
+		ExecWait '&quot;jre-6u22-windows-i586-s.exe&quot;'<br />
+	${EndUnless} <br />
+${EndIf}  <br />
+WriteRegStr HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\${REGUINSTKEY}&quot; &quot;UninstallString&quot; '&quot;$InstDir\Uninstall.exe&quot;'<br />
+WriteRegStr HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\${REGUINSTKEY}&quot; &quot;DisplayName&quot; &quot;${APPNAME} (remove only)&quot;<br />
+CreateDirectory &quot;$SMPrograms\${APPNAME}&quot;<br />
+CreateShortCut &quot;$SMPrograms\${APPNAME}\${APPNAME}.lnk&quot; &quot;$SYSDIR\javaw.exe&quot; &quot;-jar ${APPNAME}.jar&quot; &quot;$InstDir\${APPNAME}.ico&quot;<br />
+CreateShortCut &quot;$SMPrograms\${APPNAME}\Uninstall ${APPNAME}.lnk&quot; &quot;$InstDir\Uninstall.exe&quot; &quot;$InstDir\${APPNAME}.ico&quot;<br />
+MessageBox MB_OK &quot;Installation was successful.&quot;<br />
+SectionEnd<br />
+<br />
+Section Uninstall<br />
+${If} $InstDir != &quot;&quot;<br />
+	Delete &quot;$InstDir\${APPNAME}.ico&quot;<br />
+	Delete &quot;$InstDir\${APPNAME}.jar&quot;<br />
+	Delete &quot;$InstDir\Uninstall.exe&quot;<br />
+	RMDir /r &quot;$InstDir\lib&quot;<br />
+	RMDir &quot;$InstDir&quot;<br />
+${EndIf}<br />
+Delete &quot;$SMPrograms\${APPNAME}\${APPNAME}.lnk&quot;<br />
+Delete &quot;$SMPrograms\${APPNAME}\Uninstall ${APPNAME}.lnk&quot;<br />
+RMDir &quot;$SMPrograms\${APPNAME}&quot;<br />
+DeleteRegKey HKLM &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\${REGUINSTKEY}&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JackN</div><div class="date">26th October 2010, 16:32</div></div><div class="posttext">Solved: also needed <br />
+RequestExecutionLevel highest</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">26th October 2010, 17:04</div></div><div class="posttext">Solved: also needed <br />
+RequestExecutionLevel highest<br />
+<br />
+This issue is a known NT6 problem, see http://nsis.sourceforge.net/Shortcuts_removal_fails_on_Windows_Vista (Basically, MS broke all old nsis installers)<br />
+<br />
+Using &quot;RequestExecutionLevel highest&quot; is not the correct solution for you since you are installing stuff in $sysdir. Like I said, only admins can do that. Take a look at http://www.nsis.pastebin.com/63tS3AS2 for info on how to make sure your installer runs as admin. Also, it is probably a good idea for you to set &quot;SetShellVarContext all&quot; in BOTH the installer and uninstaller before touching the $smprograms variable.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

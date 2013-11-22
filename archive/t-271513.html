@@ -1,0 +1,135 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" cannot disable file system redirection on 64-bit Windows, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  cannot disable file system redirection on 64-bit Windows NSIS Discussion" />
+	
+	<title> cannot disable file system redirection on 64-bit Windows [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  cannot disable file system redirection on 64-bit Windows</div>
+<hr />
+<div class="pda"><a href="t-271513.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=271513">cannot disable file system redirection on 64-bit Windows</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">SunToo</div><div class="date">21st May 2007, 07:55</div></div><div class="posttext">Hi, <br />
+I wrote an installer that detects during initialization whether it is running on 32-bit or 64-bit Windows. If the latter is true it disables file system redirection for the following reasons:<br />
+<br />
+1) I want to write to the system32 directory.<br />
+2) I want to use the same script for both 32-bit or 64-bit Windows.<br />
+<br />
+But it doesn't work. Please try running the following example installer (compiled with NSIS v2.27) on 64-bit Windows.<br />
+<br />
+OutFile &quot;test64.exe&quot;<br />
+Name &quot;test64&quot;<br />
+AllowSkipFiles off<br />
+SetOverwrite try<br />
+<br />
+<br />
+Function .onInit<br />
+    push $0<br />
+    push $1<br />
+    push $2<br />
+    <br />
+    ;disable the file system redirector for the current thread<br />
+    System::Call 'kernel32::Wow64DisableWow64FsRedirection(*i .r1) i .r2 ?e'<br />
+    Pop $0<br />
+    IntCmp $2 0 0 label_OK label_OK<br />
+        ;The call failed.<br />
+        MessageBox MB_OK &quot;Wow64DisableWow64FsRedirection failed with error $0&quot;<br />
+        Abort<br />
+    label_OK:<br />
+    ;Installation of a dummy file: This installation works.<br />
+    File &quot;/oname=$SYSDIR\test1.txt&quot; &quot;${NSISDIR}\Docs\Splash\splash.txt&quot;<br />
+<br />
+    pop $2<br />
+    pop $1<br />
+    Pop $0<br />
+FunctionEnd<br />
+<br />
+Section &quot;Install&quot;<br />
+<br />
+    ;Installation of another dummy file: This file is installed in the wrong directory!!!<br />
+    File &quot;/oname=$SYSDIR\test2.txt&quot; &quot;${NSISDIR}\Docs\Splash\splash.txt&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+While test1.txt is installed correctly in the system32 directory test2.txt is installed in the wrong directory SysWOW64. Why?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">21st May 2007, 09:33</div></div><div class="posttext">Why not put the code in a dummy section before all other sections instead.<br />
+<br />
+Section -DisableWow64FsRedirection<br />
+...<br />
+SectionEnd<br />
+<br />
+Maybe it's because the UI is not initialised until after .onInit perhaps :S<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">SunToo</div><div class="date">21st May 2007, 09:54</div></div><div class="posttext">Thanks for you reply, Afrow UK.<br />
+<br />
+The example only demonstrates the problem I detected. Actually my installer does something more. Since NSIS doesn't allow to compile real 64-bit installer, I try to simulate it as best I can. E.g., I disable file system and registry redirection during initialization.<br />
+ <br />
+The workaround you proposed may work for some specific installations (I didn't tested it). But installation of files doesn't only occur during installation part. And I don't want to rewrite the installer completely new for every installation task. I want to create a framework which is suitable for most installation tasks.<br />
+<br />
+So I think the better solution would be to identify and solve the problem.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">21st May 2007, 10:11</div></div><div class="posttext">Try moving it to .onGUIInit then.<br />
+If using Modern UI you will have to declare your own using !define MUI_CUSTOMFUNCTION_GUIINIT.<br />
+<br />
+On a side note, you shouldn't really modify the user's system before the install files page in case the user chooses to cancel.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">SunToo</div><div class="date">21st May 2007, 10:23</div></div><div class="posttext">Regarding your side note: File system redirection is only disabled for the thread that calls Wow64DisableWow64FsRedirection. So it only affects the installer. SetRegView also only affects the installer. <br />
+<br />
+Regarding the failed redirection: By what is it caused?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">21st May 2007, 20:05</div></div><div class="posttext">As you said, Wow64DisableWow64FsRedirection only affects the current thread. The thread that runs .onInit is not the same thread that runs the sections, unless you're running the installer silently.<br />
+<br />
+You should not disable redirection for the entire installer but only for those specific files that you do wish to put in system32. That could get Windows to load the wrong DLL files in some cases (http://forums.winamp.com/showthread.php?s=&amp;threadid=262273).<br />
+<br />
+You should also use the macros from x64.nsh which make it a bit easier.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">SunToo</div><div class="date">22nd May 2007, 07:58</div></div><div class="posttext">Originally posted by kichik <br />
+As you said, Wow64DisableWow64FsRedirection only affects the current thread. The thread that runs .onInit is not the same thread that runs the sections, unless you're running the installer silently.<br />
+<br />
+<br />
+Oops, I didn't expected that because of the straight workflow of an installation. Can you tell be more about the running threads?<br />
+<br />
+<br />
+You should not disable redirection for the entire installer but only for those specific files that you do wish to put in system32. That could get Windows to load the wrong DLL files in some cases (http://forums.winamp.com/showthread.php?s=&amp;threadid=262273).<br />
+<br />
+<br />
+I'm not sure whether I understand this problem correctly. Do you mean that I have to ensure not to install my own 32-bit DLLs into the system32 directory of 64-bit Windows? Or do you mean that the NSIS framework gets some problems by loading the wrong DLLs?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">22nd May 2007, 12:03</div></div><div class="posttext">Not too much to tell. One thread runs the GUI, the other executes the sections.<br />
+<br />
+As for the DLL files, you should disable redirection right before you drop a file into system32 and enable it back again right after. If you don't, the wrong DLL files may be loaded as shown in the link (http://forums.winamp.com/showthread.php?s=&amp;threadid=262273). It could be just a bug in RichEdit, but I'd restrict the disabling of redirection to the bare minimum anyway.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">22nd May 2007, 22:32</div></div><div class="posttext">Here's another way to look at it:<br />
+<br />
+If you are running a 32-bit app under 64-bit, Windows redirection will take over and redirect that exe back to the 32-bit sections of the file system and registry.<br />
+<br />
+If you force the install to install that EXE's components under the 64-bit sections, then it will likely fail when you run it because it won't be able to find its &quot;parts&quot; in the proper places.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">SunToo</div><div class="date">23rd May 2007, 14:33</div></div><div class="posttext">Now the penny has dropped. In another thread I mentioned myself the problems of loading 64-bit DLLs by a 32-bit application. But I didn't realized the problem of finding the right ones. Sorry and thanks for your patience.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" CPU Detection Code, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  CPU Detection Code NSIS Discussion" />
+	
+	<title> CPU Detection Code [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  CPU Detection Code</div>
+<hr />
+<div class="pda"><a href="t-292531.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=292531">CPU Detection Code</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">31st May 2008, 13:31</div></div><div class="posttext">I recently wrote the following CPU detection code:<br />
+<br />
+; ---------------------------------------<br />
+; Installer Attributes<br />
+; ---------------------------------------<br />
+<br />
+Caption &quot;CPU Info&quot;<br />
+OutFile &quot;cpuinfo.exe&quot;<br />
+<br />
+!include StrFunc.nsh<br />
+${StrTok}<br />
+${StrLoc}<br />
+${StrCase}<br />
+<br />
+<br />
+; ---------------------------------------<br />
+; CPU Detection Code<br />
+; ---------------------------------------<br />
+<br />
+Var CPU_TYPE<br />
+  <br />
+!macro CheckCPUExt list ext label_found<br />
+  ${StrLoc} $0 &quot;${list}&quot; &quot; ${ext} &quot; &quot;&gt;&quot;<br />
+  StrCmp $0 &quot;&quot; 0 ${label_found}<br />
+!macroend<br />
+<br />
+Function DetectCPUType<br />
+  Banner::show /NOUNLOAD &quot;Detetcing your CPU Type, please be patient...&quot;<br />
+<br />
+  StrCpy $CPU_TYPE 5 #RTM<br />
+<br />
+  File /oname=$PLUGINSDIR\cpuinfo.exe &quot;installer\cpuinfo.exe&quot;<br />
+  nsExec::ExecToStack '&quot;$PLUGINSDIR\cpuinfo.exe&quot;'<br />
+  <br />
+  Pop $0<br />
+  Pop $1<br />
+<br />
+  Delete &quot;$PLUGINSDIR\cpuinfo.exe&quot;<br />
+  StrCmp $0 &quot;error&quot; CPU_DETECTION_DONE<br />
+<br />
+  ${StrTok} $1 &quot;$1&quot; &quot;$\n$\r$\t:&quot; &quot;9&quot; &quot;1&quot;<br />
+  ${StrCase} $1 &quot;$1&quot; &quot;U&quot;<br />
+  <br />
+  ; ------------------------------<br />
+<br />
+  StrCpy $0 &quot;0&quot;<br />
+  StrCpy $2 &quot; &quot;<br />
+  <br />
+  CPU_LOOP:<br />
+  ${StrTok} $3 $1 &quot; &quot; &quot;$0&quot; &quot;1&quot;<br />
+  IntOp $0 $0 + 1<br />
+  StrCmp $3 &quot;&quot; CPU_LOOP_END<br />
+  StrCmp $3 &quot;MMX&quot; CPU_LOOP_FOUND<br />
+  StrCmp $3 &quot;3DNOW&quot; CPU_LOOP_FOUND<br />
+  StrCmp $3 &quot;3DNOW2&quot; CPU_LOOP_FOUND<br />
+  StrCmp $3 &quot;SSE&quot; CPU_LOOP_FOUND<br />
+  StrCmp $3 &quot;SSE2&quot; CPU_LOOP_FOUND<br />
+  StrCmp $3 &quot;SSE3&quot; CPU_LOOP_FOUND<br />
+  StrCmp $3 &quot;SSSE3&quot; CPU_LOOP_FOUND<br />
+  Goto CPU_LOOP<br />
+  <br />
+  CPU_LOOP_FOUND:<br />
+  StrCpy $2 &quot;$2$3 &quot;<br />
+  Goto CPU_LOOP<br />
+  <br />
+  CPU_LOOP_END:<br />
+  <br />
+  ; ------------------------------<br />
+<br />
+  !insertmacro CheckCPUExt &quot;$2&quot; &quot;MMX&quot; HAS_MMX<br />
+  Goto CPU_DETECTION_DONE<br />
+  <br />
+  HAS_MMX:<br />
+  !insertmacro CheckCPUExt &quot;$2&quot; &quot;SSE&quot; HAS_SSE<br />
+  !insertmacro CheckCPUExt &quot;$2&quot; &quot;3DNOW&quot; HAS_3DNOW<br />
+  Goto CPU_DETECTION_DONE<br />
+    <br />
+  HAS_3DNOW:<br />
+  StrCpy $CPU_TYPE 2 #Athlon<br />
+  Goto CPU_DETECTION_DONE<br />
+<br />
+  HAS_SSE:<br />
+  StrCpy $CPU_TYPE 3 #P3<br />
+  !insertmacro CheckCPUExt &quot;$2&quot; &quot;SSE2&quot; HAS_SSE2<br />
+  !insertmacro CheckCPUExt &quot;$2&quot; &quot;3DNOW&quot; HAS_3DNOW<br />
+  Goto CPU_DETECTION_DONE<br />
+<br />
+  HAS_SSE2:<br />
+  StrCpy $CPU_TYPE 4 #P4<br />
+  Goto CPU_DETECTION_DONE<br />
+<br />
+  CPU_DETECTION_DONE:<br />
+  Push $2<br />
+<br />
+  Banner::destroy<br />
+FunctionEnd<br />
+<br />
+<br />
+; ---------------------------------------<br />
+; Install Sections<br />
+; ---------------------------------------<br />
+<br />
+Section &quot;&quot;<br />
+  Call DetectCPUType<br />
+  Pop $1<br />
+<br />
+  ;---------------------------<br />
+  <br />
+  StrCpy $0 &quot;Unknown / Detection Faild&quot;<br />
+  <br />
+  StrCmp $CPU_TYPE &quot;2&quot; 0 +2<br />
+  StrCpy $0 &quot;AMD Athlon (MMX, 3DNow!)&quot;<br />
+  <br />
+  StrCmp $CPU_TYPE &quot;3&quot; 0 +2<br />
+  StrCpy $0 &quot;Intel Pentium III (MMX, SSE)&quot;<br />
+<br />
+  StrCmp $CPU_TYPE &quot;4&quot; 0 +2<br />
+  StrCpy $0 &quot;Intel Pentium 4 (MMX, SSE, SSE2)&quot;<br />
+<br />
+  StrCmp $CPU_TYPE &quot;5&quot; 0 +2<br />
+  StrCpy $0 &quot;Runtime CPU Detection (Generic)&quot;<br />
+  <br />
+  ;---------------------------<br />
+  <br />
+  MessageBox MB_ICONINFORMATION &quot;Your CPU Type is: $0$\t$\nYour CPU Capabilities are: $1&quot;<br />
+SectionEnd <br />
+<br />
+Note that you'll need &quot;cpuinfo.exe&quot; from here:<br />
+http://oss.netfarm.it/mplayer-win32.php</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th June 2008, 10:02</div></div><div class="posttext">You should Wiki (http://nsis.sourceforge.net/Starting_a_new_page) it.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

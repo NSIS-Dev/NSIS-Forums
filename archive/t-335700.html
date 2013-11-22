@@ -1,0 +1,129 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" PleaseWait plugin, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  PleaseWait plugin NSIS Discussion" />
+	
+	<title> PleaseWait plugin [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  PleaseWait plugin</div>
+<hr />
+<div class="pda"><a href="t-335700.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=335700">PleaseWait plugin</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">7th October 2011, 13:56</div></div><div class="posttext">Hi.<br />
+I am creating new plug-in called PleaseWait  which shows small modeless window (see attachment) with label and gif animation.<br />
+<br />
+The goal is to create popup message for user that some action is being performed in background so he needs to wait.<br />
+It is suitable especially for long run tasks like downloading files, writing/reading, database operations and so on when nothing is happening/refreshing in GUI.<br />
+<br />
+Plug-in runs in a separate thread, it is top most window [above all other windows - see attachment] so there is possible to show it over several pages even in .onGUIInit!<br />
+<br />
+Showing window is simple, but I have problem with closing it.<br />
+This is my source:<br />
+<br />
+  # Show dialog with gif file and caption, dimensions and label color<br />
+  PleaseWait::ShowDialog /NOUNLOAD &quot;D:\Projects\PleaseWait\loading.gif&quot; \<br />
+  &quot;Window title&quot;  200 120 &quot;Loading data...&quot; &quot;0x0000ff&quot; 0 <br />
+  <br />
+  # This is important!<br />
+  MessageBox MB_OK &quot;After PleaseWait::ShowDialog&quot;<br />
+<br />
+<br />
+And this is C++ code I use: [shortened]<br />
+<br />
+__declspec(dllexport) void ShowDialog(HWND hwndParent, int string_size,<br />
+                             char *variables, stack_t **stacktop, extra_parameters *extra)<br />
+{<br />
+       // get NSIS parameters<br />
+.......<br />
+	// Run main thread<br />
+	unsigned uThreadID = 0;<br />
+	HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, ThreadProc, &amp;g_ThreadParam, 0, &amp;uThreadID);<br />
+}<br />
+<br />
+// This is main Thread procedure<br />
+unsigned __stdcall ThreadProc(void * param)<br />
+{<br />
+	THREADPARAM * pThreadParam = (THREADPARAM *)param;<br />
+<br />
+.......<br />
+	RegisterClassEx(&amp;wc) etc	<br />
+<br />
+	// Create the Window<br />
+	hwnd = CreateWindowEx(...)<br />
+<br />
+	// Show window and redraw it<br />
+	ShowWindow(hwnd, SW_SHOW);<br />
+	UpdateWindow(hwnd);<br />
+<br />
+	// Start animation<br />
+	PlayAnimation(hwnd, pThreadParam-&gt;szFilename, ....);<br />
+<br />
+	// The Message Loop<br />
+	while(GetMessage(&amp;Msg, NULL, 0, 0) &gt; 0)<br />
+	{<br />
+		TranslateMessage(&amp;Msg);<br />
+		DispatchMessage(&amp;Msg);<br />
+	}<br />
+	return 0;<br />
+}<br />
+<br />
+<br />
+<br />
+This is window procedure for window created above:<br />
+<br />
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)<br />
+{<br />
+	switch(msg)<br />
+	{<br />
+.......<br />
+	case WM_PAINT:<br />
+		// Draw image<br />
+		pe-&gt;OnPaint();<br />
+.......<br />
+	default:<br />
+		return DefWindowProc(hwnd, msg, wParam, lParam);<br />
+	}<br />
+	return 0;<br />
+}<br />
+<br />
+<br />
+I want anytime to close this window from NSIS script with PleaseWait::EndDialog which is:<br />
+<br />
+<br />
+__declspec(dllexport) void EndDialog(HWND hwndParent, int string_size,<br />
+                             char *variables, stack_t **stacktop, extra_parameters *extra)<br />
+{<br />
+	g_bStopImmediately = true;<br />
+}<br />
+<br />
+The problem is that immediately when I call PleaseWait::EndDialog I got Unhandled exception. I have breakpoint exactly on line  EndDialog(...) also inside and this function is never called, the program crashes *before* entering into it.<br />
+<br />
+I am not sure - what is wrong there? Why cannot I call EndDialog directly?<br />
+NSIS advanced to next line because I can see &quot;After PleaseWait::ShowDialog&quot; message box but calling EndDialog later causes the installer to crash.<br />
+<br />
+ThreadProc is still running - separated thread but I need some way how to interrupt it from NSIS as I do not know how long the dialog will be shown.<br />
+<br />
+Thanks for any ideas :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th October 2011, 18:34</div></div><div class="posttext">I can't really say without having the full code. How about running the installer through the debugger? Rather than using a boolean flag you really aught to use an event (i.e. CreateEvent/SetEvent). Also as I said before (http://forums.winamp.com/showpost.php?p=2807709&amp;postcount=16), you should really avoid using CRT. However if you really must use CRT you should clearly state this on your plug-in page as your plug-in WILL crash the installer on machines without the necessary CRT.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">9th October 2011, 18:55</div></div><div class="posttext">Just a side note: If you want to use CRT functions, but do not want your DLL to depend on a separate CRT DLL, you can set &quot;Ignore All Default Libraries&quot; to Yes and then explicitly link against the VC 6.0 CRT import library. This way your DLL will use MSVCRT.DLL (note: no version number in the name!), which, in contrast to newer MSVCRT versions, is an integral part of the operating system (since Win2k, I think) and thus does not need a separate install. Many system components, like Explorer.exe and stuff, also use the &quot;legacy&quot; MSVCRT.DLL that ships with Windows. Only drawback: Some newer CRT functions, like the strcpy_s &amp; friends, were not available in VC 6.0 yet...<br />
+<br />
+(Side-side note: If you get linker errors regarding the &quot;___CxxFrameHandler&quot; symbol with VS2010 and the VC 6.0 CRT, then simply disable C++ exception handling. Of course, you better don't throw any exceptions in your code then - it still works but can have bad side effects)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" NSIS in the news..., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  NSIS in the news... NSIS Discussion" />
+	
+	<title> NSIS in the news... [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  NSIS in the news...</div>
+<hr />
+<div class="pda"><a href="t-283231.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=283231">NSIS in the news...</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">fredtheman</div><div class="date">15th December 2007, 13:48</div></div><div class="posttext">Read this on /.<br />
+<br />
+Shortly after releasing EVE Online: Trinity at 22:04 GMT on Wednesday, 5 December, we started receiving reports that the Classic to Premium graphics content upgrade was causing problems to players by deleting the file C:\boot.ini, which is a Windows system startup file.[...]<br />
+<br />
+It might appear from the installer log that we made the mistake of explicitly deleting \boot.ini instead of just boot.ini. The former would delete the file from the root of the current drive whereas the latter would only delete from the current working directory. It is not quite so; the mistake was to assume that the file would be deleted from the current working directory without giving the full path. In fact, this is the code in the installer script that caused the problems:<br />
+<br />
+Section &quot;EVE-ONLINE&quot;<br />
+SetOutPath &quot;$INSTDIR&quot;<br />
+<br />
+Delete &quot;boot.ini&quot;<br />
+Delete &quot;manifest.dat&quot;<br />
+<br />
+File &quot;boot.ini&quot;<br />
+File &quot;manifest.dat&quot;<br />
+File &quot;resDX9*.stuff&quot;<br />
+SectionEnd<br />
+<br />
+The assumption was that by setting SetOutPath &quot;$INSTDIR&quot; then all commands that followed would use that working directory.<br />
+<br />
+The File commands use the output path that has been set. The documentation for the Delete function says the file _should_ be specified with a full path but in fact it _must_ be specified with a full path, like so:<br />
+<br />
+Delete &quot;$INSTDIR\boot.ini&quot;<br />
+Delete &quot;$INSTDIR\manifest.dat&quot;<br />
+<br />
+Otherwise, it is assumed that the file should be deleted from the root.<br />
+<br />
+<br />
+Oops :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">15th December 2007, 13:51</div></div><div class="posttext">That code of theirs was actually supposed to work. I've fixed the bug behind this that caused it to delete boot.ini from the root instead of the working directory.<br />
+<br />
+http://sourceforge.net/tracker/index.php?func=detail&amp;aid=1851273&amp;group_id=22049&amp;atid=373085</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">15th December 2007, 16:03</div></div><div class="posttext">And for the sake of a complete discussion, CCP's blog post:<br />
+<br />
+http://myeve.eve-online.com/devblog.asp?a=blog&amp;bid=526<br />
+<br />
+EVE user comments:<br />
+<br />
+http://myeve.eve-online.com/ingameboard.asp?a=topic&amp;threadID=658000<br />
+<br />
+Slashdot article:<br />
+<br />
+http://it.slashdot.org/it/07/12/15/0256255.shtml<br />
+<br />
+I really liked the last comment on the article:Having mixed, inconsistent addressing modes is a major design screw-up. And having a default of the &quot;delete&quot; command to delete somewere else than is intuitive, is completely unacceptable and the people responsible for it should be fired and striped of their qualification. These people are not engineers, but incompetent hacks.<br />
+<br />
+The right way to do it is that you can have inconsitencies, if a) there is a very good reason for it (here, there was none) and b) you make sure people notice. This can be done by making the command look different, e.g. &quot;DeleteWithAbsolutePathOrRoot&quot; or doing additional checking, like the delete command refusing to work if it is not given an absolute path. Of course documentation must also be correct, but the real screw-up is the command that looks just like the &quot;file&quot; command but works differently in an obviously potentially destructive fashion.So I guess there'd be no paycheck next month...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fredtheman</div><div class="date">15th December 2007, 16:22</div></div><div class="posttext">That code of theirs was actually supposed to work.<br />
+<br />
+So until today's fix, unless given an absolute path, Delete() will silently delete files from the root directory? I guess the documentation should have stressed this.<br />
+<br />
+But then, they should have noticed this during testing.<br />
+<br />
+You're fired ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">15th December 2007, 16:29</div></div><div class="posttext">Nope, that's not what happened. If Delete was given a path relative to the working directory (&quot;blah.txt&quot; but not &quot;..\blah.txt&quot; or &quot;.\blah.txt&quot; or &quot;$INSTDIR\blah.txt&quot;), it'd look for files in the working directory, but try deleting them from the root directory. This happened because filename was erroneously prefixed with a backslash. More accurately, the directory from which the files were deleted was suffixed with a backslash even though it was an empty string. The log was updated accordingly, saying it deleted &quot;\blah.txt&quot;.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

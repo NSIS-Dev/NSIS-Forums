@@ -1,0 +1,98 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" One installer for 32bit and 64bit, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  One installer for 32bit and 64bit NSIS Discussion" />
+	
+	<title> One installer for 32bit and 64bit [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  One installer for 32bit and 64bit</div>
+<hr />
+<div class="pda"><a href="t-318746.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=318746">One installer for 32bit and 64bit</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">voyteckst</div><div class="date">28th April 2010, 10:35</div></div><div class="posttext">I'm creating installer which will contain components for 32 and 64 bit systems. There is no problem with copying correct files, but I don't know how to define INSTDIR and InstallDir. Can someone tell me how to set INSTDIR and InstallDir depending on Windows architecture (i.e. in .oninit)?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">28th April 2010, 13:20</div></div><div class="posttext">You want to use x64.nsh. (This question has been asked dozens of times before. Please search before you ask.)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">voyteckst</div><div class="date">28th April 2010, 13:55</div></div><div class="posttext">Yes, I have searched, but as far as I remember it doesn't worked for InstallDir?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">28th April 2010, 15:04</div></div><div class="posttext">InstallDir is a compiletime command. If you're setting $INSTDIR in .onInit anyway, using it is pointless.<br />
+<br />
+This is probably all you have to do:<br />
+<br />
+funtion .onInit<br />
+  ${If} ${RunningX64}<br />
+    StrCpy $INSTDIR &quot;Your x64 default install path&quot;<br />
+  $[Else}<br />
+    StrCpy $INSTDIR &quot;Your x86 default install path&quot;<br />
+  ${EndIf}<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">voyteckst</div><div class="date">28th April 2010, 20:39</div></div><div class="posttext">Thanks. But should it be in .oninit or can be in other function which I have (also it is question for sysdir) - I give 64bit user page where he have choice to install 32bit or either 64bit version. Choice is because it installs some component for browsers and because i.e. firefox officially is not 64bit (and user likes to use ff) he can install 32bit version.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">28th April 2010, 22:00</div></div><div class="posttext">If it is system32/syswow64 then you don't need to change the actual value of $INSTDIR and just use the DisableX64FSRedirection/EnableX64FSRedirection macros from x64.nsh. For other paths not dependent on x64 file system redirection then you need to change $OUTDIR (SetOutPath) accordingly. And no it doesn't need to be in .onInit - if you do change $INSTDIR it needs to be before the Directory page of course (if you are using it).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">voyteckst</div><div class="date">29th April 2010, 09:30</div></div><div class="posttext">Thanks it works fine, but I have to manually set DisableX64FSRedirection/EnableX64FSRedirection each time I want to copy something to $SYSDIR. It don't works when set in .oninit.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">29th April 2010, 14:30</div></div><div class="posttext">Should be fine in .onInit unless something else messes with the x64 redirection under your installer process.<br />
+<br />
+just as an aside.. on Vista and above, and XP with a particular by-request hotfix (so I wouldn't depend on it), you can also write to the special SysNative folder, which is the 64bit System folder on 64bit platforms, and simply doesn't exist on 32bit platforms.<br />
+http://msdn.microsoft.com/en-us/library/aa384187%28VS.85%29.aspx</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">voyteckst</div><div class="date">30th April 2010, 05:47</div></div><div class="posttext">I have strange issue. When user choose whether to install 32 or 64 bit i set variable named arch and based on it I'm copying 32 or 64 bit files. But it works on one test computer and on other two not... What can be wrong? Code for this is below:<br />
+<br />
+SetOutPath $SYSDIR<br />
+                   ${If} $arch == 32<br />
+                           File &quot;file.dll&quot;<br />
+                   ${ElseIf} $arch == 64<br />
+                           ${DisableX64FSRedirection}<br />
+                           File /oname=file.dll &quot;filex64.dll&quot;<br />
+                   ${Else}<br />
+                   ${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">redxii</div><div class="date">30th April 2010, 06:40</div></div><div class="posttext">What exactly is it doing or not doing (copying wrong file/wrong location/etc)? I would write it like this:<br />
+<br />
+<br />
+  SetOutPath &quot;$SYSDIR&quot;<br />
+ <br />
+  {If} $arch == 32<br />
+    File &quot;file.dll&quot;<br />
+  ${ElseIf} $arch == 64<br />
+    ${DisableX64FSRedirection}<br />
+    File /oname=file.dll &quot;filex64.dll&quot;<br />
+    ${EnableX64FSRedirection}<br />
+  ${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">voyteckst</div><div class="date">30th April 2010, 08:26</div></div><div class="posttext">It doesn't copy this file. I will try to make different functions for 32 and 64 and call them according to arch variable.<br />
+<br />
+What is the purpose of running at the and  ${EnableX64FSRedirection} ?<br />
+<br />
+Edit: Different functions and calling them according to this variable works ok.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">30th April 2010, 08:53</div></div><div class="posttext">What is the purpose of running at the and  ${EnableX64FSRedirection} ?<br />
+It's to return the installer to standard behavior. In case you forget later on that you changed it. It's good practice to always do this.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

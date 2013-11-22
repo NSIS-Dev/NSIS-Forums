@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problems with nsExec::ExecToLog, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problems with nsExec::ExecToLog NSIS Discussion" />
+	
+	<title> Problems with nsExec::ExecToLog [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problems with nsExec::ExecToLog</div>
+<hr />
+<div class="pda"><a href="t-134611.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=134611">Problems with nsExec::ExecToLog</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">dabossuk</div><div class="date">7th May 2003, 10:49</div></div><div class="posttext">Hi<br />
+<br />
+I am using the following line of code below (in NSIS B3) ... installutil.exe is a commandline tool supplied by Microsoft to install .NET Services.  My problem is sometimes it works and sometimes it does not.<br />
+<br />
+ie ... if I run the setup.exe ... it calls this line and works perfect.  I can call the setup.exe another time and it &quot;looks&quot; seems to totally ignores this line.  I know this as it does not create any .installlog (created by installutil.exe) files in the installdir.  I have tried to debug this using exectolog param - but the log window during the installer does not have a scrollable window - so once all the files etc have shot past I cannot see any errors above (think this needs to be changed anyway in NSIS ?)  Any ideas ? Anyone done this ?  Thanks ...<br />
+<br />
+Banner::show /NOUNLOAD &quot;Installing Whoosh SMS Service ...&quot;<br />
+nsExec::ExecToLog '&quot;$PLUGINSDIR\installutil.exe&quot; /showcallstack &quot;$INSTDIR\whooshservice.exe&quot;'<br />
+Sleep 5000<br />
+Banner::destroy</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th May 2003, 16:04</div></div><div class="posttext">The log window should have a scroll bar if there is more text than the window can contain. Can you please attach an example compiled installer that shows this behavior?<br />
+<br />
+As for ExecToLog, make sure the working directory is always what you think it is. installutil.exe might be writing the log to the working directory. Use SetOutPath to set the working direcotry.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">7th May 2003, 20:03</div></div><div class="posttext">i know exactly what he means<br />
+i am using an extraction program in my installer, sometimes it extracts the files to the pluginsdir and sometimes to the path i have defined with setoutpath<br />
+the most time it works is the first time i execute a new compiled setup, the next time i start it the lines are just ignored because he tries to start the extraction program from the pluginsdir where it is not present<br />
+<br />
+DOCa Cola</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th May 2003, 20:17</div></div><div class="posttext">Well, I'll have to see the script to understand exactly what you're talking about but basically you always have to either have SetOutPath tell the installer exactly where to extract the file or use /oname=. Also make sure you're using b1 and above so SetOutPath will really sets the working directory.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">7th May 2003, 20:23</div></div><div class="posttext">i am using the cvs<br />
+i tried it several times with different variantions between $instdir, $instdir\ and so on, that didn't help<br />
+The problem does not persist for me because i give &quot;$instdir\program.exe&quot; as command instead of &quot;program.exe&quot;, but another problem is that i have to use something like &quot;$instdir\program.exe outdir\&quot; and then it extracts to the pluginsdir (or to where i specified the last setoutpath to) (i am not sure, maybe it sometimes takes the setoutpath before the setoutpath i definied for the extraction, but the strange thing is that it only happens sometimes)<br />
+In my extraction program i have given the full path as extraction point and that works<br />
+<br />
+DOCa Cola</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dabossuk</div><div class="date">7th May 2003, 20:25</div></div><div class="posttext">Orginally I tried the following :<br />
+<br />
+&gt;&gt;&gt;CODE&gt;&gt;&gt;<br />
+Section &quot;Trinet Service&quot; Section1<br />
+  ;The files<br />
+  SetOutPath &quot;$INSTDIR&quot;<br />
+  File &quot;..\source\trinetservice.exe&quot;<br />
+  File &quot;..\source\installutil.exe&quot;  <br />
+  Banner::show /NOUNLOAD &quot;Installing Trinet Service ...&quot;<br />
+nsExec::ExecToLog '&quot;installutil.exe&quot; /showcallstack &quot;trinetservice.exe&quot;'<br />
+&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<br />
+<br />
+Sometimes this work about 50/50 and others it did not ... I thought maybe it was timing - the file had not copied before it was called - so then I tried.<br />
+<br />
+<br />
+&gt;&gt;&gt;&gt;&gt;CODE&gt;&gt;&gt;&gt;&gt;<br />
+Function .onInit<br />
+<br />
+  InitPluginsDir<br />
+  File /oname=$PLUGINSDIR\splash.bmp &quot;splash.bmp&quot;<br />
+  File /oname=$PLUGINSDIR\installutil.exe &quot;..\source\installutil.exe&quot;<br />
+<br />
+Section &quot;Trinet Service&quot; Section1<br />
+<br />
+  ;The files<br />
+<br />
+  SetOutPath &quot;$INSTDIR&quot;<br />
+  File &quot;..\source\trinetservice.exe&quot;<br />
+  Banner::show /NOUNLOAD &quot;Installing Trinet Service ...&quot;<br />
+nsExec::ExecToLog '&quot;$PLUGINSDIR\installutil.exe&quot; /showcallstack &quot;trinetservice.exe<br />
+&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;<br />
+<br />
+The above worked better - but not 100% of the time.  Its just totally random.  I would be run the setup, uninstall and then run again and it would not work.  When you call installutil.exe it creates a file if it fails or passes called .installlog - I was not seeing this file anywhere on my machine.  I run the install and then it was created.<br />
+<br />
+I have used other EXE's like regasm32.exe and its been fine ... I wonder if its something to do with the exe file itself ? with execlog - if it fails does it say that in the log ? Ie cannot find file or something like that ?<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">7th May 2003, 20:27</div></div><div class="posttext">nope, its a problem with nsexec, it sometimes tries to run your program from another location and cannot find the tool, so there it ignores the command</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th May 2003, 20:36</div></div><div class="posttext">nsExec returns a string on the top of the stack. What does it return for you when it fails?<br />
+<br />
+For example:<br />
+<br />
+nsExec::ExecToLog 'a-program.exe'<br />
+Pop $0<br />
+MessageBox MB_OK $0</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

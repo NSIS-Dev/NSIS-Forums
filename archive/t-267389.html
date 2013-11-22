@@ -1,0 +1,205 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" FindFirst, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  FindFirst NSIS Discussion" />
+	
+	<title> FindFirst [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  FindFirst</div>
+<hr />
+<div class="pda"><a href="t-267389.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=267389">FindFirst</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">8th March 2007, 18:54</div></div><div class="posttext">Hi<br />
+<br />
+I recommend a small change in the FindFirst usage:<br />
+<br />
+user_var(handle output) user_var(filename output) filespec<br />
+<br />
+or<br />
+<br />
+FindFirst $0 $1 $INSTDIR\*.txt<br />
+<br />
+The documentation claims if no files are found, both outputs ($0 + $1) are set to empty and an error flag is set.<br />
+<br />
+This is only 99% true. If the folder is empty and the file search has 2 wildcards:<br />
+<br />
+FindFirst $0 $1 $INSTDIR\*.*<br />
+<br />
+the first variable returns the search handle (some number), the second variable returns an empty string and no error flag is set.<br />
+<br />
+To check if any files are in the folder, you need:<br />
+<br />
+CmpStr $1 &quot;&quot;<br />
+<br />
+IfErrors is unreliable.<br />
+<br />
+I hope I'm not being petty.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">8th March 2007, 19:37</div></div><div class="posttext">IfErrors is 100% reliable, using wildcards &quot;*.*&quot; returns the dots &quot;.&quot; and &quot;..&quot; specifying the directory.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">8th March 2007, 19:46</div></div><div class="posttext">Oops. I didn't see the dot. The second variable returns a decimal point, dot.<br />
+<br />
+I'm beginning to wonder if having two wildcard characters is such a good idea in the search string.<br />
+<br />
+CmpStr $1 &quot;.&quot; doesn't feel right.<br />
+<br />
+May I give this over to the experts panel (no offense) to pore over?<br />
+<br />
+Does FindFirst recognize $INSTDIR\*.* to mean any files or subfolders in $INSTDIR?<br />
+<br />
+edit:<br />
+Red Wine, you beat me to it.<br />
+<br />
+IfErrors is still inaccurate, since no error flag is set with an empty folder.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">8th March 2007, 20:05</div></div><div class="posttext">Ok, 2 examples to help you a bit :)<br />
+<br />
+outfile 'find.exe'<br />
+ShowInstDetails show<br />
+<br />
+section -<br />
+SetOutPath &quot;$EXEDIR&quot;<br />
+CreateDirectory &quot;$EXEDIR\boo&quot;<br />
+<br />
+FileOpen $R0 &quot;$EXEDIR\boo\test1.txt&quot; w<br />
+FileClose $R0<br />
+FileOpen $R0 &quot;$EXEDIR\boo\test2.txt&quot; w<br />
+FileClose $R0<br />
+<br />
+ClearErrors<br />
+FindFirst $0 $1 &quot;$EXEDIR\boo\*.*&quot;<br />
+StrCmp $1 &quot;.&quot; +2<br />
+StrCpy $2 &quot;$1$\r$\n&quot;<br />
+<br />
+loop:<br />
+FindNext $0 $1<br />
+IfErrors end<br />
+StrCmp $1 &quot;..&quot; loop<br />
+StrCpy $2 &quot;$2$1$\r$\n&quot;<br />
+goto loop<br />
+<br />
+end:<br />
+StrCmp $2 &quot;&quot; 0 +2<br />
+MessageBox MB_OK &quot;Error! No Files found&quot; IDOK +2<br />
+MessageBox MB_OK &quot;Files found: $\r$\n$2&quot;<br />
+FindClose $0<br />
+Delete &quot;$EXEDIR\boo\test1.txt&quot;<br />
+Delete &quot;$EXEDIR\boo\test2.txt&quot;<br />
+Rmdir &quot;$EXEDIR\boo&quot;<br />
+sectionend<br />
+<br />
+outfile 'find.exe'<br />
+ShowInstDetails show<br />
+<br />
+section -<br />
+SetOutPath &quot;$EXEDIR&quot;<br />
+CreateDirectory &quot;$EXEDIR\boo&quot;<br />
+<br />
+ClearErrors<br />
+FindFirst $0 $1 &quot;$EXEDIR\boo\*.*&quot;<br />
+StrCmp $1 &quot;.&quot; +2<br />
+StrCpy $2 &quot;$1$\r$\n&quot;<br />
+<br />
+loop:<br />
+FindNext $0 $1<br />
+IfErrors end<br />
+StrCmp $1 &quot;..&quot; loop<br />
+StrCpy $2 &quot;$2$1$\r$\n&quot;<br />
+goto loop<br />
+<br />
+end:<br />
+StrCmp $2 &quot;&quot; 0 +2<br />
+MessageBox MB_OK &quot;Error! No Files found&quot; IDOK +2<br />
+MessageBox MB_OK &quot;Files found: $\r$\n$2&quot;<br />
+FindClose $0<br />
+Rmdir &quot;$EXEDIR\boo&quot;<br />
+sectionend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">8th March 2007, 23:49</div></div><div class="posttext">I withdraw my usage proposal.<br />
+<br />
+To find out if the folder is empty, FindNext should loop. <br />
+<br />
+FindFirst $0 $1 $INSTDIR\*.* returns an error if the directory does not exist.<br />
+<br />
+Thx!:)<br />
+<br />
+I used the code below. (Took me a while to figure out though.)<br />
+<br />
+<br />
+  FindFirst $0 $1 &quot;$INSTDIR\*.*&quot;<br />
+  IfErrors skip<br />
+  loop:<br />
+  FindNext $0 $1<br />
+  IfErrors skip<br />
+  StrCmp $1 &quot;..&quot; loop<br />
+  MessageBox MB_ICONSTOP|MB_OK &quot;The folder is not empty.&quot;<br />
+  FindClose $0<br />
+  Abort<br />
+<br />
+  skip:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">9th March 2007, 00:08</div></div><div class="posttext">If you want to check a directory, you may use DirState (http://nsis.sourceforge.net/Docs/AppendixE.html#E.1.20)  or Locate (http://nsis.sourceforge.net/Docs/AppendixE.html#E.1.2) .</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">9th March 2007, 01:34</div></div><div class="posttext">i worked with RecFind successfully last weeks<br />
+http://nsis.sourceforge.net/RecFind:_Recursive_FindFirst%2C_FindNext%2C_FindClose<br />
+<br />
+it is the more convenient way.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bnicer</div><div class="date">9th March 2007, 03:21</div></div><div class="posttext">RecFind does a recursive search through the whole directory tree, which is slightly more than I need at the moment. I don't know how to stop it from looping when the folder is not empty. It could explain that better in the examples, imo.<br />
+<br />
+${DirState} &quot;$INSTDIR&quot; $R0<br />
+StrCmp $R0 &quot;1&quot; 0 skip<br />
+<br />
+is simpler.<br />
+<br />
+Thanks again.<br />
+<br />
+edit:<br />
+A recursive file search tool is impressive.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">9th March 2007, 22:25</div></div><div class="posttext">&gt;&gt; A recursive file search tool is impressive.<br />
+<br />
+Thats a bit tricky...<br />
+RecFind seems oversized but it is easy to handle...<br />
+it returns &quot;&quot; (emtpy) when he finds another subfolder<br />
+just skip to recfindnext<br />
+<br />
+example<br />
+;find filemask<br />
+${RecFindOpen} &quot;$FOLDER&quot; $0 $1<br />
+StrCmp $0 &quot;&quot; 0 findfile1_done1<br />
+<br />
+${RecFindFirst}<br />
+<br />
+;your code<br />
+<br />
+;fetch next file<br />
+findfile1_next:<br />
+${RecFindNext}<br />
+<br />
+;end file loop<br />
+findfile1_done1:<br />
+${RecFindClose}<br />
+<br />
+i currently work with an array to grab all folders then fetch files.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

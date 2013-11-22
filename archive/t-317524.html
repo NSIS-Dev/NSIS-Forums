@@ -1,0 +1,372 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Crash with special build for 2.46, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Crash with special build for 2.46 NSIS Discussion" />
+	
+	<title> Crash with special build for 2.46 [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Crash with special build for 2.46</div>
+<hr />
+<div class="pda"><a href="t-317524.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=317524">Crash with special build for 2.46</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">froesccn</div><div class="date">5th March 2010, 11:09</div></div><div class="posttext">I just tried updating an installer to 2.46 including<br />
+the special build files for strlen 8192. Attempting to<br />
+then build my installer caused an immediate crash.<br />
+<br />
+I then tried the 2.45 binaries and it worked fine,<br />
+also 2.46 with standard string length was fine. So I<br />
+wondered if there might be a problem with the<br />
+nsis-2.46-strlen_8192.zip<br />
+<br />
+Did anyone else try this already?<br />
+<br />
+BTW, is the space saving so significant that it <br />
+warrants using only 1024 in the default version?<br />
+Considering that many installers attempt to modify<br />
+the PATH variable it's a fine way to get into<br />
+serious trouble. Customers get unhappy ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">5th March 2010, 12:46</div></div><div class="posttext">You might want to provide a pastebin of the script, and some information on where it crashes.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">froesccn</div><div class="date">5th March 2010, 13:15</div></div><div class="posttext">Actually it doesn't work with 2.45 and strlen 8192<br />
+after all: I was accidentally still using the strlen<br />
+1024 binaries when attempting to crosscheck. Sorry.<br />
+<br />
+The problem seems to be with<br />
+<br />
+  !verbose<br />
+<br />
+statements, they crash on me with strlen 8192.<br />
+<br />
+Did anyone else experience such a problem?<br />
+<br />
+Many of the standard includes use !verbose so <br />
+either there is a problem on my side or noone<br />
+else is using long strings ...<br />
+<br />
+Edit: Just saw the other reply. I'll try<br />
+to reproduce this with a minimal script and<br />
+post the results.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">froesccn</div><div class="date">5th March 2010, 14:51</div></div><div class="posttext">Ok now I have a rather small test installer which<br />
+crashes reliable. It is an inclusion of StrTok from<br />
+StrFunc.nsh with a slightly odd construct I &quot;inherited&quot;<br />
+from the EnvVarUpdate function:<br />
+<br />
+--------- test_inc2.nsh ------------------<br />
+!include &quot;StrFunc.nsh&quot;<br />
+<br />
+!macro _IncludeStrFunction StrFuncName<br />
+  !ifndef ${StrFuncName}_INCLUDED<br />
+    ${${StrFuncName}}<br />
+  !endif<br />
+  !ifndef Un${StrFuncName}_INCLUDED<br />
+    ${Un${StrFuncName}}<br />
+  !endif<br />
+  !define un.${StrFuncName} &quot;${Un${StrFuncName}}&quot;<br />
+!macroend<br />
+<br />
+!insertmacro _IncludeStrFunction StrTok<br />
+-------------------------------------------<br />
+<br />
+However, the crash only occurs if this code is<br />
+two levels deep in include nesting, so I also have<br />
+<br />
+--------- test.nsi ------------------------<br />
+!include &quot;test_inc.nsh&quot;<br />
+-------------------------------------------<br />
+<br />
+--------- test_inc.nsh --------------------<br />
+!include &quot;test_inc2.nsh&quot;<br />
+-------------------------------------------<br />
+<br />
+A zip file containing all three files is <br />
+attached for convenience. Compiling test.nsi<br />
+crashes reliable with 2.45 and strlen 8192.<br />
+Most probably also with 2.46 as this was<br />
+what I tested originally, but I didn't<br />
+yet revert back to that version.<br />
+<br />
+The output from NSIS is as below, followed by<br />
+the windows error &quot;makensis has encountered a<br />
+problem and needs to close&quot;.<br />
+<br />
+Command line: <br />
+&quot;C:\Program Files\NSIS\makensis.exe&quot;  /NOTIFYHWND 1311446  &quot;H:\release\current\installer\test\test.nsi&quot;<br />
+<br />
+MakeNSIS v2.45 - Copyright 1995-2009 Contributors<br />
+See the file COPYING for license details.<br />
+Credits can be found in the Users Manual.<br />
+<br />
+Processing config: <br />
+Processing plugin dlls: &quot;C:\Program Files\NSIS\Plugins\*.dll&quot;<br />
+ - AdvSplash::show<br />
+ - Banner::destroy<br />
+ - Banner::getWindow<br />
+ - Banner::show<br />
+ - BgImage::AddImage<br />
+ - BgImage::AddText<br />
+ - BgImage::Clear<br />
+ - BgImage::Destroy<br />
+ - BgImage::Redraw<br />
+ - BgImage::SetBg<br />
+ - BgImage::SetReturn<br />
+ - BgImage::Sound<br />
+ - Dialer::AttemptConnect<br />
+ - Dialer::AutodialHangup<br />
+ - Dialer::AutodialOnline<br />
+ - Dialer::AutodialUnattended<br />
+ - Dialer::GetConnectedState<br />
+ - InstallOptions::dialog<br />
+ - InstallOptions::initDialog<br />
+ - InstallOptions::show<br />
+ - LangDLL::LangDialog<br />
+ - Math::Script<br />
+ - NSISdl::download<br />
+ - NSISdl::download_quiet<br />
+ - Splash::show<br />
+ - StartMenu::Init<br />
+ - StartMenu::Select<br />
+ - StartMenu::Show<br />
+ - System::Alloc<br />
+ - System::Call<br />
+ - System::Copy<br />
+ - System::Free<br />
+ - System::Get<br />
+ - System::Int64Op<br />
+ - System::Store<br />
+ - TypeLib::GetLibVersion<br />
+ - TypeLib::Register<br />
+ - TypeLib::UnRegister<br />
+ - UserInfo::GetAccountType<br />
+ - UserInfo::GetName<br />
+ - UserInfo::GetOriginalAccountType<br />
+ - VPatch::GetFileCRC32<br />
+ - VPatch::GetFileMD5<br />
+ - VPatch::vpatchfile<br />
+ - inetc::get<br />
+ - inetc::head<br />
+ - inetc::post<br />
+ - inetc::put<br />
+ - nsDialogs::Create<br />
+ - nsDialogs::CreateControl<br />
+ - nsDialogs::CreateItem<br />
+ - nsDialogs::CreateTimer<br />
+ - nsDialogs::GetUserData<br />
+ - nsDialogs::KillTimer<br />
+ - nsDialogs::OnBack<br />
+ - nsDialogs::OnChange<br />
+ - nsDialogs::OnClick<br />
+ - nsDialogs::OnNotify<br />
+ - nsDialogs::SelectFileDialog<br />
+ - nsDialogs::SelectFolderDialog<br />
+ - nsDialogs::SetRTL<br />
+ - nsDialogs::SetUserData<br />
+ - nsDialogs::Show<br />
+ - nsExec::Exec<br />
+ - nsExec::ExecToLog<br />
+ - nsExec::ExecToStack<br />
+<br />
+!define: &quot;MUI_INSERT_NSISCONF&quot;=&quot;&quot;<br />
+<br />
+Changing directory to: &quot;H:\release\current\installer\test&quot;<br />
+<br />
+Processing script file: &quot;H:\release\current\installer\test\test.nsi&quot;<br />
+!include: &quot;test_inc.nsh&quot;<br />
+!include: &quot;test_inc2.nsh&quot;<br />
+!include: &quot;C:\Program Files\NSIS\Include\StrFunc.nsh&quot;<br />
+----------------------------------------------------------------------<br />
+<br />
+NSIS String Functions Header File 1.09 - Copyright 2004 Diego Pedroso<br />
+<br />
+----------------------------------------------------------------------<br />
+<br />
+ (C:\Program Files\NSIS\Include\StrFunc.nsh:52)<br />
+!include: closed: &quot;C:\Program Files\NSIS\Include\StrFunc.nsh&quot;<br />
+!insertmacro: _IncludeStrFunction<br />
+!insertmacro: FUNCTION_STRING_StrTok<br />
+!insertmacro: STRFUNC_FUNC<br />
+$ {StrTok} - Copyright 2004 Diego Pedroso - Based on functions by &quot;bigmac666&quot; (macro:STRFUNC_FUNC:11)<br />
+!undef: &quot;StrTok&quot;<br />
+!define: &quot;StrTok&quot;=&quot;!insertmacro FUNCTION_STRING_StrTok_Call&quot;<br />
+!define: &quot;StrTok_INCLUDED&quot;=&quot;&quot;<br />
+Function: &quot;StrTok&quot;<br />
+!insertmacro: end of STRFUNC_FUNC<br />
+Exch($0,0)<br />
+Exch(st(1),0)<br />
+Exch($1,0)<br />
+Exch(st(1),0)<br />
+Exch(st(2),0)<br />
+Exch($2,0)<br />
+Exch(st(2),0)<br />
+Exch(st(3),0)<br />
+Exch($3,0)<br />
+Exch(st(3),0)<br />
+Push: $4<br />
+Push: $5<br />
+Push: $6<br />
+Push: $7<br />
+Push: $8<br />
+Push: $9<br />
+Push: $R0<br />
+!insertmacro: _IfThen<br />
+!insertmacro: end of _IfThen<br />
+!insertmacro: _IfThen<br />
+!insertmacro: end of _IfThen<br />
+!insertmacro: _IfThen<br />
+!insertmacro: end of _IfThen<br />
+StrLen $4 &quot;$2&quot;<br />
+StrLen $5 &quot;$3&quot;<br />
+StrCpy $6 &quot;0&quot; () ()<br />
+StrCpy $8 &quot;-1&quot; () ()<br />
+IntOp: $8=$8+1<br />
+!insertmacro: _Do<br />
+!insertmacro: end of _Do<br />
+StrCpy $7 &quot;$3&quot; (1) ($6)<br />
+!insertmacro: _If<br />
+!insertmacro: end of _If<br />
+!insertmacro: _If<br />
+!insertmacro: end of _If<br />
+!insertmacro: _Or<br />
+!insertmacro: end of _Or<br />
+StrCpy $3 &quot;$3&quot; ($6) ()<br />
+!insertmacro: _Else<br />
+!insertmacro: end of _Else<br />
+StrCpy $3 &quot;&quot; () ()<br />
+!insertmacro: _EndIf<br />
+!insertmacro: end of _EndIf<br />
+StrCpy $R0 &quot;End&quot; () ()<br />
+!insertmacro: _Goto<br />
+!insertmacro: end of _Goto<br />
+!insertmacro: _EndIf<br />
+!insertmacro: end of _EndIf<br />
+StrCpy $R0 &quot;0&quot; () ()<br />
+!insertmacro: _Do<br />
+!insertmacro: end of _Do<br />
+!insertmacro: _If<br />
+!insertmacro: end of _If<br />
+StrCpy $9 &quot;$2&quot; (1) ($R0)<br />
+!insertmacro: _Else<br />
+!insertmacro: end of _Else<br />
+StrCpy $9 &quot;$2&quot; (1) ()<br />
+!insertmacro: _EndIf<br />
+!insertmacro: end of _EndIf<br />
+!insertmacro: _IfThen<br />
+!insertmacro: end of _IfThen<br />
+!insertmacro: _If<br />
+!insertmacro: end of _If<br />
+StrCpy $7 &quot;$3&quot; ($6) ()<br />
+!insertmacro: _If<br />
+!insertmacro: end of _If<br />
+!insertmacro: _And<br />
+!insertmacro: end of _And<br />
+IntOp: $6=$6+1<br />
+StrCpy $3 &quot;$3&quot; () ($6)<br />
+StrCpy $6 &quot;0&quot; () ()<br />
+Goto: StrSearchLoop<br />
+!insertmacro: _ElseIf<br />
+!insertmacro: end of _ElseIf<br />
+StrCpy $3 &quot;$3&quot; ($6) ()<br />
+StrCpy $R0 &quot;End&quot; () ()<br />
+!insertmacro: _Goto<br />
+!insertmacro: end of _Goto<br />
+!insertmacro: _EndIf<br />
+!insertmacro: end of _EndIf<br />
+IntOp: $6=$6+1<br />
+StrCpy $3 &quot;$3&quot; () ($6)<br />
+StrCpy $6 &quot;0&quot; () ()<br />
+Goto: ResultPartLoop<br />
+!insertmacro: _EndIf<br />
+!insertmacro: end of _EndIf<br />
+IntOp: $R0=$R0+1<br />
+!insertmacro: _Loop<br />
+!insertmacro: end of _Loop<br />
+!insertmacro: _IfThen<br />
+!insertmacro: end of _IfThen<br />
+IntOp: $6=$6+1<br />
+!insertmacro: _Loop<br />
+!insertmacro: end of _Loop<br />
+Pop: $R0<br />
+Pop: $9<br />
+Pop: $8<br />
+Pop: $7<br />
+Pop: $6<br />
+Pop: $5<br />
+Pop: $4<br />
+Pop: $0<br />
+Pop: $1<br />
+Pop: $2<br />
+Exch($3,0)<br />
+FunctionEnd<br />
+!insertmacro: end of FUNCTION_STRING_StrTok<br />
+!insertmacro: FUNCTION_STRING_UnStrTok<br />
+!undef: &quot;UnStrTok&quot;<br />
+!insertmacro: FUNCTION_STRING_StrTok<br />
+!insertmacro: STRFUNC_FUNC<br />
+$ {UnStrTok} - Copyright 2004 Diego Pedroso - Based on functions by &quot;bigmac666&quot; (macro:STRFUNC_FUNC:5)<br />
+!define: &quot;UnStrTok&quot;=&quot;!insertmacro FUNCTION_STRING_UnStrTok_Call&quot;<br />
+!define: &quot;UnStrTok_INCLUDED&quot;=&quot;&quot;<br />
+Function: &quot;un.StrTok&quot;<br />
+!insertmacro: end of STRFUNC_FUNC<br />
+Exch($0,0)<br />
+Exch(st(1),0)<br />
+Exch($1,0)<br />
+Exch(st(1),0)<br />
+Exch(st(2),0)<br />
+Exch($2,0)<br />
+Exch(st(2),0)<br />
+Exch(st(3),0)<br />
+Exch($3,0)<br />
+Exch(st(3),0)<br />
+Push: $4<br />
+Push: $5<br />
+Push: $6<br />
+Push: $7<br />
+Push: $8<br />
+Push: $9<br />
+Push: $R0<br />
+!insertmacro: _IfThen</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">froesccn</div><div class="date">5th March 2010, 15:31</div></div><div class="posttext">Just wanted to add that modifying the include structure<br />
+of my original installer so that the problematic piece of<br />
+code is included one nesting level lower seems to be<br />
+a robust workaround for the time being (phew).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Marshall7a</div><div class="date">2nd July 2010, 10:38</div></div><div class="posttext">I too am getting this problem - special build crashes on Windows 7 32-bit.<br />
+<br />
+...<br />
+!insertmacro: SectionTextGetStored<br />
+!insertmacro: SectionText<br />
+!insertmacro: _Do<br />
+!insertmacro: end of _Do<br />
+!insertmacro: SectionText_Single<br />
+!insertmacro: _If<br />
+<br />
+The If code is at the beginning of the macro:<br />
+!macro SectionText_Single single section action io<br />
+	;this bit is just for checking that the script-author hasn't tried to add too many sections<br />
+	${If} $MAX_SECTION_COUNT = &quot;&quot;<br />
+	${OrIf} ${single} &gt; $MAX_SECTION_COUNT<br />
+		StrCpy $MAX_SECTION_COUNT ${single}<br />
+	${EndIf}<br />
+<br />
+MAX_SECTION_COUNT variable is defined.<br />
+Code compiles and runs fine on non-special build.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

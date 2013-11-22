@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" wierd nsDialogue crash issue, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  wierd nsDialogue crash issue NSIS Discussion" />
+	
+	<title> wierd nsDialogue crash issue [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  wierd nsDialogue crash issue</div>
+<hr />
+<div class="pda"><a href="t-285895.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=285895">wierd nsDialogue crash issue</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">mordekai</div><div class="date">29th January 2008, 17:31</div></div><div class="posttext">I'm having a wierd issue where, in the SelectFolderDialogue,  if i try to create a new folder (using the supplied button), and select that folder, the proceeding call to SetWindowText crashes my installer...<br />
+<br />
+any ideas?<br />
+<br />
+#I've created a custom page, here's the loader function for it:<br />
+<br />
+Function customDirectoryDlg<br />
+  nsDialogs::Create /NOUNLOAD 1018<br />
+  Pop $0   <br />
+  ${NSD_CreateDirRequest} 0 20u 80% 15u &quot;$INSTDIR&quot;<br />
+  Pop $DIR_EDIT<br />
+  ${NSD_CreateButton} 82% 20u 40u 15u &quot;Browse...&quot;<br />
+  Pop $DIR_BUTTON<br />
+  ${NSD_OnClick} $DIR_BUTTON DirButtonOnClick<br />
+  nsDialogs::Show<br />
+FunctionEnd<br />
+<br />
+# and here's the ButtonClick event function: <br />
+Function DirButtonOnClick<br />
+   Pop $0 #HWND<br />
+   nsDialogs::SelectFolderDialog /NOUNLOAD &quot;Select folder&quot; &quot;$INSTDIR&quot;  <br />
+   Pop $0     <br />
+   # in the SelectFolderDialog, if you create a new folder,  <br />
+   # and select that new folder, the following line will<br />
+   # crash the installer<br />
+   System::Call `user32::SetWindowText(i $DIR_EDIT, t &quot;blah&quot;)`<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th January 2008, 18:52</div></div><div class="posttext">What are the crash details?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mordekai</div><div class="date">29th January 2008, 19:04</div></div><div class="posttext">I get a Microsoft dialogue with the following buttons as options:<br />
+<br />
+&quot;Debug&quot;<br />
+&quot;Send Error Report&quot;<br />
+&quot;Don't Send&quot;<br />
+<br />
+There is also a binary dump of the exe and a list of dll/modules (i suspect) in their various states at the time of the crash.<br />
+<br />
+Is this any help?  Is there any other information you need?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th January 2008, 20:24</div></div><div class="posttext">Any details at all would help as currently I can't reproduce the problem. An installer that reproduces this or, even better, a complete and minimal script, would also help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mordekai</div><div class="date">29th January 2008, 20:55</div></div><div class="posttext">I'm attaching a small script that duplicates the problem.<br />
+I narrowed the problem down to the interaction between my OnClick function and my OnChange function.<br />
+<br />
+in my OnClick function, the user selects the folder.  I post this new folder string to my Edit box (for which there is an OnChange event).  the OnChange event gets called, calls GetWindowText, which appears to succeed (the final MessageBox gets called with the appropriate data).  Then the installer crashes.<br />
+<br />
+I'm wondering if i'm butchering the stack?  Popping when i shouldn't be? not popping when i should be?<br />
+<br />
+thanks for your support in this!<br />
+-chris</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th January 2008, 21:18</div></div><div class="posttext">That script did reproduce the problem. The problem appears to be calling the System plug-in in gxDirEditOnChange which is triggered by the call to SetWindowText in gxDirButtonOnClick. Because /NOUNLOAD wasn't used in the GetWindowText call, the System plug-in was unloaded while it was still processing the SetWindowText higher up in the stack.<br />
+<br />
+This is an issue I haven't considered when I introduced function callbacks for plug-ins. I am unsure of the best solution for this.<br />
+<br />
+The immediate solution for your problem is using /NOUNLOAD on line 36.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mordekai</div><div class="date">29th January 2008, 21:49</div></div><div class="posttext">Interesting.<br />
+that solution works, and is certainly easy enough.<br />
+<br />
+Thanks for your help Kichik :)<br />
+<br />
+-chris</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Daniel James</div><div class="date">17th February 2008, 15:50</div></div><div class="posttext">Originally posted by mordekai <br />
+I'm having a wierd issue where, in the SelectFolderDialogue,  if i try to create a new folder (using the supplied button), and select that folder, the proceeding call to SetWindowText crashes my installer...<br />
+<br />
+any ideas?<br />
+<br />
+<br />
+Interesting ... I've just been doing the same thing. It's something I'd have expected to find in the NSIS examples and it hurts to find it isn't quite the no-brainer it should be!<br />
+<br />
+<br />
+&lt;snip&gt;<br />
+# and here's the ButtonClick event function: <br />
+Function DirButtonOnClick<br />
+   Pop $0 #HWND<br />
+   nsDialogs::SelectFolderDialog /NOUNLOAD &quot;Select folder&quot; &quot;$INSTDIR&quot;  <br />
+   Pop $0     <br />
+   # in the SelectFolderDialog, if you create a new folder,  <br />
+   # and select that new folder, the following line will<br />
+   # crash the installer<br />
+   System::Call `user32::SetWindowText(i $DIR_EDIT, t &quot;blah&quot;)`<br />
+FunctionEnd <br />
+<br />
+System::Call seems like a sledgehammer to crack a nut, here, though. Why not just use SendMessage? I have something like this:<br />
+<br />
+<br />
+Function doBrowse<br />
+<br />
+   pop $0  ; get control hwnd off stack<br />
+<br />
+   nsDialogs::SelectFolderDialog /NOUNLOAD &quot;Select Install Folder&quot; &quot;C:\MyApp&quot;<br />
+   pop $0<br />
+<br />
+   ${If} $0 == &quot;error&quot;<br />
+      Return<br />
+   ${EndIf}<br />
+<br />
+   SendMessage $InstDirCtl ${WM_SETTEXT} 0 &quot;STR:$0&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+Note the all-important &quot;STR:&quot; in front of the lparam argument.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th November 2008, 22:34</div></div><div class="posttext">This will be fixed in the next version - 2.42.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

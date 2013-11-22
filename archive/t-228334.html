@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Print button on the license dialog page, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Print button on the license dialog page NSIS Discussion" />
+	
+	<title> Print button on the license dialog page [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Print button on the license dialog page</div>
+<hr />
+<div class="pda"><a href="t-228334.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=228334">Print button on the license dialog page</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">smatte</div><div class="date">13th October 2005, 15:28</div></div><div class="posttext">I'm trying to add a print button on license page. I tried 2 differents method:<br />
+<br />
+1- With &quot;Page custom&quot; I could add a button but the edit box that contain license is gray if I put it read only and white but selected(text in blue) if not read only.:confused:<br />
+<br />
+2- Is there a way to add some fields with an ini file when using &quot;Page license&quot;? if I could add a field &quot;button&quot;, it will be great for me. :D <br />
+<br />
+Any hint for me?:weird:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Jnuw</div><div class="date">13th October 2005, 16:07</div></div><div class="posttext">Sounds like you just want to allow the users to be able to print your license agreement.  If that's true, simply include a txt file containing your license in your installer.  Use the custom page method your were working on, and add the button (you may have to edit the position):<br />
+<br />
+[Field 5]<br />
+Type=Button<br />
+Flags=NOTIFY<br />
+Text=&amp;Print License<br />
+Left=240<br />
+Right=-10<br />
+Top=123		<br />
+Bottom=137<br />
+<br />
+Then in your leave function for that custom page...<br />
+<br />
+Function LeaveLicensePage<br />
+  ReadINIStr $0 &quot;$PLUGINSDIR\LicensePage.ini&quot; &quot;Settings&quot; &quot;State&quot;<br />
+  StrCmp $0 5 0 +4<br />
+  File /oname=$PLUGINSDIR\License.txt &quot;License.txt&quot;<br />
+  ExecShell &quot;print&quot; &quot;$PLUGINSDIR\License.txt&quot; SW_HIDE<br />
+  Abort<br />
+FunctionEnd<br />
+<br />
+Hope this helps!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">smatte</div><div class="date">13th October 2005, 16:14</div></div><div class="posttext">I already did that and it work well but when the page shows up, the license text is selected. Any code to tell nsis to doesn't selected the text in my text field?<br />
+<br />
+Thanks anyway.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Jnuw</div><div class="date">13th October 2005, 16:59</div></div><div class="posttext">Well if you use the following in your custom page ini:<br />
+<br />
+[Field 3]<br />
+Type=Text<br />
+Left=10<br />
+Right=-10<br />
+Top=20<br />
+Bottom=120<br />
+State=<br />
+Flags=MULTILINE|VSCROLL|READONLY<br />
+<br />
+And then use this in you SetFunction for the custom page:<br />
+<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;LicensePage.ini&quot; &quot;Field 3&quot; &quot;State&quot; &quot;bla bla&quot;<br />
+<br />
+;and if you want to get fancy, put the next 2 lines in right <br />
+;before the !insertmacro MUI_INSTALLOPTIONS_SHOW line to <br />
+;make the background white again, even though your text box <br />
+;is readonly.<br />
+<br />
+  ;Sets the white background on the readonly text box<br />
+  GetDlgItem $R1 $R0 1202 ; 1200 + Field # - 1<br />
+  SetCtlColors $R1 000000 FFFFFF<br />
+<br />
+That is the code I use for a text box on a custom page, and the text is not selected, hope this helps.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">smatte</div><div class="date">13th October 2005, 18:22</div></div><div class="posttext">Thanks a lot! It work #1.<br />
+Just a last think. The print command show notepad even if I used SW_SHOWMINIMIZED (because SW_HIDE doesn't exist). I'll try to find an other method to print.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Jnuw</div><div class="date">13th October 2005, 18:30</div></div><div class="posttext">Originally posted by smatte <br />
+The print command show notepad even if I used SW_SHOWMINIMIZED (because SW_HIDE doesn't exist). I'll try to find an other method to print.  <br />
+Smatte, yes I have tried both SW_HIDE and SW_SHOWMINIMIZED, and both shows the notepad pop up for just a second or two.  I have not been able to correct that, if you find an answer on that, please post back, or PM me.  Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">smatte</div><div class="date">3rd November 2005, 14:43</div></div><div class="posttext">Here is the code you could use to print silently:<br />
+<br />
+#extract license<br />
+File /oname=$PLUGINSDIR\\License.txt &quot;${LOCALPATH}\\License.txt&quot;<br />
+#print license<br />
+StrCpy $0 &quot;print&quot; ;operation<br />
+StrCpy $1 &quot;$PLUGINSDIR\\License.txt&quot; ;path to license<br />
+StrCpy $2 &quot;$PLUGINSDIR&quot; ;directory<br />
+#ShellExecute(<br />
+# HWND hwnd,<br />
+# LPCTSTR lpOperation,      we want to print<br />
+# LPCTSTR lpFile,<br />
+# LPCTSTR lpParameters,     no parameter for printing<br />
+# LPCTSTR lpDirectory,<br />
+# INT nShowCmd              0 = SW_HIDE<br />
+#);<br />
+System::Call 'shell32::ShellExecute(v,t,t,t,t,i) v(,r0,r1,,r2,0)'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Jnuw</div><div class="date">3rd November 2005, 16:27</div></div><div class="posttext">Thanks smatte!  That's great, works perfectly.<br />
+<br />
+Jnuw</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sprinleo</div><div class="date">31st August 2009, 14:23</div></div><div class="posttext">Hi Jnuw et al,<br />
+i am new NSIS.<br />
+i managed to create a custom page with all the controls that emulates the default license page.<br />
+do you know how to populate the text control to display the EULA ?<br />
+<br />
+many thanks<br />
+Manohar</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sprinleo</div><div class="date">2nd September 2009, 06:25</div></div><div class="posttext">guys, please help, this thread is my only hope :(<br />
+i am trying to display the EULA in a custom page.<br />
+code:<br />
+-------------------------------------------------------<br />
+Function myLicensePageCreate<br />
+		  !insertmacro INSTALLOPTIONS_WRITE &quot;myLicense.ini&quot; &quot;Field 2&quot; &quot;State&quot; &quot;$(license_txt)&quot;<br />
+		  !include &quot;winst\myLicense.nsh&quot;<br />
+FunctionEnd<br />
+-----------------------------------------------------------<br />
+<br />
+this simply does not show up anything in the EULA section. But if i enter a text in the place of &quot;($license_txt)&quot;, it shows.<br />
+does anybody knows what am i missing, must be a small thingy.<br />
+<br />
+any help will be much appreciated !</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

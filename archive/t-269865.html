@@ -1,0 +1,216 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problem with System::Call, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problem with System::Call NSIS Discussion" />
+	
+	<title> Problem with System::Call [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problem with System::Call</div>
+<hr />
+<div class="pda"><a href="t-269865.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=269865">Problem with System::Call</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">AxelMock</div><div class="date">20th April 2007, 16:31</div></div><div class="posttext">Hi,<br />
+<br />
+I'm having a problem with a System::Call to an external DLL.<br />
+What I want to do is to port an existing InstallShield installer <br />
+for a driver to NSIS. <br />
+I've read the Readme, studied several examples but can't found what's wrong.<br />
+<br />
+<br />
+In a custom action of IS a SetupAPI calls are performed to copy/uninstall <br />
+an OEM inffile.<br />
+<br />
+SetupCopyOEMInf/SetupUninstallOEMInf are declared as follows:<br />
+<br />
+BOOL WINAPI SetupCopyOEMInf(<br />
+  PCTSTR SourceInfFileName,<br />
+  PCTSTR OEMSourceMediaLocation,<br />
+  DWORD OEMSourceMediaType,<br />
+  DWORD CopyStyle,<br />
+  PTSTR DestinationInfFileName,<br />
+  DWORD DestinationInfFileNameSize,<br />
+  PDWORD RequiredSize,<br />
+  PTSTR DestinationInfFileNameComponent<br />
+);<br />
+<br />
+<br />
+BOOL SetupUninstallOEMInf(<br />
+  PCWSTR InfFileName,<br />
+  DWORD Flags,<br />
+  PVOID Reserved<br />
+);<br />
+<br />
+<br />
+<br />
+<br />
+I translated these into:<br />
+<br />
+!define SETUP_COPY_OEM_INFA &quot;SetupAPI::SetupCopyOEMInfA (t, t, i, i, *t, i, i, *t) i&quot;<br />
+!define SETUP_UNINSTALL_OEM_INFA &quot;SetupAPI::SetupUninstallOEMInfA (t, i, *i) i&quot;<br />
+<br />
+<br />
+with the calls being: <br />
+<br />
+ System::Call '${SETUP_COPY_OEM_INFA} (r0,,0, 2, .r2, ${NSIS_MAX_STRLEN},, )'<br />
+ System::Call &quot;${SETUP_UNINSTALL_OEM_INFA} i(r1, 1, 0) .r3&quot;<br />
+ <br />
+<br />
+These calls don't work. :-(<br />
+I don't even get a return value except for &quot;error&quot; from GetLastError....<br />
+<br />
+I've added Dumpstate::debug calls and MessageBox output to see stack and variables, <br />
+but it seems that the call is aborted before setting any return code.<br />
+<br />
+Can somebody point out what I'm doing wrong?<br />
+<br />
+<br />
+I do have &quot;SetPluginUnload alwaysoff&quot; and &quot;SetPluginUnload manual&quot; and &quot;System::Free 0&quot;<br />
+of course, globally/in the respective section.<br />
+<br />
+<br />
+If I get this working I can start work on a NSIS module implementing/using<br />
+ Microsoft DIF (Driver Installation Framework), which would really simplify <br />
+ driver installations.<br />
+<br />
+<br />
+<br />
+<br />
+Here are the relevant code snippets:<br />
+<br />
+<br />
+Function RegisterInf<br />
+;prototype BOOL WINAPI SetupCopyOEMInf(<br />
+;                                      PCTSTR SourceInfFileName,<br />
+;                                      PCTSTR OEMSourceMediaLocation,<br />
+;                                      DWORD OEMSourceMediaType,<br />
+;                                      DWORD CopyStyle,<br />
+;                                      PTSTR DestinationInfFileName,<br />
+;                                      DWORD DestinationInfFileNameSize,<br />
+;                                      PDWORD RequiredSize,<br />
+;                                      PTSTR DestinationInfFileNameComponent<br />
+;);<br />
+         Exch $0                     ; passed path to inf file<br />
+         Push $1<br />
+         Push $2<br />
+         Push $3<br />
+<br />
+         SetOutPath $SYSDIR<br />
+         ${GetFileName} $0 $1        ; get filename part of path<br />
+         Dumpstate::debug<br />
+         System::Call '${SETUP_COPY_OEM_INFA} (r0,,0, 2, .r2, ${NSIS_MAX_STRLEN},, )'<br />
+         Dumpstate::debug<br />
+         Call CheckError<br />
+<br />
+         ; return code is in $3<br />
+         MessageBox MB_ICONINFORMATION|MB_OK &quot;SetupCopyOEMInf ($0 / $2) returned $3 &quot;<br />
+         IntCmp $3 0 WriteToReg<br />
+         StrCpy $2 &quot;&quot;<br />
+         WriteToReg:<br />
+         ; result is in $2<br />
+         WriteRegStr ${NSIS_REGISTRY_ROOT} &quot;Software\${OEM}\${PRODUCT}&quot; &quot;$1&quot; &quot;$2&quot;<br />
+         <br />
+         Pop $3<br />
+         Pop $2<br />
+         Pop $1<br />
+         Exch $0<br />
+<br />
+FunctionEnd<br />
+<br />
+Function un.RegisterInf<br />
+;prototype BOOL SetupUninstallOEMInf(<br />
+;                                    PCWSTR InfFileName,<br />
+;                                    DWORD Flags,<br />
+;                                    PVOID Reserved<br />
+;);<br />
+         Exch $0                     ; passed path inf file name<br />
+         Push $1<br />
+         Push $2<br />
+         Push $3<br />
+<br />
+         ; result is in $1<br />
+         ReadRegStr $1 ${NSIS_REGISTRY_ROOT} &quot;${NSIS_REGISTRY_PRODUCTPATH}&quot; &quot;$0&quot;<br />
+         ${un.GetFileName} $1 $2        ; get filename part of path<br />
+<br />
+         StrCmp $OSVersion 'W2K' Case_W2K<br />
+<br />
+         System::Call &quot;${SETUP_UNINSTALL_OEM_INFA} i(r1, 1, 0) .r3&quot;<br />
+         ; return code is in $3<br />
+         MessageBox MB_ICONINFORMATION|MB_OK &quot;SetupUninstallOEMInfA ($0 / $1) returned $3 &quot;<br />
+         StrCpy $0 $3<br />
+         IntCmp $3 0 Done<br />
+         goto Done<br />
+<br />
+         Case_W2K:<br />
+         StrCpy $0 &quot;&quot;<br />
+         SetFileAttributes $1 FILE_ATTRIBUTE_NORMAL<br />
+         Delete $1<br />
+         IfErrors 0 Done<br />
+         StrCpy $0 &quot;1&quot;<br />
+<br />
+         Done:<br />
+         Pop $3<br />
+         Pop $2<br />
+         Pop $1<br />
+         Exch $0<br />
+<br />
+FunctionEnd<br />
+<br />
+Function CheckError<br />
+         Push $0<br />
+         System::Call &quot;Kernel32::GetLastError ()i ().r0&quot;<br />
+         Dumpstate::debug<br />
+         MessageBox MB_ICONINFORMATION|MB_OK &quot;Error code: $0 &quot;<br />
+         Pop $0<br />
+FunctionEnd<br />
+<br />
+<br />
+Call in section:<br />
+<br />
+:<br />
+StrCpy $0 &quot;$INSTDIR\${MY_DRIVERNAME}.inf&quot;<br />
+Push $0<br />
+Call RegisterInf<br />
+Pop $R0<br />
+IntCmpU $R0 0 InfError InfError<br />
+:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">20th April 2007, 16:55</div></div><div class="posttext">Have a look at SetupCopyOEMInf (http://msdn2.microsoft.com/en-us/library/aa376990.aspx) and SetupUninstallOEMInf (http://msdn2.microsoft.com/en-us/library/aa377446.aspx)<br />
+<br />
+I would define the calls as:System::Call 'Setupapi.dll::SetupCopyOEMInfA(t r1,t r2,i r3, i r4,*t .r5,i r6,*i .r7,*t .r8)i.r9'<br />
+System::Call 'Setupapi.dll::SetupUninstallOEMInfA(t R1,i R2,)i.R3'So in your case it would becomeSystem::Call 'Setupapi.dll::SetupCopyOEMInfA(t r0,t &quot;&quot;,i 0, i 2,*t .r2,i ${NSIS_MAX_STRLEN},*i .r3,*t .r4)i.R0'<br />
+System::Call 'Setupapi.dll::SetupUninstallOEMInfA(t r1,i 2,)i.R1'The first one should give you 1 (success) or 0 (fail) on $R0 and the second one should give you 1 (success) or 0 (fail) on $R1 and GetLastError will give you extended info in either case<br />
+Hope this helps<br />
+CF<br />
+<br />
+PS note that you should have admin privileges to call these functions, so you may want to add the appropriate code to make sure that the user running your app has sufficient privileges.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AxelMock</div><div class="date">26th April 2007, 08:49</div></div><div class="posttext">Hi,<br />
+<br />
+thanks to your example i was able to resolve the problem.<br />
+<br />
+Originally posted by CancerFace <br />
+Have a look at SetupCopyOEMInf (http://msdn2.microsoft.com/en-us/library/aa376990.aspx) and SetupUninstallOEMInf (http://msdn2.microsoft.com/en-us/library/aa377446.aspx)<br />
+<br />
+<br />
+<br />
+Although the calls do NOT return the values in the variables as described by MS, using Dumpstate::debug I was able to find out which variables to use.<br />
+<br />
+No I'm out for implementing the interface to DIF.<br />
+<br />
+Regards,<br />
+  Axel</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

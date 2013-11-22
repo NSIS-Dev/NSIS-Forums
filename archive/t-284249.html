@@ -1,0 +1,103 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" call !insertmacro twice in a same function, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  call !insertmacro twice in a same function NSIS Discussion" />
+	
+	<title> call !insertmacro twice in a same function [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  call !insertmacro twice in a same function</div>
+<hr />
+<div class="pda"><a href="t-284249.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=284249">call !insertmacro twice in a same function</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ryuthomas</div><div class="date">3rd January 2008, 00:49</div></div><div class="posttext">Hi,<br />
+<br />
+I defined a macro to check versions of a file. For simplicity, the file is always put into two different fixed directories says &quot;C:\MyApp1&quot; and &quot;C:\MyApp2&quot;<br />
+<br />
+I need to search through the file and get the version, so I wrote a macro:<br />
+<br />
+!macro CheckFileVersion DirToCheck IsRecursive VersionToCheck RET_Code<br />
+   ...<br />
+   ...<br />
+   ...<br />
+!macroend<br />
+<br />
+<br />
+When I call it on another macro, I do:<br />
+<br />
+!macro CheckAllDependencies RET_ResultCode<br />
+   !insertmacro CheckFileVersion &quot;C:\MyApp1&quot; &quot;True&quot; &quot;1.0.0.1&quot; $0<br />
+   !insertmacro CheckFileVersion &quot;C:\MyApp2&quot; &quot;True&quot; &quot;2.3038.1102.13&quot; $1<br />
+   ...<br />
+   ...<br />
+   ...<br />
+!macroend<br />
+<br />
+<br />
+When I tried to compile, it says:<br />
+Error: label &quot;GoToNextDir:&quot; already declared in function<br />
+<br />
+Both of this macros reside on the same file (which is a common function file, CheckAppFunction.nsh). And will be included on my installer.<br />
+<br />
+Any idea how to tackle this problem? Thanks for any help in advance.<br />
+<br />
+Cheers :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ryuthomas</div><div class="date">3rd January 2008, 03:35</div></div><div class="posttext">I found a way to get around this, with the help from this link:<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=283620&amp;highlight=Find+File<br />
+<br />
+Basically, I need to create a function inside a macro. So, in my case it is<br />
+<br />
+!macro CheckFileVersion_Macro UN<br />
+   Function ${UN}CheckFileVersion_Function<br />
+      Pop $R0    ;acting as DirToCheck<br />
+      Pop $R1    ;acting as IsRecursive<br />
+      Pop $R2    ;acting as VersionToCheck<br />
+      ...<br />
+      ...<br />
+      ...<br />
+      Push $R9   ;acting as RET_Code<br />
+   FunctionEnd<br />
+!macroend<br />
+<br />
+!macro CheckFileVersion_Macro_Call _UN _DirToCheck _IsRecursive _VersionToCheck _RET_RESULTCODE<br />
+   Push ${_VersionToCheck}<br />
+   Push ${_IsRecursive}<br />
+   Push ${_DirToCheck }<br />
+   Call ${_UN}IsCPLEXDLLVersionOrNewerExists_Function<br />
+   Pop ${_RET_RESULTCODE}<br />
+!macroend<br />
+<br />
+!macro CheckFileVersion<br />
+   !define CheckFileVersion '!insertmacro CheckFileVersion_Macro_Call &quot;&quot;'<br />
+   !insertmacro CheckFileVersion_Macro &quot;&quot;<br />
+!macroend<br />
+<br />
+And when you want to use it, you can just simply do:<br />
+<br />
+!insertmacro CheckFileVersion<br />
+!macro CheckAllDependencies RET_ResultCode<br />
+   ${CheckFileVersion} &quot;C:\MyApp1&quot; &quot;True&quot; &quot;1.0.0.1&quot; $0<br />
+   ${CheckFileVersion} &quot;C:\MyApp2&quot; &quot;True&quot; &quot;2.3038.1102.13&quot; $1<br />
+   ...<br />
+   ...<br />
+   ...<br />
+!macroend<br />
+<br />
+<br />
+I hope, in the future, anyone who is learning how to use macro can take advantage of this post.<br />
+<br />
+Cheers :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

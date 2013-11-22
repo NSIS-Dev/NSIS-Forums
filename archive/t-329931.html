@@ -1,0 +1,104 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Pending Separate Process?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Pending Separate Process? NSIS Discussion" />
+	
+	<title> Pending Separate Process? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Pending Separate Process?</div>
+<hr />
+<div class="pda"><a href="t-329931.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=329931">Pending Separate Process?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Residentmage</div><div class="date">22nd April 2011, 23:20</div></div><div class="posttext">I tend to use NSIS to repackage vendor software at my organization. (Thank you to everyone that works on it, you guys have made software deployment much, much easier...)<br />
+<br />
+This is my problem:<br />
+<br />
+I launch the execution of the software via ExecWait, and it will crash the install, because that piece of software launches another process, and closes out. (ex: Watch Adobe updates install - you launch setup.exe; it in turn launches PDApp.exe and closes out.) This becomes problematic when your nsis installer is setup to clean up the update files at the end of the installation, and deletes the install files while they are trying to be installed. <br />
+<br />
+so this is what I've done to prevent that, using Processes (http://nsis.sourceforge.net/Processes_plug-in):<br />
+<br />
+<br />
+Section &quot;the App&quot;<br />
+                 File /r &quot;install.bat&quot;<br />
+        	File /r &quot;launch_silent.vbs&quot;<br />
+  		ExecWait 'wscript.exe launch_silent.vbs'<br />
+<br />
+; launch_silent.vbs just calls install.bat silently: <br />
+; CreateObject(&quot;WScript.Shell&quot;).Run &quot;%TEMP%\install.bat&quot;,0<br />
+; for the sake of this problem, we aren't able to modify install.bat, and have to use it to do ; the installation.<br />
+<br />
+call Check4process<br />
+SectionEnd<br />
+<br />
+Function Check4process<br />
+                Processes::FindProcess &quot;cmd.exe&quot; <br />
+  		IntCmp $R0 1 0 Installed <br />
+  		sleep 6000 ; sleep for 6 seconds<br />
+  		Call Check4process ; check again<br />
+                Installed:<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+Now the vbs calls the .bat file, that runs as a process 'cmd.exe'. Check4process checks for cmd.exe and if it is running, it sleeps. Else, it exits, and continues with the installation. The problem I've come to is, say the customer has another cmd.exe (checking ipconfig or something..) my installer is paused until all cmd.exe windows are closed. <br />
+<br />
+I've tried a couple of things, but I haven't had any luck at this time, and thought I would ask those with way more experience if I've completely botched the use of nsis, or if I'm just missing something that's actually pretty simple.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">22nd April 2011, 23:46</div></div><div class="posttext">Have you tried to find out if there are any switches that forces it to wait?<br />
+<br />
+Or you could try http://nsis.sourceforge.net/ExecWait_and_waiting_for_child_processes_with_Job_Objects</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Residentmage</div><div class="date">23rd April 2011, 00:59</div></div><div class="posttext">Anders:<br />
+<br />
+Thanks for the response! There aren't any switches in the .bat file that would pause it, or that I can invoke. It's all or nothing. <br />
+<br />
+Your suggestion works wonderfully for Windows XP Professional SP3 (32-bit) but hangs the install when ran against windows7 Enterprise (64-bit). Any suggestions to what I can change in the macro to accommodate the architecture difference?  <br />
+<br />
+In the past I've put in checks for architecture and changed up the sections / function calls based on it, but I'm still really new to using macros or, for that matter, system calls.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">23rd April 2011, 06:19</div></div><div class="posttext">That code has not been touched in years, I don't know what the problem could be, sorry</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Residentmage</div><div class="date">26th April 2011, 23:46</div></div><div class="posttext">ExecDos (http://nsis.sourceforge.net/ExecDos_plug-in) is what I wound up using. Since I was able to remove the vbs, as long as the .bat windows doesn't show, this was ideal, and works on both XP and 7.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">26th April 2011, 23:54</div></div><div class="posttext">How does the batch file know the process has completed?<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Residentmage</div><div class="date">27th April 2011, 00:53</div></div><div class="posttext">How does the batch file know the process has completed?<br />
+<br />
+Stu<br />
+<br />
+I was over complicating the issue (I do that sometimes...okay, a lot.) I was using the .vbs script to launch install.bat silently. Once I found ExecDos, I didn't need the .vbs anymore, greatly simplifying the process. NSIS could launch the install.bat file directly, and monitor when it terminated to continue with the process.<br />
+<br />
+The batch file was the payload in this instance, so when it completes, the installer can continue with what it needs to do, in this case, ftp the resulting log file to a ftp site where we can take a look at the results later.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">27th April 2011, 10:42</div></div><div class="posttext">You are probably still overcomplicating by using a batch file. Whatever you are doing in the batch should be doable in NSIS script. So, how does the batch file know the process has completed?<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Residentmage</div><div class="date">27th April 2011, 19:19</div></div><div class="posttext">Stu, <br />
+<br />
+Yes it is still being complicated by using the batch file. The batch file is from the vendor; They use it to audit systems for compliance (hence, I'm not allowed to modify it...). As my workplace is very diverse (separate departments have their own IT, for example) When releasing the audit batch file to them, we have to make sure that we can get the log file back for evaluation.<br />
+<br />
+That's what I meant when I said that the batch file was the payload in this instance.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

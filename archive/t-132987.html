@@ -1,0 +1,168 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" CD vs. harddisk, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  CD vs. harddisk NSIS Discussion" />
+	
+	<title> CD vs. harddisk [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  CD vs. harddisk</div>
+<hr />
+<div class="pda"><a href="t-132987.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=132987">CD vs. harddisk</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">zoli</div><div class="date">24th April 2003, 18:09</div></div><div class="posttext">Disclaimer: I searched the site but did not find answer to my question.<br />
+<br />
+Has anybody experienced differences between running the created install from burnt CD or harddisk? <br />
+<br />
+I have a small installer asking the user to select between <br />
+1) running the (html) application from the CD or <br />
+2) running another installer which copies the application to the HDD and launches it from there.<br />
+<br />
+My problem is that this first installer works fine from my disk before burning it to the CD, but just does not launch anything if I run it from the CD. <br />
+<br />
+The related code from this first installer is the following:<br />
+<br />
+Section &quot;CD-meghajtóról futtatom&quot; sec1<br />
+    ExecShell &quot;open&quot; &quot;$EXEDIR\FIGURAKATALOGUS\START.HTM&quot;<br />
+SectionEnd<br />
+<br />
+Section &quot;Feltelepítem a gépre&quot; sec2<br />
+    Exec &quot;$EXEDIR\INSTALL\SETUP_TANC.EXE&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+If I manually launch them (either the html or the setup) then they are working, reachable, etc. I've also created a version with messageboxes displaying the path before launching the files and it seemed good.<br />
+<br />
+<br />
+Thanks in advance.<br />
+<br />
+The full file is attached as well</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">24th April 2003, 19:01</div></div><div class="posttext">you didnt attach anything.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">24th April 2003, 19:34</div></div><div class="posttext">Doens't the installer start at all or is it ExecShell causing the problem?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zoli</div><div class="date">25th April 2003, 09:29</div></div><div class="posttext">What happens is that the first installer gets executed as far as I see, so I can select which option to launch. <br />
+<br />
+After selecting and pressing the button, the first installer terminates, but the second installer (or the application) is not launched.<br />
+<br />
+If I do the same from the winchester then they are launched.<br />
+<br />
+&lt;I will give another try to attach the .nsi file in the evening, it is on my home computer&gt;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">R@m00n</div><div class="date">25th April 2003, 10:21</div></div><div class="posttext">It's caused by this fault:<br />
+ On HDD: $EXEDIR=C:\Test -&gt; C:\Test\FIGURAKATALOGUS\START.HTM<br />
+ On CD: $EXEDIR=D:\ -&gt; D:\\FIGURAKATALOGUS\START.HTM<br />
+<br />
+So it uses to Backslashes. You need to check if Exedir ends with a Backslash and if yes then remove it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">25th April 2003, 10:50</div></div><div class="posttext">Use this...<br />
+<br />
+Push [Your string]<br />
+Call removebs<br />
+Pop $R0<br />
+<br />
+If [Your string] had a backslash on the end (\) then it will now be removed.<br />
+<br />
+<br />
+Function removebs<br />
+Exch $R0<br />
+Push $R1<br />
+StrCpy $R1 $R0 1 -1<br />
+StrCmp $R1 &quot;\&quot; 0 +2<br />
+StrCpy $R0 $R0 -1<br />
+Pop $R1<br />
+Exch $R0<br />
+FunctionEnd<br />
+<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">25th April 2003, 15:01</div></div><div class="posttext">R@m00n, that's not true. $EXEDIR and friends are always stripped down from the last back-slash. Besides, he said the path looked OK to him.<br />
+<br />
+I had no problem doing what you're trying to do from a CD or hard-disk. What version of NSIS and Windows are you using?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zoli</div><div class="date">27th April 2003, 10:54</div></div><div class="posttext">Hi Guys!<br />
+<br />
+Thanks to all of you for the tips and help. <br />
+<br />
+Now it is working. You were right kichik that this was not the backslash, but still, the comment of RamOOn made me reactivate my debug messageboxes and it turned out that there was indeed a mistake in the path: <br />
+<br />
+On the CD root (and in the harddisk root as well) $EXEDIR evaluates to G (or C), so no backslash but there is the colon missing.<br />
+<br />
+So here is my code now:<br />
+<br />
+    Push $EXEDIR<br />
+    Call fix_exe_path<br />
+    Pop $R0<br />
+    Exec &quot;$R0\INSTALL\SETUP_TANC.EXE&quot;<br />
+<br />
+the similar for the &quot;launch the html&quot; as well.<br />
+<br />
+And the function:<br />
+<br />
+Function fix_exe_path<br />
+	Exch $R0<br />
+	Push $R1<br />
+	Push $R2<br />
+              StrLen $R1 $R0<br />
+	IntCmp $R1 1 0 0 +3<br />
+	StrCpy $R2 &quot;:&quot;<br />
+	StrCpy $R0 &quot;$R0$R2&quot;<br />
+	Pop $R2<br />
+	Pop $R1<br />
+	Exch $R0<br />
+FunctionEnd<br />
+<br />
+THANKS AGAIN.<br />
+Zoli</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">virtlink</div><div class="date">27th April 2003, 14:27</div></div><div class="posttext">So you mean that $EXEDIR becomes the following:<br />
+C<br />
+D<br />
+E:\Whatever<br />
+<br />
+right?<br />
+<br />
+Is this a bug in NSIS, in Windows or what?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th April 2003, 17:25</div></div><div class="posttext">It's an old bug in NSIS. What version are you using?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zoli</div><div class="date">28th April 2003, 08:44</div></div><div class="posttext">You are right Virtlink.<br />
+<br />
+From this experience, if you are in the root of a drive then $EXEDIR (at least in my version) evaluates only to the drive label, so C or D, etc.<br />
+<br />
+When you are in a directory, then it is fine, so you get back C:\Directory_name<br />
+<br />
+If I remember well then I am using the nsis20b1.exe</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">28th April 2003, 11:25</div></div><div class="posttext">NSIS 2 beta 1 is an old version. Upgrading is recommended.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">virtlink</div><div class="date">30th April 2003, 16:35</div></div><div class="posttext">So is this 'bug' eliminated in the latest versions (or releases)?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">30th April 2003, 16:36</div></div><div class="posttext">Yes, it's an old bug.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

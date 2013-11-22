@@ -1,0 +1,107 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Unable to Add Windows 8 to Manifest, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Unable to Add Windows 8 to Manifest NSIS Discussion" />
+	
+	<title> Unable to Add Windows 8 to Manifest [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Unable to Add Windows 8 to Manifest</div>
+<hr />
+<div class="pda"><a href="t-352963.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=352963">Unable to Add Windows 8 to Manifest</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">greenaj</div><div class="date">1st December 2012, 00:40</div></div><div class="posttext">Hello, I am hoping to add Windows 8 to the supportedOs values in the application manifest.  I have heard that !packhdr can be used to do this.<br />
+<br />
+From !packhdr I call mt.exe to set the manifest using my custom manfiest.  It seems that makensis again calls MT.exe to reset the manifest.<br />
+<br />
+I would like to add clear steps on how to do this in my blog.  If anyone could provide help with this, it would be greatly appreciated.  All of the posting on this mention !packhdr and resource hacker, but there are no clear stops.  I think that the Microsoft manifest tool, mt.exe might be able to be used instead.<br />
+<br />
+Thanks,<br />
+greenaj</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">1st December 2012, 07:14</div></div><div class="posttext">makensis does not use mt.exe</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">greenaj</div><div class="date">1st December 2012, 17:19</div></div><div class="posttext">OK, but makensis seems that it will overwrite any manifest that you add to the generated NSIS installer issuing a call to Resource Hacker or mt.exe from of !packhdr.  I am trying to determine if that the only way top fix this would be to rebuild NSIS from source and fix makensis.exe.  If there is another way, I would please like to know so that my client does not fell their build depends on a tweaked version of NSIS.<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">1st December 2012, 19:10</div></div><div class="posttext">makensis seems that it will overwrite any manifest that you add to the generated NSIS installer issuing a call to Resource Hacker or mt.exe from of !packhdr<br />
+<br />
+You must be doing something wrong as I've successfully changed the manifest before.<br />
+<br />
+!packhdr &quot;$%TEMP%\exehead.tmp&quot; '&quot;%ProgramFiles%\Resource Hacker\ResHacker.exe&quot; -addoverwrite &quot;%TEMP%\exehead.tmp&quot;, &quot;%TEMP%\exehead.tmp&quot;, &quot;Custom.manifest&quot;, 24,1,1033'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">1st December 2012, 19:27</div></div><div class="posttext">Works fine for me:<br />
+<br />
+!define ResHacker &quot;c:\ResHacker\ResHacker.exe&quot;<br />
+!tempfile tmpmanifest<br />
+!tempfile tmpexe<br />
+!appendfile &quot;${tmpmanifest}&quot; '&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;...snipped...&lt;supportedOS Id=&quot;whateveryouwant&quot;/&gt;&lt;/application&gt;&lt;/compatibility&gt;&lt;/assembly&gt;'<br />
+!packhdr &quot;${tmpexe}&quot; '&quot;${ResHacker}&quot; -addoverwrite &quot;${tmpexe}&quot;, &quot;${tmpexe}&quot;, &quot;${tmpmanifest}&quot;, 24, 1, '<br />
+!delfile &quot;${tmpexe}&quot;<br />
+<br />
+Other options:<br />
+<br />
+ ResHack the stubs in NSIS\Stubs<br />
+ Compile from SVN, it supports Win8 and any other GUID you want</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">2nd December 2012, 13:50</div></div><div class="posttext">@greenaj: keep in mind that when using a custom manifest, RequestExecutionLevel attribute in the script will have no consequence, you need to account for that in your manifest. Attached is the standard NSIS manifest with Win8 support added and corresponding level attributes.<br />
+Usage example:<br />
+OutFile &quot;NSIS_installer_with_Win8_support.exe&quot;<br />
+Caption &quot;NSIS installer with Win8 support&quot;<br />
+<br />
+!define ResHacker &quot;%ProgramFiles%\Resource Hacker\ResHacker.exe&quot;<br />
+!define ManifDir &quot;${NSISDIR}\Contrib\Manifests&quot;<br />
+!define Manifest NSIS_2.46_Win8<br />
+!define RequestExecutionLevel User<br />
+<br />
+        Function .onInit<br />
+MessageBox MB_OK|MB_ICONINFORMATION &quot;What the caption says.&quot;<br />
+Abort<br />
+FunctionEnd<br />
+<br />
+Section Blank<br />
+SectionEnd<br />
+<br />
+!ifdef ResHacker &amp; ManifDir &amp; Manifest &amp; RequestExecutionLevel<br />
+!packhdr &quot;$%TEMP%\exehead.tmp&quot; '&quot;${Reshacker}&quot; -addoverwrite &quot;%TEMP%\exehead.tmp&quot;, &quot;%TEMP%\exehead.tmp&quot;, &quot;${ManifDir}\${Manifest}_${RequestExecutionLevel}.manifest&quot;, 24,1,1033'<br />
+!endif</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">greenaj</div><div class="date">3rd December 2012, 05:09</div></div><div class="posttext">Thanks a lot.  I figured out where I was going wrong and got things to work.  I was trying to use !packhdr to update the resultant binary in the output directory, which of course has not bee created yet.  So, I did this:<br />
+<br />
+   !packhdr &quot;$%TEMP%\Setup.exe&quot; 'header.cmd'<br />
+<br />
+In header.cmd, I have:<br />
+<br />
+    mt.exe -manifest WinCompat.manifest -outputresource:%TEMP%\Setup.exe;1<br />
+<br />
+Instead of Reshacker, I got mt.exe to work.  I just put the whole manifest in WinCompat.manifest. Now, I guest if you want, you could use a partial manifest instead, keeping the <br />
+<br />
+   RequestExecutionLevel admin<br />
+<br />
+instruction at the top of the NSIS script.  Then you let makensis write out the Windows Common Controls dependency and the requestExecutionLevel stuff.  Then I guess I'd use <br />
+<br />
+   mt.exe -manifest WinCompat.manifest -updateresource:%TEMP%\Setup.exe;1<br />
+<br />
+where mt.exe will merge the results into the existing manifest.  It seems that mt.exe is an alternative to ResHacker if you don't have ResHacker and want to just use what ships with the MS SDK and Visual Studio.  Thanks a lot.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">greenaj</div><div class="date">5th December 2012, 04:54</div></div><div class="posttext">I added some more details in my blog at http://www.level533.com/2012/12/add-windows-8-manifest-to-nsis-installer/</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

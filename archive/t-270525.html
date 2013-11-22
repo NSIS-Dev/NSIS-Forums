@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Vista:  having trouble spawning installers, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Vista:  having trouble spawning installers NSIS Discussion" />
+	
+	<title> Vista:  having trouble spawning installers [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Vista:  having trouble spawning installers</div>
+<hr />
+<div class="pda"><a href="t-270525.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=270525">Vista:  having trouble spawning installers</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">FrozenFire</div><div class="date">2nd May 2007, 22:08</div></div><div class="posttext">I'm writing an installer to install symantec on windows xp, 2000, and windows vista, as well as configure them to use a hosted symantec antivirus server for my organization. I've gotten the xp and 2000 part of the code hammered out ok, but whenever i run the installer on vista, msiexec doesn't install the vista symantec msi package. The installer script is pretty long because of all the stuff i need to undo for the xp machines i will be installing on, but here's the relevant vista code:<br />
+<br />
+Section &quot;Install Symantec Antivirus&quot; preSymantec<br />
+<br />
+  SetOutPath &quot;$INSTDIR&quot;<br />
+  Clearerrors<br />
+  ;write avinstaller<br />
+  File &quot;Finish.exe&quot;<br />
+  Strcmp $WINVER &quot;Vista&quot; Vistafiles 0<br />
+    File &quot;savce1002clt\Symantec AntiVirus.msi&quot;<br />
+    File &quot;savce1002clt\Data1.cab&quot;<br />
+    File &quot;savce10.0.2.2020\SAV_10.0.2.2020_AllWin_EN.msp&quot;<br />
+    File &quot;savce10.0.2.2021\SAVCE_10.0.2.2021_AllWin_EN.msp&quot;<br />
+    Goto afterfiles<br />
+  Vistafiles:<br />
+    File &quot;SAVVISTA\Symantec AntiVirus.msi&quot;<br />
+    File &quot;SAVVISTA\Data1.cab&quot;<br />
+<br />
+  Afterfiles:<br />
+  ;check to see if reboot required. if so, postpone installation until after reboot<br />
+  IntCmp $RebootReq 1 0 AVnoReboot AVnoReboot<br />
+  <br />
+    ;set rebootflag<br />
+    SetRebootFlag True<br />
+    <br />
+    ;create regkey to installer to launch it on reboot<br />
+    WriteRegStr HKEY_LOCAL_MACHINE &quot;Software\Microsoft\Windows\CurrentVersion\Run&quot; &quot;JHU Finish&quot; &quot;$INSTDIR\Finish.exe&quot;<br />
+    <br />
+    ;Store installation folder<br />
+    WriteRegStr HKLM &quot;Software\JHU&quot; &quot;Installation Directory&quot; $INSTDIR<br />
+    <br />
+    ;Store windows version<br />
+    WriteRegStr HKLM &quot;Software\JHU&quot; &quot;Windows Version&quot; $WINVER<br />
+<br />
+    ;Set installation value to true<br />
+    WriteRegDWORD HKLM &quot;Software\JHU&quot; &quot;Inst AV&quot; &quot;1&quot;<br />
+    <br />
+    ;skip install<br />
+    Goto AVcontinue<br />
+    ;run av installer now<br />
+    intop $0 0 + 0 ;loop variable<br />
+    AVnoReboot:<br />
+      InstAV:<br />
+      ClearErrors<br />
+        Detailprint &quot;Windows Version: $WINVER&quot;<br />
+        ;If vista, run the vista installer<br />
+        Strcmp $WINVER &quot;Vista&quot; VistaAV 0<br />
+          Win2k:<br />
+            ;putting in these sleep periods to try to stablize some erratic installer behavior thats been happening.<br />
+            Execwait '&quot;Msiexec.exe&quot; /i &quot;$INSTDIR\Symantec AntiVirus.msi&quot; /passive Reboot=ReallySuppress'<br />
+            sleep 5000<br />
+            Execwait '&quot;Msiexec.exe&quot; /p SAV_10.0.2.2020_AllWin_EN.msp /passive REINSTALL=ALL REINSTALLMODE=omus /l*v c:\patchlog.txt'<br />
+            sleep 1000<br />
+            Execwait '&quot;Msiexec.exe&quot; /p SAVCE_10.0.2.2021_AllWin_EN.msp /passive REINSTALL=ALL REINSTALLMODE=omus /l*v c:\patchlog.txt'<br />
+            IfErrors AVErrors AVNoErrors<br />
+          VistaAV:<br />
+            Execwait '&quot;Msiexec.exe /i &quot;$INSTDIR\Symnatec Antivirus.msi&quot; /passive Reboot=ReallySuppress'<br />
+            IfErrors AVErrors AVNoErrors      <br />
+          AVErrors:<br />
+            ;sometimes the installer doesn't work until the second time, so this loop just waits until the third time to bother the user.<br />
+            intop $0 $0 + 1<br />
+            intcmp $0 3 0 InstAV 0<br />
+            MessageBox MB_YESNO|MB_DEFBUTTON1|MB_ICONQUESTION &quot;Antivirus Installation Unsuccessful. Try Again?&quot; \<br />
+              IDYES InstAV IDNO AVNoErrors<br />
+    AVNoErrors:<br />
+      DeleteRegValue HKLM &quot;Software\JHU&quot; &quot;Inst AV&quot;<br />
+      Delete &quot;$INSTDIR\Finish.exe&quot;<br />
+      Delete &quot;$INSTDIR\Data1.cab&quot;<br />
+      Delete &quot;$INSTDIR\Symantec AntiVirus.msi&quot;<br />
+      Delete &quot;$INSTDIR\SAV_10.0.2.2020_AllWin_EN.msp&quot;<br />
+      Delete &quot;$INSTDIR\SAVCE_10.0.2.2021_AllWin_EN.msp&quot;<br />
+      RMDir &quot;$INSTDIR&quot;<br />
+  AVcontinue:<br />
+<br />
+SectionEnd<br />
+<br />
+All the storing and reboot detecting is for xp and 2000, as the previous section uninstalls older versions of symantec if necissary, then reboots(i've dissabled that section in vista, as this will be the first vista distribution). Anyway, when i run it, it acts just like when i try to run msiexec.exe on the package from the command line without enough privilages. I've tried switching to exec or nsExec without any luck, and i've included &quot;RequestExecutionLevel admin&quot; at the beginning of the installer in hopes of getting it to work right, but no luck yet. I would apreciate any help anyone could give, as i've got to roll this out soon and haven't the foggiest as to how to fix it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">helix400</div><div class="date">2nd May 2007, 22:12</div></div><div class="posttext">When you run your installer on Vista, does it bring up the prompt to ask you to elevate the process as administrator?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">FrozenFire</div><div class="date">3rd May 2007, 00:38</div></div><div class="posttext">When i start the main installer, it brings up a window asking for permission. the behavior doesn't change when i left click and select &quot;Run as an administrator.&quot; When it calls msiexec, it doesn't say anything at all. the first time around msiexec returns an error(causing it to loop), the second time through the loop it doesn't, but both times it fails to install/do anything as far as i can tell.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">FrozenFire</div><div class="date">3rd May 2007, 19:17</div></div><div class="posttext">Have spent most of the day trying to get it to work and discovered that none of my exec calls are working in vista, despite running the program at admin level. Does anyone know why this isn't working(am i overlooking something obvious somewhere?)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">3rd May 2007, 19:21</div></div><div class="posttext">You have a missing quote in the ExecWait line following the VistaAV label. If that's not the problem, create a minimal example that reproduces the problem on Vista and attach it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">FrozenFire</div><div class="date">4th May 2007, 23:52</div></div><div class="posttext">Thanks for the pointer! That, several hours and other typos later, turned out to be the key hickup, and I'm happy to say I now have a final build! thanks for the help!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

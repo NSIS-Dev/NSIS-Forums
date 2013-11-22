@@ -1,0 +1,130 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Abort behaviour, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Abort behaviour NSIS Discussion" />
+	
+	<title> Abort behaviour [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Abort behaviour</div>
+<hr />
+<div class="pda"><a href="t-195972.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=195972">Abort behaviour</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">sfranklin</div><div class="date">8th October 2004, 11:40</div></div><div class="posttext">Hi,<br />
+<br />
+Is there any way to change the default abort behaviour. At the moment i have an installer that takes some time to complete. If there is a problem coppying files using the file command, the install aborts. However it isnt clear this has happened, is there anyway of changing this, so that for example i could pop up a message box?<br />
+<br />
+Thanks<br />
+<br />
+Steve</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">8th October 2004, 12:31</div></div><div class="posttext">Function .onAbort<br />
+<br />
+  # Your code here<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sfranklin</div><div class="date">8th October 2004, 13:06</div></div><div class="posttext">Ive tried that, unfortunatly it doesnt seem to work, find below a simple script to demonstrate:<br />
+<br />
+Name &quot;Bannana&quot;<br />
+<br />
+OutFile &quot;C:\Work_in_Progress\nsisTests\inst1.exe&quot;<br />
+InstallDir c:\bannana<br />
+<br />
+Function &quot;.onInit&quot;<br />
+FunctionEnd<br />
+<br />
+Page directory<br />
+Page instfiles<br />
+<br />
+Function .onAbort<br />
+  MessageBox MB_OK &quot;Install failed&quot;<br />
+FunctionEnd<br />
+<br />
+Section &quot;Installing&quot;<br />
+  Sleep 1000<br />
+  Abort<br />
+SectionEnd<br />
+<br />
+ive also looked into the other callbacks, but i can only seem to trigger a callback when the user clicks cancel.<br />
+<br />
+Steve</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">scully13</div><div class="date">8th October 2004, 14:08</div></div><div class="posttext">It looks like it's supposed to be .onUserAbort. I don't see a .onAbort listed anywhere.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sfranklin</div><div class="date">8th October 2004, 14:15</div></div><div class="posttext">but .onUserAbort only seems to be fired when the abort process is cancelled by the user, not during the install itself</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">scully13</div><div class="date">8th October 2004, 14:20</div></div><div class="posttext">I think maybe what you want then is .onInstFailed.  From the docs it says:<br />
+This callback is called when the user hits the 'cancel' button after the install has failed (if it could not extract a file, or the install script used the Abort command).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sfranklin</div><div class="date">8th October 2004, 15:48</div></div><div class="posttext">Again though using the script i posted earlier, but replacing .onAbort with .onInstFailed this is only triggered when cancel is pressed</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">scully13</div><div class="date">8th October 2004, 15:59</div></div><div class="posttext">How about this?<br />
+<br />
+Section &quot;Installing&quot;<br />
+ClearErrors<br />
+CopyFiles /SILENT &quot;$EXEDIR\nothing.exe&quot; &quot;$EXEDIR&quot;<br />
+IfErrors Failer<br />
+;Copy other files checking for Errors between each.<br />
+Goto Good<br />
+Failer:<br />
+MessageBox MB_OK &quot;Install failed&quot;<br />
+Abort<br />
+Good:<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">8th October 2004, 19:47</div></div><div class="posttext">Again though using the script i posted earlier, but replacing .onAbort with .onInstFailed this is only triggered when cancel is pressedSorry for the .onAbort thing, I meant .onUserAbort. At that time I was hurrying...<br />
+<br />
+I suggest you to use:<br />
+<br />
+1) a hidden section (about what scully13 suggested).<br />
+<br />
+OR<br />
+<br />
+2) Function .onGUIEnd which will appear when the GUI is terminated.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">10th October 2004, 15:19</div></div><div class="posttext">Abort takes a parameter that is displayed to the user.Abort &quot;installation aborted: couldn't find pickles&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sfranklin</div><div class="date">11th October 2004, 09:20</div></div><div class="posttext">It is the behaviour of the File command, which causes an abort if it is unable to write to the file system.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">11th October 2004, 11:40</div></div><div class="posttext">In that case, IfAbort in the leave funciton of the instfiles page is what you are looking for. That's what the MUI uses to update the header.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sfranklin</div><div class="date">11th October 2004, 11:55</div></div><div class="posttext">Excellent, thats what i need, thanks. <br />
+<br />
+For anybody else who needs something similar, before the instfiles page is added i added the line<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE instLeft<br />
+<br />
+and defined the function instLeft as<br />
+<br />
+Function instLeft<br />
+  ifAbort +1 skip<br />
+    MessageBox MB_OK &quot;Looks like this wont work&quot;<br />
+  skip:<br />
+FunctionEnd<br />
+<br />
+Thanks again all</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

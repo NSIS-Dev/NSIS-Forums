@@ -1,0 +1,98 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Windows Updater, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Windows Updater NSIS Discussion" />
+	
+	<title> Windows Updater [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Windows Updater</div>
+<hr />
+<div class="pda"><a href="t-264209.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=264209">Windows Updater</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">JATO</div><div class="date">23rd January 2007, 10:16</div></div><div class="posttext">Has anyone come up with a script that run Microsoft Updates from a Network drive?<br />
+<br />
+I searched the forums but didn't fine one. <br />
+<br />
+I'm thinking of creating one, but thought I'd check if someone wouldn't mind sharing their source code.<br />
+<br />
+My idea is that the script would install ALL the updates in a particular network folder that weren't already installed on the OS. This way, it could be run as often as you want and only install what is necessary. <br />
+<br />
+I'm having a hard time figuring out how to get NSIS to compare  which Updates are already installed with the updates in the network path. - ANy ideas?<br />
+<br />
+I'm thinking NSIS would need to compare the EXEs on the network to C:\WINDOWS\$NtUninstallKB###### and then execute the appropriate  WindowsXP-KB######-x86-ENU.exe file.<br />
+Any ideas?<br />
+<br />
+So If no one has a script that does this already, then I'm not sure the best way to get NSIS to look at the network folder and only install the updates it needs.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">23rd January 2007, 18:44</div></div><div class="posttext">Something like this I guess,<br />
+;REQUIRES MOREINFO PLUGIN http://nsis.sourceforge.net/MoreInfo_plug-in<br />
+<br />
+!define UPDATES_DIR &quot;C:\Critical Updates&quot; ;add here the real path to updates folder<br />
+!define KB_CHECK &quot;$$NtUninstallKB$kbnum$$&quot;<br />
+<br />
+Name &quot;Windows Critical Updates Installer&quot;<br />
+Caption &quot;$(^name)&quot;<br />
+OutFile 'updater.exe'<br />
+LicenseData '${NSISDIR}\License.txt'<br />
+LicenseBkColor 0xFFFFFF<br />
+ShowInstDetails show<br />
+<br />
+var kbnum<br />
+<br />
+page license<br />
+page instfiles<br />
+<br />
+Section &quot;All in one&quot;<br />
+<br />
+        FindFirst $0 $1 &quot;${UPDATES_DIR}\*.exe&quot;<br />
+<br />
+   loop:<br />
+        IfErrors done<br />
+<br />
+        detailprint 'Found Update: $1'<br />
+        MoreInfo::GetUserDefined &quot;${UPDATES_DIR}\$1&quot; &quot;KB Article Number&quot;<br />
+        Pop $kbnum<br />
+        detailprint 'KB Article Number is: $kbnum'<br />
+        detailprint &quot;............&quot;<br />
+<br />
+        detailprint &quot;Looking for: $WINDIR\${KB_CHECK}&quot;<br />
+        IfFileExists &quot;$WINDIR\${KB_CHECK}\*&quot; 0 install<br />
+        detailprint 'Critical Update KB$kbnum is installed'<br />
+        Goto next<br />
+<br />
+   install:<br />
+        detailprint 'Critical Update KB$kbnum is NOT installed'<br />
+        detailprint 'Updating system with KB$kbnum. Please wait...'<br />
+<br />
+        ;replace /help with required switches advisable are /quiet /norestart<br />
+        ExecWait &quot;${UPDATES_DIR}\$1 /help&quot; $3  ;/quiet /norestart<br />
+        Detailprint &quot;Return value: $3&quot; ;use return value to verify successful update<br />
+        SetRebootFlag true<br />
+        detailprint '...........'<br />
+<br />
+   next:<br />
+        FindNext $0 $1<br />
+        Goto loop<br />
+<br />
+   done:<br />
+        FindClose $0<br />
+        <br />
+        IfRebootFlag 0 +3<br />
+        messagebox mb_yesno|mb_iconexclamation &quot;Reboot required, reboot now?&quot; idno +2<br />
+        Reboot<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,728 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" UAC v0.0.11d plug-in - several questions, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  UAC v0.0.11d plug-in - several questions NSIS Discussion" />
+	
+	<title> UAC v0.0.11d plug-in - several questions [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  UAC v0.0.11d plug-in - several questions</div>
+<hr />
+<div class="pda"><a href="t-321998.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=321998">UAC v0.0.11d plug-in - several questions</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">27th August 2010, 12:30</div></div><div class="posttext">Hi,<br />
+<br />
+I am using the UAC v0.0.11d plugin (Unicode dll). After reading and trying out the Readme, Wiki pages and forum posts, I still have some questions.<br />
+<br />
+I am running Windows 7 32Bit. When the UAC is enabled all works fine. But when I switch off the UAC the plug-in dialog for the run as pops up. It allows to use the current (Standard) user by default. This is not wanted in my case. So I tried to put the file UAC.LNG (example taken from the Readme file) in NSIS Plugin dir and to set HideCurrUserOpt=1. But with no result. Did I miss something?<br />
+I don't want the Current User option in any Windows version.<br />
+(Found this thread here http://forums.shoutcast.com/showthread.php?t=291307 but didn't help me)<br />
+<br />
+And as far as I understood the whole concept, UAC is only available/ supported in Vista and Win 7. Anything to take care of for all other versions to make sure that the installer runs with Admin privileges?<br />
+<br />
+Next thing I would like to know if there is any way other than the one described in this thread http://forums.winamp.com/showpost.php?p=2650393&amp;postcount=8 to pass variables and/ or stack values from the outer to the inner process? The other way round there is UAC::StackPush.<br />
+<br />
+On the UAC Wiki page under Important Notes (http://nsis.sourceforge.net/UAC_plug-in#Important_Notes) is written:<br />
+3. When a standard or limited user supplies administrator information into the Run As dialog, you may experience permissions trouble with any extracted file. For example, if a Windows 2000 standard user supplies administrator info into the Run As dialog, and the NSIS installer extracts an .exe file, then trying to call that .exe through an Exec can fail. If this is a problem, you will want to use the AccessControl plug-in. <br />
+Does this belong to all Windows versions?<br />
+Because during installation my installer extracts/ copies a &quot;vcredist_x86.exe&quot; file to the Instdir which is then being executed by ExecWait and after extraction it is deleted.<br />
+So do I have to use the AccessControl plug-in too? Or just in case the initial user isn't a member of the Admin group?<br />
+BTW: Would it make sense to &quot;bypass&quot; the whole UAC elevation thing if version (WinVer) is one prior to Vista and/ or (UserInfo) reports that the member has already Admin privileges? If so, how to do it best?<br />
+<br />
+Maybe it will be helpful if I describe in short what the installer needs to do:<br />
+The installer needs to be run by an Admin process token to install the program to $PROGRAMFILES and write entries to HKLM. But it also needs to check for existance of some files in the users (the initial user - not the one who granted the privileges) $APPDATA dir and read + write to HKCU.<br />
+<br />
+Many thanks for your help!<br />
+<br />
+Gunther<br />
+<br />
+PS: And sorry for opening a new thread, but IMHO it makes more sense for future users also using UAC plugin to have it all in one post. Especially because the search function of the forum denies some of the logical keywords as being to long and  with other ones it finds no results even if there are respective posts. These you can only find with the help of Google &amp; Co.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">27th August 2010, 14:24</div></div><div class="posttext">And as far as I understood the whole concept, UAC is only available/ supported in Vista and Win 7. Anything to take care of for all other versions to make sure that the installer runs with Admin privileges?<br />
+Yes, UAC exists since Windows Vista. But the UAC plugin works on all recent windows versions. Technically, it doesn't have anything to do with User Account Control, it just allows you to run two instances of your installer (userlevel outer and adminlevel inner instance). It's only called the UAC plugin because that's what it was originally created for.<br />
+<br />
+But if you don't want dual-mode installations on WinXP etc, simply don't call the UAC plugin on those OSes and instead throw an error 'Needs admin' if the installer is run as user.<br />
+<br />
+<br />
+And as for this issue:It allows to use the current (Standard) user by default.<br />
+You need to manually check what user the installer was elevated to, and if it's not an admin level account you need to quit the inner instance and force the user to elevate once more. See the dualmode example scripts for details.<br />
+<br />
+<br />
+<br />
+Next thing I would like to know if there is any way other than the one described in this thread http://forums.winamp.com/showpost.php?p=2650393&amp;postcount=8 to pass variables and/ or stack values from the outer to the inner process? The other way round there is UAC::StackPush.<br />
+<br />
+I use a very simple macro to synchronize variables and/or registers between instances. I don't have it at hand atm, I can post it some time tomorrow if you want.<br />
+<br />
+On the UAC Wiki page under Important Notes (http://nsis.sourceforge.net/UAC_plug-in#Important_Notes) is written:<br />
+3. When a standard or limited user supplies administrator information into the Run As dialog, you may experience permissions trouble with any extracted file. For example, if a Windows 2000 standard user supplies administrator info into the Run As dialog, and the NSIS installer extracts an .exe file, then trying to call that .exe through an Exec can fail. If this is a problem, you will want to use the AccessControl plug-in. <br />
+Does this belong to all Windows versions?<br />
+Because during installation my installer extracts/ copies a &quot;vcredist_x86.exe&quot; file to the Instdir which is then being executed by ExecWait and after extraction it is deleted.<br />
+So do I have to use the AccessControl plug-in too? Or just in case the initial user isn't a member of the Admin group?<br />
+Yes, or extract the exe file from the outer (userlevel) instance. You won't have any privilege problems then.<br />
+<br />
+<br />
+The installer needs to be run by an Admin process token to install the program to $PROGRAMFILES and write entries to HKLM. But it also needs to check for existance of some files in the users (the initial user - not the one who granted the privileges) $APPDATA dir and read + write to HKCU.<br />
+If an admin process is starting the installer, you cannot de-elevate to userlevel. You need to call the installer from userlevel.<br />
+<br />
+<br />
+<br />
+Edit: By the way, I really suggest you use the latest 'experimental' version. It's much better.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">28th August 2010, 11:21</div></div><div class="posttext">Hi MSG!<br />
+<br />
+Edit: By the way, I really suggest you use the latest 'experimental' version. It's much better.<br />
+I would do this, but as there is no documentation for the new version and I do not fully understand it (e.g. what the ${UAC_SYNCREGISTERS} exactly does) yet.<br />
+But anyway - switched to the new version.<br />
+<br />
+But if you don't want dual-mode installations on WinXP etc, simply don't call the UAC plugin on those OSes and instead throw an error 'Needs admin' if the installer is run as user.<br />
+No, I want the possibility to start the installer as a Standard user but make sure it runs with Admin privileges on every Windows version.<br />
+<br />
+And as for this issue:<br />
+You need to manually check what user the installer was elevated to, and if it's not an admin level account you need to quit the inner instance and force the user to elevate once more. See the dualmode example scripts for details.<br />
+OK, should be no problem ...<br />
+<br />
+I use a very simple macro to synchronize variables and/or registers between instances. I don't have it at hand atm, I can post it some time tomorrow if you want.<br />
+That would be great ...! :up:<br />
+I need a possibility to &quot;transfer&quot; data from the inner to the outer process and vice versa.<br />
+<br />
+Yes, or extract the exe file from the outer (userlevel) instance. You won't have any privilege problems then.<br />
+Hehe ..., of course - sometimes it is quite that simple (that one just not thought about it).<br />
+<br />
+If an admin process is starting the installer, you cannot de-elevate to userlevel. You need to call the installer from userlevel.<br />
+Yes, that's clear. If the user who started the installer is already an Admin then there is no problem and $APPDATA and HKCU belong to the user. But the installer also should be able to be started by a Standard user. And in this case I need to switch to the outer process for being able to get the values for the initial user.<br />
+<br />
+Thanks so far!<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">28th August 2010, 16:14</div></div><div class="posttext">Hi!<br />
+<br />
+I now use the following code in .onInit function:<br />
+<br />
+StrCpy $USERS_APPDATA $APPDATA<br />
+<br />
+uac_tryagain:<br />
+!insertmacro UAC_RunElevated<br />
+...<br />
+<br />
+${If} ${UAC_IsInnerInstance}<br />
+	!insertmacro UAC_AsUser_GetGlobalVar $USERS_APPDATA			<br />
+${EndIf}<br />
+<br />
+By doing so I get the (initial) users $APPDATA value in the variable $USERS_APPDATA. If there is no inner process (initial user is already Admin) then $USERS_APPDATA == $APPDATA. That's what I need.<br />
+<br />
+But once again back to the question<br />
+<br />
+So do I have to use the AccessControl plug-in too? Or just in case the initial user isn't a member of the Admin group?<br />
+and MSG's answer<br />
+<br />
+Yes, or extract the exe file from the outer (userlevel) instance. You won't have any privilege problems then.<br />
+As I do so and run the extraction from the outer (userlevel) instance, wouldn't I run then into trouble (with any privileges)? Because the files are installed in $PROGRAMFILES as an installation for ALL users.<br />
+So I guess I have to use the AccessControl plug-in anyway, haven't I?<br />
+<br />
+And there is still the question if it is possible to disable the Current User radio button in the RunAs dialog?<br />
+I guess I need the handle of the dialog and the ID of the radio button?<br />
+<br />
+And of course I am still interested in MSG's promised way to exchange data between the inner and outer process.<br />
+<br />
+Thanks,<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">28th August 2010, 18:56</div></div><div class="posttext">No, I want the possibility to start the installer as a Standard user but make sure it runs with Admin privileges on every Windows version.<br />
+This is a contradiction. An installer started as a user will have user access privileges. An installer started as an admin will have admin access privileges. You cannot start as a user and have admin privileges.<br />
+<br />
+I need a possibility to &quot;transfer&quot; data from the inner to the outer process and vice versa.<br />
+http://nsis.pastebin.com/eM9MDUYL<br />
+The SyncVariable macro will make sure that variables that were set before elevation occured, are copied out of the outer (user level) instance into the inner instance. You can use it in your .onInit function, like this:  ${If} ${UAC_IsInnerInstance}<br />
+    ${SyncVariable} $Variable1<br />
+    ${SyncVariable} $Variable2<br />
+  ${EndIf}<br />
+The SyncSection macro does the same thing for section flags. (I don't think I ever tested if this was already automatically done by the UAC plugin, perhaps the macro isn't necessary at all.)<br />
+<br />
+To get variable values INTO the outer (user level) instance, you can make a similar macro, or just use registers, because the UAC plugin can synchronize registers automatically:  StrCpy $8 $STARTMENUSHORTCUTS<br />
+  StrCpy $9 $DESKTOPSHORTCUT<br />
+  !insertmacro UAC_AsUser_Call function InstallShortcuts ${UAC_SYNCREGISTERS}<br />
+(...and then in the InstallShortcuts function I use $8 and $9 instead of the actual variables, of course.)<br />
+<br />
+The installer also should be able to be started by a Standard user. And in this case I need to switch to the outer process for being able to get the values for the initial user.<br />
+The SyncVariable macro won't work here because you don't want to overwrite the inner instance's $APPDATA variable. Just use the registers trick:Function GetAppData<br />
+  setshellvarcontext current<br />
+  StrCpy $9 $APPDATA<br />
+FunctionEnd<br />
+<br />
+  !insertmacro UAC_AsUser_Call function GetAppData ${UAC_SYNCREGISTERS}<br />
+  SetOutPath $9<br />
+<br />
+<br />
+As I run the extraction from the outer (userlevel) instance, wouldn't I run then into trouble (with any privileges)? Because the files are installed in $PROGRAMFILES as an installation for ALL users.<br />
+So I guess I have to use the AccessControl plug-in anyway, haven't I?<br />
+Well... That depends on how you look at it. From a technical standpoint, if you want a normal user to have write access to $INSTDIR, then yes, you need to give all users write access using the AccessControl plugin. But from a software design standpoint, doing this is VERY, VERY bad practice:<br />
+If a regular user has write access to a subfolder of Program Files, that user might do something stupid that causes malware to install itself in that folder. Then an admin might think &quot;Program Files is a protected directory, so I don't have to worry about users putting malware in this directory,&quot; and he would run any executable in Program Files without thinking twice about it. And voila, you have your malware executed at admin level and the system is compromised.<br />
+<br />
+It's up to you to decide whether you want to take that risk or not, but keep in mind that your end-users are usually NOT very smart, so following proper procedure is very important if you're creating something for the grand public.<br />
+<br />
+<br />
+And there is still the question if it is possible to disable the Current User radio button in the RunAs dialog?<br />
+I guess I need the handle of the dialog and the ID of the radio button?<br />
+I'm not sure. Maybe. Anders would know. But I don't see why you'd want to go through all that trouble. You need to check if elevation was performed properly, anyway (UserInfo plugin in ${If} ${UAC_IsInnerInstance}). Just throw a MessageBox error if the user 'elevated' to a normal user.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th August 2010, 21:32</div></div><div class="posttext">[MyRunAsCfg]<br />
+DisableCurrUserOpt=1<br />
+<br />
+Function .onInit<br />
+Initpluginsdir<br />
+File &quot;/oname=$pluginsdir\uac.lng&quot; uac.lng #or just WriteIniStr<br />
+...<br />
+<br />
+But, this will not always work since there are 3 different Run As dialogs! (Windows 2000, XP+2003 and the custom UAC plugin dialog used on NT6 when UAC is off) The uac.lng file only works for the custom dialog (It's only purpose is to deal with broken runas on Vista when UAC is off) <br />
+Even if I hooked the native dialog on NT5 and disabled the current user radio button, the user could enter the name/password of a standard user in the text fields.<br />
+<br />
+The bottom line is, you have to deal with the fact that a non admin user can be selected in the run as dialog. (You don't HAVE to use the userinfo plugin, after UAC_RunElevated returns, $3 is != 0 if the user is admin IIRC)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">28th August 2010, 23:27</div></div><div class="posttext">@Anders<br />
+[MyRunAsCfg]<br />
+DisableCurrUserOpt=1<br />
+<br />
+Function .onInit<br />
+Initpluginsdir<br />
+File &quot;/oname=$pluginsdir\uac.lng&quot; uac.lng #or just WriteIniStr<br />
+...<br />
+<br />
+I always get the following error:<br />
+InitPluginsDir<br />
+File: &quot;uac.lng&quot; -&gt; no files found.<br />
+Usage: File [/nonfatal] [/a] ([/r] [/x filespec [...]] filespec [...] |<br />
+   /oname=outfile one_file_only)<br />
+Error in script &quot;F:/NSIS-Build_01/_CPack_Packages/win32/NSIS/project.nsi&quot; on line 1106 -- aborting creation process<br />
+Is there anything else I have to do or take care off?<br />
+<br />
+But, this will not always work since there are 3 different Run As dialogs! (Windows 2000, XP+2003 and the custom UAC plugin dialog used on NT6 when UAC is off) The uac.lng file only works for the custom dialog (It's only purpose is to deal with broken runas on Vista when UAC is off) <br />
+Even if I hooked the native dialog on NT5 and disabled the current user radio button, the user could enter the name/password of a standard user in the text fields.<br />
+<br />
+The bottom line is, you have to deal with the fact that a non admin user can be selected in the run as dialog. (You don't HAVE to use the userinfo plugin, after UAC_RunElevated returns, $3 is != 0 if the user is admin IIRC)<br />
+Yes, I know. And I am using the same code as in the UAC_AdminOnly.nsi! So it is more or less for usability reasons to not irritate the unexperienced user.<br />
+<br />
+Feature Request: Using WinVer.nsh it should be relatively easy to get it working for all cases.<br />
+<br />
+Thanks,<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">29th August 2010, 02:26</div></div><div class="posttext">Is there anything else I have to do or take care off?<br />
+<br />
+You need to create the file yourself, or use the ini functions<br />
+<br />
+<br />
+<br />
+Yes, I know. And I am using the same code as in the UAC_AdminOnly.nsi! So it is more or less for usability reasons to not irritate the unexperienced user.<br />
+<br />
+Feature Request: Using WinVer.nsh it should be relatively easy to get it working for all cases.<br />
+<br />
+What does WinVer have to do with anything? The run as dialog on 2000/XP/2003 is provided by windows and not by the plugin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">29th August 2010, 10:00</div></div><div class="posttext">You need to create the file yourself, or use the ini functions<br />
+I tried both variants without success.<br />
+If I create the file myself where do I have to locate it?<br />
+And if I just want to use the INI functions what's the file name and location?<br />
+It is not located in the $PLUGINSDIR. There is only the UAC.dll (among the other DLL files) while the installer is running.<br />
+<br />
+<br />
+What does WinVer have to do with anything? The run as dialog on 2000/XP/2003 is provided by windows and not by the plugin<br />
+I understood your writing<br />
+But, this will not always work since there are 3 different Run As dialogs! (Windows 2000, XP+2003 and the custom UAC plugin dialog used on NT6 when UAC is off) The uac.lng file only works for the custom dialog<br />
+as if the Windows version has something to do with which dialog will be shown. And as it is always shown when the installer is already running, it should be possible to e.g. disable the Current User radio button in every Run As dialog. That's what I thought at least.<br />
+But maybe I got it all wrong ..., and it is not that important anyway.<br />
+<br />
+Thanks<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">29th August 2010, 10:30</div></div><div class="posttext">Hi MSG!<br />
+This is a contradiction. An installer started as a user will have user access privileges. An installer started as an admin will have admin access privileges. You cannot start as a user and have admin privileges.<br />
+This seems to be a misunderstanding. If the installer is started with admin access privileges everything is fine =&gt; no further things to do.<br />
+But if it is started without (by a Standard User) which should be possible then the UAC plug-in comes to play as it then starts a second process which definitely needs admin access privileges.<br />
+<br />
+Well... That depends on how you look at it. From a technical standpoint, if you want a normal user to have write access to $INSTDIR, then yes, you need to give all users write access using the AccessControl plugin. But from a software design standpoint, doing this is VERY, VERY bad practice:<br />
+If a regular user has write access to a subfolder of Program Files, that user might do something stupid that causes malware to install itself in that folder. Then an admin might think &quot;Program Files is a protected directory, so I don't have to worry about users putting malware in this directory,&quot; and he would run any executable in Program Files without thinking twice about it. And voila, you have your malware executed at admin level and the system is compromised.<br />
+<br />
+It's up to you to decide whether you want to take that risk or not, but keep in mind that your end-users are usually NOT very smart, so following proper procedure is very important if you're creating something for the grand public.<br />
+Thanks for the explanation. And as written before my installer just copies a self-extracting archive file (vcredist_x86.exe) which contains 5 DLL files. After copying it to a temp install dir it is called by ExecWait to extract those 5 files and after extraction it is deleted. All this is (normally) done by the admin token process (inner process if the installer runs elevated). A &quot;normal&quot; user does not need write access to the programs install dir. But point three on the UAC plug-in page irritated me as it says:<br />
+<br />
+When a standard or limited user supplies administrator information into the Run As dialog, you may experience permissions trouble with any extracted file. For example, if a Windows 2000 standard user supplies administrator info into the Run As dialog, and the NSIS installer extracts an .exe file, then trying to call that .exe through an Exec can fail. If this is a problem, you will want to use the AccessControl plug-in.<br />
+And of course is the main program file which will be installed also an exe file which needs to be run by any user after installation.<br />
+So my question is: Will the above scenario (copy exe file and run it during installation) trigger this permissions trouble or not (if both are run by the user with the admin access privileges)?<br />
+Sorry for asking this question again but I think the note on the UAC plug-in page is very confusing at least to me.<br />
+<br />
+Thanks<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">29th August 2010, 10:34</div></div><div class="posttext">The filename is $PLUGINSDIR\uac.lng but you have to create it on your own.<br />
+<br />
+Yes, it is possible to disable it in all versions, but removing features from a standard windows dialog is not really something I want to do, so you are stuck with it only working on the dialog that I create, not the dialogs that are owned by windows.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">29th August 2010, 10:48</div></div><div class="posttext">Hi Anders!<br />
+<br />
+The filename is $PLUGINSDIR\uac.lng but you have to create it on your own.<br />
+Just to get it right:<br />
+I first create a file by using<br />
+<br />
+ClearErrors<br />
+FileOpen $0 $PLUGINSDIR\uac.lng w<br />
+IfErrors done<br />
+FileClose $0<br />
+done:<br />
+<br />
+and then use<br />
+<br />
+WriteINIStr $PLUGINSDIR\uac.lng MyRunAsCfg DisableCurrUserOpt=1<br />
+<br />
+to add the desired config option?<br />
+BTW: The backslashes are removed by the forums software.<br />
+<br />
+Yes, it is possible to disable it in all versions, but removing features from a standard windows dialog is not really something I want to do, so you are stuck with it only working on the dialog that I create, not the dialogs that are owned by windows.<br />
+OK, no problem (as written before) - it is only a question of usability. ;)<br />
+Just my 2 cents ...<br />
+Poping up a dialog just in case that the actually logged-on user hasn't the needed permissions to go on and then offering the option to use the same user is far from being &quot;logical&quot;. It is the same as if you would pop-up a messagebox with Yes + No button where the message says &quot;... click Yes to continue&quot; and everytime the user clicks on No the messagebox pop-up again. In such a case a messagebox with OK + Cancel button would be more logical.<br />
+<br />
+Thanks<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">29th August 2010, 13:08</div></div><div class="posttext">There is no need to use FileOpen, just use the ini function directly (your syntax is wrong btw)<br />
+<br />
+As far as the dialog goes, I don't seem to be able to make myself clear, I don't control the dialog or its content so stop bitching about it</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">29th August 2010, 13:13</div></div><div class="posttext">Just my 2 cents ...<br />
+Poping up a dialog just in case that the actually logged-on user hasn't the needed permissions to go on and then offering the option to use the same user is far from being &quot;logical&quot;.<br />
+I consider it rather obvious to warn the user that admin access is required, before you show the RunAs dialog. Otherwise they have no clue what they should do with it, or why they're getting it. But it's up to you how you design your UI, I guess.<br />
+<br />
+If the installer is started with admin access privileges everything is fine =&gt; no further things to do.<br />
+But if it is started without (by a Standard User) which should be possible then the UAC plug-in comes to play as it then starts a second process which definitely needs admin access privileges.<br />
+And that is exactly why you need to verify that the inner instance was actually Run As an administrator user, and not some other regular user. That's what I've been telling you for the past two days.<br />
+<br />
+Will the above scenario (copy exe file and run it during installation) trigger this permissions trouble or not (if both are run by the user with the admin access privileges)?<br />
+Sorry for asking this question again but I think the note on the UAC plug-in page is very confusing at least to me.<br />
+If an administrator process creates a directory and/or file, a user MIGHT not have write access to that folder/file. For example, when the admin process creates something in Program Files, which is a protected directory. That should be quite obvious. What part of it do you find so hard to understand? The note merely warns you to keep access privileges in mind, because the outer user process is not allowed to do as much as the inner admin process.<br />
+<br />
+Just to get it right:<br />
+That seems about right. But why don't you just TRY it?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">30th August 2010, 11:11</div></div><div class="posttext">Hi Anders and MSG!<br />
+<br />
+First of all let me say that I have the sense that we talk at cross purposes which may be caused by my inability to express myself in an understandable way. But as you may have noticed already English isn't my native language and so I also might misread some of the writings here in the forum, the Wiki and in the Readme files. Or they confuse me instead of making things clearer. So sorry for that.<br />
+<br />
+I consider it rather obvious to warn the user that admin access is required, before you show the RunAs dialog. Otherwise they have no clue what they should do with it, or why they're getting it. But it's up to you how you design your UI, I guess.<br />
+You are right and I agree. But it wasn't that obvious to me as I thought the dialog is only shown if the currently logged-on user hasn't unsufficient rights. And in that case it is still illogical to me that the dialog offers the option to go on with the current user. But I understood that it is a Windows dialog and that it is beyond the scope of the installer. So if there is no way (don't hit me Anders) to modify the dialog from the installer script it seems to be the best solution to ... warn the user that admin access is required, before you show the RunAs dialog<br />
+<br />
+Concerning<br />
+And that is exactly why you need to verify that the inner instance was actually Run As an administrator user, and not some other regular user. That's what I've been telling you for the past two days.<br />
+Yes, this is one the points where we talk at cross purposes. This is clear and I am doing so (from the beginning).<br />
+<br />
+If an administrator process creates a directory and/or file, a user MIGHT not have write access to that folder/file. For example, when the admin process creates something in Program Files, which is a protected directory. That should be quite obvious. What part of it do you find so hard to understand? The note merely warns you to keep access privileges in mind, because the outer user process is not allowed to do as much as the inner admin process.<br />
+The note could easily be misread.<br />
+For example, if a Windows 2000 standard user supplies administrator info into the Run As dialog, and the NSIS installer extracts an .exe file, then trying to call that .exe through an Exec can fail.<br />
+First thing is clear: The installer runs elevated.<br />
+But then a clear statement which process (inner or outer) is meant is missing. And it could be interpreted as this occurs even if both operations are done by the inner (admin) process which is not the case.<br />
+So saying: &quot;For example, if a Windows 2000 standard user supplies administrator info into the Run As dialog, and the NSIS installer inner process (with admin privileges) extracts an .exe file, then trying to call that .exe through the outer (user level) process (an UAC::Exec) can fail.&quot; would make it much clearer.<br />
+So in my case there should be no problem as I am doing all these operations from the inner process.<br />
+<br />
+As far as the dialog goes, I don't seem to be able to make myself clear, I don't control the dialog or its content ...<br />
+This I didn't understand as you wrote in http://forums.winamp.com/showpost.php?p=2692917&amp;postcount=11<br />
+Yes, it is possible to disable it in all versions ...<br />
+So please forgive me when I was a little confused.<br />
+<br />
+Same with the INI file for the Run As dialog.<br />
+The line in the Readme of the old version If the plugin is built with FEAT_CUSTOMRUNASDLG_TRANSLATE (Enabled by default), you can extract a file named UAC.LNG to $pluginsdir. led me to the wrong path. Saying &quot;..., you can create a (an INI) file ...&quot; would have made it clearer to me. But I got it now.<br />
+<br />
+Even though these settings only take place when the Run As dialog created by the installer is shown which is only the case on Vista with UAC off, correct?<br />
+RunAs.cpp is only used if the user is non admin,running on Vista with UAC off (And it is only there since the built in RunAs seems to be broken) <br />
+<br />
+Are my following conclusions correct?<br />
+It is assumed that the logged-on user has no Admin privileges.<br />
+- On Windows 2000, 2003 and XP the &quot;normal&quot; Windows Run As dialog is shown.<br />
+- On Windows Vista and Win 7 it depends on the UAC setting. It is only shown if UAC is disabled. Additionally on Vista the dialog created by the UAC plugin is shown (instead of the Windows one because it is broken).<br />
+<br />
+If all of the above is correct then I'll leave the dialog as is (not worth the effort if there is no easy way to disable the Current user radio button).<br />
+<br />
+Thanks again for your help and patience.<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">30th August 2010, 11:24</div></div><div class="posttext">Are my following conclusions correct?<br />
+It is assumed that the logged-on user has no Admin privileges.<br />
+- On Windows 2000, 2003 and XP the &quot;normal&quot; Windows Run As dialog is shown.<br />
+- On Windows Vista and Win 7 it depends on the UAC setting. It is only shown if UAC is disabled. Additionally on Vista the dialog created by the UAC plugin is shown (instead of the Windows one because it is broken).<br />
+Yes. With the added note that the win2k runas dialog is different from the XP+ runas dialog, as Anders pointed out.<br />
+<br />
+If all of the above is correct then I'll leave the dialog as is (not worth the effort if there is no easy way to disable the Current user radio button).<br />
+...which is basically what I told you two days ago. Something I mentioned about &quot;going through all that trouble&quot;.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">30th August 2010, 11:36</div></div><div class="posttext">Yes. With the added note that the win2k runas dialog is different from the XP+ runas dialog, as Anders pointed out.<br />
+OK - understood.<br />
+<br />
+...which is basically what I told you two days ago. Something I mentioned about &quot;going through all that trouble&quot;.<br />
+Yeah, you were right from the beginning. Took me some days to understand it. ;)<br />
+<br />
+BTW:<br />
+On Vista and Win 7 with UAC enabled it is not necessary to show a messagebox to the user before the Run As dialog as it won't appear.<br />
+<br />
+Using the new version of the UAC plug-in, is there a equivalent for<br />
+<br />
+ UAC::SupportsUAC<br />
+ UAC::GetElevationType<br />
+<br />
+Or any other way to determine if UAC is disabled (on Vista or Win 7)?<br />
+I can determine the Windows version by using WinVer.nsh.<br />
+<br />
+Thanks<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">30th August 2010, 16:45</div></div><div class="posttext">GetElevationType was for help during debugging. There is no public UAC api in windows, so I removed SupportsUAC (You can check the EnableLUA registry value yourself)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">20th September 2010, 12:31</div></div><div class="posttext">Hi, it's me again ....<br />
+<br />
+Now that I have managed to set up all my needed functionality for the Installer I am now at the Uninstaller part. And immediately the problems start again ...!<br />
+<br />
+Same as for the Installer I need to use the UAC plugin also for the Uninstaller to assure that it runs with Admin privileges.<br />
+So I wanted to &quot;reuse&quot; some of my code of the .onInit function in un.onInit.<br />
+<br />
+This mostly works but I am getting an error saying:<br />
+Processed 1 file, writing output:<br />
+Adding plug-ins initializing function... Done!<br />
+Error: could not resolve label &quot;_UAC_AUGOGR_OP$USERS_NAMEStrCpy$USERS_NAME_F&quot; in function &quot;un.onInit&quot;<br />
+Error - aborting creation process<br />
+<br />
+This comes from the lines:<br />
+<br />
+${If} ${UAC_IsInnerInstance}<br />
+	!insertmacro UAC_AsUser_GetGlobalVar $USERS_NAME<br />
+${EndIf}<br />
+<br />
+<br />
+The variable is set earlier in the function:<br />
+Call un.GetUserInfo<br />
+StrCpy $USERS_NAME $USERNAME<br />
+<br />
+I do not understand at the moment why the code is not working (as the rest seems to work properly)?<br />
+Is it maybe a bug in the UAC_AsUser_GetGlobalVar macro so that it doesn't work for Uninstaller?<br />
+<br />
+(Note that I am not asking for any other solution - I found already one by using MSG tip calling an extra function by UAC_AsUser_Call and the ${UAC_SYNCREGISTERS} option.)<br />
+<br />
+Gunther<br />
+<br />
+PS: I am using the newest version UAC v0.2.2c - 20100828 of the UAC plugin.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">20th September 2010, 14:09</div></div><div class="posttext">The AsUser stuff cannot really be used in the uninstaller.<br />
+<br />
+(I can't remember if you are doing a dual mode install or not but...) My advice is to generate two uninstallers at compile time, one with requestexecutionlevel user and the other with admin. Then when you install, extract the correct one.<br />
+<br />
+...And why the AsUser stuff cannot be used in the uninstaller? Well, with a uninstall registry entry in HKLM, Vista will auto-elevate so there is no way for me to get a outer instance. Sad but true.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">20th September 2010, 14:40</div></div><div class="posttext">Hi Anders!<br />
+<br />
+The AsUser stuff cannot really be used in the uninstaller.<br />
+<br />
+(I can't remember if you are doing a dual mode install or not but...) <br />
+No, I do not. As I always install the program for all users Admin privileges are required. And therefor the HKLM Regkey is used.<br />
+<br />
+My advice is to generate two uninstallers at compile time, one with requestexecutionlevel user and the other with admin. Then when you install, extract the correct one.<br />
+Hmmm ..., if I got the previous right this won't be necessary - correct?<br />
+But anyway - how to do this?<br />
+My installer uses 'RequestExecutionLevel highest'. So how can I create an uninstaller with 'RequestExecutionLevel admin' (which would be sufficient for me)?<br />
+<br />
+And is there a way to delete a certain directory from all users on a system?<br />
+Or to get the $APPDATA of all available users on the respective system?<br />
+<br />
+...And why the AsUser stuff cannot be used in the uninstaller? Well, with a uninstall registry entry in HKLM, Vista will auto-elevate so there is no way for me to get a outer instance. Sad but true.<br />
+Ups! Do I run into trouble here ...?<br />
+<br />
+I am on Windows 7 and with the UAC off the UAC plugin works as expected which means it creates an inner and outer process if the original user has no Admin privileges.<br />
+<br />
+Do you mean this will fail on Vista?<br />
+<br />
+Once again a little confused<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">20th September 2010, 15:44</div></div><div class="posttext">UAC off?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">20th September 2010, 15:53</div></div><div class="posttext">UAC off?<br />
+Yes, but of course it should also functioning with UAC on.<br />
+<br />
+When it is off then the RunAs dialog is shown (see previous discussion in this thread here).<br />
+<br />
+Meanwhile I found another thread here in the forum: http://forums.winamp.com/showthread.php?s=&amp;threadid=280330<br />
+<br />
+But it is still not clear to me ... :(<br />
+<br />
+So it is problem that only occurs on Vista?<br />
+On Vista the UAC plugin isn't able to start a second process by '!insertmacro UAC_RunElevated'?<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">24th September 2010, 20:08</div></div><div class="posttext">Netsurfer, if you're not doing a dualmode install, why do you even want to use the UAC plugin in the uninstaller to begin with?<br />
+<br />
+...And why the AsUser stuff cannot be used in the uninstaller? Well, with a uninstall registry entry in HKLM, Vista will auto-elevate so there is no way for me to get a outer instance. Sad but true.<br />
+This is not correct. You can do dualmode uninstallation without trouble, and AsUser works just fine in that case. It's true that Vista and 7 automatically force elevation when the uninstaller is called through HKLM ARP, but I remind you of this workaround:<br />
+http://forums.winamp.com/showthread.php?threadid=277801</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">25th September 2010, 12:14</div></div><div class="posttext">MSG ...<br />
+<br />
+Maybe you can give me some advice what &quot;strategy&quot; will be best for my project?<br />
+<br />
+The program the installer + uninstaller is for is ment to be an all-users application. So it should always be installed for all users ($PROGRAMFILES).<br />
+And &quot;by design&quot; normally there should only be one version installed at a time. But for testing purposes it should also be allowed to install multiple (different) versions parallel.<br />
+<br />
+In previous versions the config folder was placed in a per-user location. Starting with the new installer script the location changes to the all-users $APPDATA.<br />
+<br />
+So regardless of how many versions of the program are installed there is always only one config folder (same settings for all versions - this is meant by design and not changeable).<br />
+<br />
+And due to changes in the installer of previous versions there might be Registry entries in HKLM as well as in HKCU.<br />
+<br />
+Shortcuts in the Start Menu and Desktop are all in the all users enviroment (AFAIK).<br />
+<br />
+So here is a list of what the installer + uninstaller should be able to achieve:<br />
+<br />
+ multi language capable<br />
+ install for all-users<br />
+ write RegKeys to HKLM<br />
+ search for previous installations and remove them along with possible RegKeys, Shortcuts etc.<br />
+<br />
+<br />
+The more I work with NSIS the more I get confused ...!<br />
+There are so many traps you can walk right into ...!<br />
+<br />
+<br />
+Netsurfer, if you're not doing a dualmode install, why do you even want to use the UAC plugin in the uninstaller to begin with?<br />
+I guess you are right. I now believe that it might be best to set the RequestExecutionLevel to admin and not using the UAC plugin.<br />
+<br />
+Thanks for your help/ advice!<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">25th September 2010, 13:26</div></div><div class="posttext">And due to changes in the installer of previous versions there might be Registry entries in HKLM as well as in HKCU.<br />
+First advice: Don't get these mixed up. Since your installer only supports all-user mode, completely ignore any old HKCU entries. Just leave them be, they're not doing any harm as long as you don't use them. (As for old HKCU uninstall entries, well, that's less obvious - you could try using enumusersreg to eradicate all older uninstall entries, if necessary.)<br />
+<br />
+<br />
+So here is a list of what the installer + uninstaller should be able to achieve:<br />
+<br />
+ multi language capable<br />
+ install for all-users<br />
+ write RegKeys to HKLM<br />
+ search for previous installations and remove them along with possible RegKeys, Shortcuts etc.<br />
+<br />
+Most of this is quite simple. Multi-language support is built-in to NSIS. You already know how to install for all users, and how to use HKLM registry.  Searching for previous installations is kind of weird, because you just stated that you wanted to allow old installations in parallel, for testing purposes. But you can use enumusersreg, again, to purge any junk from all users' registry hives. (Deleting userlevel shortcuts for other users is not possible, sadly. There is however a workaround described here (http://forums.winamp.com/showthread.php?p=2685706&amp;highlight=workaround#post2685706), which works some of the time.)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">25th September 2010, 13:52</div></div><div class="posttext">MSG<br />
+<br />
+thanks for your helpful answer.<br />
+First advice: Don't get these mixed up. Since your installer only supports all-user mode, completely ignore any old HKCU entries. Just leave them be, they're not doing any harm as long as you don't use them. (As for old HKCU uninstall entries, well, that's less obvious - you could try using enumusersreg to eradicate all older uninstall entries, if necessary.)<br />
+The problem is that I wanted to use these &quot;old&quot; entries to detect if any older version is already installed (for showing an Upgrade option to the user). I also added an option to scan the entire HDD but this may last several minutes so this nothing I want to be executed by default.<br />
+And in my opinion it is unpleasant if there remain orphaned Reg entries.<br />
+<br />
+<br />
+Most of this is quite simple. Multi-language support is built-in to NSIS.<br />
+Yes, that's no problem.<br />
+But how about language support? Are there any languages (supported by NSIS) that need to use the Unicode version or is it possible to use the ANSI version even if I want to support languages like Russian?<br />
+<br />
+You already know how to install for all users, and how to use HKLM registry.  Yes, that should make no problems. :)<br />
+<br />
+Searching for previous installations is kind of weird, because you just stated that you wanted to allow old installations in parallel, for testing purposes. But you can use enumusersreg, again, to purge any junk from all users' registry hives. (Deleting userlevel shortcuts for other users is not possible, sadly. There is however a workaround described here (http://forums.winamp.com/showthread.php?p=2685706&amp;highlight=workaround#post2685706), which works some of the time.)<br />
+I already found the EnumUsersReg.nsh and played around with it yesterday. I managed to get the Appdata and Start Menu folders from all (logged-on/-off) users. But you say it is not possible to delete Shortcuts in these folders?<br />
+<br />
+And once again a question concerning the UAC. I wrote a small test script for the EnumUsersReg and though I set &quot;RequestExecutionLevel admin&quot; I can start the exe as a standard user if I have UAC set to off (I am on Win 7).<br />
+So do I have to add a manually check within my script if the user is Admin and quit if not?<br />
+I checked the Manifest of the file and it says:<br />
+<br />
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;&lt;assembly xmlns=&quot;urn:schemas-microsoft-com:asm.v1&quot; manifestVersion=&quot;1.0&quot;&gt;&lt;assemblyIdentity version=&quot;1.0.0.0&quot; processorArchitecture=&quot;X86&quot; name=&quot;Nullsoft.NSIS.exehead&quot; type=&quot;win32&quot;/&gt;&lt;description&gt;Nullsoft Install System v2.46-Unicode&lt;/description&gt;&lt;trustInfo xmlns=&quot;urn:schemas-microsoft-com:asm.v3&quot;&gt;&lt;security&gt;&lt;requestedPrivileges&gt;&lt;requestedExecutionLevel level=&quot;requireAdministrator&quot; uiAccess=&quot;false&quot;/&gt;&lt;/requestedPrivileges&gt;&lt;/security&gt;&lt;/trustInfo&gt;&lt;compatibility xmlns=&quot;urn:schemas-microsoft-com:compatibility.v1&quot;&gt;&lt;application&gt;&lt;supportedOS Id=&quot;{35138b9a-5d96-4fbd-8e2d-a2440225f93a}&quot;/&gt;&lt;supportedOS Id=&quot;{e2011457-1546-43c5-a5fe-008deee3d3f0}&quot;/&gt;&lt;/application&gt;&lt;/compatibility&gt;&lt;/assembly&gt;<br />
+<br />
+<br />
+Many thanks,<br />
+Gunther<br />
+<br />
+PS: Here's the script<br />
+<br />
+RequestExecutionLevel admin <br />
+<br />
+Var sid<br />
+Var USERPROFILE<br />
+<br />
+!include WordFunc.nsh<br />
+!include EnumUsersReg.nsh<br />
+<br />
+Name EnumUsersReg<br />
+OutFile EnumUsersReg.exe<br />
+<br />
+ShowInstDetails show<br />
+ <br />
+Section<br />
+	; use ${un.EnumUsersReg} in uninstaller sections<br />
+	${EnumUsersReg} GP tmpkey<br />
+SectionEnd<br />
+<br />
+<br />
+Function GP<br />
+	Pop $sid<br />
+<br />
+	ReadRegStr $1 HKU &quot;$sid\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders&quot; AppData<br />
+	${WordReplace} &quot;$1&quot; &quot;%USERPROFILE%&quot; &quot;$USERPROFILE&quot; &quot;+1&quot; $2<br />
+	DetailPrint $2<br />
+<br />
+	ReadRegStr $1 HKU &quot;$sid\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders&quot; &quot;Start Menu&quot;<br />
+	${WordReplace} &quot;$1&quot; &quot;%USERPROFILE%&quot; &quot;$USERPROFILE&quot; &quot;+1&quot; $2<br />
+	DetailPrint $2<br />
+FunctionEnd<br />
+<br />
+But I made some slight changes to EnumUsersReg.nsh, too:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">25th September 2010, 14:38</div></div><div class="posttext">Are there any languages (supported by NSIS) that need to use the Unicode version or is it possible to use the ANSI version even if I want to support languages like Russian?<br />
+No idea, I only use English installers. Search the forums?<br />
+<br />
+But you say it is not possible to delete Shortcuts in these folders?<br />
+Deleting should work fine. Finding the directories is that part that doesn't work.<br />
+<br />
+And once again a question concerning the UAC. I wrote a small test script for the EnumUsersReg and though I set &quot;RequestExecutionLevel admin&quot; I can start the exe as a standard user if I have UAC set to off (I am on Win 7).<br />
+So do I have to add a manually check within my script if the user is Admin and quit if not?<br />
+Yes, an extra manual check is always required.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">25th September 2010, 17:18</div></div><div class="posttext">Deleting should work fine. Finding the directories is that part that doesn't work.<br />
+Hmmm ..., I am using my modified version of EnumUsersReg.nsh (see posting above).<br />
+<br />
+It searches for the values of the RegKeys<br />
+<br />
+ HKU &quot;$sid\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders&quot; AppData<br />
+ HKU &quot;$sid\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders&quot; &quot;Start Menu&quot;<br />
+<br />
+Whereas $sid is the user's SID (if logged-on) or the temp key its hive is loaded to (if logged-off).<br />
+<br />
+The %USERPROFILE% variable is replaced by the value deriving from:<br />
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\&lt;SID&gt;\ProfileImagePath<br />
+<br />
+I thought this should work correctly for all Win &gt;= Win 2000.<br />
+<br />
+Have I overlooked anything?<br />
+<br />
+Yes, an extra manual check is always required. <br />
+OK - understood.<br />
+Is it &quot;normal&quot; that if UAC is disabled/ off one cannot start an exe file by &quot;Run as administrator&quot;?<br />
+I added a query if user is admin to my small test script. So when started as a standard user it quits. But I cannot start it in any way - no prompt for admin credentials is ever shown.<br />
+So do I have to use the UAC plugin to allow running a program as administrator in the case UAC is disabled?<br />
+Really, this UAC thing totally confuses me ... - sorry.<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">26th September 2010, 01:29</div></div><div class="posttext">It's pretty simple up to the point where you start to do tricky things, really.<br />
+<br />
+In one of your more recent posts, you noted that you always install as admin - so we can forget about most of those tricky things; it just leaves you with needing to make sure that your installer runs as admin.<br />
+<br />
+&quot;RequestExecutionLevel admin&quot; is what takes care of that on any of the Windows versions that take that manifest into account (UAC or not, but UAC is the typical path).<br />
+If there's no mechanism taking that into account (UAC off and no alternative running), you only have to check whether the installer is running as admin and warn the user that the installer will not continue if it isn't.<br />
+<br />
+That just leaves you with your remaining question... &quot;How can i tell a user to run something as admin in the latter case?&quot;.  Most typically, that would be done by  right-clicking on the installer executable, and choosing the &quot;Run as administrator&quot; option (Vista / Windows 7) or &quot;Run as&quot; followed by the user selecting an administrator account (XP).  Screenshots:<br />
+http://www.asap-utilities.com/faq-questions-answers-detail.php?m=109<br />
+<br />
+If you're not doing anything else, like needing to run an application as non-Admin, or installing files in non-Admin's profile, UAC isn't really anything you need to worry about.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">26th September 2010, 06:35</div></div><div class="posttext">That just leaves you with your remaining question... &quot;How can i tell a user to run something as admin in the latter case?&quot;.  Most typically, that would be done by  right-clicking on the installer executable, and choosing the &quot;Run as administrator&quot; option (Vista / Windows 7) or &quot;Run as&quot; followed by the user selecting an administrator account (XP).  Screenshots:<br />
+http://www.asap-utilities.com/faq-questions-answers-detail.php?m=109<br />
+<br />
+Except that &quot;Run as administrator&quot; menu option does not work on Vista when UAC is turned off</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">26th September 2010, 07:19</div></div><div class="posttext">Except that &quot;Run as administrator&quot; menu option does not work on Vista when UAC is turned off<br />
+Yes, same on Windows 7 and UAC turned off.<br />
+<br />
+Therefor I still use the UAC plugin just to make sure the RunAs Dialog will be displayed.<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">26th September 2010, 17:08</div></div><div class="posttext">Therefor I still use the UAC plugin just to make sure the RunAs Dialog will be displayed.<br />
+<br />
+Yeah, that is because the UAC plugin detects this and uses its own internal RunAs dialog in this case on NT6.<br />
+<br />
+In this kind of setup, requestexecutionlevel admin+uac plugin is fine, just remember that the AsUser macros don't &quot;work&quot;, all you can use the plugin for is the initial elevation</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">26th September 2010, 18:43</div></div><div class="posttext">Anders,<br />
+<br />
+I have to check back - sorry.<br />
+<br />
+Yeah, that is because the UAC plugin detects this and uses its own internal RunAs dialog in this case on NT6.<br />
+<br />
+In this kind of setup, requestexecutionlevel admin+uac plugin is fine, just remember that the AsUser macros don't &quot;work&quot;, all you can use the plugin for is the initial elevation<br />
+I wanted to use requestexecutionlevel highest + UAC plugin.<br />
+And the installer checks if the user has admin privileges. If not it quits (with a message box).<br />
+And the AsUser macros work fine for me (at least for the installer). For the uninstaller they do not (but it is not needed, so no problem). My uninstaller also needs Admin privileges and again I use the UAC plugin to assure this.<br />
+<br />
+But anyway, if someone wanted to know some user specific (path) information despite if the user is logged-on or not, one can use the EnumUsersReg.nsh to gather these information (admin rights presumed).<br />
+<br />
+Gunther</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">29th September 2010, 10:58</div></div><div class="posttext">But anyway, if someone wanted to know some user specific (path) information despite if the user is logged-on or not, one can use the EnumUsersReg.nsh to gather these information (admin rights presumed).<br />
+As I have been trying to tell you: This is not true. Yes, you can *usually* get the path from registry (using EnumUsersReg). However, the path is not guaranteed to be stored in registry at all. For example, on a freshly installed Windows operating system, you can be almost sure that the value will NOT be stored in the registry. Even worse: Even if it is stored in the registry, it is not guaranteed to be correct!<br />
+<br />
+Granted, in most cases, this isn't too big a problem. But you need to keep it in mind. That's why using EnumUsersReg to get a user's profile folder location is an ugly workaround at best. Use it only if you know what you're doing.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Netsurfer24</div><div class="date">29th September 2010, 11:06</div></div><div class="posttext">As I have been trying to tell you: This is not true. Yes, you can *usually* get the path from registry (using EnumUsersReg). However, the path is not guaranteed to be stored in registry at all. For example, on a freshly installed Windows operating system, you can be almost sure that the value will NOT be stored in the registry. Even worse: Even if it is stored in the registry, it is not guaranteed to be correct!<br />
+As I need the (path) values only in case the respective user has installed the program before, I guess the values are present. ;)<br />
+<br />
+Granted, in most cases, this isn't too big a problem. But you need to keep it in mind. That's why using EnumUsersReg to get a user's profile folder location is an ugly workaround at best. Use it only if you know what you're doing.<br />
+I understand what you are saying, but again ...<br />
+<br />
+I only use these values to delete/uninstall previous installed versions and/ or existing shortcuts. Additionally I &quot;clean-up&quot; each users registry (if there are orphaned entries).<br />
+<br />
+ALL new installs, shortcuts etc. will be done in the all-users context.<br />
+<br />
+But thanks for reminding me. :up:<br />
+And yes, I do not trust any single value without proofing/ testing it. :D<br />
+<br />
+Thanks<br />
+Gunther</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

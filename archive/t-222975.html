@@ -1,0 +1,120 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Bug in 2.08: uninstaller wont delete folder, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Bug in 2.08: uninstaller wont delete folder NSIS Discussion" />
+	
+	<title> Bug in 2.08: uninstaller wont delete folder [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Bug in 2.08: uninstaller wont delete folder</div>
+<hr />
+<div class="pda"><a href="t-222975.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=222975">Bug in 2.08: uninstaller wont delete folder</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">31st July 2005, 05:58</div></div><div class="posttext">its a reproduceable fault here - nsis 2.08 uninstaller wont delete $instdir - nsis 2.07 does.<br />
+<br />
+its not fault of my script - i swapped versions w/o change.<br />
+<br />
+the uninstaller demands a reboot although the folder is empty and not in use.<br />
+<br />
+please have a look on it.<br />
+<br />
+im back on 2.07 so long</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JasonFriday13</div><div class="date">1st August 2005, 04:40</div></div><div class="posttext">Right before you call 'Delete $Instdir' call this command:<br />
+<br />
+setoutpath &quot;$Instdir&quot;<br />
+setoutpath &quot;..\&quot; (you could try without the backslash)<br />
+<br />
+This changes the current directory to the directory before it (ex. from C:\windows to C:\ . This means C:\windows can be deleted (Do not delete C:\windows - this just an example)). This means $Instdir can be deleted.<br />
+<br />
+Hope this helps.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd August 2005, 20:45</div></div><div class="posttext">Right, haven't thought of that aspect when I made the change. The working directory of the installer is $INSTDIR, which is why it can't be deleted without SetOutPath. Please open a bug report and I'll fix it over the weekend.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">John P.</div><div class="date">2nd August 2005, 21:42</div></div><div class="posttext">-I just came here for this exact reason! Strange coinsidense...<br />
+<br />
+Anyway - I installed version 2.08 tonight, and ran into the same problem. <br />
+Only I was not trying to remove the $INSTDIR, I was trying to remove a folder I had created just before in the installer. I used RMDir /r and Delete, but to no avail. I don't think this has been a problem before.<br />
+<br />
+But it turned out that it was because the folder I had created and was now trying to delete, was the currently active folder just before the delete attempt (a SetOutPath &quot;the folder I'm talking about&quot; was before this in the script).<br />
+<br />
+The installer successfully deleted all the files inside the folder, just not the folder itself.<br />
+<br />
+However - when I now followed the advice given here, and put SetOutPath &quot;..\&quot; before the RMDir /r &quot;folder in question&quot; command, it worked, and the folder is now deleted. So thanks for the tip.<br />
+<br />
+However, this isn't how it's supposed to work, is it? I don't think it was like that in the earlier versions.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">2nd August 2005, 21:57</div></div><div class="posttext">Maybe RMDir itself should be changed so that it will go out of the folder in case the current folder has to be deleted. That would solve all issues.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">3rd August 2005, 11:45</div></div><div class="posttext">Yes, Kichik wants to fix it over the weekend, I'm sure he will find a nice implementation, watch the CVS ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th August 2005, 13:50</div></div><div class="posttext">Fixed.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JasonFriday13</div><div class="date">8th August 2005, 05:55</div></div><div class="posttext">I would also like the ability to delete folders in the $INSTDIR path, example: if the $instdir is 'C:\jason\software\items', I would like to be able to delete the 'C:\jason\software' folder as well. Thinking of using setoutpath to do this but I haven't tried it yet.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">8th August 2005, 10:27</div></div><div class="posttext">Well, ofcourse this is possible as before. Not really related to de bug as described before. As long as you keep track in your script where you install all yourr software this will work out. For now, better save than sorry, use &quot;..\&quot; etc.<br />
+<br />
+See manual and look at example:<br />
+<br />
+...<br />
+;only deletes if there are no more applications files<br />
+RMDir /REBOOTOK &quot;$PROGRAMFILES\${CompanyRootFolder}&quot;<br />
+...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">9th August 2005, 10:33</div></div><div class="posttext">I have written some macros to work around the bug and to add another useful feature:<br />
+<br />
+Think about a standard installer for &quot;mysoftware&quot;.<br />
+If the user installs into &quot;c:\program files\tools\mysoftware&quot; in general only &quot;mysoftware&quot; gets removed by the uninstaller, regardless whether &quot;tools&quot; or &quot;tools\mysoftware&quot; already exist.<br />
+<br />
+The macros at http://nsis.sourceforge.net/wiki/Dynamically_create_remove_directories will give you the part of the path which already existed, so you can just remove the parts created. <br />
+<br />
+Installer code:<br />
+<br />
+<br />
+  !insertmacro MakeDirBase $INSTDIR<br />
+  Pop $0<br />
+  WriteRegStr HKLM &quot;...your_regkey_path...&quot; &quot;BasePath&quot; &quot;$0&quot;<br />
+<br />
+<br />
+Uninstaller code:<br />
+<br />
+<br />
+  ReadRegStr $0 HKLM &quot;...your_regkey_path...&quot; &quot;BasePath&quot;<br />
+  !insertmacro RemoveDirBase &quot;$INSTDIR&quot; $0<br />
+<br />
+<br />
+http://nsis.sourceforge.net/wiki/Dynamically_create_remove_directories</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">9th August 2005, 15:14</div></div><div class="posttext">well, your macros add lots of overhead to installers, if used multiple times.<br />
+<br />
+you should rather stick to the common method used in several header files (like the WordFunc, FileFunc and TextFunc headers) where the features itself stay in Functions, and macros are only used to call them with one line.<br />
+<br />
+this will greatly decrease the overhead, and also work around the need of Index_... defines.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ahmad1234</div><div class="date">17th August 2005, 08:15</div></div><div class="posttext">Hi, I also have the same problem.. where do I place the new main.c.patch.txt file?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">17th August 2005, 13:08</div></div><div class="posttext">It's a part of the source code. For a compiled version grab the nightly build at http://nsis.sf.net</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Proper Installation of VB6 System Files, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Proper Installation of VB6 System Files NSIS Discussion" />
+	
+	<title> Proper Installation of VB6 System Files [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Proper Installation of VB6 System Files</div>
+<hr />
+<div class="pda"><a href="t-239731.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=239731">Proper Installation of VB6 System Files</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">joey buttafuco</div><div class="date">2nd March 2006, 20:37</div></div><div class="posttext">Hello.  I'm coming over from Inno Setup and it seems like &quot;SetOverwrite ifnewer&quot; isn't the right way to approach the following 6 necessary files for a VB6 project:<br />
+<br />
+stdole2.tlb<br />
+msvbvm60.dll<br />
+oleaut32.dll<br />
+olepro32.dll<br />
+asycfilt.dll<br />
+comcat.dll<br />
+<br />
+Here are the flags that I used to set in Inno:<br />
+<br />
+; begin VB system files<br />
+Source: &quot;E:\Ichiban Sudoku\SysFiles\stdole2.tlb&quot;;  DestDir: &quot;{sys}&quot;; Flags: restartreplace uninsneveruninstall sharedfile regtypelib<br />
+Source: &quot;E:\Ichiban Sudoku\SysFiles\msvbvm60.dll&quot;; DestDir: &quot;{sys}&quot;; Flags: restartreplace uninsneveruninstall sharedfile regserver<br />
+Source: &quot;E:\Ichiban Sudoku\SysFiles\oleaut32.dll&quot;; DestDir: &quot;{sys}&quot;; Flags: restartreplace uninsneveruninstall sharedfile regserver<br />
+Source: &quot;E:\Ichiban Sudoku\SysFiles\olepro32.dll&quot;; DestDir: &quot;{sys}&quot;; Flags: restartreplace uninsneveruninstall sharedfile regserver<br />
+Source: &quot;E:\Ichiban Sudoku\SysFiles\asycfilt.dll&quot;; DestDir: &quot;{sys}&quot;; Flags: restartreplace uninsneveruninstall sharedfile<br />
+Source: &quot;E:\Ichiban Sudoku\SysFiles\comcat.dll&quot;;   DestDir: &quot;{sys}&quot;; Flags: restartreplace uninsneveruninstall sharedfile regserver<br />
+; end VB system files<br />
+<br />
+Should I be switching SetOverwrite to Off?  I think you want to update these files if possible though, right?<br />
+<br />
+Also, is there some equivalent of the restartreplace, where a file in use will be updated but the user will be asked to reboot?  I had two files that I had to ignore updating on my first try at installing.<br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd March 2006, 20:41</div></div><div class="posttext">There's a section in the documentation (http://nsis.sourceforge.net/Docs/AppendixB.html#B.4) about the installation of VB6 runtimes. The Library macros handle overwriting the files.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joey Buttafuco</div><div class="date">2nd March 2006, 21:22</div></div><div class="posttext">Thanks for the link!<br />
+<br />
+I added the code<br />
+<br />
+ !include Library.nsh<br />
+<br />
+ Var ALREADY_INSTALLED<br />
+<br />
+ Section &quot;-Install VB6 runtimes&quot;<br />
+<br />
+   ;Add code here that sets $ALREADY_INSTALLED to a non-zero value if the application is already installed. For example:<br />
+<br />
+   IfFileExists &quot;$INSTDIR\ichiban.exe&quot; 0 new_installation ;Replace MyApp.exe with your application filename<br />
+     StrCpy $ALREADY_INSTALLED 1<br />
+   new_installation:<br />
+<br />
+   !insertmacro InstallLib REGDLL $ALREADY_INSTALLED REBOOT_NOTPROTECTED &quot;msvbvm60.dll&quot; &quot;$SYSDIR\msvbvm60.dll&quot; &quot;$SYSDIR&quot;<br />
+   !insertmacro InstallLib REGDLL $ALREADY_INSTALLED REBOOT_PROTECTED    &quot;oleaut32.dll&quot; &quot;$SYSDIR\oleaut32.dll&quot; &quot;$SYSDIR&quot;<br />
+   !insertmacro InstallLib REGDLL $ALREADY_INSTALLED REBOOT_PROTECTED    &quot;olepro32.dll&quot; &quot;$SYSDIR\olepro32.dll&quot; &quot;$SYSDIR&quot;<br />
+   !insertmacro InstallLib REGDLL $ALREADY_INSTALLED REBOOT_PROTECTED    &quot;comcat.dll&quot;   &quot;$SYSDIR\comcat.dll&quot;   &quot;$SYSDIR&quot;<br />
+   !insertmacro InstallLib DLL    $ALREADY_INSTALLED REBOOT_PROTECTED    &quot;asycfilt.dll&quot; &quot;$SYSDIR\asycfilt.dll&quot; &quot;$SYSDIR&quot;<br />
+   !insertmacro InstallLib TLB    $ALREADY_INSTALLED REBOOT_PROTECTED    &quot;stdole2.tlb&quot;  &quot;$SYSDIR\stdole2.tlb&quot;  &quot;$SYSDIR&quot;<br />
+<br />
+ SectionEnd<br />
+<br />
+ Section &quot;-un.Uninstall VB6 runtimes&quot;<br />
+<br />
+   !insertmacro UnInstallLib REGDLL SHARED NOREMOVE &quot;$SYSDIR\msvbvm60.dll&quot;<br />
+   !insertmacro UnInstallLib REGDLL SHARED NOREMOVE &quot;$SYSDIR\oleaut32.dll&quot;<br />
+   !insertmacro UnInstallLib REGDLL SHARED NOREMOVE &quot;$SYSDIR\olepro32.dll&quot;<br />
+   !insertmacro UnInstallLib REGDLL SHARED NOREMOVE &quot;$SYSDIR\comcat.dll&quot;<br />
+   !insertmacro UnInstallLib DLL    SHARED NOREMOVE &quot;$SYSDIR\asycfilt.dll&quot;<br />
+   !insertmacro UnInstallLib TLB    SHARED NOREMOVE &quot;$SYSDIR\stdole2.tlb&quot;<br />
+<br />
+ SectionEnd<br />
+<br />
+I switched the myapp to my app's name on the IfFileExists line, and my script does have a finish page, any idea why I get an error in macro InstallLib on this line<br />
+<br />
+    !error &quot;InstallLib: The library ${LOCALFILE} could not be found.&quot;<br />
+<br />
+with the first !insertmacro?<br />
+<br />
+I've tried some variations by pointing to system files I keep outside the Windows/System32 folder for safe keeping with no luck so far.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">3rd March 2006, 09:33</div></div><div class="posttext">Does it actually say &quot;${LOCALFILE}&quot; instead of, say, msvbvm60.dll? Which line in your script produces this error? Have you tried providing a full path to the DLLs in the fourth macro parameter?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

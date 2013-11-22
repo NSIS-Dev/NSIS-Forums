@@ -1,0 +1,196 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problem with sections., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problem with sections. NSIS Discussion" />
+	
+	<title> Problem with sections. [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problem with sections.</div>
+<hr />
+<div class="pda"><a href="t-219507.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=219507">Problem with sections.</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">skan</div><div class="date">22nd June 2005, 17:26</div></div><div class="posttext">Hello.<br />
+<br />
+...<br />
+I have this little program of mine that consists of two parts: the server side and the client side. I wrote this script to let the user choose between the server and the client to install: <br />
+SectionGroup &quot;MyApp&quot;<br />
+	Section &quot;MyApp client&quot; cli<br />
+		/*<br />
+		Client files<br />
+		*/<br />
+	SectionEnd<br />
+	Section &quot;MyApp server&quot; ser<br />
+		/*<br />
+		Server files<br />
+		*/<br />
+	SectionEnd<br />
+SectionGroupEnd<br />
+Now, what I want to do is this: when the user selects either client or server, the other section becomes read-only (i.e. you have to install either client or server, or both of them), so I wrote this .onSelChange function:<br />
+Function .onSelChange<br />
+	SectionGetFlags cli $1<br />
+	SectionGetFlags ser $2<br />
+	IntOp $R1 $1 &amp; 0x1<br />
+	IntOp $R2 $2 &amp; 0x1<br />
+	IntCmp $R1 0x0 client_unselected<br />
+	IntCmp $R2 0x0 server_unselected<br />
+	Abort<br />
+client_unselected:<br />
+	IntOp $2 $2 | 0x11<br />
+	SectionSetFlags ser $2<br />
+	Abort<br />
+server_unselected:<br />
+	IntOp $1 $1 | 0x11<br />
+	SectionSetFlags cli $1<br />
+	Abort<br />
+FunctionEnd<br />
+The problem is when the user deselects either server or client option, the whole section group becomes read-only and the user can not change his decision now. It seems that SectionSetFlags command somehow affects both sections at the same time. How can I make it work properly?<br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">22nd June 2005, 18:08</div></div><div class="posttext">I think you're after the effect of radio buttons.<br />
+If so, this code will work:<br />
+!include Sections.nsh<br />
+<br />
+SectionGroup &quot;MyApp&quot; main<br />
+	Section &quot;MyApp client&quot; cli<br />
+		/*<br />
+		Client files<br />
+		*/<br />
+	SectionEnd<br />
+	Section &quot;MyApp server&quot; ser<br />
+		/*<br />
+		Server files<br />
+		*/<br />
+	SectionEnd<br />
+SectionGroupEnd<br />
+<br />
+Function .onInit<br />
+  StrCpy $1 ${main}<br />
+FunctionEnd<br />
+<br />
+Function .onSelChange<br />
+<br />
+  !insertmacro StartRadioButtons $1<br />
+    !insertmacro RadioButton ${cli}<br />
+    !insertmacro RadioButton ${ser}<br />
+  !insertmacro EndRadioButtons<br />
+<br />
+FunctionEnd-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">skan</div><div class="date">22nd June 2005, 18:24</div></div><div class="posttext">Hello.<br />
+<br />
+No, actually, it's not what I mean. I want to allow user to select OR client option OR server option OR both of them BUT NOT neither of them. Radiobuttons only allow you to select one option out of many.<br />
+<br />
+Anyway, your code is not working. I have both options selected and when I try to deselect one of them, nothing happens :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">22nd June 2005, 19:27</div></div><div class="posttext">That's because it's radio buttons - all must start unselected except for one otherwise it will not work properly.<br />
+<br />
+However, for what you need is different.<br />
+This code works:<br />
+!include Sections.nsh<br />
+Function .onSelChange<br />
+<br />
+ SectionGetFlags ${cli} $R0<br />
+ IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+ SectionGetFlags ${ser} $R1<br />
+ IntOp $R1 $R1 &amp; ${SF_SELECTED}<br />
+<br />
+ StrCmp $R0 ${SF_SELECTED} noSelA2<br />
+  StrCmp $R1 ${SF_SELECTED} noSelA1<br />
+<br />
+   !insertmacro SelectSection   ${cli}<br />
+   !insertmacro UnselectSection ${ser}<br />
+<br />
+ Goto noSelA2<br />
+ noSelA1:<br />
+<br />
+   !insertmacro SelectSection   ${ser}<br />
+   !insertmacro UnselectSection ${cli}<br />
+<br />
+ noSelA2:<br />
+ StrCmp $R1 ${SF_SELECTED} noSelB2<br />
+  StrCmp $R0 ${SF_SELECTED} noSelB1<br />
+<br />
+   !insertmacro SelectSection   ${ser}<br />
+   !insertmacro UnselectSection ${cli}<br />
+<br />
+ Goto noSelB2<br />
+ noSelB1:<br />
+<br />
+   !insertmacro SelectSection   ${cli}<br />
+   !insertmacro UnselectSection ${ser}<br />
+<br />
+ noSelB2:<br />
+<br />
+FunctionEnd<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mæster</div><div class="date">22nd June 2005, 19:27</div></div><div class="posttext">Why do you use SectionGroup at all?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">skan</div><div class="date">22nd June 2005, 19:52</div></div><div class="posttext">Originally posted by Mæster <br />
+Why do you use SectionGroup at all?  <br />
+Because I like when things look organized :)<br />
+I also have some other stuff there that has no direct connection to the main application, so I decided to put it to another group...<br />
+<br />
+Originally posted by Afrow UK <br />
+However, for what you need is different.<br />
+This code works:<br />
+It works indeed! :cool:<br />
+Thank you for your help<br />
+<br />
+BTW, what's the difference between ${variable} and $variable ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">glory_man</div><div class="date">23rd June 2005, 08:41</div></div><div class="posttext">Also you can use LogicLib:<br />
+<br />
+!define LOGICLIB_SECTIONCMP<br />
+!include &quot;LogicLib.nsh&quot;<br />
+<br />
+var SingleSecID<br />
+<br />
+Function .onSelChange<br />
+${If} ${SectionIsSelected}  ${cli}<br />
+${AndUnless} ${SectionIsSelected}  ${ser}<br />
+   StrCpy $SingleSecID ${cli}<br />
+${ElseIf} ${SectionIsSelected}  ${ser}<br />
+${AndUnless} ${SectionIsSelected}  ${cli}<br />
+   StrCpy $SingleSecID ${ser}<br />
+${ElseUnless} ${SectionIsSelected}  ${cli}<br />
+${AndUnless} ${SectionIsSelected}  ${ser}<br />
+   !insertmacro SelectSection $SingleSecID<br />
+${EndIf}<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">23rd June 2005, 13:44</div></div><div class="posttext">${variable} wouldn't be a variable, but instead a constant (cannot be changed).<br />
+<br />
+E.g.<br />
+!define Constant &quot;hello world&quot;<br />
+The constant ${Constant} could then be placed in strings afterwards. !defines can also contain variables.<br />
+<br />
+When using:<br />
+Section &quot;A section&quot; SEC01<br />
+SectionEnd<br />
+...the ${SEC01} constant becomes available, which simply contains the section index (in which case would be 0 if it's the first section).<br />
+Basically, it's the same as doing:<br />
+!define SEC01 0<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

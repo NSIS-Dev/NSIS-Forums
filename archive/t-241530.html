@@ -1,0 +1,427 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" PPC-registry on Windows Mobile 5.0 fails, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  PPC-registry on Windows Mobile 5.0 fails NSIS Discussion" />
+	
+	<title> PPC-registry on Windows Mobile 5.0 fails [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  PPC-registry on Windows Mobile 5.0 fails</div>
+<hr />
+<div class="pda"><a href="t-241530.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=241530">PPC-registry on Windows Mobile 5.0 fails</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">22nd March 2006, 17:35</div></div><div class="posttext">Got everything up and running, including a fab. installation routine - works a treat on CE 2003 but fails on Mobile 5.0.  At first I thought the issue was the WM5 security model, but that is not so 'cos another part of my app. can happily manipulate the PPC registry over RAPI.<br />
+<br />
+My code with debug:<br />
+${PPC-registry::CeRapiInitEx} $R0<br />
+MessageBox MB_OK &quot;PPC-registry::CeRapiInit$\n$\n\Errorlevel: [$R0]&quot;<br />
+${PPC-registry::Read} &quot;HKEY_LOCAL_MACHINE\System\StorageManager\Profiles\SDMemory&quot; &quot;Folder&quot; $R0 $R1<br />
+MessageBox MB_OK 'PPC-registry::Read$\n$\n\$$R0    &quot;string&quot; =[$R0]$\n\$$R1    &quot;type&quot;   =[$R1]$\n'<br />
+<br />
+Fails at the Read function:<br />
+Unhandled exception at 0x2501499b in IfapMobileSetup.exe: 0xC0000005: Access violation writing location 0x10049000.<br />
+<br />
+I have read the comments from tbednarz (Sep 2002), but setting /NOUNLOAD changes nothing!<br />
+<br />
+Any inspirational thoughts most warmly welcomed!!!<br />
+<br />
+Peter</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">22nd March 2006, 20:30</div></div><div class="posttext">1. Is this happens with PPC-registry::CeRapiInit<br />
+2. Is this happens with other functions (like PPC-registry::Write)?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">23rd March 2006, 07:41</div></div><div class="posttext">1. PPC-registry::CeRapiInit seems to be exactly as good (or bad?) as PPC-registry::CeRapiInitEx.<br />
+2. PPC-registry::Write fails just like Read... you can test this using your own example code.  I have tested against both iPAQ rx1950 and the HTC PU10 = T.Mobile MDA Pro, both fail the same.<br />
+Sorry to be the bearer of bad news...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">23rd March 2006, 08:07</div></div><div class="posttext">... you can test this using your own example code.I can't test it.<br />
+<br />
+Have no idea. Maybe update rapi.lib from Windows Mobile 5.0 SDK, but I haven't it.<br />
+<br />
+Seams that is security problem.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">23rd March 2006, 09:10</div></div><div class="posttext">http://nickcheng.com/wiki/doku.php?id=windows_mobile_5.0_application_security<br />
+http://channel9.msdn.com/wiki/default.aspx/MobileDeveloper.MigrationFAQ (Why can't I use RAPI with my Windows Mobile device?)<br />
+<br />
+I'll see what I can do. How can I contact you?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">23rd March 2006, 10:15</div></div><div class="posttext">Found something. MSDN:<br />
+Microsoft Windows CE 5.0 Trusted APIs<br />
+...<br />
+The secure registry architecture in Windows CE allows only trusted applications that you have identified to modify keys and values in protected portions of the registry.<br />
+<br />
+Because most of the registry is unprotected, original equipment manufacturers must place all-important registry information in one of the protected keys.<br />
+Note   All applications have read-only access to all registry keys and values.<br />
+<br />
+In Windows CE, the following registry root keys and their subkeys are protected from untrusted applications: <br />
+HKEY_LOCAL_MACHINE\Comm<br />
+HKEY_LOCAL_MACHINE\Drivers<br />
+HKEY_LOCAL_MACHINE\HARDWARE<br />
+HKEY_LOCAL_MACHINE\Init<br />
+HKEY_LOCAL_MACHINE\Services<br />
+HKEY_LOCAL_MACHINE\SYSTEM<br />
+HKEY_LOCAL_MACHINE\WDMDrivers<br />
+<br />
+Untrusted applications are also not allowed to modify protected data. They receive the ERROR_ACCESS_DENIED return value if they attempt to use the following registry functions: <br />
+RegSetValueEx<br />
+RegCreateKeyEx<br />
+RegDeleteKey<br />
+RegDeleteValue</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Beedell</div><div class="date">23rd March 2006, 10:26</div></div><div class="posttext">My email: beedell@ifap.de</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">23rd March 2006, 10:31</div></div><div class="posttext">Peter Beedell as you see MSDN remark answer on question. If your application not trusted, you can only read from registry, and can't read from:<br />
+HKEY_LOCAL_MACHINE\Comm<br />
+HKEY_LOCAL_MACHINE\Drivers<br />
+HKEY_LOCAL_MACHINE\HARDWARE<br />
+HKEY_LOCAL_MACHINE\Init<br />
+HKEY_LOCAL_MACHINE\Services<br />
+HKEY_LOCAL_MACHINE\SYSTEM<br />
+HKEY_LOCAL_MACHINE\WDMDrivers</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">23rd March 2006, 10:38</div></div><div class="posttext">This can not explain why your PPC-RegistryTest fails - here you are writing to HKEY_LOCAL_MACHINE\SOFTWARE\NSIS.<br />
+Even if this were the case, can we expect the application to fail with a memory exception?<br />
+I have another instance (C++) using RAPI which works just fine...!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">23rd March 2006, 10:44</div></div><div class="posttext">Can you provide some code from this instance?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">23rd March 2006, 10:46</div></div><div class="posttext">Do you mean you want me to give your your own test code?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">23rd March 2006, 10:58</div></div><div class="posttext">I have another instance (C++) using RAPI which works just fine...!I understand it that you have some program written on C++ that uses RAPI. And if you have sources, I can view it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">23rd March 2006, 11:07</div></div><div class="posttext">Woops, its Delphi code..!<br />
+procedure TMainForm.TransferFeatureToPocket(AFeature: integer);<br />
+var<br />
+    ri: TRapiInit;<br />
+    hRes: HRESULT;<br />
+    dwRet: DWORD;<br />
+<br />
+    h_Key: HKey;<br />
+    ph_Key: PHKey;<br />
+    res, cri: longint;<br />
+    k_exist: LPDWORD;<br />
+//    k_exist: PDWORD;<br />
+    pFeature: Pointer;<br />
+begin<br />
+    TraceFunction('MainForm.TransferFeatureP Start', false);<br />
+    StatusBar.Panels[0].Text := 'Connecting ...';<br />
+    StatusBar.Refresh;<br />
+    ri.cbSize := sizeof(ri);<br />
+    hRes := CeRapiInitEx(ri);<br />
+    dwRet := WaitForSingleObject(ri.heRapiInit, 5000);<br />
+<br />
+    if ((dwRet &lt;&gt; WAIT_OBJECT_0) or (SUCCEEDED(ri.hrRapiInit) = FALSE)) then<br />
+    begin<br />
+        // Could not initialize Rapi<br />
+        TraceFunction('MainForm.TransferFeatureP CRU', false);<br />
+        CeRapiUninit;<br />
+        TraceFunction('MainForm.TransferFeatureP - Pocket PC not connected!', false);<br />
+        StatusBar.Panels[0].Text := 'Pocket PC not connected!';<br />
+    end<br />
+    else<br />
+    begin<br />
+        TraceFunction('MainForm.TransferFeatureP - Registering ...', false);<br />
+        StatusBar.Panels[0].Text := 'Registering ...';<br />
+        StatusBar.Refresh;<br />
+        cri := CeRapiInitEx(ri);<br />
+        if cri &lt;&gt; 0 then<br />
+        begin<br />
+          StatusBar.Panels[0].Text := 'Error!';<br />
+          TraceFunction('MainForm.TransferFeatureP - Error!', false);<br />
+        end<br />
+        else<br />
+        begin<br />
+            try<br />
+                TraceFunction('MainForm.TransferFeatureP - CeRegCreateKeyEx Start', false);<br />
+                res := CeRegCreateKeyEx(<br />
+                  HKEY_CURRENT_USER,<br />
+                  'Software\ifap GmbH\praxisCENTER mobile',<br />
+                  0,<br />
+                  'ActivateCode',<br />
+                  0,<br />
+                  0,<br />
+                  nil,<br />
+                  @h_Key,<br />
+                  k_exist);<br />
+                TraceFunction('MainForm.TransferFeatureP - CeRegCreateKeyEx End', false);<br />
+<br />
+                if res &lt;&gt; 0 then<br />
+                begin<br />
+                    StatusBar.Panels[0].Text := 'Key not found!';<br />
+                    TraceFunction('MainForm.TransferFeatureP - Key not found!', false);<br />
+                end;<br />
+<br />
+                pFeature := @AFeature;<br />
+                TraceFunction('MainForm.TransferFeatureP CeRegSetValueEx Start', false);<br />
+                res := CeRegSetValueEx(h_Key, 'ActivateCode', 0, REG_DWORD, pFeature, SizeOf(AFeature));<br />
+                TraceFunction('MainForm.TransferFeatureP CeRegSetValueEx End', false);<br />
+<br />
+                if res &lt;&gt; 0 then<br />
+                begin<br />
+                    StatusBar.Panels[0].Text := 'Program not activated properly!';<br />
+                    TraceFunction('MainForm.TransferFeatureP - Program not activated properly!', false);<br />
+                end;<br />
+<br />
+                if hres = ERROR_SUCCESS then<br />
+                    res := res;<br />
+                StatusBar.Panels[0].Text := '';<br />
+<br />
+                TraceFunction('MainForm.TransferFeatureP - CeRegCloseKey start', false);<br />
+                CeRegCloseKey(HKEY_CURRENT_USER);<br />
+                TraceFunction('MainForm.TransferFeatureP - CeRegCloseKey end', false);<br />
+            except<br />
+<br />
+            end;<br />
+        end;<br />
+    end;<br />
+<br />
+  TraceFunction('MainForm.TransferFeatureP End', false);    <br />
+end;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">23rd March 2006, 11:10</div></div><div class="posttext">I do have C++ code that uses RAPI to copy a file to a WM5 device (i.e. nothing to do with the registry) - here it is just for fun ;-)<br />
+<br />
+void CRencherRAPI::InitializeSettings()<br />
+{<br />
+	LPTSTR pPath = new TCHAR[MAX_PATH + 10];<br />
+	GetSystemDirectory(pPath, MAX_PATH);<br />
+	CString str(pPath);<br />
+	str += &quot;\\rapi.dll&quot;;<br />
+	hInst = LoadLibrary(str);<br />
+	if (hInst)<br />
+	{<br />
+		CeRapiInit      =		(FARPROC) GetProcAddress(hInst, &quot;CeRapiInit&quot;);<br />
+		CeRapiUninit    =		(FARPROC) GetProcAddress(hInst, &quot;CeRapiUninit&quot;);<br />
+		CeCreateFile    =		(pfnFunc0)GetProcAddress(hInst, &quot;CeCreateFile&quot;);<br />
+		CeWriteFile     =		(pfnFunc1)GetProcAddress(hInst, &quot;CeWriteFile&quot;);<br />
+		CeCloseHandle   =		(pfnFunc2)GetProcAddress(hInst, &quot;CeCloseHandle&quot;);<br />
+		CeFindFirstFile =		(pfnFunc3)GetProcAddress(hInst, &quot;CeFindFirstFile&quot;);<br />
+		CeGetFileSize	=		(pfnFunc4)GetProcAddress(hInst, &quot;CeGetFileSize&quot;);<br />
+		CeReadFile		=		(pfnFunc5)GetProcAddress(hInst, &quot;CeReadFile&quot;);<br />
+		CeFindNextFile  = 		(pfnFunc6)GetProcAddress(hInst, &quot;CeFindNextFile&quot;);<br />
+		CeCreateDirectory =		(pfnFunc7)GetProcAddress(hInst, &quot;CeCreateDirectory&quot;);<br />
+		CeCreateProcess  =		(pfnFunc8)GetProcAddress(hInst, &quot;CeCreateProcess&quot;);<br />
+		CeGetSystemInfo  =		(pfnFunc9)GetProcAddress(hInst, &quot;CeGetSystemInfo&quot;);<br />
+		m_bRapiLoaded = true;<br />
+	}<br />
+	else<br />
+	{<br />
+		FreeLibrary(hInst);<br />
+		MessageBox(m_hWnd, &quot;Rapi.dll konnte nicht geladen werden.&quot;, &quot;Info&quot;, MB_OK);<br />
+	}<br />
+}<br />
+<br />
+#define BUFFER_SIZE 10240<br />
+<br />
+void CRencherRAPI::CopyFiletoWinCE(CString strFileNamePC, CString strFileNamePPC)<br />
+{<br />
+	if (m_bRapiLoaded = false) <br />
+	{<br />
+		return;<br />
+	}<br />
+	CFile oldFile;	<br />
+	char cTemp[BUFFER_SIZE];<br />
+	int n = BUFFER_SIZE;<br />
+	DWORD nbytes;<br />
+	CString s;	<br />
+	long iTotBytes = 0;<br />
+	long iPercent = 0;<br />
+<br />
+	m_bAbborted = FALSE;<br />
+<br />
+	oldFile.Open(strFileNamePC, CFile::modeRead |CFile::typeBinary);<br />
+	long iLen = oldFile.GetLength(); <br />
+	long iMaxLen = iLen;<br />
+	if (m_pProgressbar != NULL)<br />
+	{<br />
+		m_pProgressbar-&gt;SetRange(0, 100);<br />
+	}		<br />
+<br />
+	iLen = iLen / BUFFER_SIZE;<br />
+	BSTR bstr = strFileNamePPC.AllocSysString(); <br />
+	<br />
+	CeRapiInit();<br />
+	HANDLE h;<br />
+	<br />
+<br />
+	h = CeCreateFile(bstr, GENERIC_READ , 0, NULL,<br />
+		    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);<br />
+<br />
+	if (h != INVALID_HANDLE_VALUE)<br />
+	{<br />
+		if (MessageBox(m_hWnd, &quot;Datei ist bereits auf Windows CE Gerät vorhanden, möchten Sie sie überschreiben?&quot;, &quot;Info&quot;, MB_YESNO) == IDNO )<br />
+		{<br />
+			return; <br />
+		}<br />
+		CeCloseHandle(h);<br />
+	}<br />
+<br />
+	h = CeCreateFile(bstr, GENERIC_READ | GENERIC_WRITE, 0, NULL,<br />
+		    OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);<br />
+<br />
+	long iProgressDividor = iMaxLen / 100L;<br />
+<br />
+	while(oldFile.Read(&amp;cTemp, BUFFER_SIZE) &gt;= 1)<br />
+	{<br />
+		CeWriteFile(h, &amp;cTemp, (DWORD)n, &amp;nbytes, NULL);<br />
+		iTotBytes = iTotBytes + (long)nbytes;<br />
+		if (m_pProgressbar != NULL)<br />
+		{<br />
+			iPercent = (iTotBytes / iProgressDividor) + 1L;<br />
+			m_pProgressbar-&gt;SetPos(iPercent);<br />
+			if (m_bAbborted)			<br />
+			{<br />
+				break;<br />
+			}<br />
+		}<br />
+	}<br />
+	SysFreeString(bstr);<br />
+	CeCloseHandle(h);<br />
+	oldFile.Close();<br />
+	CeRapiUninit();<br />
+}<br />
+<br />
+CString CRencherRAPI::GetCStringFromFile(CString strFileName)<br />
+{<br />
+	if (m_bRapiLoaded = false) <br />
+	{<br />
+		return &quot;&quot;;<br />
+	}<br />
+<br />
+	CString strOut;<br />
+	LPSTR pText = NULL;<br />
+	int iLen;<br />
+	CFile f;<br />
+	if (f.Open(strFileName, CFile::modeReadWrite))<br />
+	{<br />
+		iLen = f.GetLength();<br />
+		pText = new char[iLen + 1];<br />
+		f.Read(pText, iLen);<br />
+		pText[iLen] = '\0';<br />
+		CString str(pText);<br />
+		strOut = str;<br />
+		delete pText;<br />
+		f.Close();<br />
+	}<br />
+	else<br />
+	{<br />
+		strOut = &quot;Error&quot;;<br />
+	}<br />
+	return strOut;<br />
+}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">23rd March 2006, 11:25</div></div><div class="posttext">Peter check your e-mail</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">23rd March 2006, 11:48</div></div><div class="posttext">I cant seem to reply directly....<br />
+Ihre Nachricht hat einige oder alle Empfänger nicht erreicht.<br />
+<br />
+      Betreff:	AW: PPC-registry<br />
+      Gesendet am:	23.03.2006 12:46<br />
+<br />
+Folgende Empfänger konnten nicht erreicht werden:<br />
+<br />
+      ***1040;***1083;***1077;***1082;***1089;***1072;***1085;***1076;***1088;  ***1064;***1077;***1085;***1075;***1072;***1083;***1100;***1094; am 23.03.2006 12:46<br />
+            Fehler bei der SMTP-Kommunikation mit dem E-Mail-Server des Empfängers. Wenden Sie sich an Ihren Systemadministrator.<br />
+            &lt;IFAP-DC1.ifap.local #5.5.0 smtp;550 Access from ip address 62.154.249.106 blocked. Visit http://win.mail*****cgi-bin/support_bl?ip=62.154.249.106&gt;<br />
+<br />
+So here is my response...<br />
+<br />
+Hi Mr. um, er, sorry, do you have a nickname I could use?<br />
+Yes, the RegistryTest.nsi runs happily on my CE 2003 devices, but fails on anything other than the RAPI initialisation {PPC-registry::CeRapiInitEx}.<br />
+This fails even if I ensure the first action after the init is a read of a key that defiantly exists:<br />
+${PPC-registry::Read} &quot;HKEY_CURRENT_USER\SOFTWARE\ifap GmbH\praxisCENTER mobile&quot; &quot;ActivateCode&quot; $R0 $R1<br />
+<br />
+Best regards,<br />
+ <br />
+Peter Beedell.<br />
+-----Ursprüngliche Nachricht-----<br />
+Von: ***1040;***1083;***1077;***1082;***1089;***1072;***1085;***1076;***1088; ***1064;***1077;***1085;***1075;***1072;***1083;***1100;***1094; [mailto:shengalts@mail.ru]<br />
+Gesendet: Donnerstag, 23. März 2006 12:25<br />
+An: Peter Beedell<br />
+Betreff: PPC-registry<br />
+<br />
+I'll check the code you posted little later. Peter then you run PPC-RegistryTest.nsi &quot;Basic registry functions&quot; it fails then calls PPC-registry::Read?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">23rd March 2006, 11:50</div></div><div class="posttext">That should read: &quot;but fails on anything other than the RAPI initialisation on WM5 devices.&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">23rd March 2006, 14:15</div></div><div class="posttext">Can you test the attachment. It try to read &quot;HKEY_CURRENT_USER\SOFTWARE\ifap GmbH\praxisCENTER mobile&quot; &quot;ActivateCode&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">23rd March 2006, 14:26</div></div><div class="posttext">Running this Test.exe results in a small window, titled &quot;Fehler&quot; (German for failure), a small square (non-printable character?) and the OK button - nothing else.<br />
+<br />
+The behaviour is identical on both CE 2003 and Windows Mobile 5.0 devices.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">23rd March 2006, 15:06</div></div><div class="posttext">titled &quot;Fehler&quot;Don't mind it. How about next test?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">23rd March 2006, 15:20</div></div><div class="posttext">The results are identical to the last test in all respects!<br />
+Just one observation, when the process 'ends' it leaves a task running that must be killed in the task manager.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">23rd March 2006, 16:48</div></div><div class="posttext">What the real value of the ActivateCode and what type is it?<br />
+<br />
+Just one observation, when the process 'ends' it leaves a task running that must be killed in the task manager.Forgot CeRapiUninit()</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">23rd March 2006, 16:51</div></div><div class="posttext">Any integer value and the type is a REG_DWORD</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">23rd March 2006, 16:56</div></div><div class="posttext">Peter can we talk now in ICQ? My: 345166905</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">23rd March 2006, 17:45</div></div><div class="posttext">---</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">10th April 2006, 13:00</div></div><div class="posttext">Hi Aleksander,<br />
+I have tried the latest version and it fails at the PPC-registry::Read with &quot;*lpcbData=65536&quot;. Clicking the MessageBox away it is followed by another with &quot;MakeNSISWPlacement&quot; before the system crashes!<br />
+I wait for your response!<br />
+Cheers, Peter.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">10th April 2006, 14:39</div></div><div class="posttext">Maybe this one?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">10th April 2006, 14:47</div></div><div class="posttext">Identical behaviour in all aspects! Sorry!<br />
+Peter.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">10th April 2006, 15:10</div></div><div class="posttext">Peter can you sign on ICQ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">10th April 2006, 15:56</div></div><div class="posttext">How about this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Peter Beedell</div><div class="date">10th April 2006, 16:12</div></div><div class="posttext">I have tested this as well - no change...<br />
+I am trying to contact you by ICQ</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">10th April 2006, 16:30</div></div><div class="posttext">---</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

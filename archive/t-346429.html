@@ -1,0 +1,128 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Installation issue on win7 with standard user and UAC off, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Installation issue on win7 with standard user and UAC off NSIS Discussion" />
+	
+	<title> Installation issue on win7 with standard user and UAC off [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Installation issue on win7 with standard user and UAC off</div>
+<hr />
+<div class="pda"><a href="t-346429.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=346429">Installation issue on win7 with standard user and UAC off</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">air_circle</div><div class="date">18th July 2012, 08:10</div></div><div class="posttext">Hello, dear friends<br />
+<br />
+We have one XP application, Now need to support win7(for all users: admin, standard)<br />
+I meet some issues in standard user with UAC off:<br />
+1. Can not create new sub registry in ${HKEY_LOCAL_MACHINE} SOFTWARE, and can not write any registry value.Code example:<br />
+    !insertmacro CreateRegKey ${HKEY_LOCAL_MACHINE} SOFTWARE\MyApp<br />
+    WriteRegStr HKEY_LOCAL_MACHINE SOFTWARE\MyApp Version 1.14.83<br />
+2. Can not create the uninstall shortcut in the add/remove control panel<br />
+User need to install the APP in standard user level.<br />
+<br />
+Anyone know how to fix it? Hope someone can help me! Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">18th July 2012, 10:50</div></div><div class="posttext">You cannot write to HKLM as a limited user. If your application does this also then it must be modified to write to HKCU instead.<br />
+<br />
+Edit: You can also create the Add/Remove registry under HKCU.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th July 2012, 21:05</div></div><div class="posttext">The exact same issue exists on XP (and every version of NT before that), you just forgot to test as non-admin on XP...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">air_circle</div><div class="date">19th July 2012, 03:16</div></div><div class="posttext">Our APP need to do a per-machine installation. The request is that one user install it in the same pc, other users shall be able use it.<br />
+If write to HKCU instead, then comes one issue: <br />
+After user A install the APP, the user B can see the APP, but will not be able use the APP since the registry value is not available for B.<br />
+<br />
+And Our APP works well on XP, since user will always have admin permission on XP and we don't want to re-implement the APP.<br />
+<br />
+So, NSIS can not finish the per-machine installation on standard user level?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">19th July 2012, 06:11</div></div><div class="posttext">And Our APP works well on XP, since user will always have admin permission on XP and we don't want to re-implement the APP.<br />
+Users on XP are not always admins. New users may be admin by default, but that's not a reason to assume that nobody ever creates a userlevel user. Any smart system administrator would make his company's pcs use userlevel users, not admins.<br />
+<br />
+So, NSIS can not finish the per-machine installation on standard user level?<br />
+It's not that NSIS cannot do it - It's that Windows will not allow it. If you want to do something for all users, you MUST have administrative access. Once you're admin there are many ways to accomplish what you want to do, but it involves either making some ugly hacks OR fixing your application to follow Microsoft Windows standards. If you want some location where your application can write data for all users, you need to use alluser Appdata. That's what it was designed for.<br />
+<br />
+More hack-job solutions (please don't do this):<br />
+- Create a service that automatically runs at admin level to handle all the admin-level tasks your app needs. This solution is used for example by the Steam client, because it must be able to install games which sometimes (but not always) requires admin.<br />
+- Enumerate all userhives in HKU and create reg info for each user, plus the default user hive.<br />
+- Make your HKLM regkey world-writable.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">air_circle</div><div class="date">19th July 2012, 08:08</div></div><div class="posttext">MSG,<br />
+<br />
+Thanks for your detailed info. <br />
+<br />
+Do you know any info about following?<br />
+1.What's the alluser Appdata folder on win7? is it %public%?<br />
+2.Do you know any alluser registry location with write/read permission?<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">19th July 2012, 10:54</div></div><div class="posttext">If you are doing an all users install then you must install with administrator privileges. You can then write to HKLM, $PROGRAMFILES and you can write shortcuts for all users (SetShellVarContext all).<br />
+<br />
+Add RequestExecutionLevel admin to your script and then in .onInit check the user has administrator privileges using UserInfo::GetAccountType.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">19th July 2012, 17:04</div></div><div class="posttext">1.What's the alluser Appdata folder on win7? is it %public%?<br />
+2.Do you know any alluser registry location with write/read permission?<br />
+1. It's %APPDATA%  after you do setshellvarcontext all<br />
+2. World-writable alluser registry does not exist as far as I know.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">20th July 2012, 07:15</div></div><div class="posttext">1.What's the alluser Appdata folder on win7? is it %public%?<br />
+<br />
+<br />
+No, public is for documents etc. CommonAppdata=Programdata on NT6.<br />
+<br />
+See also:<br />
+http://blogs.msdn.com/b/oldnewthing/archive/2012/07/06/10327322.aspx<br />
+http://blogs.msdn.com/b/aaron_margosis/archive/2011/09/25/faq-where-do-i-save-files-and-how-exactly-do-i-do-that.aspx</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">air_circle</div><div class="date">23rd July 2012, 11:39</div></div><div class="posttext">But Programdata folder is limited access for such cas:<br />
+usera:admin<br />
+userb:stand<br />
+In the same pc, if usera create the common user data file, then the userb will have no pemission to write.How to handle this case?<br />
+<br />
+Can install app into c:\users\public?<br />
+I just found all users(admin/standard) have permission to write/create new file/folder in this folder.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">23rd July 2012, 15:00</div></div><div class="posttext">If I understand Anders's links correctly, %PUBLIC% is simply the new allusers startmenu/desktop/etc. These folders were not world-writable in WinXP, so I would guess they are also not world-writable on Vista/7. <br />
+In contrast, Program Data is the new allusers Application Data. This folder IS world-writable in XP/etc. Therefore I would expect it to be world-writable in Vista/7 as well.<br />
+<br />
+I don't have a Vista/7 virtual machine at hand right now, so I can't test the above assumptions. But I do remember testing it in the past without trouble. Are you sure you cannot write to your programdata folder as user?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">air_circle</div><div class="date">25th July 2012, 07:27</div></div><div class="posttext">Yes, I do some test on my win7.<br />
+<br />
+First, log in with admin, and launch my app, then it create the common configure file configure.ini in the Program Data\myapp.<br />
+<br />
+Second, log in with standard user, launch my app, it can not change the configuration file configure.ini, there is no write permission since the file is created by amin.<br />
+<br />
+Third, i tried to install the app into %public%, i repeat the step 1 and step 2, it is passed, all user can add new configuration in the configure.ini file.<br />
+<br />
+On win7, the %public% is c:\users\public, this is new folder from vista, there is no this folder on XP.<br />
+<br />
+From my test result, I plan to install the new app into %public% on win7, but on XP, will keep installing the app into C:\Program Files.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

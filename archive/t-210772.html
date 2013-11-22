@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problems executing file after installation, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problems executing file after installation NSIS Discussion" />
+	
+	<title> Problems executing file after installation [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problems executing file after installation</div>
+<hr />
+<div class="pda"><a href="t-210772.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=210772">Problems executing file after installation</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">cervezas</div><div class="date">18th March 2005, 18:05</div></div><div class="posttext">My software has a Windows desktop component and also installs some files on a Palm OS device.  When the installer finishes installing the Windows application I want it to execute another installer I've already built (not NSIS) to start the Palm software installation.  I've read the manual and a bunch of posts on this and am mystified as to why I haven't succeeded.<br />
+<br />
+Briefly, the problem is that when the Palm installer gets called it behaves like it can't find the first file that it needs to install and it crashes.  I have verified that the file is there and after the Palm installer has crashed I can browse to the executable for it and perform the installation manually.  <br />
+<br />
+Note: the Palm installer.exe and the files it needs to do its thing are all installed by the NSIS installer.<br />
+<br />
+What could be the problem here?<br />
+<br />
+David</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th March 2005, 18:20</div></div><div class="posttext">The working directory is probably not set right. The other installer probably looks there for the files, and since it isn't set properly, it can't find them. Use SetOutPath to set the working directory.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">cervezas</div><div class="date">18th March 2005, 18:50</div></div><div class="posttext">Originally posted by kichik <br />
+The working directory is probably not set right.... Use SetOutPath to set the working directory.  <br />
+<br />
+Hmmm. Thanks for the suggestion.  I probably did need to do that, but even when I do there's still the same problem.  Another strange thing I just noticed (and should have noticed earlier) is that a MessageBox I call prior to my Exec command doesn't display, even thought the Exec command following it is clearly running.  <br />
+<br />
+Here's the function I'm calling by defining MUI_PAGE_CUSTOMFUNCTION_LEAVE PalmInstall. What's happening here with the IntCmp calls is I'm checking which version(s) of the Palm software they decided to install in a previous dialog.  (Note: I've tried putting this define MUI_PAGE_CUSTOMFUNCTION_LEAVE before the MUI_PAGE_INSTFILES macro, before the MUI_PAGE_FINISH macro, and I've also tried putting the body of the function in Function .onInstSuccess, all with the same result.)<br />
+<br />
+Function PalmInstall<br />
+<br />
+  IntCmp PALM_OS_2_3_4 1 OS234 next<br />
+  OS234:<br />
+    IntCmp PALM_OS_5 1 msgBoth msg234<br />
+    msgBoth:<br />
+      MessageBox MB_ICONINFORMATION|MB_OK &quot;EpiSurveyor Setup will now install the \<br />
+      software to your Palm OS devices. Since you have opted to install the versions \<br />
+      for both Palm OS 5 and for earlier Palm OS devices the Palm installation dialog \<br />
+      will run twice.  If prompted to select the devices (HotSync users) to install \<br />
+      to, take care to select the devices whose Palm OS version matches the one being \<br />
+      installed in the current dialog.&quot;<br />
+      Goto install234<br />
+    msg234:<br />
+      MessageBox MB_ICONINFORMATION|MB_OK &quot;EpiSurveyor Setup will now install the \<br />
+      software to your Palm OS devices.  You have opted to install the version \<br />
+      for Palm OS 2, 3, and 4 without 16-bit color.  If prompted to select \<br />
+      the devices (HotSync users) to install to, take care to select devices that \<br />
+      use a compatible version of Palm OS.&quot;<br />
+    install234:<br />
+      SetOutPath &quot;$INSTDIR\engine\os2_3_4&quot;<br />
+      Exec '&quot;$INSTDIR\engine\os2_3_4\pInstaller.exe&quot;'<br />
+  next:<br />
+  IntCmp PALM_OS_5 1 OS5 done<br />
+  OS5:<br />
+    ; if we already installed the OS 2-3-4 version we don't need another message<br />
+    IntCmp PALM_OS_2_3_4 1 install5 msg5<br />
+    msg5:<br />
+      MessageBox MB_ICONINFORMATION|MB_OK &quot;EpiSurveyor Setup will now install the \<br />
+      software to your Palm OS devices.  You have opted to install the version \<br />
+      for Palm OS 5 and OS 4 with 16-bit color.  If prompted to select \<br />
+      the devices (HotSync users) to install to, take care to select devices that \<br />
+      use a compatible version of Palm OS.&quot;<br />
+    install5:<br />
+      SetOutPath &quot;$INSTDIR\engine\os5&quot;<br />
+      Exec '&quot;$INSTDIR\engine\os5\pInstaller.exe&quot;'<br />
+  done:<br />
+FunctionEnd<br />
+<br />
+David</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th March 2005, 19:03</div></div><div class="posttext">The best place to put this code would probably be in a section of its own, or the last section.<br />
+<br />
+Try replacing the Exec instruction with MessageBox. When the message box shows up, manually execute the installer and see if it works or not. It might be something that executes later one that it's missing.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dienjd</div><div class="date">22nd March 2007, 23:50</div></div><div class="posttext">Originally posted by kichik <br />
+The working directory is probably not set right. The other installer probably looks there for the files, and since it isn't set properly, it can't find them. Use SetOutPath to set the working directory.  <br />
+<br />
+Think it would be worth it to add a check and set a compiler warning if Exec is used when $OUTDIR is not the same as the target EXE's parent directory?<br />
+<br />
+I just ran into this issue also. I know it's because of my sloppiness, but a compiler check could alert people to this potential problem at build time.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mark Nascimento</div><div class="date">23rd March 2007, 01:12</div></div><div class="posttext">I have a problem similar.<br />
+If $INSTDIR is MyDocs and:<br />
+ SetOutPath &quot;$INSTDIR\engine\os5&quot;<br />
+      Exec '&quot;$INSTDIR\engine\os5\pInstaller.exe&quot;'<br />
+<br />
+The pInstaller.exe will run from ns..$temp, NOT from $INSTDIR.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dienjd</div><div class="date">23rd March 2007, 05:07</div></div><div class="posttext">Originally posted by Mark Nascimento <br />
+I have a problem similar.<br />
+If $INSTDIR is MyDocs and:<br />
+ SetOutPath &quot;$INSTDIR\engine\os5&quot;<br />
+      Exec '&quot;$INSTDIR\engine\os5\pInstaller.exe&quot;'<br />
+<br />
+The pInstaller.exe will run from ns..$temp, NOT from $INSTDIR.  <br />
+<br />
+Mark, this may be happening because MyDocs is not static. It can be different values based on what SetShellVarContext points to. You may want to verify that it is set to the correct value (all versus current) and MessageBox $OUTDIR just before your Exec instruction.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mark Nascimento</div><div class="date">23rd March 2007, 12:32</div></div><div class="posttext">Thank You.<br />
+Solved.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dienjd</div><div class="date">23rd March 2007, 15:59</div></div><div class="posttext">Originally posted by dienjd <br />
+Think it would be worth it to add a check and set a compiler warning if Exec is used when $OUTDIR is not the same as the target EXE's parent directory? <br />
+Nevermind, this isn't possible since both of these are set at runtime :) Would be possible I guess in a script to wrap Exec in a routine that verifies this.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

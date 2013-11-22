@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Two Problems, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Two Problems NSIS Discussion" />
+	
+	<title> Two Problems [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Two Problems</div>
+<hr />
+<div class="pda"><a href="t-135518.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=135518">Two Problems</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">sgt-d</div><div class="date">15th May 2003, 20:52</div></div><div class="posttext">1) MUI_FINISHPAGE_RUN<br />
+<br />
+this works:<br />
+!define MUI_FINISHPAGE_RUN &quot;$INSTDIR\test1.exe&quot;<br />
+<br />
+but this does not:<br />
+!define MUI_FINISHPAGE_RUN &quot;$INSTDIR\subfolder1\subfolder2\test2.exe&quot;<br />
+<br />
+which doesn't make sense to me at all.  why not?  we have a full qualifying path, so it should work.<br />
+<br />
+2) CreateShortCut<br />
+<br />
+will not work: <br />
+<br />
+CreateShortCut &quot;$SMPROGRAMS\${MUI_STARTMENUPAGE_VARIABLE}\MyApp.lnk&quot; &quot;$INSTDIR\system\myapp.exe&quot; /command_line_switch_for_myapp<br />
+<br />
+there is no way to pass any command line arguments to myapp.exe during the creation of my shortcuts.  i've tried everything i can think of, but nsis keeps assuming too many things.  it either adds my /switch inside the quotes (which won't work, ex: &quot;c:\myapp.exe /test&quot;) or it tries assuming that my /switch is another nsis parameter, such as an icon or hotkey.<br />
+<br />
+i need workarounds, hax, fixes, anything that works!<br />
+<br />
+thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">16th May 2003, 02:08</div></div><div class="posttext">This works fine for me :-CreateShortCut &quot;${NSISDIR}\blah.lnk&quot; &quot;${NSISDIR}\makensisw.exe&quot; &quot;/?&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dajvid</div><div class="date">16th May 2003, 02:11</div></div><div class="posttext">Hi,<br />
+<br />
+In regards to your second problem with CreateShortcut, it sounds like your command line switch contains spaces in it. For example:<br />
+<br />
+CreateShortCut &quot;$SMPROGRAMS\${MUI_STARTMENUPAGE_VARIABLE}\MyApp.lnk&quot; &quot;$INSTDIR\system\myapp.exe&quot; /whoop C:\Tick Tock\bing.txt<br />
+<br />
+will consider:<br />
+<br />
+&quot;/whoop&quot; as the command line switch,<br />
+&quot;C:\Tick&quot; as the icon file, and<br />
+&quot;Tock\bing.txt&quot; as the icon_index_number.<br />
+<br />
+(I know hard coding file locations is bad practice, I'm just trying to illustrate how spaces in paths can also delimit parameters)<br />
+<br />
+Wrap your command line switches in quotes (don't forget to escape them if necessary) and that should bring joy into your life. For example:<br />
+<br />
+CreateShortCut &quot;$SMPROGRAMS\${MUI_STARTMENUPAGE_VARIABLE}\MyApp.lnk&quot; &quot;$INSTDIR\system\myapp.exe&quot; &quot;/whoop \$&quot;C:\Tick Tock\bing.txt\$&quot;&quot;<br />
+<br />
+(Don't know about your first problem - for a stab in the dark, could it relate to escaping quotes? All I can say is that from my recent conversion to MUI, when I define MUI symbols, I can't use statements like <br />
+<br />
+!define MUI_FINISHPAGE_RUN '&quot;wrapping quotes&quot;' <br />
+<br />
+anymore, but I can use<br />
+<br />
+!define MUI_FINISHPAGE_RUN &quot;\$&quot;wrapping quotes\$&quot;&quot;<br />
+<br />
+Other than that, I can't see why your exact example wouldn't work. Would it help if you post the exact line from your script which is failing?)<br />
+<br />
+Ta,<br />
+Dave.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sgt-d</div><div class="date">16th May 2003, 05:09</div></div><div class="posttext">Item #2 CreateShortcut is working fine, I had an extra set of quotes after the command line parameter that was throwing it off.  And if I create a shortcut to a long filename path, it does it correctly (in the created shortcut) by encasing the path and exe in quotes, but not the extra params:<br />
+<br />
+&quot;c:\a long filename path test\myapp.exe&quot; /ahh<br />
+<br />
+Item #1 MUI_FINISHPAGE_RUN is not working, no matter what I try.  I think I've expired all of the possibilities here:<br />
+<br />
+!define MUI_FINISHPAGE_RUN $INSTDIR\subfolder1\subfolder2\myapp.exe<br />
+<br />
+!define MUI_FINISHPAGE_RUN '$INSTDIR\subfolder1\subfolder2\myapp.exe'<br />
+<br />
+!define MUI_FINISHPAGE_RUN &quot;$INSTDIR\subfolder1\subfolder2\myapp.exe&quot;<br />
+<br />
+!define MUI_FINISHPAGE_RUN `$INSTDIR\subfolder1\subfolder2\myapp.exe`<br />
+<br />
+!define MUI_FINISHPAGE_RUN &quot;$\&quot;$INSTDIR\subfolder1\subfolder2\myapp.exe$\&quot;&quot;<br />
+<br />
+No matter what I try, the app I want to run cannot and will not run, ever.  It just can't be in a subfolder or a series of subfolders --- it's like it absolutely has got to be in the same folder as $INSTDIR.<br />
+<br />
+i need a workaround or a fix!  :/</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">cvx_borg</div><div class="date">16th May 2003, 10:02</div></div><div class="posttext">is the file you want to run already there? i had this problem when copied some files in .oninstsuccess and wanted to display it like that. you have to move the copying into a section in this case.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sgt-d</div><div class="date">16th May 2003, 15:25</div></div><div class="posttext">my mui defines are all at the top of my nsis script, including the finish page.  the files are all copied in my first section.<br />
+<br />
+i don't know, it just doesn't make sense.  the path is 100% correct, i've even checked it with a messagebox, but it just will not run myapp.exe when i click finish unless myapp.exe is in $INSTDIR -- it can't be anywhere else on my hard drive.  way too restrictive.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">16th May 2003, 15:48</div></div><div class="posttext">Attach the script and I'll have a look.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sgt-d</div><div class="date">16th May 2003, 16:51</div></div><div class="posttext">ok, god i'm stupid.  nested folders work fine for the finish page.<br />
+<br />
+here's my real problem though, and i can't figure out a way to do it.<br />
+<br />
+i don't just want to run the exe on the finish page, i want to change directories...  into the same folder as the exe that i am attempting to run.<br />
+<br />
+on finish i need to run a starter exe 2 subfolders deep, to execute some commands and then it automatically cd's up 2 folders back to $INSTDIR and runs the real exe.<br />
+<br />
+well, the finish page runs my starter exe, but since it is in $INSTDIR and hasn't changed into the subfolders, when the starter exe is done, it tries going up two folders above $INSTDIR -- and the real exe can't be found then.<br />
+<br />
+if that makes sense at all.  you can tell i'm out of coffee.  so, is there a way to change directories for the finish page run command?<br />
+<br />
+and wouldn't it be a better idea anyway to automatically chdir into the same folder as the exe we want to run?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">16th May 2003, 17:09</div></div><div class="posttext">Exec and ExecWait start the program with $OUTDIR as the working directory. Set it using SetOutPath or just copy a value in to it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sgt-d</div><div class="date">16th May 2003, 19:17</div></div><div class="posttext">ok, how do i tell MUI_FINISHPAGE_RUN to use $OUTDIR?  i mean, i added SetOutPath in like 20 places (at the end of each section) hoping it would work, but MUI_FINISHPAGE_RUN seems to only rely on $INSTDIR.  so, when i click finish, i can run an exe from anywhere on my harddrive, but it never changes to the same directory that the contains that exe.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">16th May 2003, 19:37</div></div><div class="posttext">The MUI never uses SetOutPath and NSIS doesn't change $OUTDIR unless you use SetOutPath or copy something into it so the last directory set as $OUTDIR will be used. Use SetOutPath in the finish page's pre function or the last section.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sgt-d</div><div class="date">16th May 2003, 20:20</div></div><div class="posttext">ok, i give up.  i have setoutpath at the end of every section (16 total) yet MUI_FINISHPAGE_RUN still fails to change directories to $OUTPATH, or somehow it is being reset to $INSDIR --- and i don't see an example of a finish page's pre function anywhere so i guess i'll have to try something else instead.  :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sgt-d</div><div class="date">16th May 2003, 20:26</div></div><div class="posttext">!define MUI_CUSTOMFUNCTION_FINISH_PRE myFinishPre<br />
+<br />
+Function myFinishPre<br />
+  SetOutPath &quot;$INSTDIR\system\mpp&quot;<br />
+FunctionEnd<br />
+<br />
+annoying...  this fails too.  it just will not chdir to the folder of the exe being run.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">16th May 2003, 20:47</div></div><div class="posttext">Works fine for me and it doesn't relay on any change I have made to the latest CVS version. It should even work on 1.98 (executing a program at the end using .onInstSuccess for example). Try setting MUI_FINISHPAGE_RUN to the attached program, it'll tell you the working directory. Maybe it will help you see where the problem is.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sgt-d</div><div class="date">16th May 2003, 21:15</div></div><div class="posttext">ok, i feel stupid.  :p~<br />
+<br />
+!define MUI_CUSTOMFUNCTION_FINISH_PRE myFinishPre <br />
+<br />
+Function myFinishPre <br />
+SetOutPath &quot;$INSTDIR\system\mpp&quot; <br />
+FunctionEnd <br />
+<br />
+this worked, but in all of my previous attempts i forgot to change this:<br />
+<br />
+!define MUI_FINISHPAGE_RUN $OUTDIR\subfolder1\subfolder2\myapp.exe <br />
+<br />
+back to $INSTDIR<br />
+<br />
+it seems to work now.  ugh.  sorry for the bs.  i wish i had seen MUI_CUSTOMFUNCTION_FINISH_PRE sooner.<br />
+<br />
+thanks kichik!<br />
+<br />
+oh, i also tested your file, it works also.  mine reports the current folder too, which is how i saw it failing.<br />
+<br />
+anyway, thanks again!  :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

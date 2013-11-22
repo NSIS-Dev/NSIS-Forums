@@ -1,0 +1,82 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" random system.dll crash on installer shutdown, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  random system.dll crash on installer shutdown NSIS Discussion" />
+	
+	<title> random system.dll crash on installer shutdown [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  random system.dll crash on installer shutdown</div>
+<hr />
+<div class="pda"><a href="t-303545.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=303545">random system.dll crash on installer shutdown</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">26th February 2009, 23:42</div></div><div class="posttext">Hi there,<br />
+<br />
+I'm getting a random crash from system.dll ; I realize that this 'could be anything', but maybe you guys have some thoughts.<br />
+<br />
+Basically system.dll is used to create buffers, structs, make API calls, etc. in various places.  As far as I can tell, all of the code is 'safe' - i.e. buffers get cleaned up where they should be.. but I'm still not an expert.<br />
+<br />
+The crash only occurs when the installer shuts down, and is highly intermittent.  In fact, I'm trying to see if I can get some details on the crash but I can't get the thing to crash now.<br />
+<br />
+Is there something happening at installer shutdown where, presumably, system.dll gets unloaded or so and something I've forgotten could cause these crashes?<br />
+<br />
+If you need code, I'll try and share as much as I can, but the all of the system calls used are the below (with minor modifications; e.g. Get_Local_Time adjusted to return a specific format instead of the hours/minutes/etc. on the stack; no changes to the system calls themselves).<br />
+<br />
+http://nsis.sourceforge.net/Get_Local_Time<br />
+http://nsis.sourceforge.net/Refresh_shell_icons<br />
+http://nsis.sourceforge.net/Dump_log_to_file<br />
+http://nsis.sourceforge.net/NsDialogs_SetImageOLE<br />
+http://nsis.sourceforge.net/Allow_only_one_installer_instance<br />
+<br />
+And...<br />
+Refresh a control:<br />
+System::Call &quot;user32::InvalidateRect(i,i,i)i (r0, 0, 1)&quot;<br />
+<br />
+Sadly I can't rule any of these out too easily given that the crash *is* intermittent.<br />
+<br />
+Thanks in advance for any pointers.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">27th February 2009, 00:06</div></div><div class="posttext">I would suggest running the installer in a loop (batchfile or whatever) and comment things out untill it stops crashing (the installer could write a special file to $temp at the end, then the batchfile could check for this file, it it exists, it just runs it again, it its not there, there was a crash etc)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">27th February 2009, 00:38</div></div><div class="posttext">yeah, I've had to move on to making the installer do what it's supposed to do (when not crashing; which has been the last 30 manual runs; I hate heisenbugs), after which I'm likely to do something like that; I hope that there's no conceivable way that timing of the installer closing could have something to do with it.. e.g. a user closing the installer after 1.5s &gt; crash, batch closing it after 0.000xs &gt; no crash, etc.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">2nd March 2009, 13:37</div></div><div class="posttext">Well, never got the crashes again (set up a small scripted test), but I'll be keeping an eye out.  For now I'll just rule this as Windows having been in a dirty state from some earlier tests, although I'm not sure how system.dll would be affected .</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">folklore</div><div class="date">2nd March 2009, 14:01</div></div><div class="posttext">Originally posted by Animaether <br />
+Well, never got the crashes again (set up a small scripted test), but I'll be keeping an eye out.  For now I'll just rule this as Windows having been in a dirty state from some earlier tests, although I'm not sure how system.dll would be affected .  <br />
+<br />
+<br />
+The crash only occurs when the installer shuts down, and is highly intermittent. In fact, I'm trying to see if I can get some details on the crash but I can't get the thing to crash now.<br />
+<br />
+It allways means that there are a memory error:check if you allocated a memory resource and then forget to free it.Or access the memory without a allocation .The installer's script  is build in a language like assembly.and I sugest that if you make a stack error:I means thant the stack if out of order.It will be lead you to failure at shudown time.<br />
+ All above,It like a memory error.Good luck.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">2nd March 2009, 14:25</div></div><div class="posttext">well, that's the thing... as far as I can tell, the NSIS stack is always clean by the end of a function call / macro / etc (I always code them with comments that indicate what the stack should look like at a specific line of the code, so that I always know where I should be popping things off and into what variables etc.).<br />
+<br />
+I don't think the System plugin itself cares much about the NSIS stack, short of using it for input / output, but none of the system calls I use grab things from / place things on the stack (without popping right after), that I can tell - using the variables ($0-$9,$R0-$R9) instead...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">3rd March 2009, 16:02</div></div><div class="posttext">update: found the culprit<br />
+<br />
+Although it never seemed to crash again in the main installer, a derived (much smaller) installer once again showed the crash.  The problem was that the finish page was based off of the welcome page.  The welcome page uses the OLE image function to set a JPG file to a Bitmap control.  To do so, a buffer has to be created for the image data, which must be cleared once done with it.<br />
+<br />
+However, the finish page did not set this image.. but it was still clearing the buffer which was presumed to be in $0.  The value of $0 could, of course, be just about anything at the time of installer end and the fact that I never saw the crash again is more likely to be 'luck' than anything else.  The smaller installer always had $0 set to a value of 0, 1, 2 or 3 (depending on some test results) which I'm guessing the call in question would -always- cause to throw an error later.<br />
+<br />
+Looks like this was a case of not seeing the forest for the trees; focusing on the stack and the integrity of the System calls themselves and completely missing the fact that System was called where (on something) it never should have been, no matter the integrity of the call itself.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

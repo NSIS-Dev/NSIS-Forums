@@ -1,0 +1,90 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to pass LOCALFILE to Library.nsh as a variable, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to pass LOCALFILE to Library.nsh as a variable NSIS Discussion" />
+	
+	<title> How to pass LOCALFILE to Library.nsh as a variable [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to pass LOCALFILE to Library.nsh as a variable</div>
+<hr />
+<div class="pda"><a href="t-208430.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=208430">How to pass LOCALFILE to Library.nsh as a variable</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jsbach</div><div class="date">21st February 2005, 14:45</div></div><div class="posttext">i wish to pass a dynamic foldername to upgrade all its DLLs/OCXs but i'm getting the error:<br />
+'!error: InstallLib 1: The library $5\$1 could not be found.<br />
+Error in macro InstallLib on macroline 89'.<br />
+<br />
+Even tried to !define a custom var (i.e. var MyVar) and use it (with StrCpy $MyVar &quot;c:\sourcedir&quot;: no way.<br />
+I've read almost all relevant posts in this forum but i must admit i can't still understand where the issue is: i would really appreciate just some hints.<br />
+Here below the abstract of the code i'm using.<br />
+Thanks in advance.<br />
+<br />
+;test upgrade all dll in a given folder<br />
+!include Library.nsh<br />
+var ALREADY_INSTALLED<br />
+name &quot;Get files test&quot;<br />
+outfile &quot;testgetfiles.exe&quot;<br />
+InstallDir &quot;$PROGRAMFILES\MyTest&quot;<br />
+<br />
+Section -DoIt<br />
+  push  &quot;c:\sourcedir\winlib&quot;<br />
+  call GetFiles<br />
+SectionEnd<br />
+<br />
+Function GetFiles<br />
+  Exch $5<br />
+  FindFirst $0 $1 &quot;$5\*.*&quot;<br />
+loop:<br />
+  StrCmp $1 &quot;&quot; done<br />
+  StrCmp $1 &quot;.&quot; readnext<br />
+  StrCmp $1 &quot;..&quot; readnext<br />
+  ifFileExists &quot;$5\$1&quot; 0 readnext<br />
+  StrCpy $ALREADY_INSTALLED 1<br />
+  !insertmacro InstallLib REGDLL $ALREADY_INSTALLED REBOOT_NOTPROTECTED &quot;$5\$1&quot; &quot;$SYSDIR\$1&quot; &quot;$SYSDIR&quot;<br />
+readnext:<br />
+  FindNext $0 $1<br />
+  Goto loop<br />
+done:<br />
+FindClose $0<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jsbach</div><div class="date">22nd February 2005, 17:28</div></div><div class="posttext">forgot mention: the parameter 'localfile' in library.nsh is used 'as is'. on the contrary, destfile and tempbasedir are converted to variables ($r4/$r5).<br />
+I tried to !define in the script a compile var and use it in the Installib line (${dllpath}\$1 instead of $5\$1).<br />
+Error is the same.<br />
+What am i missing, if the case ?<br />
+thanks to anybody would help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">22nd February 2005, 18:14</div></div><div class="posttext">The issue is that localfile expects a local file name. The compiler can't predict which files the installer will find at runtime. It can't guess which files it needs to compress.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jsbach</div><div class="date">22nd February 2005, 23:39</div></div><div class="posttext">thanks for quick reply, kichik.<br />
+I understand what you mean, however: should not this apply also to 'destfile' ?<br />
+Let me explain my target. i'm writing a wizard to auto generate scripts from a given source structure. i've two options: 1. create the 'File ...' lines step by step as soon my wizard recurse the folders; 2. call GetFiles function to recursively 'File...' AND 'InstallLib...' on each file the wizard finds (of course, Installib is called only if .OCX,.DLL,.TLB are detected).<br />
+Well, i found in this forum the post by mr. Opher Shachar with the function 'UpgradeDLL_Func' which seems to do exactly that job. I'm not using it for two reasons: first i'm not able to find the necessary include 'PathManip.nsh'; second, Library.nsh seems to be more feasible.<br />
+I would like to use this library, but i can't pass the dynamic folders as they're processed by the GetFiles function.<br />
+Why it is not possible to manage the 'localfile' parm the same way as 'destfile' ? Sorry, this is not clear to me.<br />
+thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jsbach</div><div class="date">24th February 2005, 00:03</div></div><div class="posttext">after some testing, i see now that folders can be assigned dynamically using !define. The compiler now gives error only on the filename (still a user var, this is my mistake).<br />
+Don't understand why files are treated in different way than folders; anycase, it's not an elegant (partial) solution as i have to !undef / !define the same 'source_dll_path' inside the folder recursion loop.<br />
+Guess no solution at present...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">24th February 2005, 18:40</div></div><div class="posttext">destfile doesn't contain a path of a local file that needs to be compressed into the installer while localfile does. destfile tells the Library macro where to put the file. That doesn't affect which files it needs to compress. It can be totally dependent on how the script runs on the user's machine.<br />
+<br />
+With localfile, it's a completely different story. The compiler can't run the script on your machine, while compiling it, in order to find out which files it needs to compress. Even if it could run the script somehow, it can't predict which values the registers will contain on the user's machine. It can't predict which files it needs to compress. You must specify them explicitly.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

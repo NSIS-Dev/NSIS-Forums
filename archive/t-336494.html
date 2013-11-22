@@ -1,0 +1,104 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" RMdir /r followed by File /r generating random i/o errors, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  RMdir /r followed by File /r generating random i/o errors NSIS Discussion" />
+	
+	<title> RMdir /r followed by File /r generating random i/o errors [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  RMdir /r followed by File /r generating random i/o errors</div>
+<hr />
+<div class="pda"><a href="t-336494.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=336494">RMdir /r followed by File /r generating random i/o errors</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Ron.Stordahl</div><div class="date">24th October 2011, 22:25</div></div><div class="posttext">I have found that the following code: <br />
+RMDir /r &quot;$INSTDIR\Documents&quot;<br />
+SetOverwrite ON<br />
+File /r &quot;..\BPQ32\Files\Documents&quot;<br />
+will generate random i/o failures thus:<br />
+<br />
+Error opening file for writing<br />
+C:\Program Files (x86)\BPQ32\Documents\Thumbs.db<br />
+<br />
+Installer stops at<br />
+Output folder: c:\Program Files (x86)\BPQ32\Documents.<br />
+<br />
+This i/o error (although it isn't always the same file name) has occurred on several Windows 7 machines and one XP machine.  The occurance rate is low, perhaps one in 10 runs of the installer.<br />
+<br />
+To try to isolate this I placed a MessageBox immediately following the RMDir /r and with that I could never reproduce it.  I then replaced the MessageBox with a Sleep 1000 and could never reproduce it.  Removing the Sleep 1000 results in the error returning.<br />
+<br />
+I suspect that the RMDir /r operation is using proceed i/o (overlapped, Asynchronous) when it should be using wait i/o (Synchronous).<br />
+<br />
+The RMDir /r operation is apparently not yet completed when the write from the File operation is attempted.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">24th October 2011, 22:41</div></div><div class="posttext">How about adding /x Thumbs.db to your File instruction.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ron.Stordahl</div><div class="date">24th October 2011, 23:07</div></div><div class="posttext">Since it is occurring at multiple places in my installer and for multiple files it would do not good to pick just one file.  The filename can be any one of the potentially hundreds in the folders I am replacing.  The documents folder contains 152 files and 6 folders, several deep.  I can see that it is a bit time consuming for the system to completely delete it. <br />
+<br />
+When I insert a 1 second delay following the RMDir the error never occurs.  I would guess 1 second is entirely too long, but it works so I am using it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">24th October 2011, 23:14</div></div><div class="posttext">So it's not just Thumbs.db? I can see that file in particular causing problems as it's the thumbnail cache and it can still be in use by Windows. It also has hidden+system attributes which can prevent write access. Either way, you should exclude it from your installer as it will be adding extra size unnecessarily.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ron.Stordahl</div><div class="date">25th October 2011, 02:47</div></div><div class="posttext">No it is not for any particular file, rather it can be apparently any file that at that point is being allocated or written.  Some that it has failed on are needed exe's for example. With  'sleep 1000' inserted after the rmdir /r the problem is gone.  I have had to do this at several places in my code. Not an attractive work around, but it gets me by.<br />
+<br />
+My conclusion is that the rmdir should be using wait i/o.<br />
+<br />
+How can I get this issue to the attention of one of the NSIS developers?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">25th October 2011, 07:40</div></div><div class="posttext">How can I get this issue to the attention of one of the NSIS developers?<br />
+You should file a bug report in the bug tracker, or submit a code page if you know the solution. You could also drop by in the IRC channel if you want to discuss it realtime.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th October 2011, 14:29</div></div><div class="posttext">NSIS does not do any async I/O IIRC, maybe antivirus or something like that is getting in the way?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ron.Stordahl</div><div class="date">25th October 2011, 15:27</div></div><div class="posttext">Ill file a report in the bug tracker, once I find where that is..perhaps you have a link?<br />
+<br />
+No it's not a virus issue, I just reproduced it on a new W7 laptop fresh out of the box.  The occurrence rate is low, maybe 1 out of 20 runs, but unacceptable of course.  And yes I know a workaround, put a 'sleep 1000' after every RMDir /r.<br />
+<br />
+Now to try to find the bug tracker page.....</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">25th October 2011, 16:10</div></div><div class="posttext">He didn't say virus issue, he said antivirus. Antivirus software locks all accessed files for a short while while it scans them, before any operation can be performed on them. You can test this by disabling your virusscanner, and checking whether that solves the problem.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ron.Stordahl</div><div class="date">25th October 2011, 17:18</div></div><div class="posttext">Sorry...I misunderstood.  Actually the Windows 7 Laptop I just tested this on, obtaining the failure after about 15 consecutive runs of the installer, was right out of the box and had no antivirus scanner on it...it keeps warning me that I need to get one!  Perhaps Ill download MSE at some point, after I first do about a years worth of security updates.<br />
+<br />
+I still suspect the RMDir is not using wait i/o.  I never see the issue if I add a 'sleep 1000' after each RMDir.  Makes the installer kind of jerky, but gets me by for now.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th October 2011, 18:03</div></div><div class="posttext">If you don't pass /REBOOTOK we just use the plain Find*, RemoveDirectory and DeleteFile, none of them are async. (See util.c in exehead source)<br />
+<br />
+MSDN says &quot;The DeleteFile function marks a file for deletion on close. Therefore, the file deletion does not occur until the last handle to the file is closed.&quot; This smells like a antivirus and/or indexer issue to me...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ron.Stordahl</div><div class="date">25th October 2011, 19:43</div></div><div class="posttext">Since it occurs on machines with and w/o antivirus software I am dismissing that possibility.  As to indexing...perhaps there is a command that can be invoked from within NSIS to turn off indexing, where and if it was on, then turn it on again when the installer finishes?  If so I can try that.<br />
+<br />
+As I said I have 'resolved' the problem by inserting 'sleep 1000' after each RMdir, but that does not get to the root of the problem..it only masks it.<br />
+<br />
+When time allows I will post a bug report, when I find where that is done.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th October 2011, 20:51</div></div><div class="posttext">It would really help if you could come up with a minimal sample script (and any required files) so I could try to reproduce this (Please come up with a sample that does not include Thumbs.db or other internal windows files)<br />
+<br />
+You report bugs on the NSIS sourceforge tracker (project page on SF)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

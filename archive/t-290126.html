@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Replace old files, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Replace old files NSIS Discussion" />
+	
+	<title> Replace old files [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Replace old files</div>
+<hr />
+<div class="pda"><a href="t-290126.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=290126">Replace old files</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">DaOmAsTeR</div><div class="date">12th April 2008, 23:39</div></div><div class="posttext">Hi.<br />
+Im on the moment creating an installer for my new work. This installer will overwrite an file which ist existing on the HDD. <br />
+The old file should be saved by the installer and the uninstaller should replace it if the programm will be uninstalled.<br />
+How i do that?<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koopa</div><div class="date">12th April 2008, 23:51</div></div><div class="posttext">So you want to make a backup on install and restore the file on uninstall?<br />
+Insert these 2 macros:<br />
+!macro BackupFile FILE_DIR FILE BACKUP_TO<br />
+ IfFileExists &quot;${BACKUP_TO}\*.*&quot; +2<br />
+  CreateDirectory &quot;${BACKUP_TO}&quot;<br />
+ IfFileExists &quot;${FILE_DIR}\${FILE}&quot; 0 +2<br />
+  Rename &quot;${FILE_DIR}\${FILE}&quot; &quot;${BACKUP_TO}\${FILE}&quot;<br />
+!macroend<br />
+<br />
+!macro RestoreFile BUP_DIR FILE RESTORE_TO<br />
+ IfFileExists &quot;${BUP_DIR}\${FILE}&quot; 0 +2<br />
+  Rename &quot;${BUP_DIR}\${FILE}&quot; &quot;${RESTORE_TO}\${FILE}&quot;<br />
+!macroend <br />
+install section:<br />
+Section &quot;Test&quot; <br />
+#Backup old copy<br />
+!insertmacro BackupFile &quot;$INSTDIR\Path\To\File\&quot; &quot;file.dll&quot; &quot;$INSTDIR\Path\To\Backup\Folder\&quot;<br />
+#Install new file<br />
+SetOutPath &quot;$INSTDIR\Path\To\File\&quot;<br />
+File &quot;file.dll&quot;<br />
+SectionEnd<br />
+ <br />
+uninstall section:<br />
+Section Uninstall<br />
+#Remove installed copy<br />
+  Delete &quot;$INSTDIR\Path\To\File\file.dll&quot;<br />
+  #Restore old copy<br />
+  !insertmacro RestoreFile &quot;$INSTDIR\Path\To\Backup\Folder\&quot; &quot;file.dll&quot; &quot;$INSTDIR\Path\To\File\&quot;<br />
+SectionEnd<br />
+<br />
+The example is simple, but should show, what is needed.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DaOmAsTeR</div><div class="date">12th April 2008, 23:53</div></div><div class="posttext">Thx for your fast help.<br />
+Here's my next question:<br />
+;Installer Sections  <br />
+Section &quot;Main Files&quot; SecMain      <br />
+SetOutPath &quot;$INSTDIR\System\&quot;      <br />
+;myfile.exe   <br />
+<br />
+At compiling i get this error:<br />
+<br />
+Section: &quot;Main Files&quot; -&gt;(SecMain)<br />
+SetOutPath: &quot;$INSTDIR\System\&quot;<br />
+Error: command Section not valid in Section<br />
+Error in script &quot;C:\Programme\NSIS\Examples\Modern UI\WelcomeFinish.nsi&quot; on line 57 -- aborting creation process</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koopa</div><div class="date">12th April 2008, 23:57</div></div><div class="posttext">&quot;Error: command Section not valid in Section&quot;<br />
+Use this:<br />
+;Installer Sections  <br />
+Section &quot;Main Files&quot; SecMain<br />
+SetOutPath &quot;$INSTDIR\System\&quot;<br />
+File &quot;my file.exe&quot;<br />
+SectionEnd<br />
+Cannot say anything to the other compile error, because for that,I must see more from your script.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DaOmAsTeR</div><div class="date">13th April 2008, 00:11</div></div><div class="posttext">Next error:<br />
+Section: &quot;Bandar&quot; -&gt;(files)<br />
+Error: &quot;files&quot; already defined, can't assign section index!<br />
+Error in script &quot;C:\Programme\NSIS\Examples\Modern UI\WelcomeFinish.nsi&quot; on line 72 -- aborting creation process <br />
+<br />
+Section Bandar files    <br />
+SetOutPath &quot;$INSTDIR\***\Bandar&quot;   <br />
+File ***.dat  <br />
+File *****.dat  <br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koopa</div><div class="date">13th April 2008, 00:15</div></div><div class="posttext">You probably just missed the quotations<br />
+Section &quot;Bandar files&quot;    <br />
+SetOutPath &quot;$INSTDIR\***\Bandar&quot;   <br />
+File &quot;***.dat&quot;  <br />
+File &quot;*****.dat&quot;  <br />
+SectionEnd<br />
+Plus, you cannot define one section description for 2 sections, e.g.<br />
+<br />
+Section &quot;Blah&quot;  SECBLAH  <br />
+SetOutPath &quot;$INSTDIR\***\Blah&quot;   <br />
+File &quot;***.dat&quot;<br />
+SectionEnd<br />
+<br />
+Section &quot;BlahBlah&quot; SECBLAH <br />
+SetOutPath &quot;$INSTDIR\***\BlahBlah&quot;   <br />
+File &quot;***.dat&quot;  <br />
+SectionEnd<br />
+<br />
+doesn't work, because the first section already uses it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DaOmAsTeR</div><div class="date">13th April 2008, 00:24</div></div><div class="posttext">OK, last question:<br />
+My installer installs everytime the same 2 files in 20/30 directorys. What i have to do that the uninstaller deletes this 2 files in every folder but not the other files in this directory?<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koopa</div><div class="date">13th April 2008, 00:29</div></div><div class="posttext">You have to delete every single file:<br />
+Section Uninstall<br />
+  ;Delete files	 <br />
+  Delete &quot;$INSTDIR\Blah\Blah1.exe&quot;<br />
+  Delete &quot;$INSTDIR\Blah\Blah2.exe&quot;<br />
+  Delete &quot;$INSTDIR\Blah1\Blah1.exe&quot;<br />
+  Delete &quot;$INSTDIR\Blah1\Blah2.exe&quot;<br />
+  Delete &quot;$INSTDIR\Blah2\Blah1.exe&quot;<br />
+  Delete &quot;$INSTDIR\Blah2\Blah2.exe&quot;<br />
+SectionEnd<br />
+and so on.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DaOmAsTeR</div><div class="date">13th April 2008, 00:30</div></div><div class="posttext">that would take me a long time to do :)<br />
+but if there's no other solution...<br />
+Thanks 4 help</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koopa</div><div class="date">13th April 2008, 00:33</div></div><div class="posttext">Simply Copy and Paste will do most work. ;)<br />
+<br />
+Maybe there is a shorter ability too, don't know, I'm always deleting every single file, just to make sure, that uninstaller works as expected.<br />
+<br />
+If you install files to your own folder, you could use *.*, but i havn't tried it in any of my installer scripts yet.<br />
+<br />
+If you're installing files in other folders, such as e.g. c:\Windows, you probably should use the long way, to make sure, that you don't uninstall other files by mistake.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

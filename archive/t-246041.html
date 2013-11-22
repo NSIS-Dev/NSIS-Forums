@@ -1,0 +1,170 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Calling LogonUser() API, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Calling LogonUser() API NSIS Discussion" />
+	
+	<title> Calling LogonUser() API [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Calling LogonUser() API</div>
+<hr />
+<div class="pda"><a href="t-246041.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=246041">Calling LogonUser() API</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">EDais</div><div class="date">12th May 2006, 15:01</div></div><div class="posttext">I'm trying to call the LogonUserA() API call from an installer, but can't seem to find the exact syntax.<br />
+Here's the call in C++:<br />
+<br />
+***<br />
+if (LogonUser(UserName, NULL, Password,<br />
+&amp;nbsp;&amp;nbsp;LOGON32_LOGON_NETWORK, LOGON32_PROVIDER_DEFAULT, &amp;hToken)) {<br />
+***<br />
+<br />
+And here's what I've got in NSIS:<br />
+<br />
+***<br />
+!ifndef LogonUser<br />
+&amp;nbsp;&amp;nbsp;!define LogonUser &quot;AdvAPI32::LogonUserA(t, t, t, i, i, i) i&quot;<br />
+!endif<br />
+!ifndef LOGON32_LOGON_NETWORK<br />
+&amp;nbsp;&amp;nbsp;!define LOGON32_LOGON_NETWORK    1<br />
+!endif<br />
+!ifndef LOGON32_PROVIDER_DEFAULT<br />
+&amp;nbsp;&amp;nbsp;!define LOGON32_PROVIDER_DEFAULT 0<br />
+!endif<br />
+<br />
+!ifmacrondef DoLogonUser <br />
+&amp;nbsp;&amp;nbsp;!macro DoLogonUser UserName Password<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;System::Call &quot;*(i) i (0) .r0&quot;<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;;System::Call &quot;${LogonUser}('${UserName}',,'${Password}', \<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;${LOGON32_LOGON_NETWORK}, ${LOGON32_PROVIDER_DEFAULT}, r0) .r1&quot;<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;System::Call &quot;AdvAPI32::LogonUserA(t'${UserName}',n,t'${Password}', \<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;i${LOGON32_LOGON_NETWORK},i${LOGON32_PROVIDER_DEFAULT},i r0)i.r1&quot;<br />
+<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;DetailPrint &quot;Return token: $0&quot;<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;DetailPrint &quot;Call return: $1&quot;<br />
+&amp;nbsp;&amp;nbsp;!macroend<br />
+!endif<br />
+***<br />
+<br />
+Apologies for any obvious syntax glitches, I'm an NSIS virgin!<br />
+Cheers,<br />
+<br />
+&amp;nbsp;&amp;nbsp;Mike</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">12th May 2006, 15:42</div></div><div class="posttext">!define LOGON32_PROVIDER_DEFAULT 0<br />
+!define LOGON32_LOGON_NETWORK 3<br />
+StrCpy $1 &quot;$UserName&quot;<br />
+StrCpy $2 &quot;.&quot;<br />
+StrCpy $3 &quot;$UserPassword&quot;<br />
+System::Call 'advapi32::LogonUserW(w r1, w r2, w r3, i ${LOGON32_LOGON_NETWORK}, i ${LOGON32_PROVIDER_DEFAULT}, *i R0)i .R5'If the function succeeds $R5 is nonzero. It returns the token handle to $R0. You obviously need to define $UserName and $UserPassword :)<br />
+<br />
+Also your definitions are wrong. Here are the logon types/providers<br />
+; Logon types<br />
+!define LOGON32_LOGON_INTERACTIVE       2<br />
+!define LOGON32_LOGON_NETWORK           3<br />
+!define LOGON32_LOGON_BATCH             4<br />
+!define LOGON32_LOGON_SERVICE           5<br />
+!define LOGON32_LOGON_UNLOCK            7<br />
+!define LOGON32_LOGON_NETWORK_CLEARTEXT 8<br />
+!define LOGON32_LOGON_NEW_CREDENTIALS   9<br />
+<br />
+; Logon Providers<br />
+!define LOGON32_PROVIDER_DEFAULT    0<br />
+!define LOGON32_PROVIDER_WINNT35    1<br />
+!define LOGON32_PROVIDER_WINNT40    2<br />
+!define LOGON32_PROVIDER_WINNT50    3<br />
+<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">EDais</div><div class="date">12th May 2006, 16:50</div></div><div class="posttext">Great, thanks for that, got it working now!<br />
+<br />
+In case anyone else needs it then here's what I ended up with:<br />
+<br />
+***<br />
+!ifndef LogonUser<br />
+&amp;nbsp;&amp;nbsp;!define LogonUser &quot;AdvAPI32::LogonUserW(w, w, w, i, i, *i) i&quot;<br />
+!endif<br />
+!ifndef CloseHandle<br />
+&amp;nbsp;&amp;nbsp;!define CloseHandle &quot;Kernel32::CloseHandle(i) i&quot;<br />
+!endif<br />
+!ifndef LOGON32_LOGON_NETWORK<br />
+&amp;nbsp;&amp;nbsp;!define LOGON32_LOGON_NETWORK    3<br />
+!endif<br />
+!ifndef LOGON32_PROVIDER_DEFAULT<br />
+&amp;nbsp;&amp;nbsp;!define LOGON32_PROVIDER_DEFAULT 0<br />
+!endif<br />
+<br />
+!define DEBUG<br />
+<br />
+!ifmacrondef DoLogonUser <br />
+&amp;nbsp;&amp;nbsp;;Logs on a user, and returns their login token in $R0<br />
+&amp;nbsp;&amp;nbsp;!macro DoLogonUser UserName Password<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;System::Call &quot;${LogonUser}('${UserName}', '.', '${Password}', \<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;${LOGON32_LOGON_NETWORK}, ${LOGON32_PROVIDER_DEFAULT}, .R0) .R5&quot;<br />
+<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;StrCmp $R5 0 logOnErr<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;goto logOnDone<br />
+&amp;nbsp;&amp;nbsp;logOnErr:<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;DetailPrint &quot;Error: Logging user '${UserName}' on&quot;<br />
+&amp;nbsp;&amp;nbsp;logOnDone:<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;!ifdef DEBUG<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;DetailPrint &quot;Return token: $R0&quot;<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;DetailPrint &quot;Call return: $R5&quot;<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;!endif<br />
+&amp;nbsp;&amp;nbsp;!macroend<br />
+!endif<br />
+<br />
+!ifmacrondef DoLogoffUser<br />
+&amp;nbsp;&amp;nbsp;;Logs off a user token (Returned from DoLogonUser)<br />
+&amp;nbsp;&amp;nbsp;!macro DoLogoffUser Token<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;System::Call &quot;${CloseHandle}(${Token}) .R5&quot;<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;StrCmp $R5 0 logOffErr<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;goto logOffDone<br />
+&amp;nbsp;&amp;nbsp;logOffErr:<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;DetailPrint &quot;Error: Logging user off (Token: '${Token}')&quot;<br />
+&amp;nbsp;&amp;nbsp;logOffDone:<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;!ifdef DEBUG<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;DetailPrint &quot;Close return: $R5&quot;<br />
+&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;!endif<br />
+&amp;nbsp;&amp;nbsp;!macroend<br />
+!endif<br />
+***<br />
+<br />
+Example usage:<br />
+<br />
+***<br />
+; Perform user login<br />
+!insertmacro DoLogonUser &quot;username&quot; &quot;password&quot;<br />
+<br />
+; Store user token<br />
+StrCpy $8 $R0<br />
+<br />
+; -- stuff here --<br />
+<br />
+; Logoff user<br />
+!insertmacro DoLogoffUser $8<br />
+***</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dogo</div><div class="date">19th April 2007, 13:16</div></div><div class="posttext">Some additional notes to this method to check if User could be logged on.<br />
+This will only work with Windows XP + greater Version.<br />
+In Windows 2000 there had to be an LocalPolicy set which is called &quot;se_tcb_name&quot; (Act as part of the Operating System).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mazdakam</div><div class="date">5th December 2007, 21:54</div></div><div class="posttext">can i use this for detecting users logged in or not?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th December 2007, 21:55</div></div><div class="posttext">No.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Replace files recursively, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Replace files recursively NSIS Discussion" />
+	
+	<title> Replace files recursively [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Replace files recursively</div>
+<hr />
+<div class="pda"><a href="t-297901.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=297901">Replace files recursively</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Ewgenijkkg</div><div class="date">26th September 2008, 16:27</div></div><div class="posttext">Hello, guys. I got a problem here, I can not find a simple solution for. My installer extracts a zip-archive to a temporary folder TEMP. Then it should copy files and directories from that temporary to the installation directory INSTALL. Some files should be copied and some of them not, depending on some conditions. I use CopyFiles for that. Now the problem is that I can not say to CopyFiles: &quot;Look in each folder TEMP\X and copy the files from TEMP\X to folder INSTALL\X&quot; if I do not know exactly which folders are contained in TEMP after the archive was extracted. Is there a way to handle this problem except for doing a search for all folders in TEMP explicitly?<br />
+<br />
+BR<br />
+Ewgenij</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">26th September 2008, 17:14</div></div><div class="posttext">The only thought that comes to mind is perhaps using Windows XCOPY (via the nsExec plugin).  This might give you more options without spending a lot of time developing something within NSIS.  This assumes that the &quot;conditions&quot; you refer to could be handled easily.<br />
+<br />
+From what I can tell, Xcopy is included with all versions of Windows. (For a complete list of XCOPY options, just go to a command prompt and type &quot;xcopy /?&quot;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ewgenijkkg</div><div class="date">29th September 2008, 12:26</div></div><div class="posttext">Hey, that helped! Thank you a lot! But I got another question:) <br />
+<br />
+I have the following command:<br />
+xcopy &quot;$Source\*&quot; &quot;$OUTDIR&quot; /Y /E /EXCLUDE:$EXEDIR\exclude.txt<br />
+<br />
+In the file exclude.txt I have the names of files, which should not be copied. Now, what if $EXEDIR contains blanks? The command line does not accept that. Quotes do no help. The only solution I see is to make $EXEDIR the working directory temporarily and then to call xcopy. But is there maybe another solution?<br />
+<br />
+BR<br />
+Ewgenij</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">29th September 2008, 15:20</div></div><div class="posttext">Changing the working directory is probably the best option.<br />
+<br />
+Another might be to use use the folder's short name. Every file/folder in Windows should have a short-named equivalent.  Usually, it's the first 6 characters of the file name, followed by a tilde (~) and then a number.<br />
+<br />
+To see them, go to a command prompt and type dir /x.  (I think there's also an API call to get them; I'm just not sure head what it is off the top of my head...)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pbingel</div><div class="date">29th September 2008, 16:13</div></div><div class="posttext">This should get you closer. I keep getting an error that my exclude file can not be read, however it does take the parameter correctly. Not sure how to format the exclude.txt file so that may be my problem. <br />
+<br />
+<br />
+nsExec::ExecToStack '&quot;$SYSDIR\cmd.exe&quot; /c xcopy.exe &quot;$Source\*&quot; &quot;$OUTDIR&quot; /Y /E /I /EXCLUDE:&quot;$EXEDIR\Exclude.txt&quot;'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ewgenijkkg</div><div class="date">1st October 2008, 10:47</div></div><div class="posttext">Originally posted by pbingel <br />
+I keep getting an error that my exclude file can not be read, however it does take the parameter correctly. Not sure how to format the exclude.txt file so that may be my problem <br />
+<br />
+I had the same error message, but the real reason is that xcopy (more precisely, the shell) does not accept the quotas around $EXEDIR\Exclude.txt. That is the true reason, not the format of the file! It takes the parameter correctly, but for some reason can not process it properly.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pbingel</div><div class="date">1st October 2008, 14:48</div></div><div class="posttext">Ok, well I made a slight modification and now it works. I had to put the exclude.txt in the same directory as the .exe. DOS looks in the current directory first so no need to give a full path and therefore changed the code to:<br />
+<br />
+<br />
+nsExec::ExecToStack '&quot;$SYSDIR\cmd.exe&quot; /c xcopy.exe &quot;$Source\*&quot; &quot;$OUTDIR&quot; /Y /E /I /EXCLUDE:Exclude.txt'<br />
+Pop $0<br />
+Pop $1<br />
+MessageBox MB_OK $0 ;Should be 0<br />
+MessageBox MB_OK $1 ;Should be the files copied<br />
+<br />
+<br />
+This worked for me and xcopy did exclude the files that I had listed in the Exclude.txt as expected. :D<br />
+<br />
+Since you no longer have any odd quotation marks you can go back to the older style without including '&quot;$SYSDIR\cmd.exe&quot; /c'<br />
+<br />
+<br />
+nsExec::ExecToStack 'xcopy.exe &quot;$EXEDIR\JTCW\*.*&quot; &quot;$EXEDIR\JTCW2\&quot; /I /Y /E /EXCLUDE:Exclude.txt'</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

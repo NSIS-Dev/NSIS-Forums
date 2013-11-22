@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" proper 64-bit and 32-bit handling?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  proper 64-bit and 32-bit handling? NSIS Discussion" />
+	
+	<title> proper 64-bit and 32-bit handling? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  proper 64-bit and 32-bit handling?</div>
+<hr />
+<div class="pda"><a href="t-333194.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=333194">proper 64-bit and 32-bit handling?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jmichae3</div><div class="date">4th August 2011, 22:15</div></div><div class="posttext">I am trying to make an installer that handles 64-bit and 32-bit properly.  This includes $PROGRAMFILES and $PROGRAMFILES64. <br />
+<br />
+I had tried<br />
+<br />
+!include &quot;MUI2.nsh&quot;<br />
+!include &quot;logiclib.nsh&quot;<br />
+!include &quot;x64.nsh&quot;<br />
+!include &quot;shortcut.nsh&quot; ;mine<br />
+<br />
+<br />
+;--------------------------------<br />
+;General<br />
+<br />
+  ;Name and file<br />
+  Name &quot;Thunderbird Mail Split GUI&quot;<br />
+  OutFile &quot;${PRODUCT_NAME}-${VERSION_STRING}-setup.exe&quot;<br />
+<br />
+  ;Default installation folder<br />
+;  InstallDir &quot;$LOCALAPPDATA\${PRODUCT_NAME}&quot;<br />
+<br />
+${If} ${RunningX64}<br />
+  InstallDir &quot;$PROGRAMFILES64\${PRODUCT_NAME}&quot;<br />
+${Else}<br />
+  InstallDir &quot;$PROGRAMFILES\${PRODUCT_NAME}&quot;<br />
+${EndIf}<br />
+<br />
+  ;Get installation folder from registry if available<br />
+  InstallDirRegKey HKCU &quot;Software\${PRODUCT_NAME}&quot; &quot;&quot;<br />
+<br />
+  ;Request application privileges for Windows Vista<br />
+  RequestExecutionLevel admin<br />
+<br />
+<br />
+  !define MUI_ABORTWARNING<br />
+Function .onInit<br />
+    #prevent multiple instances of the installer running<br />
+    System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;${PRODUCT_NAME}&quot;) i .r1 ?e'<br />
+    Pop $R0<br />
+<br />
+    StrCmp $R0 0 +3<br />
+    MessageBox MB_OK|MB_ICONEXCLAMATION &quot;The installer is already running.&quot;<br />
+    Abort<br />
+<br />
+	GetDlgItem $0 $HWNDPARENT 1<br />
+	CreateFont $1 &quot;$(^Font)&quot; &quot;14&quot; &quot;700&quot;<br />
+;culprit. worked in older versions.  what do I do now?  got this from the forums.<br />
+;    CreateFont $HEADLINE_FONT &quot;$(^Font)&quot; &quot;14&quot; &quot;700&quot;<br />
+    InitPluginsDir<br />
+${If} ${RunningX64}<br />
+    SetOutPath &quot;$PROGRAMFILES64\${PRODUCT_NAME}&quot;<br />
+${Else}<br />
+    SetOutPath &quot;$PROGRAMFILES\${PRODUCT_NAME}&quot;<br />
+${EndIf}<br />
+<br />
+<br />
+<br />
+	SetShellVarContext all<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+but this doesn't work, bails at first ${If}.<br />
+at the very least, I need a solution to this problem of how to handle 32 and 64-bit executables properly.<br />
+<br />
+<br />
+I am also looking for a REAL usable installer template I can base my stuff off of.  something with 64-bit and 32-bit support, don't really need multiple languages, though that would be useful, settable program version and program name, title via !define and process kill.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">4th August 2011, 23:52</div></div><div class="posttext">I think a construct like &quot;${If} ${RunningX64}&quot; will only work with install-time instructions, i.e. in a Section or Function.<br />
+<br />
+But &quot;InstallDir&quot; is global installer attribute, evaluated at compile-time.<br />
+<br />
+For obvious reasons you can't detect the architecture of the customer's machine at compile-time!<br />
+<br />
+Try something like:<br />
+Function .onInit<br />
+   ${If} ${RunningX64}<br />
+      StrCpy $INSTDIR &quot;$PROGRAMFILES64\${PRODUCT_NAME}&quot;<br />
+   ${Else}<br />
+      StrCpy $INSTDIR &quot;$PROGRAMFILES\${PRODUCT_NAME}&quot;<br />
+   ${EndIf}<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jmichae3</div><div class="date">3rd May 2013, 07:29</div></div><div class="posttext">ok, this technique alone is not working in win7. I heard you have to use this in conjunction with SetRegView 64 or 32 to do some more correct x64 handling. but I am sure there is more than this, because it's still extracting to c:\program files\subdir\ instead of to where I told it to, which is in d:\pro\subdir\ - any ideas?<br />
+I am trying to install to win7ult64 and also to winxppro32.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jmichae3</div><div class="date">3rd May 2013, 07:40</div></div><div class="posttext">here is my current script set. shortcut.nsh is only for making .lnk and .url files. setup.nsi is the main script.<br />
+the installer ends up in d:\prog\uritoxml\ but like I said the rest of the program stuff ends up in c:\program files\uritoxml\</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

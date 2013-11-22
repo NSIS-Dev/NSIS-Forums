@@ -1,0 +1,132 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to assign properly to $R0 ?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to assign properly to $R0 ? NSIS Discussion" />
+	
+	<title> How to assign properly to $R0 ? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to assign properly to $R0 ?</div>
+<hr />
+<div class="pda"><a href="t-296813.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=296813">How to assign properly to $R0 ?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">chuckwood</div><div class="date">2nd September 2008, 15:52</div></div><div class="posttext">Sorry if my question sounds stupid but I am relatively a newbie and I can't explain something strange going on in my code.<br />
+<br />
+Remember the original PageReinstall in the makensis.nsi example?<br />
+<br />
+<br />
+Function PageReinstall<br />
+<br />
+  ReadRegStr $R0 HKLM &quot;${D_INSTALLKEY}&quot; &quot;&quot;<br />
+<br />
+  ${If} $R0 == &quot;&quot;<br />
+    Abort<br />
+  ${EndIf}<br />
+<br />
+  ReadRegDWORD $R0 HKLM &quot;${D_INSTALLKEY}&quot; &quot;VersionMajor&quot;<br />
+  ReadRegDWORD $R1 HKLM &quot;${D_INSTALLKEY}&quot; &quot;VersionMinor&quot;<br />
+  ReadRegDWORD $R2 HKLM &quot;${D_INSTALLKEY}&quot; &quot;VersionRevision&quot;<br />
+  ReadRegDWORD $R3 HKLM &quot;${D_INSTALLKEY}&quot; &quot;VersionBuild&quot;<br />
+  StrCpy $R0 $R0.$R1.$R2.$R3<br />
+<br />
+  ${VersionCompare} ${VER_MAJOR}.${VER_MINOR}.${VER_REVISION}.${VER_BUILD} $R0 $R0<br />
+	${If} $R0 == 0<br />
+    StrCpy $R1 &quot;${D_PRODUCT} ${VERSION} is already installed. Select the operation you want to perform and click Next to continue.&quot;<br />
+    StrCpy $R2 &quot;Add/Reinstall components&quot;<br />
+    StrCpy $R3 &quot;Uninstall ${D_PRODUCT}&quot;<br />
+    !insertmacro MUI_HEADER_TEXT &quot;Already Installed&quot; &quot;Choose the maintenance option to perform.&quot;<br />
+    StrCpy $R0 &quot;2&quot;<br />
+  ${ElseIf} $R0 == 1<br />
+    StrCpy $R1 &quot;An older version of ${D_PRODUCT} is installed on your system. It's recommended that you uninstall the current version before installing. Select the operation you want to perform and click Next to continue.&quot;<br />
+    StrCpy $R2 &quot;Uninstall before installing&quot;<br />
+    StrCpy $R3 &quot;Do not uninstall&quot;<br />
+    !insertmacro MUI_HEADER_TEXT &quot;Already Installed&quot; &quot;Choose how you want to install ${D_PRODUCT}.&quot;<br />
+    StrCpy $R0 &quot;1&quot;<br />
+  ${ElseIf} $R0 == 2<br />
+  ...<br />
+<br />
+<br />
+Well, when I implemented my first release, I neglected to to   implement the version numbers in the registry. So now when I release a new installer with better code, I want it to be able to detect its presence and call it. Fortunately, both the older version and the new one have the uninstaller information in the same place in the registry ($D_UNINSTALLKEY).<br />
+<br />
+So I modified the above to:<br />
+<br />
+<br />
+Function PageReinstall<br />
+<br />
+  ReadRegStr $R0 HKLM &quot;${D_INSTALLKEY}&quot; &quot;&quot;<br />
+<br />
+  ${If} $R0 == &quot;&quot;<br />
+    Abort<br />
+  ${EndIf}<br />
+<br />
+  ReadRegDWORD $R0 HKLM &quot;${D_INSTALLKEY}&quot; &quot;VersionMajor&quot;<br />
+  ReadRegDWORD $R1 HKLM &quot;${D_INSTALLKEY}&quot; &quot;VersionMinor&quot;<br />
+  ReadRegDWORD $R2 HKLM &quot;${D_INSTALLKEY}&quot; &quot;VersionRevision&quot;<br />
+  ReadRegDWORD $R3 HKLM &quot;${D_INSTALLKEY}&quot; &quot;VersionBuild&quot;<br />
+  StrCpy $R0 $R0.$R1.$R2.$R3<br />
+<br />
+    ;; identify older versions that did not register their version number in registry<br />
+  ClearErrors<br />
+  ReadRegStr $IsOldVerInstalled HKLM &quot;${D_UNINSTALLKEY}&quot; &quot;UninstallString&quot;<br />
+  IfErrors +2 0<br />
+	StrCpy $R0 1.0.0.0<br />
+<br />
+  ${VersionCompare} ${VER_MAJOR}.${VER_MINOR}.${VER_REVISION}.${VER_BUILD} $R0 $R0<br />
+	${If} $R0 == 0<br />
+    StrCpy $R1 &quot;${D_PRODUCT} ${VERSION} is already installed. Select the operation you want to perform and click Next to continue.&quot;<br />
+    StrCpy $R2 &quot;Add/Reinstall components&quot;<br />
+    StrCpy $R3 &quot;Uninstall ${D_PRODUCT}&quot;<br />
+    !insertmacro MUI_HEADER_TEXT &quot;Already Installed&quot; &quot;Choose the maintenance option to perform.&quot;<br />
+    StrCpy $R0 &quot;2&quot;<br />
+  ${ElseIf} $R0 == 1<br />
+    StrCpy $R1 &quot;An older version of ${D_PRODUCT} is installed on your system. It's recommended that you uninstall the current version before installing. Select the operation you want to perform and click Next to continue.&quot;<br />
+    StrCpy $R2 &quot;Uninstall before installing&quot;<br />
+    StrCpy $R3 &quot;Do not uninstall&quot;<br />
+    !insertmacro MUI_HEADER_TEXT &quot;Already Installed&quot; &quot;Choose how you want to install ${D_PRODUCT}.&quot;<br />
+    StrCpy $R0 &quot;1&quot;<br />
+  ${ElseIf} $R0 == 2<br />
+  ...<br />
+<br />
+<br />
+But for some reason it never executes the $R0 == 1 part (&quot;An older version, etc.&quot;).<br />
+<br />
+What's wrong in my code?<br />
+<br />
+I also tried StrCpy $R0 &quot;1.0.0.0&quot; instead of StrCpy $R0 1.0.0.0 but that didn't help.<br />
+<br />
+What's wrong in my code?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">3rd September 2008, 17:59</div></div><div class="posttext">You are setting $R0 to 1.0.0.0 if the uninstall registry is present. Is that what you want to do?<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">chuckwood</div><div class="date">3rd September 2008, 23:18</div></div><div class="posttext">Originally posted by Afrow UK <br />
+You are setting $R0 to 1.0.0.0 if the uninstall registry is present. Is that what you want to do?<br />
+Yes, but I finally found the bug. The bug was in the beginning of the function:<br />
+Function PageReinstall<br />
+<br />
+  ReadRegStr $R0 HKLM &quot;${D_INSTALLKEY}&quot; &quot;&quot;<br />
+<br />
+  ${If} $R0 == &quot;&quot;<br />
+    Abort<br />
+  ${EndIf}<br />
+<br />
+NSIS never had a chance to reach the point of setting $R0 to 1.0.0.0 because reading ${D_INSTALLKEY} from the old version always yielded $R0 == &quot;&quot;.<br />
+<br />
+Now all is well. :) <br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

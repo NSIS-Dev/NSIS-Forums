@@ -1,0 +1,78 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" NSIS/VPatch: code question, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  NSIS/VPatch: code question NSIS Discussion" />
+	
+	<title> NSIS/VPatch: code question [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  NSIS/VPatch: code question</div>
+<hr />
+<div class="pda"><a href="t-284908.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=284908">NSIS/VPatch: code question</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Koen van de Sande</div><div class="date">13th January 2008, 16:28</div></div><div class="posttext">I'm syncing VPatch source with my personal version of the source code.<br />
+<br />
+I have a question regarding temporary file creation on POSIX:<br />
+http://nsis.svn.sourceforge.net/viewvc/nsis/NSIS/trunk/Contrib/VPatch/Source/GenPat/POSIXUtil.cpp?view=log<br />
+<br />
+&quot;use the safer mkstemp instead of tmpnam&quot;<br />
+<br />
+However, I fail to see how the new code:<br />
+<br />
+  112   string getTempFile() {<br />
+  113     char t[] = &quot;/tmp/genpatXXXXXX&quot;;<br />
+  114 <br />
+  115     mode_t old_umask = umask(0077);<br />
+  116 <br />
+  117     int fd = mkstemp(t);<br />
+  118     if (fd == -1) {<br />
+  119       cerr &lt;&lt; &quot;Cannot create temporary filename&quot;;<br />
+  120       return &quot;&quot;;<br />
+  121     }<br />
+  122     close(fd);<br />
+  123 <br />
+  124     umask(old_umask);<br />
+  125 <br />
+  126     return string(t);<br />
+  127   }<br />
+<br />
+<br />
+is any better than the old code:<br />
+<br />
+  114  string getTempFile() {<br />
+  115     char filebuf [L_tmpnam];<br />
+  116 <br />
+  117     // create a temporary filename<br />
+  118     const char *fname = tmpnam (filebuf);<br />
+  119 <br />
+  120     if (!fname)<br />
+  121       cerr &lt;&lt; &quot;Cannot create temporary filename&quot;;<br />
+  122 <br />
+  123     return string(fname);<br />
+  124   }<br />
+<br />
+The new code eliminates a warning about the usage of tmpnam (which is not secure against timing-based attacks). However, the new code isn't secure against this either: it creates a file securely, then it closes the file. And then permissions are set. However, between the setting of permissions and the closing of the file, hijacking of the temporary filename can take place, just as with tmpnam, right? Also, I don't like how the new code hardcodes temporary files to be stored in &quot;/tmp&quot;, the old tmpnam() would get the folder from the OS.<br />
+I might be mistaken with my observations. Feedback on my (mis)conceptions is welcome!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th January 2008, 20:03</div></div><div class="posttext">The new code isn't vulnerable to timing attacks as it mkstemp() handles both creation and permissions. The second umask() call only sets the permissions for new files that'd be created after the mkstemp() call.<br />
+<br />
+&quot;/tmp&quot; is indeed hardcoded, but that's the recommended method according to the man pages I've read.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koen van de Sande</div><div class="date">13th January 2008, 20:22</div></div><div class="posttext">OK, I guess if someone wants to use a different folder, they'll just be out of luck. The chances of someone on POSIX not having this folder are rather slim.<br />
+Or perhaps the P_tmpdir macro from stdio.h can be used instead of /tmp?<br />
+<br />
+edit: I'm not going to bother with this macro, as it might not be crossplatform.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

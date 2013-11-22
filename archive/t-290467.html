@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" makeNSIS fails on big file, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  makeNSIS fails on big file NSIS Discussion" />
+	
+	<title> makeNSIS fails on big file [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  makeNSIS fails on big file</div>
+<hr />
+<div class="pda"><a href="t-290467.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=290467">makeNSIS fails on big file</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">18th April 2008, 14:18</div></div><div class="posttext">Hello.. I have a problem on big files with NSIS 2.36 :<br />
+SetCompressor lzma<br />
+<br />
+Section &quot;Main&quot;<br />
+	File &quot;bigfile.dat&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+bigfile is 1 740 336 643 bytes long<br />
+<br />
+makeNSIS either crashes or display the following error:<br />
+File: &quot;bigfile.dat&quot; [compress]Error: add_db_data() - compress() failed(input/output error [-4])</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">18th April 2008, 15:42</div></div><div class="posttext">when using bzip2 ou zlib, it always crashes</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">18th April 2008, 18:14</div></div><div class="posttext">From my investigation using Process Explorer, for each file, makensis.exe tries to map in memory :<br />
+- the file to compress<br />
+- a temporary file which size is 1.25 times the size of the file to compress (probably a buffer for compression)<br />
+<br />
+Now I can see the memory address space of makensis has a free space between ctype.nls (0x890000+0x3000) and lpk.dll (0x62DC0000) under Windows XP SP2<br />
+<br />
+This free memory space is 1 649 594 368 bytes long, so the biggest &quot;compressable&quot; file should be about 733 151 232 bytes long<br />
+<br />
+Do you confirm my analysis ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th April 2008, 18:21</div></div><div class="posttext">NSIS doesn't support files as large as that. There are solutions on the Wiki like CABSetup.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">21st April 2008, 10:50</div></div><div class="posttext">:( <br />
+I don't want to extract a CAB file on the user harddisk and then uncompress it to the installation target folder, (that would require a lot of free space on disk), when it seems possible to directly uncompress from the installer to the target folder. Plus I need a one-file installer (can't span on multiple installer files).<br />
+<br />
+Besides, NSIS worked perfectly with big file up to 1.52 GB but crashes with a file 1.62 GB long<br />
+<br />
+(forget the 700 MB limit from my previous analysis)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">21st April 2008, 17:10</div></div><div class="posttext">ok I've analyzed NSIS sources and I've come to the conclusion that the biggest file (if alone) that NSIS can currently support should be under (about) 1 704 564 322 bytes = 1.58 GB<br />
+<br />
+formula= (0x7FFFFFFF-4-1024-(16&lt;&lt;20))/5*4</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">22nd April 2008, 10:03</div></div><div class="posttext">kichik, you could add support for files up to 2GB simply by adding the following lines in build.cpp in function CEXEBuild::add_db_data<br />
+<br />
+    int bufferlen = length + 1024 + length / 4; // give a nice 25% extra space<br />
+    if (bufferlen &lt; 0)          // we've hit a signed integer overflow (file is over 1.6 GB)<br />
+        bufferlen = INT_MAX-st-sizeof(int)-(16 &lt;&lt; 20); //  so maximize compressor room and hope the file compresses well<br />
+<br />
+as commented, it should work correctly as long as the big file to compress do compress well, under the room allocated for compression</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">22nd April 2008, 10:42</div></div><div class="posttext">Please submit it as a patch (http://sourceforge.net/tracker/?group_id=22049&amp;atid=373087).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">evin</div><div class="date">22nd April 2008, 11:24</div></div><div class="posttext">Use the Vpatch. (NSIS\Bin\GenPat.exe)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">22nd April 2008, 13:16</div></div><div class="posttext">done. (http://sourceforge.net/tracker/index.php?func=detail&amp;aid=1948700&amp;group_id=22049&amp;atid=373087) <br />
+<br />
+Vpatch doesn't apply for a first installation<br />
+<br />
+However I did develop a WPatch, more powerful for patching files *in-place* without requiring more free space on disk than the size difference<br />
+I plan to release it soon</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

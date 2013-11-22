@@ -1,0 +1,138 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" System::Call not working with custom DLL, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  System::Call not working with custom DLL NSIS Discussion" />
+	
+	<title> System::Call not working with custom DLL [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  System::Call not working with custom DLL</div>
+<hr />
+<div class="pda"><a href="t-303689.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=303689">System::Call not working with custom DLL</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">njshaw2</div><div class="date">2nd March 2009, 17:11</div></div><div class="posttext">Hi,<br />
+<br />
+I've written a function in my own DLL to find out if the user has permission to install the software version (based on a hardware dongle setting, but that detail is irrelevant).  My function, in C, is something like this:<br />
+<br />
+int WINAPI CanUserInstall(void)<br />
+{<br />
+  int Ret = FALSE;<br />
+<br />
+  // do various checks<br />
+  // if user is allowed to install, set Ret to TRUE;<br />
+<br />
+  return Ret;<br />
+}<br />
+<br />
+This function is being exported by the DLL correctly (according to Microsoft's Dependency Walker app).<br />
+<br />
+In my NSIS script, I have the following code:<br />
+<br />
+SetOutPath &quot;$TEMP&quot;<br />
+File &quot;installer.dll&quot;<br />
+System::Call 'installer.dll::CanUserInstall(v) i.R0 ?e'<br />
+Pop $0<br />
+MessageBox MB_OK &quot;Return value = $R0, lasterr = $0&quot;<br />
+IntCmp $R0 1 OkToInstall CancelInstall<br />
+<br />
+CancelInstall:<br />
+Abort &quot;Not allowed to install&quot;<br />
+<br />
+OkToInstall:<br />
+; ... do the install<br />
+<br />
+Firstly, the messagebox returns this:<br />
+&quot;Return value = error, lasterr = 0&quot;<br />
+Then the IntCmp always goes to the CancelInstall as $R0 always equals 0.<br />
+<br />
+Any ideas where I'm going wrong?  The error return implies it either can't load the DLL, or can't find the function in it, but I can't see where I've gone wrong.<br />
+<br />
+Thanks for any help.<br />
+Nick.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">2nd March 2009, 17:27</div></div><div class="posttext">you don't need &quot;.dll&quot;. you don't need v, just () is fine, other than that it looks ok to me. And I'm sure you know, in this example, ?e is pointless since you don't call SetLastError or other windows api's</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AxelMock</div><div class="date">2nd March 2009, 17:34</div></div><div class="posttext">Originally posted by njshaw2 <br />
+<br />
+[B]Hi,<br />
+<br />
+I've written a function in my own DLL to find out if the user has permission to install the software version (based <br />
+<br />
+Last time i fiddled with System::Call I ended up with:<br />
+<br />
+!define GetPrivateProfileString &quot;kernel32::GetPrivateProfileStringA(t,t,t,t,i,t) i&quot;<br />
+<br />
+<br />
+and <br />
+   System::Call &quot;${GetPrivateProfileString}('Version', 'DriverVer', '', .r1, ${NSIS_MAX_STRLEN}, r1) .s&quot;<br />
+<br />
+before it worked.<br />
+<br />
+So in your case:<br />
+<br />
+!define CanUserInstall &quot;installer::CanUserInstall(v) i&quot;<br />
+<br />
+and <br />
+  System::Call &quot;${CanUserInstall} () .R0&quot;<br />
+<br />
+<br />
+Maybe omitting the &quot;.dll&quot; already helps....<br />
+<br />
+Good luck</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">2nd March 2009, 17:51</div></div><div class="posttext">AxelMock, dude, you know nsis already has .ini support?<br />
+<br />
+and a define will not help at all, thats all precompiler magic and does not change the end result</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">njshaw2</div><div class="date">2nd March 2009, 18:49</div></div><div class="posttext">Thanks for the suggestions.  I've already tried without the &quot;.dll&quot;, without the (v) and without the ?e - all give the same result.<br />
+<br />
+I'm at the stage where I can't see the DLL is actually loaded - I've put OutputDebugStrings in the DLL's DllMain() which are never being called, so either NSIS is failing to load the DLL, or the DLL is not loading properly.  Does the DLL need any specific calling convention or build property?  I'm using WINAPI for the functions, and the project is built with Multi-threaded DLL support. It's also being built in VS2008, can't see why that could be an issue, but just in case.<br />
+<br />
+It looks, from the replies, like I'm doing all the right stuff in NSIS (I can do calls to Win32 APIs fine, so I know the system.dll is working and my syntax is pretty much ok) - back to the old VS2008 debugging, it looks like.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">2nd March 2009, 20:56</div></div><div class="posttext">Process Monitor from sysinternals should be able to help out. You can see both the filesystem operations to make sure it finds the file, and possible errors when the loader tries to map the dll</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AxelMock</div><div class="date">3rd March 2009, 07:36</div></div><div class="posttext">Originally posted by Anders <br />
+AxelMock, dude, you know nsis already has .ini support?<br />
+ <br />
+<br />
+Yes, I know ConfigRead but it does NOT work on a Unicode inf-file.<br />
+GetPrivateProfileString works. And I can set the section in which to look for the value.<br />
+<br />
+And converting the inf-file to ANSI did not work on the japanese/chinese Windows machine.<br />
+<br />
+And last week I didn't have the Unicode to UTF-8 conversion...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">njshaw2</div><div class="date">16th March 2009, 14:48</div></div><div class="posttext">I've found the problem I was having.  Subtle.  You need to include the path of your dll in the System::Call() information if your dll is not in the system path.  The documentation doesn't specify this; it implies it will load it from the last configured &quot;SetOutPath&quot;.  Obviously not.<br />
+<br />
+So I used:<br />
+<br />
+SetOutPath &quot;$TEMP&quot;<br />
+File &quot;Data\MyFile.dll&quot;<br />
+System:Call &quot;$TEMP\MyFile.dll:MyFunc() i.r0&quot;<br />
+<br />
+and from then on it was happy. :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th March 2009, 15:52</div></div><div class="posttext">I think if you extract your dll to the same folder as the System.dll then it will work (i.e. $PLUGINSDIR).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Completely disable cancel, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Completely disable cancel NSIS Discussion" />
+	
+	<title> Completely disable cancel [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Completely disable cancel</div>
+<hr />
+<div class="pda"><a href="t-322433.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=322433">Completely disable cancel</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">miesfeld</div><div class="date">15th September 2010, 17:45</div></div><div class="posttext">For a one type of install, once it gets past a certain point in the pages, I want to prevent the user from canceling.  They need to finish the install and then do an uninstall if they want to change something.<br />
+<br />
+I know there are a number of ways of doing this, like using the onUserAbort function, or getting the window handle of the Cancel button and disabling it, etc..<br />
+<br />
+But, I'd like to have the appearance that the MUI_PAGE_INSTFILES and MUI_UNPAGE_INSTFILES in MUI 2 have where the Cancel button, the title bar Close button and the System Menu Close item are all disabled.  However, the Next and Back buttons should be enabled.<br />
+<br />
+I've been searching, but I can't seem to find how that is done.  Is there a simple way of doing this?  <br />
+<br />
+Or, do I have to write a custom Show function for every standard page and disable everything manually?<br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">15th September 2010, 18:02</div></div><div class="posttext">!define SC_CLOSE 0xF060<br />
+!define MF_GRAYED 0x1<br />
+<br />
+; Disable Close (X) button.<br />
+System::Call user32::GetSystemMenu(i$HWNDPARENT,i0)i.R0<br />
+System::Call user32::EnableMenuItem(iR0,i${SC_CLOSE},i${MF_GRAYED})<br />
+<br />
+; Disable Cancel button.<br />
+GetDlgItem $R0 $HWNDPARENT 2<br />
+EnableWindow $R0 0Note that NSIS will disable/re-enable both when you enter/leave the InstFiles page.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">miesfeld</div><div class="date">15th September 2010, 23:22</div></div><div class="posttext">Okay, thanks.  That works, I found some similar code.  And, I just created a function that I call on each page I need to use it.<br />
+<br />
+Even after I read the doc, I don't quit understand this:<br />
+<br />
+; Disable Close (X) button.<br />
+System::Call user32::GetSystemMenu(i$HWNDPARENT,i0)i.R0<br />
+System::Call user32::EnableMenuItem(iR0,i${SC_CLOSE},i${MF_GRAYED})<br />
+<br />
+I understand Windows programming and mostly the above makes sense.  What I don't understand is the: i.R0<br />
+<br />
+I know that is where the result of GetSystemMenu goes, as an int, but what is the dot? The '.'  And why don't you use $R0?  Same thing in the call to EnableMenuItem()  There is iR0.  Don't you need a space after the i?  And, again, why isn't $R0 used instead of just R0?<br />
+<br />
+The reason I ask, is that when I copy some of these System::Call examples, they work.  But when I try to write my own code it fails.  ;-(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">15th September 2010, 23:56</div></div><div class="posttext">Even after I read the doc, I don't quit understand this:<br />
+<br />
+; Disable Close (X) button.<br />
+System::Call user32::GetSystemMenu(i$HWNDPARENT,i0)i.R0<br />
+System::Call user32::EnableMenuItem(iR0,i${SC_CLOSE},i${MF_GRAYED})<br />
+<br />
+I understand Windows programming and mostly the above makes sense.  What I don't understand is the: i.R0<br />
+<br />
+I know that is where the result of GetSystemMenu goes, as an int, but what is the dot?<br />
+The format of the System plugin parameter feeding / output is:<br />
+&lt;type&gt;&lt;inval/var&gt;&lt;outvar&gt;<br />
+In this case, as you want the output from the function, there is no input value/variable, so the . (dot) is used to indicate such.  Otherwise, if you wrote &quot;iR0&quot;, the System plugin would think you're trying to input the value of $R0.. which makes no sense in this case.<br />
+<br />
+The System docs state it as follows:<br />
+&quot;Either one of source or destination can also be a dot ('.') if it is not needed.&quot;<br />
+<br />
+And why don't you use $R0?<br />
+Because you're indicating to the System plugin that it should store the result of the function in the -variable- $R0. If you wrote that as i$R0, you'd be telling it to store the result of the function in whatever the -value- of $R0 is.  I'm pretty sure that doesn't even work :)<br />
+<br />
+Same thing in the call to EnableMenuItem()  There is iR0.<br />
+In that case, he could have used i$R0 (or 'i $R0', see below), as it's an input value.  Matter of personal preference, perhaps :)<br />
+<br />
+Don't you need a space after the i?<br />
+Nope - System pretty much ignores that space after the parameter type.  It can be easier to read when you do use the space, though.<br />
+<br />
+There is even a whole 'nother syntax form you can use.. I hardly ever see it used these days, though, so probably best to stay away from it.  Here's an example using it, just for reference... look for the System::Call lines.<br />
+http://nsis.sourceforge.net/Windows_Critical_Updates_Mass_Installer<br />
+<br />
+The reason I ask, is that when I copy some of these System::Call examples, they work.  But when I try to write my own code it fails.  ;-(<br />
+Welcome to the world of the System plugin.  Few here have mastered it.. I sure as heck haven't yet :)  Just keep poking about at it, check out more examples (plenty in the forums), and never be afraid to ask for assistance.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th September 2010, 11:29</div></div><div class="posttext">I tend not to use spaces in my System plug-in calls when possible so that I do not have to use quotes. As soon as you introduce a space you must use quotes.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">16th September 2010, 13:17</div></div><div class="posttext">I tend not to use spaces in my System plug-in calls when possible so that I do not have to use quotes. As soon as you introduce a space you must use quotes.<br />
+You mean spaces in parameter values (e.g. for strings.. but those always need quotes..)?  The spaces between the parameter type and in/out value/variable(s) shouldn't change anything, though?<br />
+<br />
+i.e.<br />
+<br />
+System::Call &quot;user32::MessageBox(i$HWNDPARENT, t'NSIS System Plug-in', t'Test', i0)&quot;<br />
+System::Call &quot;user32::MessageBox(i $HWNDPARENT, t 'NSIS System Plug-in', t 'Test', i 0)&quot;<br />
+<br />
+are functionally entirely the same afaik ( but I did say I haven't mastered the System plugin yet :&gt; )</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th September 2010, 17:00</div></div><div class="posttext">In NSIS you only need quotes to make a string with spaces a single token. If there are no spaces then you don't need quotes. In my two System calls there are no spaces and therefore I do not need any quotes. I guess thinking about it it's just to stop the syntax highlighter in Notepad2 picking up my System code as just another string in quotes.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

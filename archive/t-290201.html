@@ -1,0 +1,187 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" My understanding to date - Basic Installer, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  My understanding to date - Basic Installer NSIS Discussion" />
+	
+	<title> My understanding to date - Basic Installer [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  My understanding to date - Basic Installer</div>
+<hr />
+<div class="pda"><a href="t-290201.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=290201">My understanding to date - Basic Installer</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">hungryOrb</div><div class="date">14th April 2008, 11:26</div></div><div class="posttext">I hope this info can potentially help someone who is starting out. It's a culmination of help from many sources, including Cheryll, RedWine, and AfrowUK. Thanks to the other guys as well :) I'm bound to perhaps misrepresent a feature or element somehow, so please just post away with the correction, as the edit feature will not allow for late edits to the OP.<br />
+<br />
+------------------------------------------------------<br />
+<br />
+This is a list of functions that I think people will be able to make use of when trying to learn NSIS.<br />
+<br />
+1.) User Account Type Check. <br />
+<br />
+  Function .onInit<br />
+<br />
+  UserInfo::GetAccountType<br />
+	Pop $0<br />
+	StrCmp $0 &quot;Admin&quot; 0 +3 ;<br />
+               ;MessageBox MB_OK 'You seem to be an admin!'<br />
+		Goto done<br />
+	StrCmp $0 &quot;Power&quot; 0 +3<br />
+		MessageBox MB_OK 'You must be logged in as Administrator!'<br />
+		Quit ;<br />
+	StrCmp $0 &quot;User&quot; 0 +3<br />
+		MessageBox MB_OK 'You must be logged in as Administrator!'<br />
+		Quit ;<br />
+	StrCmp $0 &quot;Guest&quot; 0 +3<br />
+		MessageBox MB_OK 'You must be logged in as Administrator!'<br />
+		Quit ;<br />
+	MessageBox MB_OK &quot;Unknown error (Perhaps unknown account type?)&quot;<br />
+	Quit ;<br />
+<br />
+	Win9x:<br />
+		# This one means you don't need to care about admin or<br />
+		# not admin because Windows 9x doesn't either<br />
+		MessageBox MB_OK &quot;(Checking Account Type) Error! This DLL can't run under Windows 9x!&quot;<br />
+<br />
+	done:<br />
+ <br />
+<br />
+This is obviously an NSIS function that will check the current user account type. Use the working example to check if the user is allowed to mess with your installer/uninstaller.<br />
+This should really go in your initialisation, note the example doesn't close the function, and that's simply because you'll want to put some other things in your initialisation too.<br />
+<br />
+2.) Custom Page (Login Details) <br />
+<br />
+   !insertmacro MUI_INSTALLOPTIONS_EXTRACT_AS &quot;Custom.ini&quot; &quot;Custom&quot;<br />
+  Functionend<br />
+<br />
+LangString CUSTOM_TITLE ${LANG_ENGLISH} &quot;Enter your Login Details.&quot;<br />
+   LangString CUSTOM_SUBTITLE ${LANG_ENGLISH} &quot; &quot;<br />
+<br />
+   Page custom CustomPage MyCustomLeave<br />
+   <br />
+#==================================<br />
+Function CustomPage<br />
+<br />
+   !insertmacro MUI_HEADER_TEXT &quot;$(CUSTOM_TITLE)&quot; &quot;$(CUSTOM_SUBTITLE)&quot;<br />
+   # Display the page.<br />
+   !insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;Custom&quot;<br />
+<br />
+FunctionEnd <br />
+<br />
+This is actually the section cut after the last. So the Functionend is the end of the initialisation.<br />
+This example assumes that you want your custom page to appear before your main sections. Notice that the 'Page custom' wants to run two functions, 'CustomPage' and 'MyCustomLeave'. The CustomPage function simply adds info to the header text and of course, displays the page (renders your .ini file).<br />
+<br />
+Function MyCustomLeave<br />
+<br />
+ReadINIStr $0 &quot;Custom.ini&quot; &quot;Settings&quot; &quot;State&quot;<br />
+StrCmp $0 0 extract  ; Next button?<br />
+;Abort<br />
+<br />
+extract:<br />
+# Get the user entered values. ---------------==============================<br />
+   !insertmacro MUI_INSTALLOPTIONS_READ $Username &quot;Custom&quot; &quot;Field 1&quot; &quot;State&quot;<br />
+   !insertmacro MUI_INSTALLOPTIONS_READ $Password &quot;Custom&quot; &quot;Field 2&quot; &quot;State&quot;<br />
+   !insertmacro MUI_INSTALLOPTIONS_READ $Server &quot;Custom&quot; &quot;Field 3&quot; &quot;State&quot;<br />
+   !insertmacro MUI_INSTALLOPTIONS_READ $Autoupdate &quot;Custom&quot; &quot;Field 4&quot; &quot;State&quot;<br />
+   !insertmacro MUI_INSTALLOPTIONS_READ $AUpdatePath &quot;Custom&quot; &quot;Field 5&quot; &quot;State&quot;<br />
+   !insertmacro MUI_INSTALLOPTIONS_READ $DatabaseName &quot;Custom&quot; &quot;Field 6&quot; &quot;State&quot;<br />
+<br />
+done:<br />
+FunctionEnd <br />
+<br />
+I don't know everything (anything? ^^) about how the .ini files work, but it would seem that the .ini file can be read for the state of a button which is automatically added by NSIS, the next button.<br />
+The Leave function simply wants to do stuff when you continue past the page, which is the same as saying that you click the next button. The details that user's have input on our custom page now get extracted to variables. <br />
+<br />
+  WriteRegStr HKCU &quot;Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main&quot; &quot;MySQLUser&quot; $Username ;As per install instruction file.<br />
+  WriteRegStr HKCU &quot;Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main&quot; &quot;MySQLPass&quot; $Password<br />
+  WriteRegStr HKCU &quot;Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main&quot; &quot;MySQLADDR&quot; $Server<br />
+  WriteRegStr HKCU &quot;Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main&quot; &quot;AutoUpdatePath&quot; $AUpdatePath<br />
+  WriteRegStr HKCU &quot;Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main&quot; &quot;MySQLDBName&quot; $DatabaseName <br />
+  WriteRegStr HKCU &quot;Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main&quot; &quot;DBAccessMode&quot; &quot;1&quot; <br />
+  WriteRegStr HKCU &quot;Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main&quot; &quot;Status&quot; &quot;1&quot; <br />
+<br />
+;MessageBox MB_OK '0 is off and 1 is on! :: $Autoupdate' -====== Check!<br />
+<br />
+   ${If} $Autoupdate == &quot;1&quot; ;control was selected<br />
+   WriteRegStr HKCU &quot;Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main&quot; &quot;AutoUpdateEnable&quot; &quot;1&quot;<br />
+   ${EndIf}<br />
+   ${If} $Autoupdate == &quot;0&quot;<br />
+   WriteRegStr HKCU &quot;Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main&quot; &quot;AutoUpdateEnable&quot; &quot;0&quot;<br />
+   ${EndIf} <br />
+<br />
+This writing to registry is placed in the main section, which in install time, is just after the last file is copied. The logic ${If} statements assume that you have included the Logic library (!include 'LogicLib.nsh').<br />
+You'll notice a message box line that is commented out. Remember to use these to check on the different stages of install of certain elements.<br />
+<br />
+3.) Uninstaller Planning(a)<br />
+<br />
+WriteRegStr HKLM &quot;Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main&quot; &quot;InstPathHere&quot; &quot;$INSTDIR&quot;<br />
+<br />
+When using the uninstaller, to correctly identify the install path, we cannot use $INSTDIR if our uninstaller is not placed in the $INSTDIR at install time. This suggests and means that the $INSTDIR used in the uninstaller is based on the location of the uninst.exe or whatever your uninstaller is called.<br />
+<br />
+<br />
+4.) Deleting Files(risky)<br />
+<br />
+RMDIR /r &quot;$R0&quot; <br />
+<br />
+Firstly, this is not recommended by the majority here it seems, so I shan't encourage it much, but rather offer how and why and when it can be useful.<br />
+Having taken steps similar to the previous, the correct install path will remain in the registry and be able to be extracted accurately and used UNLESS a user:<br />
+1) changes that registry<br />
+2) renames the install folder manually<br />
+3) or steps to a similar effect.<br />
+Therefore, when using remove directory /r with your install path, the folder and everything in it will be deleted properly. Because this is potentially risky, given that the user takes to changing details which shouldn't matter a whole lot (usually appropriate naming prevents needs to rename, and messing with the registry is never a good idea unless one knows exactly what they want) you can use the preferred NSIS method of deleting all files within a folder, and then removing the directory without the '/r' parameter. The reason I don't use this, is because users are much more likely to add or subtract files from the INSTDIR than do any other changes, and also when there are updates, certain files will be added which may become part of the application while not becoming part of the uninstaller, which will by default only remove the files it knows should be there. Leaving you with a not-quite-uninstalled application. <br />
+<br />
+---------------------<br />
+<br />
+And that's all :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AaronLS</div><div class="date">14th April 2008, 23:29</div></div><div class="posttext">Here are some guidelines I follow:<br />
+Include a version number of your installer in the registry.  You may find it invaluable when writing future upgrades or hotfixes that can perform special logic for certain versions.<br />
+<br />
+Use &quot;SetCompress off&quot; at the beginning of your installer while debugging, simply to speed up execution and compilation of the installer.  Useful during phases of rapid testing and updates.<br />
+<br />
+If you have a suite of products or components, divide them up into seperate *.nsh files so that you are not overwhelmed by a large amount of irrelevant code when working on one particular product.  Each product is divided into macros such as ProductName_Section and ProductName_Oninit that can be placed in the master *.nsi where appropriate.  This also allows for easy reordering of sections by only copying/pasting !insertmacro statements rather than entire sections.<br />
+<br />
+Use ifndef headers in all *.nsh files to avoid multiple includes:<br />
+<br />
+!ifdef MYUTILITIES_NSH_USAGE<br />
+;=========Usage Example========<br />
+<br />
+<br />
+!endif<br />
+!ifndef MYUTILITIES_NSH<br />
+  !define MYUTILITIES_NSH<br />
+;code here   <br />
+<br />
+!endif<br />
+<br />
+<br />
+Name global vars with a leading _ underscore followed by the nsh filename if they are used only internally to the nsh script.  Name global vars intended for access outside of the nsh script the same way but without the leading underscore:<br />
+<br />
+_MyUtilities_SomethingInternal<br />
+MyUtilities_SomethingAvailableToPublic<br />
+<br />
+Use the same convention for function names and macros to avoid conflicts with other's *.nsh files.  However, macro parameters do not have to be named this way.<br />
+<br />
+Use GetTempFileName to place a name in a variable and File /oname=$TempFileVar for all temporary files!  It may seem painful at first, but if you don't and try to make up some output filename in a random location, then you may really feel the pain when your users start running into problems because you are overwriting existing files, or trying to write/execute in a location they don't have permissions to.<br />
+<br />
+Avoid repetitive hard coded strings.  Use defines or registers.  If you have some &quot;magic value&quot; as a string or number and it is used in more than one place, put it in a define so that typos don't cause problems, maintenance is easy, and readability is improved:<br />
+!define ProductVersion &quot;1.01&quot;<br />
+<br />
+Organize your directory structure of files you plan to deploy into a structure similar to that which they will be deployed to the user's machine.  I often have one of these &quot;structures&quot; in a seperate subdirectory for every Section.  I will further divide these up into files which are blatantly copied, and files which are only copied if not existing, and then ini files which are to be merged.<br />
+<br />
+I then make use of the File /r command to allow me to include large numbers of files with very little code.  Experiment thoroughly with the /r option to make sure you understand how it works.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hungryOrb</div><div class="date">15th April 2008, 10:22</div></div><div class="posttext">Oh :D So useful, thankyou!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

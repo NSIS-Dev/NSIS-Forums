@@ -1,0 +1,173 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How To: Installer with choice of shortcut command line parameters?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How To: Installer with choice of shortcut command line parameters? NSIS Discussion" />
+	
+	<title> How To: Installer with choice of shortcut command line parameters? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How To: Installer with choice of shortcut command line parameters?</div>
+<hr />
+<div class="pda"><a href="t-268591.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=268591">How To: Installer with choice of shortcut command line parameters?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">NikMonkey_25</div><div class="date">29th March 2007, 12:05</div></div><div class="posttext">Hi,<br />
+<br />
+I am trying to create an installer which creates a desktop and start menu shortcut with command line parameters.<br />
+The application being installed has two operating modes: real-time, and viewing only.  Both modes require different command line parameters.<br />
+I want the installer to give the user the option to select which mode to be installed, and add the correct command line parameters to the shortcuts accordingly.<br />
+<br />
+What's the best way of doing this?<br />
+<br />
+Cheers<br />
+Nik</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">29th March 2007, 12:31</div></div><div class="posttext">Use the GetOptions macro, search Wiki for this, also added below so you can get started just in case.<br />
+<br />
+Then as example here add to your &quot;function .onInit&quot;<br />
+<br />
+  ${GetOptions} $CMDLINE &quot;/L&quot; $R0<br />
+  IfErrors SkipLogSet 0<br />
+  MessageBox  MB_ICONQUESTION|MB_OK &quot;Logset found and additional value is &gt;$R0&quot;<br />
+   LogSet on<br />
+  SkipLogSet:<br />
+<br />
+<br />
+==================================<br />
+Function GetOptions<br />
+	!define GetOptions `!insertmacro GetOptionsCall`<br />
+<br />
+	!macro GetOptionsCall _PARAMETERS _OPTION _RESULT<br />
+		Push `${_PARAMETERS}`<br />
+		Push `${_OPTION}`<br />
+		Call GetOptions<br />
+		Pop ${_RESULT}<br />
+	!macroend<br />
+<br />
+	Exch $1<br />
+	Exch<br />
+	Exch $0<br />
+	Exch<br />
+	Push $2<br />
+	Push $3<br />
+	Push $4<br />
+	Push $5<br />
+	Push $6<br />
+	Push $7<br />
+	ClearErrors<br />
+<br />
+	StrCpy $2 $1 '' 1<br />
+	StrCpy $1 $1 1<br />
+	StrLen $3 $2<br />
+	StrCpy $7 0<br />
+<br />
+	begin:<br />
+	StrCpy $4 -1<br />
+	StrCpy $6 ''<br />
+<br />
+	quote:<br />
+	IntOp $4 $4 + 1<br />
+	StrCpy $5 $0 1 $4<br />
+	StrCmp $5$7 '0' notfound<br />
+	StrCmp $5 '' trimright<br />
+	StrCmp $5 '&quot;' 0 +7<br />
+	StrCmp $6 '' 0 +3<br />
+	StrCpy $6 '&quot;'<br />
+	goto quote<br />
+	StrCmp $6 '&quot;' 0 +3<br />
+	StrCpy $6 ''<br />
+	goto quote<br />
+	StrCmp $5 `'` 0 +7<br />
+	StrCmp $6 `` 0 +3<br />
+	StrCpy $6 `'`<br />
+	goto quote<br />
+	StrCmp $6 `'` 0 +3<br />
+	StrCpy $6 ``<br />
+	goto quote<br />
+	StrCmp $5 '`' 0 +7<br />
+	StrCmp $6 '' 0 +3<br />
+	StrCpy $6 '`'<br />
+	goto quote<br />
+	StrCmp $6 '`' 0 +3<br />
+	StrCpy $6 ''<br />
+	goto quote<br />
+	StrCmp $6 '&quot;' quote<br />
+	StrCmp $6 `'` quote<br />
+	StrCmp $6 '`' quote<br />
+	StrCmp $5 $1 0 quote<br />
+	StrCmp $7 0 trimleft trimright<br />
+<br />
+	trimleft:<br />
+	IntOp $4 $4 + 1<br />
+	StrCpy $5 $0 $3 $4<br />
+	StrCmp $5 '' notfound<br />
+	StrCmp $5 $2 0 quote<br />
+	IntOp $4 $4 + $3<br />
+	StrCpy $0 $0 '' $4<br />
+	StrCpy $4 $0 1<br />
+	StrCmp $4 ' ' 0 +3<br />
+	StrCpy $0 $0 '' 1<br />
+	goto -3<br />
+	StrCpy $7 1<br />
+	goto begin<br />
+<br />
+	trimright:<br />
+	StrCpy $0 $0 $4<br />
+	StrCpy $4 $0 1 -1<br />
+	StrCmp $4 ' ' 0 +3<br />
+	StrCpy $0 $0 -1<br />
+	goto -3<br />
+	StrCpy $3 $0 1<br />
+	StrCpy $4 $0 1 -1<br />
+	StrCmp $3 $4 0 end<br />
+	StrCmp $3 '&quot;' +3<br />
+	StrCmp $3 `'` +2<br />
+	StrCmp $3 '`' 0 end<br />
+	StrCpy $0 $0 -1 1<br />
+	goto end<br />
+<br />
+	notfound:<br />
+	SetErrors<br />
+	StrCpy $0 ''<br />
+<br />
+	end:<br />
+	Pop $7<br />
+	Pop $6<br />
+	Pop $5<br />
+	Pop $4<br />
+	Pop $3<br />
+	Pop $2<br />
+	Pop $1<br />
+	Exch $0<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">NikMonkey_25</div><div class="date">29th March 2007, 13:02</div></div><div class="posttext">Cheers onad, but that's not exactly what I am trying to do.  I don't want to get options from the command line.<br />
+I need to display a page with two install options (e.g. radio buttons) one for real-time and one for viewing only.<br />
+<br />
+If the user selected real time option button, the files would be installed and a desktop shortcut created with specific parameters i.e.:<br />
+<br />
+CreateShortcut $DESKTOP\BGSTATS_5g.lnk &quot;$INSTDIR\BGSTATS_5g.exe&quot; &quot;\\prview1\prview1_c\ddstats\live\real-time /a&quot;<br />
+<br />
+And if the user selected viewing only install, the desktop shortcut would be:<br />
+<br />
+CreateShortcut $DESKTOP\BGSTATS_5g.lnk &quot;$INSTDIR\BGSTATS_5g.exe&quot; &quot;\\prview1\prview1_c\ddstats\live\real-time&quot;<br />
+<br />
+Cheers</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">29th March 2007, 18:04</div></div><div class="posttext">Use InstallOptions. For an installer I did not too long ago, I used the InstallOptions INI file that NSIS uses for the uninstall and do not uninstall options. You'll find it under NSIS\Examples\makensis.ini<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Error from CoInitializeSecurity (WMI), media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Error from CoInitializeSecurity (WMI) NSIS Discussion" />
+	
+	<title> Error from CoInitializeSecurity (WMI) [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Error from CoInitializeSecurity (WMI)</div>
+<hr />
+<div class="pda"><a href="t-313731.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=313731">Error from CoInitializeSecurity (WMI)</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">12th October 2009, 23:47</div></div><div class="posttext">I borrowed the System plugin calls that F0rt wrote about (http://forums.winamp.com/showthread.php?s=&amp;threadid=309949) and wrote my own program to access WMI. On my laptop at home (Vista 64) it works fine, and here at work (XP Pro) it works fine. But on our target systems (Win 2000 Pro) the very first system call fails.<br />
+<br />
+I stripped the program down to some essentials, and it still fails. The routines (in the attached file) work on my XP desktop and fail with RPC_E_TOO_LATE (0x80010119) at the very first line of code. On other Win2k machines here, that call works but it fails later with a line that says failed ExecQuery 0xc0000005.<br />
+<br />
+Is there anyone that can see why this fails (either error, or best, both errors)?<br />
+<br />
+thanks,<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">13th October 2009, 00:41</div></div><div class="posttext">first one just means CoInitializeSecurity has already been called (this function is process wide and only works once) Maybe some kind of injected shell extension or something on the failing machines?<br />
+<br />
+as far as the other one goes, what does WBEMTest.exe do on the failing machine?<br />
+<br />
+as a final note, getting logical drives can be done without using WMI</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">13th October 2009, 01:33</div></div><div class="posttext">When it doesn't fail on the ole32::CoInitializeSecurity, it makes it through the next 2 calls OK (ole32::CoCreateInstance, IWbemLocator-&gt;ConnectServer) but gets a 0xC0000005 returned by the call on line 92 to IWbemServices-&gt;ExecQuery. The program doesn't terminate, but I guess it means to COM-connected process terminated. I don't try to use the other value (a IEnumWbemClassObject) that it ought to return.<br />
+<br />
+I'm home now, so I can't try any experiments or investigate the injected shell extension theory until tomorrow.<br />
+<br />
+About other ways to get logical drives - are you suggesting there is an API for it? I want to find the logical drives, and for each one I want to know if it is a CD or removable drive, what size it is, and the current volume name (if there is media in it).<br />
+<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">13th October 2009, 02:11</div></div><div class="posttext">if WBEMTest.exe works where IWbemServices-&gt;ExecQuery called by system.dll fails, there could be a bug in the COM handling or using wrong parameter somewhere. If it also fails with WBEMTest.exe, I'm guessing there is a problem with the COM default security on that machine<br />
+<br />
+As far as native API goes, call GetLogicalDriveStrings() or GetDriveType() directly in a loop. GetVolumeInformation() gives you label, GetDiskFreeSpace[Ex]() the size. It should also be noted that a volume could be mounted in a subfolder somewhere and not have a dos style drive letter at all, for those, call FindFirstVolume+FindFirstVolumeMountPoint and friends IIRC</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">13th October 2009, 02:55</div></div><div class="posttext">I misunderstood your earlier question asking what WBEMTEST.exe does on the failing machine. It works properly, I get successful data back from all the queries I'm using.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">14th October 2009, 05:27</div></div><div class="posttext">I read the MSDN article (http://msdn.microsoft.com/en-us/library/aa390423%28VS.85%29.aspx) on Getting WMI Data from the Local Computer and saw a note that says on Win2000 you have to specify the default authentication credentials for a user by using a SOLE_AUTHENTICATION_LIST (http://msdn.microsoft.com/en-us/library/ms680039%28VS.85%29.aspx) structure in the pAuthList parameter of CoInitializeSecurity (http://msdn.microsoft.com/en-us/library/ms693736%28VS.85%29.aspx) .<br />
+<br />
+I've tried to do that but my program crashes now on the call to CoInitializeSecurity. I know this isn't really a NSIS problem at this point, but hope that Anders, F0rt or someone can spot what I've done wrong. Here's the part that sets up the call to CoInitializeSecurity. I have tried it with and without the SOLE_AUTHENTICATION_SERVICE structure, it crashes either way.  It runs fine on XP and Vista.!define RPC_C_AUTHN_DEFAULT  0xFFFFFFFF<br />
+!define RPC_C_AUTHZ_DEFAULT  0xFFFFFFFF<br />
+<br />
+${If} ${IsWin2000}<br />
+	; allocate and initialize SOLE_AUTHENTICATION_INFO Structure<br />
+	System::Call &quot;*(i ${RPC_C_AUTHN_DEFAULT}, i ${RPC_C_AUTHZ_DEFAULT}, i 0)i.r2&quot;<br />
+	; allocate and initialize SOLE_AUTHENTICATION_LIST Structure<br />
+	System::Call &quot;*(i 1, i r2)i.r3&quot;<br />
+	; allocate and initialize SOLE_AUTHENTICATION_SERVICE Structure<br />
+	System::Call &quot;*(i ${RPC_C_AUTHN_DEFAULT}, i ${RPC_C_AUTHZ_DEFAULT}, i 0, i 0)i.r4&quot;<br />
+	StrCpy $5 1<br />
+${Else}<br />
+	StrCpy $2 0<br />
+	StrCpy $3 0<br />
+	StrCpy $4 0<br />
+	StrCpy $5 -1<br />
+${EndIf}<br />
+<br />
+System::Call &quot;ole32::CoInitializeSecurity( \<br />
+   i 0,               ; PSECURITY_DESCRIPTOR pSecDesc \<br />
+   i r5,              ; LONG cAuthSvc \<br />
+   i r4,              ; SOLE_AUTHENTICATION_SERVICE *asAuthSvc \<br />
+   i 0,               ; void *pReserved1 \<br />
+   i ${RPC_C_AUTHN_LEVEL_DEFAULT},    ; DWORD dwAuthnLevel \<br />
+   i ${RPC_C_IMP_LEVEL_IMPERSONATE},  ; DWORD dwImpLevel \<br />
+   i r3,              ; void *pAuthList \<br />
+   i ${EOAC_NONE},    ; DWORD dwCapabilities \<br />
+   i 0) i.r1&quot;TIA<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">14th October 2009, 21:40</div></div><div class="posttext">Your code looks correct to me.<br />
+<br />
+Would it be possible for you to write a little app in C to test so we could rule out the system plugin? or alternatively debug WBEMTEST.exe and check the parameters it passes to CoInitializeSecurity<br />
+<br />
+(Also, using comments like that in a plugin parameter might not be so smart, not sure if the script parser is able to handle it)<br />
+<br />
+edit:<br />
+(this is on XP, not sure if wbemtest is the same on 2000)<br />
+0:000&gt; bp ole32!CoInitializeSecurity<br />
+...<br />
+0:000&gt; kd<br />
+0013febc  0013ff1c<br />
+0013fec0  01006a64 wbemtest!WinMain+0xc4<br />
+0013fec4  00000000<br />
+0013fec8  ffffffff &lt;&lt; cAuthSvc (-1)<br />
+0013fecc  00000000<br />
+0013fed0  00000000<br />
+0013fed4  00000001 &lt;&lt; they are passing RPC_C_AUTHN_LEVEL_NONE<br />
+0013fed8  00000003<br />
+0013fedc  00000000<br />
+0013fee0  00000000<br />
+0013fee4  00000000<br />
+0013fee8  00000000<br />
+0013feec  7c80b529 kernel32!GetModuleHandleA<br />
+0013fef0  00151f05<br />
+0013fef4  7c80b529 kernel32!GetModuleHandleA<br />
+0013fef8  00151f05<br />
+0013fefc  00000000<br />
+0013ff00  77c39d7a msvcrt!_initterm+0x13<br />
+0013ff04  00fbf758<br />
+0013ff08  0013ffc0<br />
+<br />
+RPC_C_AUTHN_LEVEL_DEFAULT might equal RPC_C_AUTHN_LEVEL_NONE on a local machine, I don't know (And its documented that you need to pass those extra structs on 2k, so I'm sure its not going to fix it)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">14th October 2009, 23:00</div></div><div class="posttext">Thanks for the suggestions. You're right, the script parser does not like the comments embedded in the SYSTEM plugin call strings. I took those out after I spotted that.<br />
+<br />
+I have pretty much duplicated (in NSIS code) the example MSDN showed, it runs on XP but only gets as far as the IWbemServices::ExecQuery call on Win2000. That call doesn't crash the app, but returns a 0xC0000005 error code.<br />
+<br />
+The latest code is attached to this post.<br />
+<br />
+I will look at trying to run the debugger on WbemTest.exe. Here is the call to CoInitializeSecurity that seems to work on both OS's.<br />
+; allocate and initialize SOLE_AUTHENTICATION_INFO<br />
+System::Call &quot;*(i ${RPC_C_AUTHN_WINNT}, i ${RPC_C_AUTHZ_NONE}, i 0) i .r2&quot;<br />
+; allocate and initialize SOLE_AUTHENTICATION_LIST Structure<br />
+System::Call &quot;*(i 1, i r2) i .r3&quot;<br />
+	<br />
+System::Call &quot;ole32::CoInitializeSecurity( \<br />
+   i 0, i -1, i 0, i 0, i ${RPC_C_AUTHN_LEVEL_CALL}, \<br />
+   i ${RPC_C_IMP_LEVEL_IMPERSONATE}, i r3, i ${EOAC_NONE}, i 0) i.r1&quot;<br />
+<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th October 2009, 02:23</div></div><div class="posttext">the WBEMTEST.exe version on windows 2000 does not have CoInitializeSecurity in its import table (it could still be calling it, but it is a bit weird to just not import it normally)<br />
+<br />
+edit: So it does end up calling CoInitializeSecurity after GetProcAddress'ing it (why, I don't know, that function should exist on every version of windows so there is no point in delay loading it)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th October 2009, 03:23</div></div><div class="posttext">looking over your code some more, you are using &quot;w&quot; as the arguments in some places, those arguments are really BSTR's and BSTR != plain unicode string, you can use a BSTR where a unicode string is expected, but not the other way around and the system plugin does not have a BSTR parameter type AFAIK, you can make a proper BSTR with the SysAllocString() function</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th October 2009, 04:38</div></div><div class="posttext">I made a little test app in c++, it works fine on XP but fails with WBEM_E_INVALID_CLASS (0x80041010) on IWbemServices-&gt;ExecQuery()<br />
+<br />
+Not really sure where to go from here</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th October 2009, 05:24</div></div><div class="posttext">Right, got it working now!<br />
+<br />
+For whatever crazy reason, using CLSID_WbemAdministrativeLocator in the call to CoCreateInstance seems to fix things on 2000 (plain CLSID_WbemLocator works fine on XP)<br />
+<br />
+I'll end with a few notes...<br />
+<br />
+ I did not use WBEM_FLAG_RETURN_IMMEDIATELY, did not want to deal with semisynchronous calls (whatever they are)<br />
+ CoInitializeSecurity(0,-1,0,0,1,3,0,0,0)//using the same params as wbemtest<br />
+ CoCreateInstance(CLSID_WbemAdministrativeLocator,NULL,CLSCTX_INPROC_SERVER,IID_IWbemLocator,(LPVOID*)&amp;WBEMLoc)<br />
+ I'm not calling CoSetProxyBlanket() IIRC</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">18th October 2009, 07:46</div></div><div class="posttext">Anders, thanks for continuing work on my problem, and the suggestion that CLSID_WbemAdministrativeLocator might work for me on Win2000. <br />
+<br />
+After a little playing around, I've got it working! I switched to CLSID_WbemAdministrativeLocator and commented out the CoSetProxyBlanket. The SerialNumber came back different (even though here at home I run Win2000 under VirtualBox), but that is accurate (according to what WBEMTest shows. <br />
+<br />
+Then I tried a different query (Select * from Win32Bios) and property ('Name'), and after crashing the WMI repository a few times, it comes back with the BIOS name correctly. Hopefully the crash is just an artifact of the VirtualBox. XP continues to work correctly.<br />
+<br />
+[A few minutes go by] Now I've incorporated those changes into my WMI.nsh, and my app runs in XP and Win2000! Thank you, Anders! I'll need to clean up WMI.nsh, but I plan to put it in the wiki when I've done that.<br />
+<br />
+I'm in the middle of moving to a new apartment and may not be able to try on a true Win2000 system until either Monday or Tuesday.<br />
+<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th October 2009, 08:13</div></div><div class="posttext">As far as crashes go, one thing you should fix is the w vs BSTR problem.<br />
+<br />
+code like System::Call &quot;$3-&gt;20(w 'WQL', w 'Select * from Win32_BIOS' ... is wrong, like I said, you can't use w, you need proper BSTR's (you can fake BSTR's with the system plugin struct syntax (on BSTR's you are going to free yourself) something like *{i 3,w &quot;abc&quot;}i.r0 but the pointer you must pass is not $0 but $0+4 (length is at -4) )</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

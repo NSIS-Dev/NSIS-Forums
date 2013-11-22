@@ -1,0 +1,202 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" More Vista / RequestExecutionLevel pitfalls, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  More Vista / RequestExecutionLevel pitfalls NSIS Discussion" />
+	
+	<title> More Vista / RequestExecutionLevel pitfalls [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  More Vista / RequestExecutionLevel pitfalls</div>
+<hr />
+<div class="pda"><a href="t-285047.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=285047">More Vista / RequestExecutionLevel pitfalls</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">RDaneel</div><div class="date">15th January 2008, 22:42</div></div><div class="posttext">I just noticed that using RequestExecutionLevel admin has the unexpected (for me, anyway) side-effect of not just changing the *privileges* of the installer BUT also of changing the *user*! :(<br />
+<br />
+Specifically, I note from both observation and from the installer's own details window that the selected per-user folders and desktop are NOT those of the logged-in user, but those of the admin user going with the password Vista demanded.<br />
+<br />
+This is with using $SMPROGRAMS, $DESKTOP, and leaving SetShellVarContext defaulted to [presumably] current.<br />
+<br />
+The installer is NSIS 2.34, created on XP SP2, and installed on Vista RTM.<br />
+<br />
+I am going to now try &quot;RequestExecutionLevel user&quot;, but based on other comments here, I expect other troubles (like issues with $PROGRAMFILES?).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th January 2008, 23:15</div></div><div class="posttext">Welcome to the wonderful world of Vista<br />
+<br />
+The UAC plugin tries to deal with some of these issues.<br />
+<br />
+http://nsis.sourceforge.net/UAC_plug-in<br />
+<br />
+&lt;Rant Type=&quot;Vista/UAC/NT/LUA&quot;&gt;<br />
+if you require admin rights to install, you are doing a &quot;all users&quot; type install, so you put your files in $programfiles, uninstall info in HKLM and the shortcuts should be for all users (SetShellVarContext all)<br />
+&lt;/Rant&gt;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RDaneel</div><div class="date">15th January 2008, 23:30</div></div><div class="posttext">Thanks, Anders!<br />
+<br />
+This looks like it may mostly work (but I am troubled by the Important Notes #3 issue), but what a ridiculous mess to have to do all this for the fairly ordinary task of installing an app... silly Vista.  Sigh.<br />
+<br />
+OTOH, it looks like all that is really NOT working properly with &quot;RequestExecutionLevel user&quot; is installing the app files to a $PROGRAMFILES subdir... does Vista have someplace else that functions as a &quot;standard&quot; place for app files to be placed?<br />
+<br />
+Or do they just think it makes sense to force you into needing admin privileges which then make all of your per-user paths wrong?  Grrr.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">16th January 2008, 00:08</div></div><div class="posttext">$LOCALAPPDATA can be used for single user installs<br />
+<br />
+As far as issue #3 goes, for normal folders, there should be no problem, normal users have exec rights by default for files installed by an admin (I have never had a problem with this, might be an issue in domains with tight security or something like that, dunno)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RDaneel</div><div class="date">16th January 2008, 02:46</div></div><div class="posttext">Yes, reasonably enough, I have always used $APPDATA and friends for [per-user] data... but for executables, it has always been $PROGRAMFILES.<br />
+<br />
+For some reason, I had thought their was now in Vista a per-user version (or analog) of $PROGRAMFILES - but I don't see it, now that I am forced to actually try and deal with this nasty state of affairs.<br />
+<br />
+And thanks again - I at least have a way to proceed now... it just seems there could have been a better way for this all to work out.  I know - their answer would no doubt be to use the MSI ecosystem, and all would be good.  Sigh again.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">16th January 2008, 10:39</div></div><div class="posttext">there is a per user analog (the real analog has always been $APPDATA and $LOCALAPPDATA) of $PROGRAMFILES in vista, but its a hack, and when you use RequestExecutionLevel, that gets disabled (file redirection or whatever its called). And without RequestExecutionLevel, Vista auto detects nsis installers and forces you to run it as admin. Even if you could get around that, you end up at pretty much the same place since the redirection of program files ends up in $LOCALAPPDATA\somefolder anyway</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">16th January 2008, 16:29</div></div><div class="posttext">The current development builds of NSIS include a new header file (MultiUser.nsh) that is designed to deal with such issues   automatically. See http://nsis.sourceforge.net/Docs/MultiUser/Readme.html for details. I would appreciate tests and feedback.<br />
+<br />
+Note that you can choose the &quot;highest&quot; execution level to allow non-admin users to install your software in $LOCALAPPDATA, while administrators can install in $PROGRAMFILES. Software in $PROGRAMFILES is be available for all users, so the shortcuts should be installed in the per-machine folders instead of the folders for the current user.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">16th January 2008, 20:18</div></div><div class="posttext">I have not looked into the new MultiUser stuff, but I assume you run into the finish page run problem(runs as admin instead of logged in user on vista with standard user doing a all user install), unless you are doing some UAC magic</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">16th January 2008, 23:46</div></div><div class="posttext">That depends on the manifest of the application you run (i.e. what privileges it requests).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RDaneel</div><div class="date">17th January 2008, 04:07</div></div><div class="posttext">Ummm... I am having sort of a meta-problem here. ;)<br />
+<br />
+I must be missing something, because it looks like the whole Vista &quot;install&quot; model is seriously broken - at least for us &quot;exe&quot; installer types, since I still assume MS made things work a bit better for the &quot;msi&quot; installer case(s).<br />
+<br />
+I have a shell extension which needs to get registered, and AFAIK, that means at least some entries in, e.g., HKCR and HKLM... but even if I didn't, there is still the issue of the uninstall entries, which also go to HKLM (or can I do ALL uninstall stuff in HKCU?).<br />
+<br />
+So how does ANYTHING get installed without requesting Admin privileges?  Once you do, you are shafted by the really crippled security model that seems unable to give you Admin privileges without making the installer BECOME an Admin - thus losing the correct meaning of &quot;current user&quot;.<br />
+<br />
+I just tried making the trivial changes to use the $LOCALAPPDATA tree to install my app's code files, did a &quot;RequestExecutionLevel user&quot;, and did an install... which seemed to work, but had actually silently FAILED.<br />
+<br />
+The app files were installed as expected, the desktop shortcut was there, and the menu entries were there - all FILE things worked fine, as expected.  But since NONE of the HKCR/HKLM writes actually happened, my Shell extension was MIA, and there were no uninstall entries.<br />
+<br />
+Just to be clear, I always do a &quot;this user only&quot; install, but have assumed (perhaps incorrectly?) that even that case still needs Registry entries written outside of HKCU.<br />
+<br />
+Anyway, I am going to try and use the UAC plugin, which looks like it will probably let me install my app on Vista &quot;properly&quot; - but this all seems like such an ugly mess that I still feel like something is very wrong - with either my model of how installs work, or Vista, or both. :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">17th January 2008, 11:36</div></div><div class="posttext">Originally posted by Joost Verburg <br />
+That depends on the manifest of the application you run (i.e. what privileges it requests).  <br />
+<br />
+Not it does not.<br />
+<br />
+Say user &quot;Joe&quot; is a standard user.<br />
+He wants to install app &quot;Foo&quot;. Foo's installer has RequestExecutionLevel=admin, so Joe elevates with admin account &quot;Root&quot;. If run is checked at the finish page, the Foo program is started as Root even if it has a RequestExecutionLevel=user manifest, so all its settings end up in the wrong HKCU/$appdata. The next time Joe starts Foo, all his settings from the first time he used the app are gone, since they were saved in the Root profile.<br />
+<br />
+RDaneel:<br />
+Uninstall info can be stored in HKCU<br />
+This works for most shell exstensions aswell, use HKEY_CURRENT_USER\Software\Classes instead of HKCR<br />
+<br />
+from win2000 and up, you can use HKEY_CURRENT_USER\Software\Classes instead of HKCR for most shell/COM stuff when doing things for a single user</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">17th January 2008, 17:42</div></div><div class="posttext">Right. So Foo won't be able to perform administrative actions, but the user associated to it would be the administrator that is used for the installer?<br />
+<br />
+It really depends on the type of application what is the right thing to do. A system-wide configuration program should be run using the administrator account, because you don't want another UAC prompt. Most normal application should indeed run using the current Windows user account because of configuration in HKCU/$APPDATA.<br />
+<br />
+I would suggest to create a header file using the UAC plug-in that allows you to run an application using the Windows user account instead of the account that is used for the installer. I don't have a Vista system available right now, but would be happy to include a contributed header file to the official NSIS package.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">17th January 2008, 19:55</div></div><div class="posttext">you can't really solve this with a simple header file, all calls to Exec* needs to be changed to UAC::Exec* in the users code (the MUI code could look for some special UAC define, but that only solves the finish page problem, other possible calls to Exec* and CreateShortcut are still problematic)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">17th January 2008, 20:28</div></div><div class="posttext">I don't really understand what you mean, it's not that all calls have to be replaced. As I said, there are applications that do need the administrator privileges of the installer. For most applications that are started during the installation itself this will be the case.<br />
+<br />
+So a simple macro in a header file that performs the necessary UAC plug-ins call would certainly solve the issue (or is it just a single UAC plug-in command?). This allows the user to run the application using the current Windows user account whenever that is required.<br />
+<br />
+What's the problem with CreateShortcut? The location is just determined by SetShellContext. Whenever a RequestExecutionLevel command is included (so Vista does not redirect shortcuts) there should be no issues.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">17th January 2008, 20:36</div></div><div class="posttext">First off, for installers that use the UAC plugin, you must use RequestExectutionLevel=user since the UAC plugin has to performe the elevation, so there is never just one easy command.<br />
+<br />
+as for CreateShortcut, people want it work &quot;normally&quot;  with SetShellContext=current</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">17th January 2008, 22:40</div></div><div class="posttext">I think there should be a possibility for an installer with RequestExectutionLevel=admin to run an application using the current user Windows account, without using the UAC plug-in for other things. I'll have to check the details of this plug-in and the Windows API.<br />
+<br />
+Regarding CreateShortcut, you mean an installer with RequestExectutionLevel=admin combined with SetShellVarContext=current? It's a bit of a weird combination. An installer that allows per-machine/per-user installation should normally use RequestExecutionLevel=highest. But there may indeed be some exceptions (a per-user application that needs a service/driver?).<br />
+<br />
+We should check the behavior of other installers and change the SetShellContext=current mode if necessary (or add an additional mode).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">17th January 2008, 23:36</div></div><div class="posttext">I know its a weird combination, but some users want it (They are used to the way its done on 2k/XP, but few people run as non admin there so the issue has somewhat hidden) Other things you might want to do is get the users name etc, that can be done since the UAC plugin supports calling any nsis function in the context of the current user.<br />
+<br />
+When using RequestExectutionLevel=admin, its IMPOSSIBLE to start a new process as the current(&quot;correct&quot;) user without using ugly hacks like starting the app from the task scheduler(that service might be disabled) or injecting code into explorer.exe (ugly, hacky, and user might not have explorer.exe running, or it could even be running elevated even tho that is not recommended) The UAC plugin is somewhat hacky aswell, but it follows the wrapper model recommended by MS (well, they really want you to use MSI but that is not really relevant here)<br />
+<br />
+See http://www.codeproject.com/KB/vista-security/VistaElevator.aspx for task scheduler example, and http://www.codeproject.com/KB/vista-security/RunNonElevated.aspx for injection. There are some threads about this on the msdn/technet forums aswell.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RDaneel</div><div class="date">18th January 2008, 07:51</div></div><div class="posttext">Yes, it may be a weird combination, but it was what I was used to doing since Win9x days... ;)<br />
+<br />
+In any case, your suggestions for using HKCU for everything (uninstall info and Shell extension [un]registration) look like they will work, with one complication:<br />
+<br />
+The component registration [for me] happens through the NSIS RegDLL statement, which names a DLL.  This DLL has a DllRegisterServer entry point, which just calls the ATL UpdateRegistryFromResourceS function to interpret a &quot;resource script&quot; to actually make the all of the registry changes...<br />
+<br />
+Since this chain of calls that starts with RegDLL doesn't have the ability to carry along parameters like &quot;use HKCR or HKCU&quot;, life is more complicated (since you indicate that the HKCU &quot;trick&quot; doesn't work on systems earlier than Win2K).<br />
+<br />
+Perhaps I would need to have the DllRegisterServer implementation itself decide at runtime which part of the registry to use based on something like &quot;*can* I write to HKCR?&quot; or not, and use the appropriate version of the &quot;resource script&quot;.  Hmmm.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th January 2008, 12:16</div></div><div class="posttext">If you are willing to take over the RegDLL stuff and do it by hand, its even possible to register a dll hardcoded for HKCR into HKCU\Software\Classes without having source for dll (I have done this for my single user non admin hacked install of iTunes) I could dig up the code if you want (Might be in AutoIt or some weird language IIRC) <br />
+<br />
+But since you control the dll, i'm sure there are better ways, either by using a special entrypoint for single installs (RegDll supports that), or have the installer write a &quot;hint&quot; in HKCU before it registers the dll, or as you say, check for write access to HKCR and fallback to HKCU</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RDaneel</div><div class="date">18th January 2008, 19:17</div></div><div class="posttext">Cool - I really should review the docs once in a while to notice that features like the optional entrypoint on RegDLL are there! ;)<br />
+<br />
+This does look like the preferred way of making this work... since UnRegDLL does not seem to share this feature, I can presumably just always attempt an HKCU unregistration, and then fall back to a HKCR one if that errors out.<br />
+<br />
+(Or, if detecting the error is not reliable enough, just do an explicit probe in the DLL's DllUnregisterServer to see if the HKCU registration entries are present.)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">18th January 2008, 21:06</div></div><div class="posttext">Originally posted by Anders <br />
+When using RequestExectutionLevel=admin, its IMPOSSIBLE to start a new process as the current(&quot;correct&quot;) user without using ugly hacks like starting the app from the task scheduler(that service might be disabled) or injecting code into explorer.exe (ugly, hacky, and user might not have explorer.exe running, or it could even be running elevated even tho that is not recommended) The UAC plugin is somewhat hacky aswell, but it follows the wrapper model recommended by MS (well, they really want you to use MSI but that is not really relevant here)<br />
+Is such a hack currently possible with the UAC plug-in?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">18th January 2008, 21:15</div></div><div class="posttext">Originally posted by RDaneel <br />
+Yes, it may be a weird combination, but it was what I was used to doing since Win9x days... ;)<br />
+On Win9x there is indeed not a lot of different between the the shell var contexts. If I remember correctly, a per-user desktop is available, but the Start Menu is always shared between all users. However, an installation in $PROGRAMFILES should normally be combined with &quot;SetShellVarContext all&quot;. This will work fine with both Win9x and NT.<br />
+<br />
+With Vista wrong setting will cause more troubles as compared to previous Windows versions.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th January 2008, 21:21</div></div><div class="posttext">Originally posted by Joost Verburg <br />
+If I remember correctly, a per-user desktop is available, but the Start Menu is always shared between all users.  <br />
+I don't think the start menu is shared (I know different user profiles can have seperate start menus (As for shared start menu, I can't remember if 9x has one or if it works))<br />
+The all user desktop does not work on 98 IIRC (even tho the folder is there, the content is not displayed on the desktop)<br />
+<br />
+Originally posted by Joost Verburg <br />
+<br />
+With Vista wrong setting will cause more troubles as compared to previous Windows versions.  <br />
+These problems have been here since win2000 atleast, its just that most people run as admin on 2k/XP</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">18th January 2008, 21:39</div></div><div class="posttext">Originally posted by Anders <br />
+I don't think the start menu is shared (I know different user profiles can have seperate start menus (As for shared start menu, I can't remember if 9x has one or if it works))<br />
+The all user desktop does not work on 98 IIRC (even tho the folder is there, the content is not displayed on the desktop)<br />
+Then it's the other way around. I remember one of them doesn't work.<br />
+Originally posted by Anders <br />
+These problems have been here since win2000 atleast, its just that most people run as admin on 2k/XP <br />
+That's what I mean.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" System::Call 'netapi32::NetUserEnum', media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  System::Call 'netapi32::NetUserEnum' NSIS Discussion" />
+	
+	<title> System::Call 'netapi32::NetUserEnum' [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  System::Call 'netapi32::NetUserEnum'</div>
+<hr />
+<div class="pda"><a href="t-313439.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=313439">System::Call 'netapi32::NetUserEnum'</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">intruder1980</div><div class="date">6th October 2009, 09:36</div></div><div class="posttext">Hey,<br />
+<br />
+I have some trouble using the System::Call 'netapi32::NetUserEnum'!<br />
+<br />
+I need a way to get a list of the local users.<br />
+Some months ago &quot;Anders&quot; adviced me to use the System-Plugin:<br />
+<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=304642&amp;highlight=exec<br />
+<br />
+I am using the functions written by &quot;CancerFace&quot;. This worked fine for a while but once in a while I am running into some kind of memory-leak?!?!<br />
+I found the Thread about it:<br />
+<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=243303&amp;highlight=EnumerateUsers<br />
+<br />
+I wrote for testing a small installer with a loop. When I set the number of iterations high the error always appears. Is there something I am doing wrong? I am really thankful for any help that you guys can give me. <br />
+<br />
+This is my test-installer:<br />
+<br />
+!include &quot;Sections.nsh&quot;<br />
+!include &quot;LogicLib.nsh&quot;<br />
+;--------------------------------<br />
+<br />
+Name &quot;One Section&quot;<br />
+OutFile &quot;one-section.exe&quot;<br />
+<br />
+;--------------------------------<br />
+Var i<br />
+Var j<br />
+<br />
+!macro EnumerateUsers SERVER_NAME <br />
+messagebox mb_ok|mb_iconexclamation 'Start'<br />
+!define Index &quot;Line${__LINE__}&quot;<br />
+  StrCpy $j 0<br />
+Loop:<br />
+  IntOp $j $j + 1<br />
+  <br />
+  <br />
+  System::Call 'netapi32::NetUserEnum(w &quot;${SERVER_NAME}&quot;,i 0,i 2,*i .R0,i -1, \<br />
+  *i .R1,*i .R2,*i .r1)i .r2'<br />
+  StrCpy $R8 $R0<br />
+  StrCpy $9 0<br />
+  ${Index}-loop:<br />
+    StrCmp $9 $R2 ${Index}-stop +1<br />
+    ;messagebox mb_ok|mb_iconexclamation 'BEFORE CALL! R0:[$R0]'<br />
+    System::Call &quot;*$R0(w .R9)&quot;<br />
+    IntOp $i $9 + 1<br />
+    IntOp $R0 $R0 + 4<br />
+    IntOp $9 $9 + 1<br />
+    Goto ${Index}-loop<br />
+  ${Index}-stop:<br />
+  System::Call 'netapi32.dll::NetApiBufferFree(i R8)i .R1'<br />
+  <br />
+${If} $j &lt; &quot;1000&quot;<br />
+      goto Loop<br />
+${EndIf}<br />
+  !undef Index<br />
+messagebox mb_ok|mb_iconexclamation 'Stop'<br />
+!macroend<br />
+<br />
+;--------------------------------<br />
+<br />
+; Sections<br />
+Section !Required<br />
+  !insertmacro EnumerateUsers &quot;\\127.0.0.1&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">6th October 2009, 15:39</div></div><div class="posttext">System::Call 'netapi32::NetUserEnum(w &quot;${SERVER_NAME}&quot;,i 0,i 2,*i .R0,i -1, \<br />
+*i .R1,*i .R2,*i .r1)i .r2'<br />
+System::Call 'netapi32.dll::NetApiBufferFree(i R0)i .R1' in a loop does not leak<br />
+<br />
+comment out System::Call &quot;*$R0(w .R9)&quot; and the problem seems to go away(Looking at private bytes in process explorer), not sure why<br />
+<br />
+...but your usage of the resume handle seems wrong, you should do StrCpy $1 0 before the loop and use *i r1 r1 in the function call, not *i .r1<br />
+<br />
+also, $R1 has the count of items you got, not $R2</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">6th October 2009, 15:55</div></div><div class="posttext">here is the complete code i'm testing:<br />
+Var i<br />
+Var j<br />
+<br />
+!macro EnumerateUsers SERVER_NAME<br />
+messagebox mb_topmost 'Start'<br />
+!define Index &quot;Line${__LINE__}&quot;<br />
+StrCpy $j 0<br />
+StrCpy $1 0<br />
+Loop:<br />
+IntOp $j $j + 1<br />
+<br />
+System::Call 'netapi32::NetUserEnum(w &quot;${SERVER_NAME}&quot;,i 0,i 2,*i .R0,i -1, \<br />
+*i .R1,*i .R2,*i r1 r1)i .r2'<br />
+StrCpy $R8 $R0<br />
+StrCpy $9 0<br />
+<br />
+${Index}-loop:<br />
+StrCmp $9 $R1 ${Index}-stop 0<br />
+#System::Call &quot;*$R0(w.R9)&quot; ;uncomment this for leak...<br />
+IntOp $i $9 + 1<br />
+IntOp $9 $9 + 1<br />
+IntOp $R0 $R0 + 4<br />
+#DetailPrint &quot;$9==$R1:$R9&lt;&lt;$R0&quot;<br />
+Goto ${Index}-loop<br />
+${Index}-stop:<br />
+<br />
+System::Call 'netapi32.dll::NetApiBufferFree(i R8)i .R1'<br />
+<br />
+<br />
+<br />
+${If} $j &lt; &quot;1000&quot;<br />
+goto Loop<br />
+${EndIf}<br />
+!undef Index<br />
+messagebox mb_ok|mb_iconexclamation 'Stop'<br />
+!macroend<br />
+Section !Required<br />
+!insertmacro EnumerateUsers &quot;\\127.0.0.1&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">intruder1980</div><div class="date">8th October 2009, 12:56</div></div><div class="posttext">Hey Anders,<br />
+<br />
+thanks again for looking into it. Really appreciate the fast support in this forum.<br />
+I am still looking for a solution.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

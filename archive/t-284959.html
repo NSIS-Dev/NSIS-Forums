@@ -1,0 +1,182 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Refreshing Environment Variable Table., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Refreshing Environment Variable Table. NSIS Discussion" />
+	
+	<title> Refreshing Environment Variable Table. [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Refreshing Environment Variable Table.</div>
+<hr />
+<div class="pda"><a href="t-284959.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=284959">Refreshing Environment Variable Table.</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">14th January 2008, 11:21</div></div><div class="posttext">Hi<br />
+<br />
+I have an application that is dependent on some dll's. These dll's are included in the installer. Once all the files and dll's have been installed I manipulate the search path and some system wide environment variables using Kickik's script which can be found here: http://nsis.sourceforge.net/Path_Manipulation<br />
+<br />
+Once the installer has finished I can launch my application through any of the shortcuts I've created, everything works as expected.<br />
+<br />
+What I would like to do is to launch the application from the finish page of the installer. The problem I have is that I get a UnsatisfiedLinkError (Java). This is because my application is not picking up the new PATH that I have just set. The new path contains the directory to my dll's.<br />
+<br />
+What I need to do is to refresh the environment table after I have set the path so when my application launches from the finish page it will be able to pickup the dll's on the search path.<br />
+<br />
+I have followed the following thread:<br />
+http://forums.winamp.com/showthread.php?threadid=273924<br />
+which adds some code to Kickik's script which refreshes the environment table. However, this does not work for me.<br />
+<br />
+I have included Kickik's script with the modifications.<br />
+<br />
+Could somebody please help me I've spent a lot of time on this and don't seem to be getting anywhere.<br />
+<br />
+Regards<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bholliger</div><div class="date">14th January 2008, 18:25</div></div><div class="posttext">Hi there!<br />
+<br />
+Well, this might not be what you expected, but it's a solution, that works:<br />
+<br />
+Use FileWrite to write a batch file to the temp directory. Write something like<br />
+<br />
+<br />
+@echo off<br />
+set whatevervar=what you wanna set<br />
+set path=%path%;$INSTDIR<br />
+start myapplication.exe<br />
+<br />
+<br />
+And then just execute the batch file with ExecWait &quot;mybatch.cmd&quot;. After execution you can delete the file. Your application gets the variables for the first time start. For upcoming starts, explorer has the right environment variables.<br />
+<br />
+Cheers<br />
+<br />
+Bruno</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">14th January 2008, 18:28</div></div><div class="posttext">See:<br />
+<br />
+http://nsis.sourceforge.net/Setting_Environment_Variables_to_Active_Installer_Process</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">15th January 2008, 09:01</div></div><div class="posttext">Thanks guys,<br />
+<br />
+I'll take a look at both options.<br />
+<br />
+Regards<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">16th January 2008, 19:28</div></div><div class="posttext">Hi<br />
+<br />
+I have looked at the batch option first and have used <br />
+<br />
+nsExec::Exec '$0 /c &quot;$TEMP\launchZang.cmd&quot;'<br />
+<br />
+instead of:<br />
+<br />
+ExecWait &quot;$TEMP\launchZang.cmd&quot; <br />
+<br />
+because I do not want the command shell to appear.<br />
+<br />
+The following function is called from the finish page.<br />
+<br />
+<br />
+Function LaunchZang<br />
+<br />
+  ClearErrors<br />
+  FileOpen $0 $TEMP\launchZang.cmd w<br />
+  IfErrors done<br />
+      FileWrite $0 &quot;set ZBZ_HOME=$INSTDIR&quot;<br />
+      FileWrite $0 &quot;$\r$\n&quot;<br />
+      FileWrite $0 &quot;set FFMPEG_HOME=$INSTDIR\ffmpeg&quot;<br />
+      FileWrite $0 &quot;$\r$\n&quot;<br />
+      FileWrite $0 &quot;set path=%path%;${DLLS_ABSOLUTE_PATH}&quot;<br />
+      FileWrite $0 &quot;$\r$\n&quot;<br />
+      FileWrite $0 'cd &quot;$INSTDIR\client&quot;'<br />
+      FileWrite $0 &quot;$\r$\n&quot;<br />
+      FileWrite $0 '&quot;..\jre_v6\bin\javaw.exe&quot; -cp .\BrowserLauncher2-10rc4.jar;.\Connected.jar;.\flickrapi-1.0b4.jar;.\jdic.jar;.\jh.jar;.\jregex1.2_01.jar;.\JSON.jar;.\mail.jar com.kc.pm.PhoneManager -Xmx210m'<br />
+      FileClose $0 <br />
+<br />
+      ;ExecWait &quot;$TEMP\launchZang.cmd&quot;<br />
+      <br />
+      SetOutPath &quot;$TEMP&quot;<br />
+      ReadEnvStr $0 COMSPEC<br />
+      nsExec::Exec '$0 /c &quot;$TEMP\launchZang.cmd&quot;'     <br />
+      <br />
+  done:<br />
+  <br />
+FunctionEnd<br />
+<br />
+<br />
+The application starts from the finish page which is what I wanted, the command prompt disappears which I want I want. All good, except the finish page of the installer hangs around. The installer is failing to exit/finish.<br />
+<br />
+Any ideas?<br />
+<br />
+Regards<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bholliger</div><div class="date">16th January 2008, 19:46</div></div><div class="posttext">I'd try kichik's idea or the following.<br />
+<br />
+Execute the script in asynchronous mode:<br />
+<br />
+<br />
+      SetOutPath &quot;$TEMP&quot;<br />
+      ReadEnvStr $0 COMSPEC<br />
+      ExecShell &quot;open&quot; $0 '/c &quot;$TEMP\launchZang.cmd&quot;' SW_HIDE<br />
+      Sleep 2500<br />
+      Delete /REBOOTOK &quot;$TEMP\launchZang.cmd&quot;<br />
+<br />
+<br />
+Cheers<br />
+<br />
+Bruno</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">17th January 2008, 10:13</div></div><div class="posttext">Thanks for the reply.<br />
+<br />
+I've taken your code and everything works perfectly. I'm also going to look at kichik's idea.<br />
+<br />
+Once again thank you.<br />
+<br />
+Regards<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">17th January 2008, 13:35</div></div><div class="posttext">Hi<br />
+<br />
+I have also got it working using kichik's link.<br />
+<br />
+<br />
+Function LaunchZang<br />
+<br />
+  SetEnv::SetEnvVar &quot;ZBZ_HOME&quot; &quot;$INSTDIR&quot;<br />
+  SetEnv::SetEnvVar &quot;FFMPEG_HOME&quot; &quot;$INSTDIR\ffmpeg&quot;<br />
+  ReadEnvStr $R0 &quot;PATH&quot;<br />
+  StrCpy $R0 &quot;$R0;${DLLS_ABSOLUTE_PATH}&quot;<br />
+  SetEnv::SetEnvVar &quot;PATH&quot; $R0<br />
+  ExecShell &quot;open&quot; &quot;$SMPROGRAMS\${ZANG}\${ZANG}.lnk&quot;<br />
+  <br />
+FunctionEnd<br />
+<br />
+<br />
+Thanks to the both of you.<br />
+<br />
+Regards<br />
+<br />
+Paul</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

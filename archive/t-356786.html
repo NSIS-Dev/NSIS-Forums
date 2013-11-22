@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Uninstall Log for File /r, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Uninstall Log for File /r NSIS Discussion" />
+	
+	<title> Uninstall Log for File /r [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Uninstall Log for File /r</div>
+<hr />
+<div class="pda"><a href="t-356786.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=356786">Uninstall Log for File /r</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Zeranoe</div><div class="date">6th March 2013, 05:39</div></div><div class="posttext">I'm trying to create a uninstall log that records every file that is installed so that my uninstaller only removes the files that were originally installed. I haven't made a whole lot of progress though because I'm finding it difficult to log File /r commands.<br />
+<br />
+Here is my current progress, please be aware that this script does NOT work, but it is my current progress.<br />
+<br />
+Var UninstallLog<br />
+!macro InstallDirectory Directory<br />
+  File /r &quot;${Directory}&quot;<br />
+  Push &quot;${Directory}&quot;<br />
+  Call InstallDirectoryFiles<br />
+!macroend<br />
+<br />
+Function InstallDirectoryFiles<br />
+  Pop $3<br />
+  FindFirst $0 $1 &quot;$INSTDIR\$3\*&quot;<br />
+  FindNext $0 $1<br />
+  FindNext $0 $1<br />
+  StrCpy $2 &quot;$3\$1&quot;<br />
+  Goto Loop<br />
+  Loop:<br />
+  DetailPrint &quot;First 1: $1&quot;<br />
+  StrCmp $1 &quot;&quot; NextMain<br />
+  StrCmp $1 &quot;.&quot; Next<br />
+  StrCmp $1 &quot;..&quot; Next<br />
+  DetailPrint &quot;Second 2: $2&quot;<br />
+  IfFileExists &quot;$2\*&quot; IsDir IsFile<br />
+  IsDir:<br />
+  FindFirst $0 $1 &quot;$INSTDIR\$2\*&quot;<br />
+  StrCmp $1 &quot;&quot; Close<br />
+  StrCmp $1 &quot;.&quot; NextDir<br />
+  StrCmp $1 &quot;..&quot; NextDir<br />
+  FileOpen $UninstallLog &quot;$INSTDIR\uninstall.log&quot; a<br />
+  FileSeek $UninstallLog 0 END<br />
+  FileWrite $UninstallLog &quot;$2\$1$\r$\n&quot;<br />
+  FileClose $UninstallLog<br />
+  StrCpy $2 &quot;$2\$1&quot;<br />
+  DetailPrint &quot;Third 2: $2&quot;<br />
+  Goto Next<br />
+  IsFile:<br />
+  FileOpen $UninstallLog &quot;$INSTDIR\uninstall.log&quot; a<br />
+  FileSeek $UninstallLog 0 END<br />
+  FileWrite $UninstallLog &quot;$2\$1$\r$\n&quot;<br />
+  FileClose $UninstallLog<br />
+  DetailPrint &quot;Forth 2: $2&quot;<br />
+  Goto Next<br />
+  NextDir:<br />
+  FindNext $0 $1<br />
+  Goto IsDir<br />
+  Next:<br />
+  FindNext $0 $1<br />
+  Goto Loop<br />
+  NextMain:<br />
+  FindClose $0<br />
+  FindNext $0 $1<br />
+  Call InstallDirectoryFiles<br />
+  Close:<br />
+  FindClose $0<br />
+FunctionEnd<br />
+<br />
+And this is called by:<br />
+<br />
+!insertmacro InstallDirectory &quot;lib&quot;<br />
+<br />
+I need to log File /r because I have many subfolders and a lot of files.<br />
+<br />
+Please let me know if there is an easier way, or where I'm going wrong with my current script.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">6th March 2013, 06:42</div></div><div class="posttext">This will only work in $INSTDIR is empty when install begins, and stuff is only installed in $INSTDIR.<br />
+<br />
+A better way would be to create something that logs compression at compiletime. Could be done using !execute and an (nsis) exe that writes an nsh with all the files to be compressed on the compilation machine.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zeranoe</div><div class="date">6th March 2013, 14:59</div></div><div class="posttext">Do you have an example of the type of log system you talked about?<br />
+<br />
+I'm still fairly new with NSIS.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">6th March 2013, 18:29</div></div><div class="posttext">No, but my point is that you probably want to make the log at compiletime. Since the amount of compiletime commands is very limited in the current version of NSIS (v3 will be better), you'll need to use !execute to launch another exe during compilation, which will generate your list for you. So you'd need to make an (NSIS) exe that generates an nsh file that contains<br />
+file &quot;Relative path\filename&quot;<br />
+file &quot;Relative path\filename2&quot;<br />
+for each file found in the relative path that you'd normally use File /r on.<br />
+And it would also write an nsh file containing<br />
+&quot;Delete $INSTDIR\Filename&quot;<br />
+for each. Although I'm not yet sure how you can make this work for other paths, too... It's undoubtedly possilble, but it would take some smart coding.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zeranoe</div><div class="date">6th March 2013, 18:42</div></div><div class="posttext">So I need to code a NSIS nsi script that generates the directory structure, compile that, and use the compiled exe in the actual installer to generate a the list?<br />
+<br />
+That first NSIS exe should write the directory structure to a .nsh file so that it can be easily loaded by the installer?<br />
+<br />
+I'm just trying to confirm if I understand this right.<br />
+<br />
+That is really the best way to make an uninstall log? Would you recommend anything else? That seems like a lot of work, and it would seem to me like I'm just doing the same sort of scripting, just calling it externally.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">6th March 2013, 19:29</div></div><div class="posttext">No, the nsh file wouldn't be loaded by the installer, it would loaded by the compiler using !include. That way the list gets created at compiletime, instead of at runtime.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zeranoe</div><div class="date">6th March 2013, 19:37</div></div><div class="posttext">So do I write the nsh file myself, or does something else create it?<br />
+<br />
+To go through this much work, am I doing something wrong?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">7th March 2013, 07:09</div></div><div class="posttext">1) Create an (NSIS) exe that uses FindFirst/FindNext or Locate plugin or whatever, to generate a filename list. Make it save this list to Files.nsh, with each line saying File &quot;Path\to\filename.ext&quot;. Also make it save this list to UnFiles.nsh, with each line saying Delete &quot;$INSTDIR\path\to\filename.ext&quot;.<br />
+2) In your actual script, at the top do !execute YourExe.exe. At the point where you currently do File /r, put !include Files.nsh . In the uninstaller section, do !include UnFiles.nsh .<br />
+<br />
+But it was just an idea. If you think it's too much work, you're free to use your own solution. Wasn't there some logging header file with logging functions that support /r, somewhere on the wiki?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">7th March 2013, 11:24</div></div><div class="posttext">This shows an example of executing a script at compile time: http://nsis.sourceforge.net/Invoking_NSIS_run-time_commands_on_compile-time<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

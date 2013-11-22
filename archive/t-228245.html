@@ -1,0 +1,211 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Default language, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Default language NSIS Discussion" />
+	
+	<title> Default language [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Default language</div>
+<hr />
+<div class="pda"><a href="t-228245.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=228245">Default language</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">12th October 2005, 14:13</div></div><div class="posttext">According to bug report #1324734 (http://sourceforge.net/tracker/?func=detail&amp;atid=373085&amp;aid=1324734&amp;group_id=22049), we should be using the UI's language as the default language. There's no technical difficulty involved and the suggested behavior is feasible. However, I'm not so sure that's the right thing to do.<br />
+<br />
+As far as I can tell, most users use the English UI, but set their locale to their local language. In this, they might appreciate the installer automatically choosing their local language. However, the bug report does bring up a valid point, saying that the installer should, at least by default, follow the rest of the UI.<br />
+<br />
+So, what do you think?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">12th October 2005, 15:53</div></div><div class="posttext">However, the UI behavior is not necessarily consistent.<br />
+Case in point- change the locale to German (Germany) and then open the Calendar applet. The UI is in English but the months are displayed in German.<br />
+So which is correct?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">apmolyneux</div><div class="date">12th October 2005, 16:30</div></div><div class="posttext">I was the original submitter of that bug, and just in case anybody is interested (other than myself and a few of my customers) here's the workaround script I wrote. Sorry it's a bit of a mess - I've just got out of the &quot;get it working&quot; phase and haven't got around to tidying it up yet:<br />
+<br />
+<br />
+!define sysOSVERSIONINFO '(i, i, i, i, i, &amp;t128) i'<br />
+!define sysGetVersionEx 'kernel32::GetVersionExA(i) i'<br />
+!define sysVER_PLATFORM_WIN32_NT 2<br />
+!macro SetUILanguage UN<br />
+Function ${UN}SetUILanguage<br />
+  Push $R0<br />
+  Push $R1<br />
+  Push $R2<br />
+  ; Call GetUserDefaultUILanguage (if available)<br />
+  ; $R0 = GetUserDefaultUILanguage()<br />
+  System::Call 'kernel32::GetUserDefaultUILanguage() i.r10'<br />
+  StrCmp $R0 &quot;error&quot; OldFashionedWay Finish<br />
+OldFashionedWay:<br />
+  ; Check the Windows version<br />
+  ; $R0 = new OSVERSIONINFO(148, 0, 0, 0, 0, &quot;&quot;)<br />
+  System::Call '*${sysOSVERSIONINFO}(148,0,0,0,0,&quot;&quot;) .r10'<br />
+  ; GetVersionEx($R0)<br />
+  System::Call '${sysGetVersionEx}(r10)'<br />
+  ; $R1 = $R0-&gt;dwPlatformId<br />
+  System::Call &quot;*$R0(i ., i ., i ., i ., i .r11)&quot;<br />
+  ; delete $R0<br />
+  System::Free $R0<br />
+  IntCmp $R1 ${sysVER_PLATFORM_WIN32_NT} PlatformIsNT<br />
+  ; We're running on DOS-based Windows<br />
+  StrCpy $R0 &quot;Control Panel\desktop\ResourceLocale&quot;<br />
+  StrCpy $R1 &quot;&quot;<br />
+  GoTo GetLCIDFromHKCU<br />
+PlatformIsNT:<br />
+  ; We're running on Windows NT<br />
+  StrCpy $R0 &quot;.DEFAULT\Control Panel\International&quot;<br />
+  StrCpy $R1 &quot;Locale&quot;<br />
+GetLCIDFromHKU:<br />
+  ReadRegStr $R2 HKU $R0 $R1<br />
+  GoTo GetLangIDFromLCID<br />
+GetLCIDFromHKCU:<br />
+  ReadRegStr $R2 HKCU $R0 $R1<br />
+GetLangIDFromLCID:<br />
+  StrCpy $R2 &quot;0x$R2&quot;<br />
+  IntOp $R0 $R2 &amp; 0xffff<br />
+Finish:<br />
+  StrCpy $LANGUAGE $R0<br />
+  Pop $R2<br />
+  Pop $R1<br />
+  Pop $R0<br />
+FunctionEnd<br />
+!macroend<br />
+!insertmacro SetUILanguage &quot;&quot;<br />
+!insertmacro SetUILanguage &quot;un.&quot;<br />
+<br />
+<br />
+To see this in action, call SetUILanguage from .onInit, and un.SetUILanguage from un.onInit.<br />
+<br />
+Basically, it just tries to call GetUserDefaultUILanguage() (available on Windows ME, Windows 2000 and later). If that doesn't work, it does some Registry trawling to find the same information.<br />
+<br />
+Comments welcome!<br />
+<br />
+Cheers,<br />
+<br />
+Andrew</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">15th October 2005, 14:55</div></div><div class="posttext">Can you please create a Wiki (http://nsis.sourceforge.net/wiki/) page for this code?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">apmolyneux</div><div class="date">17th October 2005, 13:26</div></div><div class="posttext">Originally posted by kichik <br />
+Can you please create a Wiki (http://nsis.sourceforge.net/wiki/) page for this code? <br />
+<br />
+Done - it's here (http://nsis.sourceforge.net/wiki/Language_Detection_From_Windows_UI_Language).<br />
+<br />
+That version of the code is slightly updated. The code I posted here sets $LANGUAGE based on the whole language identifier. The code on the Wiki trims off the sublanguage identifier, because that seemed to cause NSIS to get it wrong. I'm working on a bug report for that one.<br />
+<br />
+Cheers,<br />
+<br />
+Andrew</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">18th October 2005, 10:54</div></div><div class="posttext">Why not implement both options and let the NSIS scriptwriter decide what he/she thinks is best?<br />
+<br />
+Personally I set the language to the language of the OS GUI.<br />
+<br />
+The idea is simple: <br />
+<br />
+&quot;If the user can use the PC he sure can read the OS GUI language in some form... thus also an installer in this language.&quot;<br />
+<br />
+Well, since one of my installers was used by total +300.000 people in GB, FR, ES, NL, TK, DE without any install language complaint... While mostly really using XP in French, Spanish, English and German<br />
+<br />
+NOTE:<br />
+Why bother the installer user whith language questions if not needed. One of the goals of NSIS is to make installation simple, preventing un-neccesairy questions.<br />
+<br />
+BTW:<br />
+If this language is not available embededed in the installer I set to English with an option for the installation user to choose.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">apmolyneux</div><div class="date">18th October 2005, 11:18</div></div><div class="posttext">Originally posted by onad <br />
+Personally I set the language to the language of the OS GUI.<br />
+<br />
+You mean you use a script workaround like I do? If so, I'd be interested to know if your solution is similar to mine.<br />
+<br />
+Cheers,<br />
+<br />
+Andrew</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">18th October 2005, 20:25</div></div><div class="posttext">Yep, I do, actually at a given point I needed a solution NOW, so I started of my venture in writing a plugin.<br />
+<br />
+Happy as I was what I created, I thought: I'm surlely not the only one so posted the solution incl. examples on the Wiki:<br />
+<br />
+Your solution is nice, thanks! But take care accessin the registry directly, I prefer API calls of an OS, You know MS might decide to change the registry names at will.. (Windows Vista?)<br />
+<br />
+I'm sure you could alter your code doing the same as my plugin.<br />
+<br />
+Wiki MoreInfo Multilanguage and OS GUI language here.<br />
+<br />
+http://nsis.sourceforge.net/wiki/MoreInfo_plug-in<br />
+<br />
+FYI: Next month Vista Beta 2 I will do a Windows Vista compatibility test.<br />
+<br />
+For now, my heavy task is still getting makensis to work under FreeBSD (POSIX) so I can automet my builds.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">apmolyneux</div><div class="date">19th October 2005, 12:01</div></div><div class="posttext">Originally posted by onad <br />
+Your solution is nice, thanks! But take care accessin the registry directly, I prefer API calls of an OS, You know MS might decide to change the registry names at will.. (Windows Vista?)<br />
+<br />
+My code should work fine on Vista. It tries to call the API function first - the Registry-based solution is only used if the API function isn't available (e.g. on Windows 95/98 and NT 4.0). So long as MS don't decide to remove the GetUserDefaultUILanguage() API function in Vista, it should be OK.<br />
+As far as I know, there's no other way to get the UI language on &quot;legacy&quot; Windows versions. I'll take a look at your code to see how you do it.<br />
+<br />
+Cheers,<br />
+<br />
+Andrew</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">apmolyneux</div><div class="date">19th October 2005, 12:12</div></div><div class="posttext">onad:<br />
+<br />
+I just took a look at your code. I see you're getting the language of USER.EXE, which is good thinking and will work for legacy Windows versions.<br />
+<br />
+However, it won't work properly for users who are running the MUI (Multilingual User Interface) version of Windows 2000 or XP. USER.EXE is always &quot;English (US)&quot; in a MUI environment. I'm told the Enterprise and Ultimate versions of Vista will also be MUI.<br />
+<br />
+You should modify your code to try calling GetUserDefaultUILanguage first, and use the USER.EXE method as the fallback for old Windows versions.<br />
+<br />
+Documentation for GetUserDefaultUILanguage is here:<br />
+http://msdn.microsoft.com/library/default.asp?url=/library/en-us/intl/nls_5c85.asp<br />
+<br />
+Cheers,<br />
+<br />
+Andrew</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">9th November 2005, 00:16</div></div><div class="posttext">Good tip, I will adjust my plugin as soon as I find the time.<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bhaelochon</div><div class="date">17th November 2005, 21:56</div></div><div class="posttext">Originally posted by iceman_k<br />
+However, the UI behavior is not necessarily consistent.<br />
+Case in point- change the locale to German (Germany) and then open the Calendar applet. The UI is in English but the months are displayed in German.<br />
+So which is correct?<br />
+The UI behavior is consistent, though. No labels, menus, or message boxes--collectively, the &quot;UI&quot;--are modified at all. The selection only affects numbers, currencies, times, dates, and input locales; i.e. the other items in the Regional Options CP applet; i.e. the key areas of Windows that, when changed, make it possible to use an English version in a non-English environment.<br />
+<br />
+Originally posted by kichik<br />
+However, the bug report does bring up a valid point, saying that the installer should, at least by default, follow the rest of the UI.<br />
+And it's that point that clinches my decision to vote to use the UI language as the default. Word, Excel, IE, If we want our users to be able to use the locale language, we should utilize the LangDLL plug-in.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">20th November 2005, 18:39</div></div><div class="posttext">Just to keep you all up-to-date on this one, I plan to implement it for 2.12.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">21st November 2005, 10:55</div></div><div class="posttext">Great,<br />
+<br />
+Then my Moreinfo Plugin will be obsolete for the language part, good. Maybe you can reuse some of the moreinfo text of the wikipage.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">30th December 2005, 15:48</div></div><div class="posttext">Not in time for 2.12, but the change has finally been made. It'll be available in 2.13 and the next nightly build (http://nsis.sourceforge.net/nightly/nsis.zip).</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

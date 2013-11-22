@@ -1,0 +1,275 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Very advanced internationalisation, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Very advanced internationalisation NSIS Discussion" />
+	
+	<title> Very advanced internationalisation [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Very advanced internationalisation</div>
+<hr />
+<div class="pda"><a href="t-282700.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=282700">Very advanced internationalisation</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">only_johhny</div><div class="date">5th December 2007, 20:16</div></div><div class="posttext">There is a program in english with different language packages for other languages and three InstTypes: InstType $(inst_minimal)  #means installation without any additional language --&gt; only english<br />
+InstType $(inst_standard) #means installation with the language chosen at installatin begining as additional packet<br />
+InstType $(inst_full)     #means installation with all available language packets<br />
+This is what I want to do: <br />
+<br />
+[list=1]<br />
+ make the installer available in multilangue (done by MUI_RESERVEFILE_LANGDLL and MUI_LANGUAGE)<br />
+ make the license file available in more than on language (done by MUI_PAGE_CUSTOMFUNCTION_SHOW and language strings containing the filename)<br />
+ take the choosen language from the installer, and precheck it (done by MUI_PAGE_CUSTOMFUNCTION_SHOW and &quot;!insertmacro SelectSection  ${SEC0001}&quot;)<br />
+ take the choosen language from the installer, put the language file in InstType &quot;standard&quot; (how to say which group schould be added by SF_SECGRP ???)<br />
+ delete the non-use InstType when the language is english (Is it possible to 'delete' an InstType at runtime [$(inst_minimal) or $(inst_standard)] if the user chooses english, I tried CB_DELETESTRING (http://forums.winamp.com/showthread.php?s=&amp;threadid=279052&amp;highlight=CBDELETESTRING) but it seems that the wrong string is deleted?)<br />
+[/list=1] <br />
+<br />
+I use the following code (with InstTypes as shown before )<br />
+<br />
+...<br />
+!define LIC_NAME $(lic_filename)<br />
+...<br />
+<br />
+# Installer pages<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW addLicense<br />
+!insertmacro MUI_PAGE_LICENSE ..\bin\Release\lizenz.rtf # some file has to stand here, the right language file is choosen dynamically<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW MySpecialLanguageThings<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+!insertmacro MUI_PAGE_STARTMENU Application $StartMenuGroup<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!insertmacro MUI_PAGE_FINISH<br />
+!insertmacro MUI_UNPAGE_CONFIRM<br />
+!insertmacro MUI_UNPAGE_INSTFILESES<br />
+<br />
+# Installer languages<br />
+!insertmacro MUI_LANGUAGE German<br />
+!insertmacro MUI_LANGUAGE English<br />
+!insertmacro MUI_LANGUAGE French<br />
+<br />
+...<br />
+<br />
+ <br />
+Function addLicense <br />
+# addLicence shows the right licence file instead allowing only one via MUI_PAGE_LICENSE<br />
+ <br />
+   ClearErrors<br />
+   System::Call 'kernel32::CreateFile(t &quot;$EXEDIR\${LIC_NAME}&quot;, i ${GENERIC_READ}, i ${FILE_SHARE_READ}, i 0, i ${OPEN_EXISTING}, i 0, i 0) i .r0'<br />
+   IfErrors exit<br />
+   System::Call 'kernel32::GetFileSize(i r0, i 0) i .r1'<br />
+   IntOp $1 $1 + 1 ; for terminating zero<br />
+   System::Alloc $1<br />
+   Pop $2<br />
+   System::Call 'kernel32::ReadFile(i r0, i r2, i r1, *i .r3, i 0)'<br />
+   System::Call 'kernel32::CloseHandle(i r0)'<br />
+   FindWindow $0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+   GetDlgItem $0 $0 1000<br />
+   SendMessage $0 ${WM_SETTEXT} $0 $2<br />
+   System::Free $2<br />
+exit:<br />
+FunctionEnd<br />
+<br />
+...<br />
+# Installer sections<br />
+Section $(SEC0000_NAME) SEC0000<br />
+    SetOutPath $INSTDIR<br />
+    SetOverwrite on<br />
+    File ..\bin\Release\license.rtf<br />
+    SetOutPath $INSTDIR\en<br />
+    File /r ..\bin\Release\help\en\*<br />
+    WriteRegStr HKLM &quot;${REGKEY}\Components&quot; MainProg 1<br />
+    SectionIn RO   # This Section is allways checked and cannot be disabled<br />
+SectionEnd<br />
+<br />
+SectionGroup /e $(SECGRP0000_NAME) SECGRP0000<br />
+    # what languages belongs to standard type<br />
+    # is choosen dynamically via MyOnGuiInit<br />
+    Section /o $(SEC0001_NAME) SEC0001<br />
+        SetOutPath $INSTDIR\de<br />
+        SetOverwrite on<br />
+        File /r ..\bin\Release\de\*<br />
+        File /r ..\bin\Release\help\de\*<br />
+        File ..\bin\Release\lizenz.rtf<br />
+        WriteRegStr HKLM &quot;${REGKEY}\Components&quot; German 1<br />
+        SectionIn 3<br />
+    SectionEnd<br />
+<br />
+    Section /o $(SEC0002_NAME) SEC0002<br />
+        SetOutPath $INSTDIR\fr<br />
+        SetOverwrite on<br />
+        File /r ..\bin\Release\fr\*<br />
+        File /r ..\bin\Release\help\fr\*<br />
+        WriteRegStr HKLM &quot;${REGKEY}\Components&quot; French 1<br />
+        SectionIn 3<br />
+    SectionEnd<br />
+SectionGroupEnd<br />
+<br />
+<br />
+Function MySpecialLanguageThings<br />
+  # delete not used InstType if language is English<br />
+  # does not work... deletes the wrong string - no custom anymore<br />
+    ${If} $(SEC0000_NAME)  == &quot;Main Program&quot;<br />
+        Push $R0        <br />
+        FindWindow $R0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+        GetDlgItem $R0 $R0 1017        <br />
+        SendMessage $R0 ${CB_DELETESTRING} 3 $(inst_standard)<br />
+        Pop $R0<br />
+    ${Else}<br />
+ # selecting installer sections (languages)<br />
+ # adding to a group does not work in this way...<br />
+        ${If} $(SEC0001_NAME)  == &quot;Deutsch&quot;<br />
+            !insertmacro SetSectionFlag ${SEC0001} SF_SECGRP<br />
+            !insertmacro SelectSection  ${SEC0001}<br />
+        ${Else}<br />
+            ${If} $(SEC0002_NAME) == &quot;FranÃ§ais&quot;<br />
+                !insertmacro SetSectionFlag ${SEC0002} SF_SECGRP<br />
+                !insertmacro SelectSection  ${SEC0002}<br />
+            ${EndIf}<br />
+        ${EndIf}<br />
+    ${EndIf}<br />
+FunctionEnd<br />
+<br />
+LangString SEC0000_NAME     ${LANG_ENGLISH} &quot;Main Program&quot;<br />
+LangString SEC0000_NAME     ${LANG_GERMAN}  &quot;Hauptprogramm&quot;<br />
+LangString SEC0000_NAME     ${LANG_FRENCH}  &quot;Programme&quot;<br />
+LangString SEC0001_NAME     ${LANG_ENGLISH} &quot;German&quot;<br />
+LangString SEC0002_NAME     ${LANG_ENGLISH} &quot;French&quot;<br />
+LangString SEC0001_NAME     ${LANG_GERMAN}  &quot;Deutsch&quot;<br />
+LangString SEC0002_NAME     ${LANG_FRENCH}  &quot;FranÃ§ais&quot;<br />
+LangString lic_filename     ${LANG_ENGLISH} &quot;..\bin\Release\license.rtf&quot;<br />
+LangString lic_filename     ${LANG_GERMAN}  &quot;..\bin\Release\lizenz.rtf&quot;<br />
+# no licence file for French yet --&gt; we take the english one<br />
+LangString lic_filename     ${LANG_FRENCH}  &quot;..\bin\Release\license.rtf&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">only_johhny</div><div class="date">5th December 2007, 20:19</div></div><div class="posttext">Maybe there is a more elegant way than comparing with self defined strings (that maybe change later)?<br />
+${If} $(SEC0002_NAME) == &quot;FranÃ§ais&quot;<br />
+...<br />
+LangString SEC0002_NAME     ${LANG_FRENCH}  &quot;FranÃ§ais&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">only_johhny</div><div class="date">5th December 2007, 20:22</div></div><div class="posttext">Originally posted by Afrow UK <br />
+[...]{SF_SECGRP} [...] setting it means you are turning your section into a group marker. How can I add/remove a section to/from a group at runtime?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th December 2007, 21:10</div></div><div class="posttext">To &quot;delete&quot; installation types, you can use InstTypeSetText with an empty string. You can then use SectionSetInstTypes to set the installation type to which each section belongs. To hide sections, set their text to an empty string using SectionSetText.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">only_johhny</div><div class="date">5th December 2007, 21:45</div></div><div class="posttext">SectionSetInstTypes worked fine, 'but InstTypeSetText 1 &quot;&quot;' doesn't seem to work: the second InstType is still there.<br />
+Function MySpecialLanguageThings<br />
+  # delete not used InstType if language is English <br />
+  # by setting the text of standard (sectinos are counted from 0)<br />
+  # to an empty string<br />
+    ${If} $(SEC0000_NAME)  == &quot;Main Program&quot;<br />
+        InstTypeSetText 1 &quot;&quot;<br />
+    ${Else}<br />
+ # selecting installer sections (languages)<br />
+ # set a group needs binary bit b110 = d6.<br />
+        ${If} $(SEC0001_NAME)  == &quot;Deutsch&quot;<br />
+            SectionSetInstTypes ${SEC0001} 6<br />
+            !insertmacro SelectSection  ${SEC0001}<br />
+        ${Else}<br />
+            ${If} $(SEC0002_NAME) == &quot;FranÃ§ais&quot;<br />
+                SectionSetInstTypes ${SEC0002} 6<br />
+                !insertmacro SelectSection  ${SEC0002}<br />
+            ${EndIf}<br />
+        ${EndIf}<br />
+    ${EndIf}<br />
+FunctionEnd <br />
+<br />
+Any idea how to ask for the choosen language other than comparing with the manaully defined LangStrings?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th December 2007, 21:56</div></div><div class="posttext">InstTypeSetText is zero based. Make sure you got the numbers right.<br />
+<br />
+$LANGUAGE will give you the language identifier which can be compared to ${LANG_*}.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">only_johhny</div><div class="date">6th December 2007, 18:40</div></div><div class="posttext">$LANGUAGE gives the choosen LCID, therefore<br />
+1031 for German<br />
+1033 for English<br />
+1036 for French<br />
+<br />
+if this will be ALWAYS like that it's OK, even if &quot;readable&quot; synonyms (like German, English, French) would be better.<br />
+<br />
+using <br />
+InstTypeSetText 1 &quot;&quot;<br />
+there are still all InstTypes there. Any more ideas about this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th December 2007, 23:46</div></div><div class="posttext">$LANGUAGE gives chosen language identifier (LANGID). It can be compared to ${LANG_GERMAN}, ${LANG_ENGLISH}, ${LANG_FRENCH} and friends which contain the appropriate language identifier.<br />
+<br />
+Using InstTypeSetText with an empty string works fine for me. You'll have to be a bit more specific on your usage.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">only_johhny</div><div class="date">7th December 2007, 20:55</div></div><div class="posttext">I have the solution now. The problem was, that I used my Function here:<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW MySpecialLanguageThings<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+<br />
+<br />
+But seem to has to be used here:<br />
+<br />
+<br />
+!define MUI_CUSTOMFUNCTION_GUIINIT MySpecialLanguageThings<br />
+<br />
+<br />
+PS: ${If} $LANGUAGE  == ${LANG_ENGLISH} works fine!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">only_johhny</div><div class="date">12th January 2008, 13:18</div></div><div class="posttext">I had problems with the multi language license file in Vista and tried to find a better soulution. This is the native way to do this (Solution at sourceforge/bug-tracker (https://sourceforge.net/tracker/?func=detail&amp;atid=373085&amp;aid=1869701&amp;group_id=22049)):<br />
+...<br />
+<br />
+# Reserved Files<br />
+!insertmacro MUI_RESERVEFILE_LANGDLL<br />
+<br />
+...<br />
+<br />
+# Installer pages<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+!insertmacro MUI_PAGE_LICENSE $(lic_filename)<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+!insertmacro MUI_PAGE_STARTMENU Application $StartMenuGroup<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!insertmacro MUI_PAGE_FINISH<br />
+!insertmacro MUI_UNPAGE_CONFIRM<br />
+!insertmacro MUI_UNPAGE_INSTFILES<br />
+<br />
+# Installer languages<br />
+!insertmacro MUI_LANGUAGE German<br />
+!insertmacro MUI_LANGUAGE English<br />
+!insertmacro MUI_LANGUAGE French<br />
+<br />
+...<br />
+<br />
+LicenseLangString lic_filename     ${LANG_ENGLISH} &quot;..\bin\Release\license.rtf&quot;<br />
+LicenseLangString lic_filename     ${LANG_GERMAN}  &quot;..\bin\Release\lizenz.rtf&quot;<br />
+# no licence file for French yet --&gt; we take the english one<br />
+LicenseLangString lic_filename     ${LANG_FRENCH}  &quot;..\bin\Release\license.rtf&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">schuldi</div><div class="date">7th February 2008, 13:27</div></div><div class="posttext">Hey this works perfect! put this on the wiki it can be helpful for others too...<br />
+Thanks so far.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">8th February 2008, 16:15</div></div><div class="posttext">IMHO, synonyms are not better in that spot..<br />
+<br />
+You wrote:<br />
+&quot;SNIP ... even if &quot;readable&quot; synonyms (like German, English, French) would be better. SNAP&quot;<br />
+<br />
+because: Then you can not calculate base and sublanguages, see the article:<br />
+<br />
+http://nsis.sourceforge.net/MoreInfo_plug-in#Info_about_LCID.27s</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

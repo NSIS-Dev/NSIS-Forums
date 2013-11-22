@@ -1,0 +1,215 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" ini hierarchy, string comparison and such., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  ini hierarchy, string comparison and such. NSIS Discussion" />
+	
+	<title> ini hierarchy, string comparison and such. [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  ini hierarchy, string comparison and such.</div>
+<hr />
+<div class="pda"><a href="t-118389.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=118389">ini hierarchy, string comparison and such.</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Ootpik</div><div class="date">19th December 2002, 01:34</div></div><div class="posttext">wondering how i might modify my install script to do a simple string comparison to add a new line in a an ini file. i'm braincramped right now, and can't seem to figure it out. here's my problem:<br />
+<br />
+i write a line to an existing section of my UT2003.ini file. there are preceding lines of the same type (key). in order to preserve hiearchical dependance, my key needs to be at the end; i.e;<br />
+<br />
+[Engine.GameEngine]<br />
+CacheSizeMegs=32<br />
+UseSound=True<br />
+ServerActors=IpDrv.MasterServerUplink<br />
+ServerActors=UWeb.WebServer<br />
+ServerPackages=Fire<br />
+ServerPackages=Editor<br />
+ServerPackages=TeamSymbols_UT2003<br />
+ServerPackages=MyPackage **<br />
+<br />
+** new line ( ServerPackages=MyPackage ) needs to be written under the preceding entries (rather than at the top, where it is defaulting to)<br />
+<br />
+how might i do that?<br />
+i know i've got to use push, pop and exch, but i'm at a loss in finding examples i can understand.<br />
+<br />
+thanks in advance.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ootpik</div><div class="date">19th December 2002, 05:28</div></div><div class="posttext">FileOpen $0 &quot;file.txt&quot; r<br />
+GetTempFileName $R0<br />
+FileOpen $1 $R0 w<br />
+loop:<br />
+   FileRead $0 $2<br />
+   IfErrors done<br />
+   StrCmp $2 &quot;line to replace$\r$\n&quot; 0 +3<br />
+      FileWrite $1 &quot;replacement of line$\r$\n&quot;<br />
+      Goto loop<br />
+   FileWrite $1 $2<br />
+   Goto loop<br />
+<br />
+done:<br />
+   FileClose $0<br />
+   FileClose $1<br />
+   Delete &quot;file.txt&quot;<br />
+   CopyFiles /SILENT $R0 &quot;file.txt&quot;<br />
+   Delete $R0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ootpik</div><div class="date">19th December 2002, 09:56</div></div><div class="posttext">hi. ok. that works, but now i want to first check if the line isn't already there. can't seem tot wrap my mind around that, however...<br />
+<br />
+could i get some help with this please?<br />
+i'd found this: http://205.188.244.9/showthread.php?s=&amp;postid=630801<br />
+however, now i need to possibly ignore/write over an ini value...<br />
+my script:<br />
+<br />
+<br />
+Section &quot;&quot;<br />
+FileOpen $0 &quot;$INSTDIR\System\UT2003.ini&quot; r<br />
+GetTempFileName $R0<br />
+FileOpen $1 $R0 w<br />
+loop:<br />
+	FileRead $0 $2<br />
+	IfErrors done<br />
+	StrCmp $2 &quot;MainMenuClass=XInterface.UT2MainMenu$\r$\n&quot; 0 +3<br />
+      FileWrite $1 &quot;ServerPackages=MyPackage$\r$\nMainMenuClass=XInterface.UT2MainMenu$\r$\n&quot;<br />
+      Goto loop<br />
+   FileWrite $1 $2<br />
+   Goto loop<br />
+done:<br />
+   FileClose $0<br />
+   FileClose $1<br />
+   Delete &quot;$INSTDIR\System\UT2003.ini&quot;<br />
+   CopyFiles /SILENT $R0 &quot;$INSTDIR\System\UT2003.ini&quot;<br />
+   Delete $R0<br />
+WriteINIStr &quot;$INSTDIR\System\UT2003.ini&quot; &quot;MyPackage.MyPackageTab_IA&quot; &quot;LastGoalScore&quot; &quot;8&quot;	<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th December 2002, 14:33</div></div><div class="posttext">Use:<br />
+<br />
+ClearErrors<br />
+FileOpen $0 &quot;file&quot; &quot;r&quot;<br />
+loop:<br />
+  FileRead $0 $1<br />
+  IfErrors done<br />
+  StrCmp $1 &quot;some line$\r$\n&quot; 0 loop<br />
+    StrCpy $2 1<br />
+done: FileClose $0<br />
+<br />
+If $2's value is &quot;1&quot; after this peice of code, the line was found in the file.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ootpik</div><div class="date">19th December 2002, 18:09</div></div><div class="posttext">i still don't get it.<br />
+<br />
+the nifty little piece of code you wrote there checks if the line is there... you say if $2's value is &quot;1&quot; after this peice of code...<br />
+<br />
+i still have to *check* if that's true.. right?<br />
+so there's code left to add there.. something like:<br />
+<br />
+StrCmp $2 1 blah<br />
+blah:<br />
+OtherThingToDo<br />
+<br />
+am i correct?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ootpik</div><div class="date">19th December 2002, 18:23</div></div><div class="posttext">also, the code i'm using above (the rather longish block of code which you formatted so nicely! :) makes my installer hesitate and jump while reporting its progress. it also reports some worrisome details like &quot;deleted: yourini.ini&quot;<br />
+<br />
+is there a more elegant way to do what i'm trying to do? like something more compact that doesn't generate all these temp file that need to be cleaned up? essentially, i want to test if:<br />
+&quot;ServerPackages=MyPackage$\r$\n&quot;<br />
+exists. if not, then add it in *above* this line:<br />
+&quot;MainMenuClass=XInterface.UT2MainMenu$\r$\n&quot;<br />
+<br />
+thank you kichik!!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ootpik</div><div class="date">19th December 2002, 22:24</div></div><div class="posttext">this is what i have now, and it's not working :(<br />
+<br />
+; write the ini file!<br />
+Section &quot;&quot;<br />
+<br />
+ClearErrors<br />
+<br />
+FileOpen $0 &quot;$INSTDIR\System\UT2003.ini&quot; &quot;r&quot;<br />
+testloop:<br />
+  FileRead $0 $1<br />
+  IfErrors checkdone<br />
+  StrCmp $1 &quot;ServerPackages=MyPackage$\r$\n&quot; 0 testloop<br />
+    StrCpy $2 1<br />
+checkdone: FileClose $0<br />
+<br />
+StrCmp $2 &quot;1&quot; finish WriteNewIniLine<br />
+<br />
+WriteNewIniLine:<br />
+ClearErrors<br />
+<br />
+FileOpen $0 &quot;$INSTDIR\System\UT2003.ini&quot; &quot;r&quot;<br />
+GetTempFileName $R0<br />
+FileOpen $1 $R0 w<br />
+loop:<br />
+	FileRead $0 $2<br />
+	IfErrors done<br />
+	StrCmp $2 &quot;MainMenuClass=XInterface.UT2MainMenu$\r$\n&quot; 0 +3<br />
+      FileWrite $1 &quot;ServerPackages=MyPackage$\r$\nMainMenuClass=XInterface.UT2MainMenu$\r$\n&quot;<br />
+      Goto loop<br />
+   FileWrite $1 $2<br />
+   Goto loop<br />
+done:<br />
+   FileClose $0<br />
+   FileClose $1<br />
+   Delete &quot;$INSTDIR\System\UT2003.ini&quot;<br />
+   CopyFiles /SILENT $R0 &quot;$INSTDIR\System\UT2003.ini&quot;<br />
+   Delete $R0<br />
+<br />
+finish:<br />
+	WriteINIStr &quot;$INSTDIR\System\UT2003.ini&quot; &quot;TeamFreeze.MyPackageTab_IA&quot; &quot;LastGoalScore&quot; &quot;8&quot;	<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th December 2002, 23:45</div></div><div class="posttext">To make the progress indicator ignore those commands put them in a function and call that function from the section. To hide the output use SetDetailsPrint.<br />
+<br />
+What do you mean by not working? Do you mean it prints those delete messages and jumps the progress bar or is it something else?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ootpik</div><div class="date">20th December 2002, 00:02</div></div><div class="posttext">what i mean by not working is that the above code will write the line even if (and i don't know that above code is correctly checking/comparing) it finds the line i'm searching for.<br />
+<br />
+unreal tournament re-uses ini variables.<br />
+so i've got many lines of &quot;Serverpackages=SomePackage&quot; in my ini.<br />
+however, if you look in my code above i'm checking for the existance of:<br />
+Serverpackages=MyPackage<br />
+and i was trying to get the script to skip to the next label if it found that line. unfortunately, it writes it anyway  and so i end up with two entries of the same line in my ini:<br />
+Serverpackages=MyPackage<br />
+Serverpackages=MyPackage<br />
+<br />
+btw, how would i silently call the function that contains the code?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">20th December 2002, 00:07</div></div><div class="posttext">SetDetailsPrint none<br />
+Call FunctionName<br />
+SetDetailsPrint both<br />
+<br />
+I will look at the code again tomorrow because right now I can't see anything wrong with it (2 AM here, I sure have missed something ;) )...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ootpik</div><div class="date">20th December 2002, 00:31</div></div><div class="posttext">great. can't wait to hear back on that!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ootpik</div><div class="date">20th December 2002, 09:13</div></div><div class="posttext">thanks again!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">20th December 2002, 11:14</div></div><div class="posttext">Great! Good luck with your mod/map, send us a link when the installer is ready :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ootpik</div><div class="date">20th December 2002, 15:29</div></div><div class="posttext">http://www.badgergoose.com/teamfreeze/index.html</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">20th December 2002, 19:18</div></div><div class="posttext">I don't have UT2003 so I can't test it, but I did notice two things: it doesn't check if you have UT2003 and it doesn't delete the readme on uninstall.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

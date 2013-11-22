@@ -1,0 +1,186 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Calculating Space required, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Calculating Space required NSIS Discussion" />
+	
+	<title> Calculating Space required [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Calculating Space required</div>
+<hr />
+<div class="pda"><a href="t-291064.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=291064">Calculating Space required</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">akshay.sharma</div><div class="date">30th April 2008, 12:25</div></div><div class="posttext">Is there any way to calculate the Space Required for installation?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">30th April 2008, 16:10</div></div><div class="posttext">This is done automatically and displayed one the components page or directory page (can't remember which!)<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">akshay.sharma</div><div class="date">2nd May 2008, 05:51</div></div><div class="posttext">I have created a custom page, so how to calculate the Space required in that page</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd May 2008, 11:04</div></div><div class="posttext">Enumerate all of the sections, use SectionGetSize for each one and some it up with IntOp.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">6th May 2008, 08:39</div></div><div class="posttext">Note that on 32bits Windows, IntOp will not allow numbers larger than 4294967296 (4GB). Use the Math plugin for larger installations.<br />
+<br />
+If your problem is more related to customizing the space required depending on what files are already present on the target system, here's my code. I cloned the DIRECTORY page using nsDialogs and made it update the Space Required field realtime depending on what directory name is currently in the Install To: field.<br />
+<br />
+Function DIRECTORYpage<br />
+  nsDialogs::Create /NOUNLOAD 1018<br />
+  Pop $2<br />
+  GetDlgItem $1 $HWNDPARENT 1<br />
+  EnableWindow $1 0<br />
+  ${NSD_CreateLabel} 0u 0u 300u 18u &quot;Setup will install $(^Name) in the following folder. \<br />
+    To install in a different folder, click Browse and select \<br />
+    another folder. Click Next to continue.&quot;<br />
+  Pop $2<br />
+  ${NSD_CreateGroupBox} 0u 70u 300u 35u &quot;Destination Folder&quot;<br />
+  Pop $2<br />
+  ${NSD_CreateDirRequest} 10u 85u 210u 12u &quot;$INSTDIR&quot;<br />
+  Pop $NSDFIELD1<br />
+  ${NSD_OnChange} $NSDFIELD1 DIRECTORYField1<br />
+  ${NSD_CreateBrowseButton} 229u 83u 59u 15u &quot;Br&amp;owse...&quot;<br />
+  pop $NSDBUTTON1<br />
+  ${NSD_OnClick} $NSDBUTTON1 DIRECTORYButton1<br />
+  ${NSD_CreateLabel} 0u 115u 100u 10u &quot;Space required: 0MB&quot;<br />
+  pop $NSDFIELD2<br />
+  ${NSD_CreateLabel} 0u 125u 100u 10u &quot;Space available: 0MB&quot;<br />
+  pop $NSDFIELD3<br />
+  call DIRECTORYField1<br />
+  SendMessage $NSDFIELD1 ${EM_SETSEL} 0 -1<br />
+  ${NSD_SetFocus} $NSDFIELD1<br />
+  !insertmacro MUI_HEADER_TEXT &quot;Choose Install Location&quot; &quot;Choose the folder in which to install $(^Name).&quot;<br />
+  nsDialogs::Show<br />
+FunctionEnd<br />
+<br />
+<br />
+Function DIRECTORYField1<br />
+  System::Call 'user32::GetWindowText(i $NSDFIELD1, t.r0, i${NSIS_MAX_STRLEN})'<br />
+  StrCpy $1 $0 2 1<br />
+  ${If} $1 == &quot;:\&quot; <br />
+    StrCpy $1 $0 2<br />
+    System::Call 'kernel32::GetDiskFreeSpaceExA(t, *l, *l, *l)i(r1,.r2,.,.) .r3'<br />
+    ${If} $3 == 0<br />
+      ;could not detect free space, drive probably doesn't exist. Disable Next button.<br />
+      SendMessage $NSDFIELD2 ${WM_SETTEXT} 0 &quot;STR:Space required: 0MB&quot;<br />
+      GetDlgItem $1 $HWNDPARENT 1<br />
+      EnableWindow $1 0<br />
+      goto DIRECTORYField1end<br />
+    ${EndIf}<br />
+    StrCpy $INSTDIR $0<br />
+<br />
+    #(call some function that computes how much space is<br />
+    # needed, depending on what files were found in $INSTDIR)<br />
+<br />
+    Math::Script 'r1 = ff(f(r2)/1048576,17); #[r1 &gt; 999, r1 = ff(r1/1024,17) + &quot;GB&quot;, r1 = r1 + &quot;MB&quot;]'<br />
+    SendMessage $NSDFIELD3 ${WM_SETTEXT} 0 &quot;STR:Space available: $1&quot;<br />
+    Math::Script 'r1 = ff(f($SPACENEEDED)/1048576,17); #[r1 &gt; 999, r1 = ff(r1/1024,17) + &quot;GB&quot;, r1 = r1 + &quot;MB&quot;]'<br />
+    SendMessage $NSDFIELD2 ${WM_SETTEXT} 0 &quot;STR:Space required: $1&quot;<br />
+<br />
+    ;Prevent installing to root of $WINDIR, $WINDIR itself,<br />
+    ;$PROGRAMFILES or $SYSDIR (put down here because the<br />
+    ;Space fields should still update)<br />
+    StrCpy $0 $INSTDIR 3<br />
+    StrCpy $3 $WINDIR 3<br />
+    ${If} $0 == $3<br />
+    ${OrIf} $INSTDIR == &quot;$PROGRAMFILES&quot;<br />
+    ${OrIf} $INSTDIR == &quot;$WINDIR&quot;<br />
+    ${OrIf} $INSTDIR == &quot;$SYSDIR&quot;<br />
+      GetDlgItem $1 $HWNDPARENT 1<br />
+      EnableWindow $1 0<br />
+      goto GetINSTDIRField1end<br />
+    ${EndIf}<br />
+    <br />
+    Math::Script '#[$2 &gt; $SPACENEEDED, r1 = &quot;EnoughSpace&quot;]'<br />
+    ${If} $1 == &quot;EnoughSpace&quot;<br />
+      GetDlgItem $1 $HWNDPARENT 1<br />
+      EnableWindow $1 1<br />
+    ${Else}<br />
+      GetDlgItem $1 $HWNDPARENT 1<br />
+      EnableWindow $1 0<br />
+    ${EndIf}<br />
+  ${Else}<br />
+    SendMessage $NSDFIELD2 ${WM_SETTEXT} 0 &quot;STR:Space required: 0MB&quot;<br />
+    GetDlgItem $1 $HWNDPARENT 1<br />
+    EnableWindow $1 0<br />
+  ${EndIf}<br />
+  DIRECTORYField1end:<br />
+FunctionEnd<br />
+<br />
+The function for the Browse button is as follows, in case you can use it:<br />
+Function DIRECTORYButton1<br />
+  ;remove all trailing backslashes and spaces from $INSTDIR<br />
+  StrCpy $2 $INSTDIR<br />
+  StrCpy $1 $2 1 -1<br />
+  StrCmp $1 '\' +2<br />
+  StrCmp $1 ' ' 0 +3<br />
+  StrCpy $2 $2 -1<br />
+  goto -3<br />
+  ;Get the deepest existing subdirectory in $INSTDIR<br />
+  ${Do}<br />
+    IfFileExists &quot;$2\*.*&quot; 0 +2<br />
+      ${ExitDo}<br />
+    ${CutBeforeLastBackslash} 3 $2<br />
+    StrLen $1 $3<br />
+    ${If} $1 &gt; 2<br />
+      StrCpy $2 $3<br />
+    ${Else}<br />
+      ${ExitDo}<br />
+    ${EndIf}<br />
+  ${Loop}<br />
+  nsDialogs::SelectFolderDialog &quot;Select folder&quot; $2<br />
+  pop $3<br />
+  StrCmp $3 &quot;error&quot; +2<br />
+  StrCpy $INSTDIR $3<br />
+  SendMessage $NSDFIELD1 ${WM_SETTEXT} 0 &quot;STR:$INSTDIR&quot;<br />
+FunctionEnd<br />
+<br />
+And this uses the following macro:<br />
+;  Cut off a string just before its last backslash.<br />
+;  _outvar is the number/name of the variable to write to (0 for $0, 2 for $2,<br />
+;  NEVER USE $R# REGISTERS), _input is any string.<br />
+;  Example:<br />
+;<br />
+;  StrCpy $2 &quot;c:\program files\longpath\subdir&quot;<br />
+;  ${CutBeforeLastBackslash} 3 $2<br />
+;  # $2 is now: c:\program files\longpath\subdir<br />
+;  # $3 is now: c:\program files\longpath<br />
+!macro _CutBeforeLastBackslash _outvar _input<br />
+  Push $R0<br />
+  Push $R1<br />
+  Push $R2<br />
+  !define Lprefix L${__LINE__}<br />
+  StrCpy $R0 ${_input}<br />
+  ${Do}<br />
+    StrLen $R2 $R0<br />
+    ${If} $R2 == &quot;0&quot;<br />
+      ${ExitDo}<br />
+    ${EndIf}<br />
+    StrCpy $R1 $R0 &quot;&quot; -1<br />
+    StrCpy $R0 $R0 -1<br />
+    ${If} $R1 == &quot;\&quot;<br />
+      ${ExitDo}<br />
+    ${EndIf}<br />
+  ${Loop}<br />
+  StrCpy $${_outvar} $R0<br />
+  !undef Lprefix<br />
+  Pop $R2<br />
+  Pop $R1<br />
+  Pop $R0<br />
+!macroend<br />
+!define CutBeforeLastBackslash `!insertmacro _CutBeforeLastBackslash`</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

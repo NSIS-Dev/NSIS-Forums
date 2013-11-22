@@ -1,0 +1,129 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Can NSISdl read from www page?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Can NSISdl read from www page? NSIS Discussion" />
+	
+	<title> Can NSISdl read from www page? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Can NSISdl read from www page?</div>
+<hr />
+<div class="pda"><a href="t-170638.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=170638">Can NSISdl read from www page?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">janedoe2003</div><div class="date">23rd February 2004, 19:28</div></div><div class="posttext">Hi,<br />
+<br />
+I'm back at trying to use NSIS to build an over-the-web installer after spending some time building full EXE's. It doesn't look like NSISdl is able to just download the contents of a web page into a file eg.:<br />
+<br />
+1. PHP script over on the www server<br />
+&lt;?php<br />
+//GET /check.php HTTP/1.0<br />
+echo &quot;myapp.exe\t1.0.0.0&quot;;<br />
+?&gt;<br />
+<br />
+2. NSIS installer<br />
+Section &quot;&quot; <br />
+  Call ConnectInternet<br />
+<br />
+  StrCpy $2 &quot;$INSTDIR\check.txt&quot;<br />
+  NSISdl::download http://srv/check.php $2<br />
+  Pop $R0 <br />
+  #&quot;Server did not specify content length&quot;<br />
+  MessageBox MB_OK|MB_ICONSTOP $R0<br />
+SectionEnd<br />
+<br />
+Besides creating a file on the www server (eg. list.ini), is there a way?<br />
+<br />
+Thank you<br />
+JD.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">23rd February 2004, 20:00</div></div><div class="posttext">If you have a dynamic page you should send the content length header.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">janedoe2003</div><div class="date">23rd February 2004, 20:34</div></div><div class="posttext">Thx Joost :-) This is the first time I'm sending raw data. Do you know what I'm doing wrong?<br />
+<br />
+&lt;?php<br />
+  echo &quot;Content-type: text/plain\r\n&quot;;<br />
+  echo &quot;Content-length: 17\r\n\r\n&quot;;<br />
+  echo &quot;myapp.exe\t1.0.0.0&quot;;<br />
+?&gt;<br />
+<br />
+Thx<br />
+JD.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">janedoe2003</div><div class="date">23rd February 2004, 21:01</div></div><div class="posttext">Ha! :-)<br />
+<br />
+&lt;?php<br />
+  ob_start();<br />
+header('Content-Type: text/plain');<br />
+?&gt;<br />
+&lt;html&gt;<br />
+&lt;head&gt;<br />
+&lt;/head&gt;<br />
+&lt;body&gt;<br />
+<br />
+&lt;?php<br />
+$dir = opendir(&quot;.&quot;);<br />
+<br />
+while ($item = readdir($dir)) {<br />
+	if(strstr($item,&quot;.exe&quot;)) {<br />
+		print &quot;$item\n&quot;;<br />
+	}<br />
+}<br />
+?&gt;<br />
+<br />
+&lt;/body&gt;<br />
+&lt;/html&gt;<br />
+&lt;?php<br />
+  header('Content-Length: ' . ob_get_length());<br />
+  ob_end_flush();<br />
+?&gt;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">janedoe2003</div><div class="date">24th February 2004, 08:10</div></div><div class="posttext">For those interested, this is how you can generate an INI file dynamically, listing all the binary files in the current directory.<br />
+<br />
+Since I haven't found whether PHP supports the PE file format (maybe through the Win32 package, but no idea if available in the Unix port of the language), the version number for each file is currently forced to 1.0.0.0. The output will look like a standard INI file, eg.<br />
+<br />
+[myapp]<br />
+myfile.exe=1.0.0.0<br />
+myocx.ocx=1.0.0.0<br />
+<br />
+You can then download this file from an NSIS EXE, and access it using the ReadINIStr() function.<br />
+<br />
+=&gt; Does someone know of to go about, and build a hashed table in NSIS, inserting all the key/value tuples from a section?<br />
+I need to do this so I can browse through eg. the [myapp] section, checking whether each file is available and in the right version, and download it otherwise.<br />
+<br />
+Hope that helps<br />
+JD.<br />
+<br />
+-----------------<br />
+<br />
+&lt;?php<br />
+	ob_start();<br />
+	header('Content-Type: text/plain');<br />
+<br />
+	print &quot;[myapp]\r\n&quot;;<br />
+	$dir = opendir(&quot;.&quot;);<br />
+<br />
+	while ($item = readdir($dir)) {<br />
+		  if (eregi(&quot;(.exe|.dll|.ocx)&quot;, $item)) {<br />
+				print &quot;$item=1.0.0.0\r\n&quot;;<br />
+			}<br />
+	}<br />
+<br />
+	header('Content-Length: ' . ob_get_length());<br />
+  ob_end_flush();<br />
+?&gt;</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

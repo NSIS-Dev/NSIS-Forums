@@ -1,0 +1,97 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" .NET 2.0 Installer asking to close NSIS setup, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  .NET 2.0 Installer asking to close NSIS setup NSIS Discussion" />
+	
+	<title> .NET 2.0 Installer asking to close NSIS setup [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  .NET 2.0 Installer asking to close NSIS setup</div>
+<hr />
+<div class="pda"><a href="t-262097.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=262097">.NET 2.0 Installer asking to close NSIS setup</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">soundken</div><div class="date">19th December 2006, 19:50</div></div><div class="posttext">I have a customer using my installer on a Windows XP machine (has Internet Explorer 6.0).<br />
+<br />
+The NSIS installer checks for .NET installed and using NSIS::download, downloads the .NET 2.0 installer and starts the installer running with an ExecWait.<br />
+<br />
+The .NET 2.0 installer goes through an initial step of &quot;Validating Install&quot; and seems to be checking for IE 5.01.<br />
+<br />
+At that point, the .NET 2.0 installer opens a dialog box titled &quot;Files In Use&quot; and suggests that the user stop the NSIS installer program before continuing.<br />
+<br />
+Does NSIS use any files that .NET 2.0 needs to install or having to do with IE?<br />
+<br />
+This doesn't happen on every Windows XP machine that needs 2.0 installed, and I don't have access to this customer's machine.<br />
+<br />
+The code segment that does the download and install is:<br />
+<br />
+Section &quot;&quot; SEC01 ;dotnetfx.exe<br />
+  SectionIn RO<br />
+  ${If} $NETRegistry == &quot;&quot;<br />
+        !define DOTNET_URL &quot;http://download.microsoft.com/download/5/6/7/567758a3-759e-473e-bf8f-52154438565a/dotnetfx.exe&quot;<br />
+        DetailPrint &quot;Beginning download of latest .NET Framework version.&quot;<br />
+	NSISDL::download ${DOTNET_URL} &quot;$TEMP\dotnetfx.exe&quot;<br />
+	DetailPrint &quot;Completed download.&quot;<br />
+	Pop $R0<br />
+	StrCmp $R0 &quot;success&quot; +3<br />
+		MessageBox MB_OK &quot;Download failed: $R0&quot;<br />
+		Quit<br />
+ try_install_again:<br />
+	DetailPrint &quot;Pausing installation while downloaded .NET Framework installer runs.&quot;<br />
+	ExecWait &quot;$TEMP\dotnetfx.exe&quot;<br />
+        !insertmacro CheckDotNET<br />
+        ${If} $NETRegistry == &quot;&quot;<br />
+              MessageBox MB_RETRYCANCEL|MB_DEFBUTTON1 &quot;.NET did not get installed. Do you want to try again?&quot; IDRETRY +2<br />
+              Abort &quot;You have chosen to cancel the installation.&quot;<br />
+              goto try_install_again<br />
+        ${EndIf}<br />
+	DetailPrint &quot;Completed .NET Framework install/update. Cleaning temporary files...&quot;<br />
+	Delete &quot;$TEMP\dotnetfx.exe&quot;<br />
+	DetailPrint &quot;Completed cleaning temporary files.&quot;<br />
+  ${EndIf}<br />
+SectionEnd<br />
+<br />
+Thanks for your help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">19th December 2006, 23:02</div></div><div class="posttext">My guess is that a running proccess on target uses those &quot;Files In Use&quot; files.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">soundken</div><div class="date">19th December 2006, 23:05</div></div><div class="posttext">The &quot;Files In Use&quot; dialog only listed my NSIS installer as the application that should be stopped. So it seems like that is the only running process that the .NET installer was complaining about.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">19th December 2006, 23:15</div></div><div class="posttext">As far as I know NSIS has nothing to do with this. Besides why this happens only on the specific target? Maybe you should manually unload all loaded plugins by your installer?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">soundken</div><div class="date">19th December 2006, 23:25</div></div><div class="posttext">It looks like by defualt plugins are unloaded. You have to explicitly say /NOUNLOAD. Are there any others steps I need to do to unload the plugins? Specifically NSISDL and whatever plugin ExecWait uses?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">19th December 2006, 23:34</div></div><div class="posttext">SetPluginUnload is the instruction, I guess you need to try all possible ways just to be sure that the fault is not from your side.<br />
+Another thing is to provide your customer with an installer that executes downloaded .Net installer and then quits (no ExecWait) and ask them to once .Net is successfully installed re-run your installer to complete the intallation and drop you a note if worked by this way.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">22nd December 2006, 11:16</div></div><div class="posttext">Did you use GetCORVersion to get the installed .NET version? By default, the System plug-in doesn't unload DLLs it calls. For that, you must add ?u to the end of the call line. I've updated my script (http://nsis.sourceforge.net/Get_.NET_Version) on the wiki.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">soundken</div><div class="date">28th December 2006, 16:42</div></div><div class="posttext">Yes, I am using GetCORVersion. I've added the ?u to the call.<br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">3rd January 2007, 12:31</div></div><div class="posttext">Hi soundken, <br />
+<br />
+does the &quot;Thanks&quot; mean you got it working by adding &quot;?u&quot; ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">soundken</div><div class="date">3rd January 2007, 16:04</div></div><div class="posttext">We were never able to reproduce the problem, so I can't verify that this worked.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

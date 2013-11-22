@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Extract file from a nsis installer, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Extract file from a nsis installer NSIS Discussion" />
+	
+	<title> Extract file from a nsis installer [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Extract file from a nsis installer</div>
+<hr />
+<div class="pda"><a href="t-291829.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=291829">Extract file from a nsis installer</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">neviton</div><div class="date">15th May 2008, 12:43</div></div><div class="posttext">:confused: I was thinging if there is a way to extract files from a installer created with NSIS. <br />
+<br />
+Maybe using a command line parameter with the installer like:<br />
+<br />
+setup.exe /please_gimme_my_file:app.exe :D  <br />
+<br />
+There is ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">15th May 2008, 13:15</div></div><div class="posttext">nsis installers usually have their files compressed in an archive block.. if the compression is lzma, you can extract the files using 7zip.<br />
+<br />
+It's also one of many good reasons for those writing installers to offer an option to just dump the contents from within the installer, and encrypt or obfuscate the files within.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">neviton</div><div class="date">15th May 2008, 14:35</div></div><div class="posttext">OK Thanks Animaether<br />
+<br />
+But if you know if there is a script that I could put inner the installer script to let me extract a file for a location that I choose using command line parameter if possible.<br />
+<br />
+Or if you have any idea...<br />
+Tell me please<br />
+<br />
+Thanks again :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">15th May 2008, 17:25</div></div><div class="posttext">ohhh you want to actually offer this yourself in your own installer!<br />
+Well that's a whole different question :D<br />
+<br />
+Try this...<br />
+<br />
+<br />
+!include &quot;StrFunc.nsh&quot; ; String library<br />
+<br />
+SetCompressor lzma<br />
+<br />
+Name &quot;Test&quot;<br />
+OutFile &quot;Setup.exe&quot;<br />
+InstallDir &quot;$PROGRAMFILES\test&quot;<br />
+${StrStr}<br />
+<br />
+!macro getParameterValue SWITCH DEFAULT<br />
+	!define UniqueID ${__LINE__}<br />
+<br />
+	Push $0<br />
+	Push $1<br />
+	Push $2<br />
+	Push $3<br />
+	Push $4<br />
+<br />
+	; Find SWITCH in CMDLINE<br />
+	Push &quot;$CMDLINE&quot;<br />
+	Push &quot;${SWITCH}&quot;<br />
+	Call StrStr<br />
+	Pop $0<br />
+<br />
+	; Check if the SWITCH was specified at all<br />
+	StrCmp &quot;$0&quot; &quot;&quot; gpv_notfound_${UniqueID}<br />
+<br />
+	; It was found, so get the actual value<br />
+	StrLen $2 &quot;$0&quot;<br />
+	StrLen $1 &quot;${SWITCH}&quot;<br />
+	StrCpy $0 &quot;$0&quot; $2 $1<br />
+<br />
+	; Check if the last character is a doublequote, and remove if it is<br />
+	StrCpy $3 &quot;$0&quot; 1 -1<br />
+	StrCmp $3 '&quot;' 0 +3<br />
+	    StrLen $2 &quot;$0&quot;<br />
+	    IntOp $2 $2 - 1<br />
+	    StrCpy $0 &quot;$0&quot; $2 0<br />
+<br />
+	; If value is null, assign default value<br />
+	StrCmp &quot;$0&quot; &quot;&quot; 0 +2<br />
+	StrCpy $0 &quot;${DEFAULT}&quot;<br />
+	goto _done_${UniqueID}<br />
+<br />
+	gpv_notfound_${UniqueID}:<br />
+	StrCpy $0 -1<br />
+<br />
+	_done_${UniqueID}:<br />
+	Pop $4<br />
+	Pop $3<br />
+	Pop $2<br />
+	Pop $1<br />
+	Exch $0<br />
+	!undef UniqueID<br />
+!macroend<br />
+<br />
+Function .onInit<br />
+	!insertMacro getParameterValue &quot;/extractFile=&quot; &quot;%nofile%&quot;<br />
+	Pop $0<br />
+	<br />
+	StrCmp $0 -1 0 +3<br />
+	    MessageBox MB_OK &quot;/extractFile= parameter not specified - skipping&quot;<br />
+	    goto _skip<br />
+<br />
+	StrCmp $0 &quot;%nofile%&quot; 0 +3<br />
+	    MessageBox MB_OK &quot;/extractFile= parameter specified, but value empty - skipping&quot;<br />
+	    goto _skip<br />
+<br />
+    SetOutPath $EXEDIR<br />
+	MessageBox MB_OK &quot;File to extract: $0&quot;<br />
+<br />
+	StrCmp $0 &quot;test.txt&quot; 0 +4<br />
+		MessageBox MB_OK &quot;Extracting file: $0&quot;<br />
+	    File &quot;test.txt&quot;<br />
+	    Abort<br />
+<br />
+	StrCmp $0 &quot;test2.txt&quot; 0 +4<br />
+		MessageBox MB_OK &quot;Extracting file: $0&quot;<br />
+	    File &quot;test2.txt&quot;<br />
+	    Abort<br />
+<br />
+	MessageBox MB_OK &quot;Invalid file specified - aborting.&quot;<br />
+		Abort<br />
+<br />
+	_skip:<br />
+	MessageBox MB_OK &quot;Continuing to GUI mode.&quot;<br />
+FunctionEnd<br />
+<br />
+Section &quot;MainSection&quot; SEC01<br />
+	; dummy section<br />
+SectionEnd<br />
+<br />
+<br />
+( You will need two files, &quot;test.txt&quot; and &quot;test2.txt&quot; for the above code to work.  Replace with your actual files, of course. )</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

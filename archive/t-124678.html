@@ -1,0 +1,101 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" message box when space disk is too small, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  message box when space disk is too small NSIS Discussion" />
+	
+	<title> message box when space disk is too small [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  message box when space disk is too small</div>
+<hr />
+<div class="pda"><a href="t-124678.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=124678">message box when space disk is too small</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">cooladn</div><div class="date">11th February 2003, 11:18</div></div><div class="posttext">Hello,<br />
+after a long time without post, i come to ask some help.<br />
+Several months ago, i've written a program needing 2 CDroms.<br />
+Today, i need to make un upgrade of this program.<br />
+Space disk is my problem. The program will install 575 Mo of data.<br />
+So i put an AddSize 580000 on my section, but even if i put Addsize 10000000, the program start.<br />
+<br />
+As Install directory address is present in a part of Registry database, my program start without any choice.<br />
+I make a lot of CopyFiles command like this one<br />
+<br />
+CopyFiles /silent &quot;$EXEDIR\DATA\Anims\GB\*.*&quot; &quot;$INSTDIR\data\Anims\GB&quot;<br />
+<br />
+So, i need to open a message box if space disk is too small and next to close the program.<br />
+<br />
+if you have an idea, thinks for your help</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">11th February 2003, 11:43</div></div><div class="posttext">You could try looking at the sysGetDiskFreeSpaceEx example of the System plugin in Contrib\System\System.nsi. This would allow you to manually determine if there is enough disk space free. There is a little more information on using the System plugin (not for disk space checking though) in the NSIS Archive.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">cooladn</div><div class="date">11th February 2003, 13:33</div></div><div class="posttext">thinks for your help but i don't understand not very well how to use it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">virtlink</div><div class="date">11th February 2003, 13:51</div></div><div class="posttext">The System.nsi, along with the System plugin are very undocumented and there are only a few persons who really know how to deal with it.<br />
+The essence is that you use this line: &quot;System::Call '${sysGetDiskFreeSpaceEx}(i r1, .r3, .r4, .r5)'&quot; along with some other instructions to get the free space on the disk in bytes, substract the number of needed bytes from it and then check whether the result is negative (&lt; 0). If so, there isn't enough space left.<br />
+This is the online version of the sample where Sunjammer referred to: System.nsi (http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/*checkout*/nsis/NSIS/Contrib/System/System.nsi?rev=HEAD&amp;content-type=text/plain)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">11th February 2003, 16:12</div></div><div class="posttext">Try this example out:-<br />
+<br />
+OutFile &quot;FreeSpace.exe&quot;<br />
+!define sysGetDiskFreeSpaceEx 'kernel32::GetDiskFreeSpaceExA(t, *l, *l, *l) i'<br />
+<br />
+; $0 - space required in kb<br />
+; $1 - path to check<br />
+; $2 - 0 = ignore quotas, 1 = obey quotas<br />
+; trashes $2<br />
+function CheckSpaceFunc<br />
+  IntCmp $2 0 ignorequota<br />
+  ; obey quota<br />
+  System::Call '${sysGetDiskFreeSpaceEx}(r1,.r2,,.)'<br />
+  goto converttokb<br />
+  ; ignore quota<br />
+  ignorequota:<br />
+  System::Call '${sysGetDiskFreeSpaceEx}(r1,.,,.r2)'<br />
+  converttokb:<br />
+  ; convert the large integer byte values into managable kb<br />
+  System::Int64Op $2 / 1024<br />
+  Pop $2<br />
+  ; check space<br />
+  System::Int64Op $2 &gt; $0<br />
+  Pop $2<br />
+functionend<br />
+<br />
+section -<br />
+  StrCpy $0 12345; kb u need<br />
+  StrCpy $1 'c:\' ; check drive c: for space<br />
+  Call CheckSpaceFunc<br />
+  IntCmp $2 1 okay<br />
+  MessageBox MB_OK &quot;Error: Not enough disk space&quot;<br />
+  okay:<br />
+sectionend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">cooladn</div><div class="date">11th February 2003, 16:23</div></div><div class="posttext">thinks for your help.<br />
+i 've just written a vb program doing the same thing.<br />
+if someone is interrested, just ask me</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">virtlink</div><div class="date">12th February 2003, 10:31</div></div><div class="posttext">Where you able to make a VB program that is a plugin for NSIS? I'm interested!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">cooladn</div><div class="date">17th February 2003, 10:39</div></div><div class="posttext">I use it as a program started with exeWait command<br />
+Next, as i use an emplacement in HKCU registry, it write a command that i read with my nsis installer</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th February 2003, 15:32</div></div><div class="posttext">With ExecWait you can read the return value. I don't know how to return a value to the OS with VB, but if you find it a way it will be much simpler than writing and reading from the registry.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

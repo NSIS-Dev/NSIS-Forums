@@ -1,0 +1,239 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Bitmap in the background, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Bitmap in the background NSIS Discussion" />
+	
+	<title> Bitmap in the background [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Bitmap in the background</div>
+<hr />
+<div class="pda"><a href="t-251710.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=251710">Bitmap in the background</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">22nd July 2006, 18:57</div></div><div class="posttext">Hi<br />
+I would like to add image to my installers.<br />
+I tried to do it, but without success<br />
+I saw similiar function in Setup Factory (see atachment)<br />
+I tried several methods and the best was this one:<br />
+<br />
+!ifndef LR_LOADFROMFILE<br />
+  !define LR_LOADFROMFILE     0x0010<br />
+!endif<br />
+!ifndef LR_CREATEDIBSECTION<br />
+  !define LR_CREATEDIBSECTION 0x2000<br />
+!endif<br />
+!ifndef STM_SETIMAGE<br />
+  !define STM_SETIMAGE        370<br />
+!endif<br />
+!ifndef IMAGE_BITMAP<br />
+  !define IMAGE_BITMAP        0<br />
+!endif<br />
+<br />
+!ifndef sysLoadImage<br />
+  !define sysLoadImage        &quot;user32::LoadImageA(i, t, i, i, i, i) i&quot;<br />
+!endif<br />
+<br />
+!ifndef sysDeleteObject<br />
+  !define sysDeleteObject     &quot;gdi32::DeleteObject(i) i&quot;<br />
+!endif<br />
+<br />
+!define MUI_UI &quot;${NSISDIR}\Contrib\UIs\modern_instpic.exe&quot;<br />
+ShowInstDetails nevershow<br />
+<br />
+!macro DisplayImage IMG_NAME<br />
+	Push $0<br />
+	Push $1<br />
+	Push $6<br />
+	GetTempFileName $1<br />
+	File /oname=$1 &quot;${IMG_NAME}&quot;<br />
+        FindWindow $0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+        GetDlgItem $0 $0 2000<br />
+        System::Call '${sysLoadImage} (0, s, ${IMAGE_BITMAP}, 0, 0, ${LR_CREATEDIBSECTION}|${LR_LOADFROMFILE}) .r6' &quot;$1&quot;<br />
+        SendMessage $HWNDPARENT ${STM_SETIMAGE} ${IMAGE_BITMAP} $6<br />
+        System::Call &quot;${sysDeleteObject} (r6)&quot;<br />
+	Delete $1<br />
+        Pop $6<br />
+	Pop $1<br />
+	Pop $0<br />
+!macroend<br />
+<br />
+(I found this code somewhere in the forum)<br />
+<br />
+But it works only with classic UI, not modern (after my edit)<br />
+<br />
+I tried to rewrite it to work with MUI, but I could not draw image on each NSIS page, only in installing files page<br />
+<br />
+Can anybody help me?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">22nd July 2006, 21:00</div></div><div class="posttext">I searched forums and found several goood topics.<br />
+I make great progress, but there are still few problems:<br />
+<br />
+a) how to update labels after clicking on Next/Back button?<br />
+b) how to set transparent color to gray area in the middle of the window?<br />
+<br />
+(I use the<br />
+GetDlgItem $0 $HWNDPARENT 1037<br />
+SetCtlColors $0 0xFFFFFF transparent <br />
+<br />
+function for labels, but it does not work with that gray area<br />
+Any ideas?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">22nd July 2006, 21:52</div></div><div class="posttext">1) When you set label backgrounds to transparent new text is drawn over old text. You need to refresh the label yourself. The easiest way to do this is to show and hide the label with ShowWindow.<br />
+2) See FindWindow in the manual. It shows you how to get the handle of the inner dialog.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">23rd July 2006, 07:13</div></div><div class="posttext">'skinned' forum search http://forums.winamp.com/search.php?s=&amp;action=showresults&amp;searchid=5298747&amp;sortby=lastpost&amp;sortorder=descending wansis works with MUI (but I never used it :) )</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">23rd July 2006, 21:08</div></div><div class="posttext">@Afrow UK:<br />
+<br />
+I tried to redraw labels, but no success.<br />
+I created my own ONGUIINT function, but it does not help<br />
+<br />
+... load bitmap ... ; works fine<br />
+<br />
+FindWindow $0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+GetDlgItem $0 $HWNDPARENT 1037<br />
+SetCtlColors $0 0xFFFFFF transparent ; till now works fine<br />
+ShowWindow $0 ${SW_HIDE} ; no effect<br />
+ShowWindow $0 ${SW_SHOW} ; no effect<br />
+ <br />
+<br />
+Shall I create PRE/SHOW/LEAVE functions for each page and redraw labels there or what?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">24th July 2006, 22:20</div></div><div class="posttext">Try to use the lates NSIS version, I have not tried yet myself but I think transparant text handling in MUI improved. see Changelog of v2.17 or v2.18</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">30th July 2006, 22:20</div></div><div class="posttext">Hi all<br />
+Tonight I finished work on installer with full background image. (enjoy !)<br />
+It requires some small fixes, but it is almost done.<br />
+Have a look on attachment.<br />
+<br />
+I wrote it with help of InstallOptions, manual, Skinned button plugin, ResHacker and some other articles on NSIS forums...<br />
+<br />
+It is similar to Ultra modern skin and XPUI skin, but these ones are not suitable for me.<br />
+<br />
+In few days I will publish full script.<br />
+<br />
+Known bugs:<br />
+- not redrawing label on Install page<br />
+- XPStyle must be off<br />
+- some flickering</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">28th September 2006, 18:22</div></div><div class="posttext">After few questions I modify my script for other users<br />
+<br />
+Try download this rar:<br />
+www.oblivion.sk/slappy/stiahni/slappys_script.rar <br />
+<br />
+725 kB<br />
+<br />
+There is few files like images, custom pages, UI.exe, .nsi script, readme<br />
+<br />
+You need http://forums.winamp.com/showthread.php?s=&amp;threadid=241092&amp;highlight=skinnedbutton<br />
+<br />
+this plugin for proper working of buttons<br />
+<br />
+Just try it and then ask....<br />
+<br />
+here is an image of working installer (if you compile files from upper rar you should get the same)<br />
+<br />
+http://www.oblivion.sk/images/lotr2.jpg</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zeeh3</div><div class="date">28th September 2006, 20:33</div></div><div class="posttext">Cool... have you tried ebanner plugin to use JPGs instead of those big BMPs?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">29th September 2006, 17:01</div></div><div class="posttext">Originally posted by zeeh3 <br />
+Cool... have you tried ebanner plugin to use JPGs instead of those big BMPs?  <br />
+<br />
+Ok, I will try to fix it...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Trexian</div><div class="date">21st July 2007, 18:22</div></div><div class="posttext">Originally posted by T.Slappy <br />
+After few questions I modify my script for other users<br />
+<br />
+Try download this rar:<br />
+www.oblivion.sk/slappy/stiahni/slappys_script.rar <br />
+<br />
+725 kB<br />
+<br />
+There is few files like images, custom pages, UI.exe, .nsi script, readme<br />
+<br />
+You need http://forums.winamp.com/showthread.php?s=&amp;threadid=241092&amp;highlight=skinnedbutton<br />
+<br />
+this plugin for proper working of buttons<br />
+ <br />
+Does anyone still have the script for this? I've searched but cannot find it.<br />
+<br />
+TIA.<br />
+<br />
+---------------<br />
+Sic semper...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">25th October 2007, 22:31</div></div><div class="posttext">I did not work on this script for some time, I did not have time etc...<br />
+Anyway: my server moved, so the new address for script is:<br />
+http://www.oblivion.sk/slappy/slappys_script.rar cca 730kB (this is the same version)<br />
+<br />
+If you have any suggestions write me a PM...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">18th November 2010, 08:40</div></div><div class="posttext">I am back to the forum!<br />
+I could not login for several years :)<br />
+Anyway I made a great step ahead with this plugin, you can now find all info about it at http://www.unsigned-softworks.sk/installer page!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">18th May 2011, 15:11</div></div><div class="posttext">Hi<br />
+<br />
+I found a bug? which really disturbs me I am would like to hear some ideas how to get rid of it.<br />
+<br />
+Static control on install page (#1006) is not drawn correctly. This is normal behaviour:<br />
+http://www.unsigned-softworks.sk/en/images/other/correct.jpg<br />
+<br />
+But when another text is sent to this control (using DetailPrint or via some plugin) this happens: (there are multiple texts writen over them)<br />
+http://www.unsigned-softworks.sk/en/images/other/wrong.jpg<br />
+As you can see the text &quot;This message is shown incorrectly...&quot; is not readable.<br />
+<br />
+Why is this happening and how to repair it?<br />
+I used SetDetailsPrint listonly to not print to this control, but that is not a solution.<br />
+Do I need to catch some WM_ERASEBACKGROUND message and repaint control manually or what should I do? :(<br />
+Thanks for all ideas!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">gfm688</div><div class="date">20th May 2011, 04:45</div></div><div class="posttext">Hi<br />
+<br />
+I found a bug? which really disturbs me I am would like to hear some ideas how to get rid of it.<br />
+<br />
+Static control on install page (#1006) is not drawn correctly. This is normal behaviour:<br />
+But when another text is sent to this control (using DetailPrint or via some plugin) this happens: (there are multiple texts writen over them)<br />
+As you can see the text &quot;This message is shown incorrectly...&quot; is not readable.<br />
+<br />
+Why is this happening and how to repair it?<br />
+I used SetDetailsPrint listonly to not print to this control, but that is not a solution.<br />
+Do I need to catch some WM_ERASEBACKGROUND message and repaint control manually or what should I do? :(<br />
+Thanks for all ideas!<br />
+<br />
+Subclass the Static control on install page (#1006), then catch WM_SETTEXT message and refresh the control like this:<br />
+<br />
+${If} $MSG = ${WM_SETTEXT}<br />
+  ShowWindow $HWND ${SW_HIDE}<br />
+  ShowWindow $HWND ${SW_SHOWNA}<br />
+${EndIf}</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

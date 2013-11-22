@@ -1,0 +1,132 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" RmDir dirs still left, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  RmDir dirs still left NSIS Discussion" />
+	
+	<title> RmDir dirs still left [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  RmDir dirs still left</div>
+<hr />
+<div class="pda"><a href="t-286807.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=286807">RmDir dirs still left</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">klopfdreh</div><div class="date">13th February 2008, 15:06</div></div><div class="posttext">Hello,<br />
+<br />
+I'm using a MUI macro to define a function which is executed when the user press cancel:<br />
+<br />
+!define MUI_CUSTOMFUNCTION_ABORT abortFunction<br />
+ <br />
+<br />
+In that function I want to delete the installation Folder because I copy some files in a previous custom dialog:<br />
+<br />
+Function abortFunction<br />
+    MessageBox MB_OK &quot;Called&quot;<br />
+    RmDir /r /REBOOTOK $INSTDIR<br />
+FunctionEnd<br />
+ <br />
+<br />
+After the installer has been closed the files are all deleted, but the directories still exists. The OutPath isn't set &quot;SetOutPath)<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">14th February 2008, 11:05</div></div><div class="posttext">That's a very dangerous function. You don't even check to make sure $INSTDIR was set and that you're in the right page. What if the user is on the directory page, starts to type &quot;C:\Program Files\Application&quot; but only gets to &quot;C:\Program Files&quot; and cancels? You'll wipe out his entire Program Files directory.<br />
+<br />
+As for the problem itself, the directory is probably being used in some way. A possible cause is SetOutPath as you've mentioned. If you're sure it's not it, there are plenty others. You can use Process Explorer to search for open handles to the installation directory.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">klopfdreh</div><div class="date">14th February 2008, 13:54</div></div><div class="posttext">Ah, thats right! Good that you post it in here! So what do you think is the safest way to delete it once its set and only those files which are installed?<br />
+<br />
+Thanks!<br />
+<br />
+Edit:<br />
+<br />
+I think the directory is set because I call the custom page after the MUI_PAGE_DIRECTORY<br />
+<br />
+<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+Page custom DriverPage DriverPageLeave<br />
+!insertmacro MUI_PAGE_STARTMENU Application $StartMenuGroup<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!insertmacro MUI_PAGE_FINISH<br />
+!insertmacro MUI_UNPAGE_CONFIRM<br />
+!insertmacro MUI_UNPAGE_INSTFILES<br />
+<br />
+<br />
+The only thing I have to do is to check if it is set, don't I?<br />
+<br />
+I found out with:<br />
+MessageBox MB_OK $INSTDIR <br />
+<br />
+On each page where I can abort, the path is c:\Program Files\${PRODUCT_NAME}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">14th February 2008, 14:19</div></div><div class="posttext">You should simply not create the files at such an early stage of the installation. Create the files in the first section. This way, you don't have to delete them in case the user cancels before installation begins.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">klopfdreh</div><div class="date">14th February 2008, 14:31</div></div><div class="posttext">I'm get the information, which files have to be copied of a listbox and that is created on a page before the main section. Is there any way to store those references and copy them in a section:<br />
+<br />
+<br />
+Function DriverPageLeave<br />
+    !insertmacro MakeDirBase &quot;$INSTDIR\driver&quot;<br />
+    <br />
+    # Copy all drivers into the installation-directory<br />
+    Sendmessage $ListBox ${LB_GETCOUNT} 0 0 $0   <br />
+    StrCpy $1 0<br />
+    loop:<br />
+    System::Call user32::SendMessage(i$ListBox,i${LB_GETTEXT},i$1,t.r3)<br />
+    CopyFiles $3 $INSTDIR\driver<br />
+    IntOp $1 $1 + 1<br />
+    ${ifthen} $1 &lt; $0 ${|} goto loop ${|}<br />
+FunctionEND</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">14th February 2008, 15:03</div></div><div class="posttext">http://nsis.sourceforge.net/Validating_$INSTDIR_before_uninstall<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">14th February 2008, 16:23</div></div><div class="posttext">You can save their paths in variables or if you want to save actual files, you can put them in $PLUGINSDIR which is automatically deleted when the installation ends. Just don't forget to call InitPluginsDir to initialize it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">15th February 2008, 13:42</div></div><div class="posttext">After the installer has been closed the files are all deleted, but the directories still exists. The OutPath isn't set &quot;SetOutPath&quot;<br />
+Ever thought, that INSTDIR ist locked that way from explorer?<br />
+Use SetOutPath $EXEDIR to unlock</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">15th February 2008, 13:47</div></div><div class="posttext">SetOutPath doesn't affect Explorer, it affects the installer's working directory.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">15th February 2008, 14:02</div></div><div class="posttext">&gt;&gt; SetOutPath doesn't affect Explorer<br />
+<br />
+sure - it does - check it with unlocker - explorer locks it as<br />
+soon setoutpath is set. you can do all except deleting the directory.<br />
+<br />
+eg setups with a predefined installer (nsis is also a good container)...<br />
+nsis extracts - installer needs to point to his directory with<br />
+ setoutpath - after that i need to point away to delete the temporary directory (dont has to be pluginsdir).<br />
+every portable program has that limit.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">15th February 2008, 14:07</div></div><div class="posttext">Then that's an error on Unlocker's side or Explorer does some dirty trick. In any case, once the installer exits, no one will use the directory anymore. It's not a limitation of every program, it's a conscious call NSIS makes to set the working directory to that specified by SetOutPath.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">15th February 2008, 18:44</div></div><div class="posttext">&gt;&gt; Explorer does some dirty trick<br />
+<br />
+maybe that - in any case i failed it was explorer who was sitting on it like a mother duck on its egg.<br />
+Unlocker didnt failed once here - sometimes i forget to close editor or sandbox which lock folders too - annoying although the document is closed long ago - the working path is still set and that is same problem like explorer behaves.<br />
+<br />
+so i started to set the path afterwards any action to prevent that nevertheless nsis or explorer caused it.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Dumplog crash, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Dumplog crash NSIS Discussion" />
+	
+	<title> Dumplog crash [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Dumplog crash</div>
+<hr />
+<div class="pda"><a href="t-242477.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=242477">Dumplog crash</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">3rd April 2006, 09:13</div></div><div class="posttext">Hi guys<br />
+<br />
+I have a function which I run after the installer finishes (or if the installer detects an error in an operation earlier, it runs this function before quitting).<br />
+<br />
+It uses the DumpLog plugin - it writes the log details to a temporary file, then appends the contents of that file to the main log file (defined as a constant earlier as $logpath):<br />
+<br />
+DumpLog::DumpLog &quot;$PLUGINSDIR\log.txt&quot;<br />
+Push $0<br />
+Push $1<br />
+Push $2<br />
+<br />
+FileOpen $0 &quot;$PLUGINSDIR\log.txt&quot; r<br />
+FileOpen $1 &quot;$logpath&quot; a<br />
+FileSeek $1 &quot;0&quot; end<br />
+logloop:<br />
+  FileRead $0 $2<br />
+  IfErrors endlogloop<br />
+  FileWrite $1 $2<br />
+  Goto logloop<br />
+endlogloop:<br />
+FileClose $1<br />
+FileClose $0<br />
+<br />
+Pop $2<br />
+Pop $1<br />
+Pop $0<br />
+<br />
+The problem is it also crashes. I wondered if Dumplog has a known error or something; it won't even get as far as writing the temporary log.txt. I've triple-checked that the stack isn't being abused and causing something to fail - is there something that I don't know happening here?<br />
+<br />
+To compound the problem, it doesn't always happen (e.g. on a successful install). <br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">3rd April 2006, 15:34</div></div><div class="posttext">I'm not sure why it crashes, but it was written for increased speed over the NSIS Dump log to file (http://nsis.sourceforge.net/Dump_log_to_file) function which you can try instead. The author (Instructor) checks the forums regularely. I'm sure he'd be happy if you could help him fix it.<br />
+Firstly, try putting in a MessageBox immediately after the plugin call and see if it appears.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">3rd April 2006, 15:48</div></div><div class="posttext">DumpLog::DumpLog &quot;$PLUGINSDIR\log.txt&quot; .R0<br />
+MessageBox MB_OK &quot;$$R0={$R0}&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">3rd April 2006, 15:51</div></div><div class="posttext">Hmm yeah that's true. First I'll go over my stack usage with a fine toothcomb :)<br />
+<br />
+Cheers</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">3rd April 2006, 16:13</div></div><div class="posttext">Instructor - exactly that! Miss off that variable and it bombs.<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">4th April 2006, 15:52</div></div><div class="posttext">There's more. Does DumpLog push the provided variable for you?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">4th April 2006, 17:51</div></div><div class="posttext">No need for a Pop $R0. .R0 tells the plugin to use the $R0 variable (like System plugin).<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">5th April 2006, 08:40</div></div><div class="posttext">Heh, that'll be another reason! Do I still need to push the variable at the start, though? As in:<br />
+Push $0<br />
+DumpLog::DumpLog &quot;$INSTDIR\log.txt&quot; $0<br />
+MessageBox MB_OK &quot;$0&quot;<br />
+Pop $0That sort of thing?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">5th April 2006, 09:39</div></div><div class="posttext">Oh crap, should it be a . not a $ before the variable name?<br />
+<br />
+E.g.<br />
+Push $0<br />
+DumpLog::DumpLog &quot;$INSTDIR\log.txt&quot; .0<br />
+MessageBox MB_OK &quot;$0&quot;<br />
+Pop $0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">5th April 2006, 10:06</div></div><div class="posttext">Uhm yes. If you give the plugin $0 you're passing it the contents of $0. So, if you did StrCpy $0 .0 first then it would work. .0 is specifying the variable name to use.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RobGrant</div><div class="date">5th April 2006, 10:25</div></div><div class="posttext">Cool thanks, I'll test that a bit later. I'm just making the DumpLog docs a bit more useful and wanted to include a link to a bit of documentation which mentions what . variable references/pointer are (e.g. .R0) but I can't find any. Anyone know of any?<br />
+<br />
+Ideally some knowledge of the plugin's return vars would be good too.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">5th April 2006, 11:08</div></div><div class="posttext">From wiki:<br />
+<br />
+Do not use a variable name - e.g: <br />
+<br />
+$0<br />
+<br />
+Use a reference to that variable name - e.g: <br />
+<br />
+.0<br />
+<br />
+Where is no such thing like &quot;.0&quot; (Readme.txt) It is personal decision to use .r0, .r1, ..., .R0, .R1, ... to make plugin call in one line. I'm recently walk away from this practice to the header use.<br />
+<br />
+BTW: you can use anything else then &quot;.r0, .r1, ..., .R0, .R1, ...&quot; error level output will be ignored for example:<br />
+DumpLog::DumpLog &quot;$INSTDIR\log.txt&quot; XXX</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

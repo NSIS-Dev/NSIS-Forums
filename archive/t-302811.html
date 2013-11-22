@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Change Dialog Text Colour, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Change Dialog Text Colour NSIS Discussion" />
+	
+	<title> Change Dialog Text Colour [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Change Dialog Text Colour</div>
+<hr />
+<div class="pda"><a href="t-302811.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=302811">Change Dialog Text Colour</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">kukomamasan</div><div class="date">5th February 2009, 16:22</div></div><div class="posttext">Hi all,<br />
+<br />
+Im having to change colour in txt in a directory dialog, i think i found a command but it change the background colour instead, and so far whatever i put in is kinda blue or green or black ?<br />
+<br />
+here is what i wanna change colours :<br />
+<br />
+Function ChangeDirTextFunction<br />
+FindWindow $R0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+GetDlgItem $R1 $R0 1006<br />
+ReadRegStr $R0 HKLM &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\GhostRecon.exe&quot; &quot;path&quot;<br />
+StrCmp $R0 &quot;&quot; NotPresent Present<br />
+notpresent:<br />
+SendMessage $R1 ${WM_SETTEXT} 0 `STR:Welcome To Bobs Map Pack 1.3 Installer$\nInstallation Was Unable To Find The Path To Mods Folder ,$\nBrowse To Your Ghost Recon Mods Folder, And Install There.`<br />
+goto done<br />
+present:<br />
+SetCtlColors $R1 0x000000 0x000741<br />
+SendMessage $R1 ${WM_SETTEXT} 0 `STR:Welcome To Bobs Map Pack 1.3 Installer$\nInstallation Did Find The Path To The Mods Folder ,$\nVerify Path is correct, or browse to the right location, And Install There.`<br />
+done:<br />
+FunctionEnd<br />
+<br />
+Now if the path was found i want the txt to turn green, if its not found i want red txt, how do i do that ?<br />
+<br />
+Oh and using $R0 in both reg and window could mess things up i think ? Though things seem to work, it go down to present, and display colour. You can change to $B or any $xxx if u wanna ?<br />
+Thx in advance</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">5th February 2009, 18:42</div></div><div class="posttext">The text color is the first of the two numbers, the background color is the second.  0xFF0000 would be red, 0x00FF00 would be green (bit too bright on default backgrounds).<br />
+<br />
+You have to Hide the label and re-display it as otherwise the label isn't repainted properly by Windows (the two texts would overlap).<br />
+<br />
+Furthermore, dialog item IDs with installoptions typically start at 1200, not 1000.  However, it's safer to get the HWND of the controls straight from the ini after initializing/creating the dialog.<br />
+<br />
+Here's a full example using MUI+InstallOptions.  Uses LogicLib for the if/then/else type statements.<br />
+<br />
+code<br />
+<br />
+outfile 'customtest.exe'<br />
+<br />
+!include 'LogicLib.nsh'<br />
+!include 'MUI.nsh'<br />
+!include 'winmessages.nsh'<br />
+<br />
+var hwnd<br />
+<br />
+Page Custom CustomPre CustomPost<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+Function CustomPre<br />
+	!insertmacro MUI_INSTALLOPTIONS_EXTRACT &quot;textfield.ini&quot;<br />
+	!insertmacro MUI_INSTALLOPTIONS_INITDIALOG &quot;textfield.ini&quot;<br />
+	Pop $hwnd<br />
+	!insertmacro MUI_INSTALLOPTIONS_SHOW<br />
+FunctionEnd<br />
+<br />
+Function CustomPost<br />
+	!insertmacro MUI_INSTALLOPTIONS_READ $0 &quot;textfield.ini&quot; &quot;Settings&quot; &quot;State&quot;<br />
+	${If} $0 == 0<br />
+	    Abort<br />
+	${ElseIf} $0 == 1<br />
+		!insertmacro MUI_INSTALLOPTIONS_READ $R1 &quot;textfield.ini&quot; &quot;Field 2&quot; &quot;HWND&quot;<br />
+		!insertmacro MUI_INSTALLOPTIONS_READ $R0 &quot;textfield.ini&quot; &quot;Field 1&quot; &quot;State&quot;<br />
+		${If} $R0 == &quot;C:\&quot;<br />
+			SetCtlColors $R1 0xff0000 &quot;transparent&quot;<br />
+			ShowWindow $hwnd 0<br />
+			SendMessage $R1 ${WM_SETTEXT} 0 `STR:You cannot pick C: root!`<br />
+			ShowWindow $hwnd 1<br />
+		${Else}<br />
+			SetCtlColors $R1 0x00cc00 &quot;transparent&quot;<br />
+			ShowWindow $hwnd 0<br />
+			SendMessage $R1 ${WM_SETTEXT} 0 `STR:Path OKAY`<br />
+			ShowWindow $hwnd 1<br />
+		${EndIf}<br />
+	${EndIf}<br />
+	Abort<br />
+FunctionEnd<br />
+<br />
+Section<br />
+SectionEnd<br />
+<br />
+<br />
+INI file<br />
+<br />
+[Settings]<br />
+NumFields=2<br />
+<br />
+[Field 1]<br />
+Type=DirRequest<br />
+Flags=NOTIFY<br />
+State=DirRequest<br />
+Left=12<br />
+Right=134<br />
+Top=8<br />
+Bottom=21<br />
+<br />
+[Field 2]<br />
+Type=Label<br />
+Text=Label<br />
+Left=12<br />
+Right=165<br />
+Top=30<br />
+Bottom=42</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

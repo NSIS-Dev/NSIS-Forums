@@ -1,0 +1,140 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Beginner question, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Beginner question NSIS Discussion" />
+	
+	<title> Beginner question [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Beginner question</div>
+<hr />
+<div class="pda"><a href="t-110353.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=110353">Beginner question</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">aj0000009</div><div class="date">18th October 2002, 08:19</div></div><div class="posttext">Hi,<br />
+I am a Unix guy! I have written packages for Solaris and HP.<br />
+I am new to Windows development. Have been studying VB and<br />
+finally developed an application using VB.<br />
+I am in the process of writting an installer for the application.<br />
+Studied VB Installer, Windows Installer, InstallShield, ... and<br />
+came across NSIS a week ago. I found NSIS easy to learn and<br />
+implement, but I am stuck at one place.<br />
+<br />
+Here is what needs to be done,<br />
+  1) Findout if the target machine has Microsoft Word Installed.<br />
+  2) If Word is NOT installed, print an error message and<br />
+     abort the installation.<br />
+  3) If Word is installed,<br />
+     a) Copy a file from $INSTDIR to MS Word installed directory,<br />
+        default c:\Program Files\Microsoft Office\Office<br />
+     b) Write an entry into the registry name/value<br />
+            WordInstall    &quot;&lt;WORD INSTALL DIR&gt;&quot;<br />
+<br />
+One of the ways to resolve the problems is, I can write an<br />
+ActiveX DLL file with functions,<br />
+  a) GetWordPath   ==&gt; Returns the InstallDir of MS Word or empty str<br />
+<br />
+1) I created the DLL and copied it to NSIS directory<br />
+  When I call myDLL::GetWordPath in the .nsi script, I am getting<br />
+<br />
+  Invalid command: myDLL::GetWordPath<br />
+<br />
+2) Say, If the above command is successful, where is the<br />
+   return value from ActiveX function stored?<br />
+<br />
+Can someone help me with the nsi script to get the results.<br />
+<br />
+<br />
+Is it possible to get the Word Install Path in NSIS, without<br />
+even bothering to create VB ActiveX DLL?<br />
+<br />
+<br />
+Many Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">18th October 2002, 11:28</div></div><div class="posttext">being an open office user myself, i cant really find the correct registry-entries for word.<br />
+<br />
+i only found this (http://support.microsoft.com/default.aspx?scid=KB;EN-US;Q140724&amp;)  on google:<br />
+<br />
+In the example, the path to WinWord.Exe should be stored in the registry as:<br />
+<br />
+   HKEY_CLASSES_ROOT\Word.Document.6\shell\open\command =<br />
+<br />
+    &quot;C:\Program Files\My Accessories\Winword.Exe&quot; /n<br />
+<br />
+which does causes FindExecutable to return the expected string. <br />
+<br />
+in your case i'd double-check this, by searching your own registry for the location of the word executable (it also might appear that it has a different name in newer versions).<br />
+<br />
+assuming that registry-entry is correct, you'd proceed like this:<br />
+<br />
+ReadRegStr $0 &lt;INSERT THE REGISTRY-ENTRY TO THE WINWORD.EXE&gt;<br />
+StrCmp $0 &quot;&quot; NoWordInstalled CopyFiles<br />
+<br />
+NoWordInstalled and CopyFiles are GOTO-commands.<br />
+<br />
+hope this helps you!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">18th October 2002, 11:31</div></div><div class="posttext">i think you could check the HKEY_CLASSES_ROOT for the .doc extension and check if it contains *word.exe* before you proceed (if there's no more specific entry for the executable).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">18th October 2002, 11:43</div></div><div class="posttext">try this<br />
+ReadRegStr $0 HKLM \<br />
+              &quot;Applications/Winword.exe/shell/new/command&quot; \<br />
+              &quot;(Default)&quot;<br />
+<br />
+i'm not sure if (Default) is the correct name for the entry. just try this ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th October 2002, 13:34</div></div><div class="posttext">Getting Word's path from the association of .doc is not a good idea because one can associate .doc to OpenOffice for example and still have Word installed.<br />
+<br />
+You can get winword.exe's path from:<br />
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Winword.exe<br />
+<br />
+I have tested this for Word 97, 2000, and XP and it works for all of them. It should work for earlier versions too AFAIK.<br />
+<br />
+I have attached a sample script that should help you get started.<br />
+<br />
+BTW, you can't create NSIS plug-in DLLs using VB. Only VC++ or Delphi using the templates in Contrib\ExDLL, unless you know how to create DLLs in VB that will work with VC.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aj0000009</div><div class="date">18th October 2002, 21:28</div></div><div class="posttext">Not only I found NSIS install to be great, the forum response<br />
+is excelent. Thanks to everyone for the reply.<br />
+<br />
+I tried the solution given by &quot;kichik&quot; and it works great<br />
+on my machine Windows XP!<br />
+Only doubt I have is, What if the user has more than one application<br />
+on Windows with the name &quot;Winword.exe&quot;?<br />
+Say, I rename the notepad.exe to Winword.exe and installs it on my<br />
+machine. It gets installed fine and an entry is added into<br />
+the registry. Now there will be multiple entries for Winword.exe.<br />
+  SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Winword.exe<br />
+<br />
+ReadRegStr returns the first available entry for Winword.exe.<br />
+How do I make sure whether I got the path for the MS Winword and not<br />
+my Winword.exe app(Notepad.exe)?<br />
+<br />
+<br />
+Here is the Visual Basic code that returns the path to Microsoft<br />
+Word Application and I feel confident about the results returned<br />
+by the below function (never tested on Window98 &amp; Windows95!).<br />
+<br />
+Please attach large scripts/source codes. Attached below.<br />
+<br />
+Thanks Again.<br />
+Andy</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th October 2002, 11:59</div></div><div class="posttext">This VB code can be easily converted to a NSIS script. Just use ReadRegStr and one call to GetNextParm (http://www.clantpa.co.uk/nsis/wiki/index.php/GetNextCommandLineParameter). The first call to GetNextParm, if you push the entire command line, will give you just the exe without its parameters.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Have installer choose dialog button to select?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Have installer choose dialog button to select? NSIS Discussion" />
+	
+	<title> Have installer choose dialog button to select? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Have installer choose dialog button to select?</div>
+<hr />
+<div class="pda"><a href="t-186124.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=186124">Have installer choose dialog button to select?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">flyakite</div><div class="date">10th July 2004, 18:25</div></div><div class="posttext">Okay I'm trying to replace system files with the installer.  However when a file is replaced the WFP (Windows File Protection) dialog comes up:<br />
+<br />
+http://www.portraitofakite.com/images/WFP1.gif <br />
+<br />
+So I moddified the CloseIE plugin code to close the window:<br />
+<br />
+<br />
+Function closeWFP<br />
+   loop:<br />
+     FindWindow $0 &quot;&quot; &quot;Windows File Protection&quot;<br />
+     IntCmp $0 0 done<br />
+     IsWindow $0 0 done<br />
+     System::Call 'user32::PostMessageA(i,i,i,i) i($0,${WM_CLOSE},0,0)'<br />
+     Sleep 300<br />
+     Goto loop<br />
+   done:<br />
+FunctionEnd<br />
+<br />
+<br />
+It closes THAT window but when that window is closed this window is brought up:<br />
+<br />
+http://www.portraitofakite.com/images/WFP2.gif<br />
+<br />
+<br />
+What code would I need to insert into that function to have the installer automatically choose &quot;Yes&quot; for the user?  I imagine it's some sort of SendMessage command but I don't know what to send it.<br />
+<br />
+Thanks in advance.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">10th July 2004, 19:35</div></div><div class="posttext">you could search the handle of the &quot;yes&quot; button, and send a message to it, that fakes a mouse-klick.<br />
+or is there even a way to send a message like &quot;yes&quot;?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">flyakite</div><div class="date">11th July 2004, 07:46</div></div><div class="posttext">Hmm... okay I'm still having major problems.  I've tried a million things so far and just can't get that second dialog to go away.<br />
+<br />
+I think that the second dialog is like a child window or something.  When the second dialog comes up the first one technically doesn't close.  It just loses permanent focus and the new dialog becomes in focus.<br />
+<br />
+<br />
+I've discovered this code will send the 'y' key to a window which essentially is the same as click &quot;Yes&quot;:<br />
+<br />
+SendMessage $1 ${WM_CHAR} 0x79 0x230001<br />
+<br />
+However I can't get the stupid HWND of that new dialog.<br />
+<br />
+Can someone please tell me either how to get the HWND of that dialog or how to send a message to the window in focus, or how to get the HWND of the window in focus?<br />
+<br />
+This problem is really bugging me and I'd appreciate any help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">11th July 2004, 08:38</div></div><div class="posttext">By the information I acquired now, you can use FindWindow from NSIS to do that. But how?<br />
+<br />
+FindWindow $0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+<br />
+If you give the window class and the window parent hwnd, it will output the first child window handle. I don't know if it will work but I tested here recently a code just like that above.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">flyakite</div><div class="date">11th July 2004, 09:13</div></div><div class="posttext">Okay it turns out this whole time the FindWindow code was working for both windows, as I added a message box to display the HWND of each one and it's working.<br />
+<br />
+Now the only problem left is to simulate actually pressing the &quot;Yes&quot; button.<br />
+<br />
+So far the<br />
+<br />
+SendMessage $1 ${WM_CHAR} 0x79 0x230001<br />
+<br />
+is not working.  I've tried WM_KEYDOWN.  Should I be using a command other than WM_CHAR?  I know if the window is active and you just push the letter 'y' on the keyboard it selects the &quot;Yes&quot; button.  And 0x79 is the hex code for the letter 'y', but after execution the window still remains.<br />
+<br />
+This is the last hurdle I have, and have spent hours searching and trying different things to get it to work.  There needs to be a function that just simulates a keypress and nothing else, independent of passing HWND parameters and whatnot.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">11th July 2004, 15:22</div></div><div class="posttext">Windows has both &quot;y&quot; and &quot;Y&quot; letters. You have to find the code for letter &quot;Y&quot; as &quot;Yes&quot; has the first letter in upper case.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">flyakite</div><div class="date">11th July 2004, 17:54</div></div><div class="posttext">YES!  I figured it out!<br />
+<br />
+I appreciate everyone's help but unfortunately nothing that anyone suggested was working.  But I stumbled across a post at www.experts-exchange.com for someone requesting their C++ project automatically hit an 'OK' button.<br />
+<br />
+They were using WM_COMMAND to post a message using a call to the system library user32.dll, sending it the command of the button ID.  They linked to a little app called MessageSender that allows you to test things like sending and posting messages to dialogs using different commands.<br />
+http://www.google.com/search?hl=en&amp;ie=UTF-8&amp;q=MessageSender (http://)<br />
+<br />
+Anyway... for those interested, here is the complete code I use to close both windows automatically by virtually pressing the dialog buttons:<br />
+<br />
+<br />
+<br />
+<br />
+Function closeWFP<br />
+    ;Find and close first dialog<br />
+    FindWindow $0 &quot;&quot; &quot;Windows File Protection&quot;<br />
+    System::Call 'user32::PostMessageA(i,i,i,i) i($0,${WM_COMMAND},2,0)'<br />
+<br />
+    ;Find and close second dialog<br />
+    FindWindow $1 &quot;&quot; &quot;Windows File Protection&quot;<br />
+    System::Call 'user32::PostMessageA(i,i,i,i) i($1,${WM_COMMAND},6,0)'<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+So to close just one dialog you just need two lines of code:<br />
+<br />
+1)FindWindow $0 &quot;&quot; &quot;Windows File Protection&quot;<br />
+2)System::Call 'user32::PostMessageA(i,i,i,i) i($0,${WM_COMMAND},2,0)'<br />
+<br />
+<br />
+The first line finds the HWND of the window with the title &quot;Windows File Protection&quot; and stores it as $0<br />
+<br />
+The second line uses the system plugin and uses the call function.  The only parameters you need to worry about are the ones in the last parenthesis ($0,${WM_COMMAND},2,0)<br />
+ $0  =  The variable that we stored the HWND from FindWindow<br />
+ ${WM_COMMAND}  =  leave as is<br />
+ 2  =  The ID of the button you want to press.  In this case the &quot;Cancel&quot; ID is 2<br />
+ 0  =  leave as is</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">11th July 2004, 22:12</div></div><div class="posttext">You should never try to upgrade protected files.<br />
+<br />
+It depends on the Windows installation whether this message is displayed or not, if the file is cached it will be replaced back immidiately and you can't do anything to avoid that.<br />
+<br />
+There is however no need to upgrade protected files, these files are automatically updated with Windows Updates and Service Packs. You can include signed Microsoft updated if you want.<br />
+<br />
+If the problem is that you don't know how to check for file protection, a solution will be available soon. This week I will upload an entirely new system for installing/registering/checking/sharing DLL and TLB libraries.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">flyakite</div><div class="date">11th July 2004, 22:46</div></div><div class="posttext">lol, thanks for the advice but the entire purpose of the installer is to replace system files with moddified versions containing different icons.<br />
+<br />
+The installer won't replace a file if the version in the installer and the version on the target computer won't match.  The installer kills explorer.  It then deletes the file being replaced from all the cache locations.  To install all you have to do is rename the file on the system and then extract the file from the installer to the desired location, instead of renaming on restart.<br />
+<br />
+I've done this successfully on hundreds of users computers and it's only not worked on a few because of the user, not the installer.<br />
+<br />
+<br />
+I've attached the script in case anyone is interested.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

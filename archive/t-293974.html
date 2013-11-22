@@ -1,0 +1,124 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Restart Section, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Restart Section NSIS Discussion" />
+	
+	<title> Restart Section [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Restart Section</div>
+<hr />
+<div class="pda"><a href="t-293974.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=293974">Restart Section</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">AndyBoy</div><div class="date">4th July 2008, 14:51</div></div><div class="posttext">Hi!<br />
+<br />
+I`ve been looking at some advises here, but they didn`t help me a lot. So maybe somebody else can help me.<br />
+<br />
+My installer checks the installation path, and if it is a forbidden path, it stops the installation. What i`ve been trying to do, is when the installer is stopped, it goes back to the DIRECTORY page and asks the user to select another path. I`m using this code:<br />
+<br />
+Function RelGotoPage<br />
+  IntCmp $R9 0 0 Move Move<br />
+    StrCmp $R9 &quot;X&quot; 0 Move<br />
+      StrCpy $R9 &quot;120&quot;<br />
+ <br />
+  Move:<br />
+  SendMessage $HWNDPARENT &quot;0x408&quot; &quot;$R9&quot; &quot;&quot;<br />
+FunctionEnd<br />
+<br />
+<br />
+!macro BadPathsCheck<br />
+StrCpy $R0 $INSTDIR &quot;&quot; -2<br />
+StrCmp $R0 &quot;:\&quot; bad<br />
+StrCpy $R0 $INSTDIR &quot;&quot; -14<br />
+StrCmp $R0 &quot;\Program Files&quot; bad<br />
+StrCpy $R0 $INSTDIR &quot;&quot; -8<br />
+StrCmp $R0 &quot;\Windows&quot; bad<br />
+StrCpy $R0 $INSTDIR &quot;&quot; -6<br />
+StrCmp $R0 &quot;\WinNT&quot; bad<br />
+StrCpy $R0 $INSTDIR &quot;&quot; -9<br />
+StrCmp $R0 &quot;\system32&quot; bad<br />
+StrCpy $R0 $INSTDIR &quot;&quot; -8<br />
+StrCmp $R0 &quot;\Desktop&quot; bad<br />
+StrCpy $R0 $INSTDIR &quot;&quot; -22<br />
+StrCmp $R0 &quot;\Documents and Settings&quot; bad<br />
+StrCpy $R0 $INSTDIR &quot;&quot; -13<br />
+StrCmp $R0 &quot;\My Documents&quot; bad good<br />
+bad:<br />
+  MessageBox MB_OK|MB_ICONSTOP &quot;Install path invalid! You should chose another install path.&quot;<br />
+  StrCpy $R9 -1 ;Goto the next page<br />
+  Call RelGotoPage<br />
+good:<br />
+!macroend<br />
+<br />
+Section InstallComponents<br />
+<br />
+!insert BadPathsCheck<br />
+<br />
+... Some code here that installs files...<br />
+<br />
+SectionEnd<br />
+<br />
+The point is, that ( maybe i`m mistaken, but i keep getting errors ) Section continues to execute installation of the files, even though it shows the Directory page. Is there a way to make the Section restart, or pause?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">4th July 2008, 15:46</div></div><div class="posttext">It would be a better way to check the path before the user is allowed to leave the DIRECTORY page! You can use the CallbackFunction of the directory page to do this. Just assign a &quot;[leave_function]&quot; function to your directory page. In that function check whether $INSTDIR is valid or not. If it's not valid, then simply call Abort ...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">4th July 2008, 15:54</div></div><div class="posttext">Here is an example:<br />
+<br />
+Name &quot;Path&quot;<br />
+OutFile &quot;Path.exe&quot;<br />
+InstallDir &quot;C:\Foobar&quot;<br />
+<br />
+page directory &quot;&quot; &quot;&quot; LeaveDir<br />
+page instfiles<br />
+<br />
+Section<br />
+  SetOutPath $INSTDIR<br />
+  DetailPrint 'Now intsalling stuff to &quot;$INSTDIR&quot;'<br />
+SectionEnd<br />
+<br />
+Function LeaveDir<br />
+  MessageBox MB_TOPMOST|MB_YESNO 'Is &quot;$INSTDIR&quot; a valid directory?' IDYES +2<br />
+  Abort  <br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">4th July 2008, 16:30</div></div><div class="posttext">There is no need for a custom leave function, use the standard .onVerifyInstDir callback function.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">4th July 2008, 16:33</div></div><div class="posttext">You are right. But then you check the directory more often, not only when the user tries to leave the directory page. Depends on what you want to achieve. Try this and compare the result with my first example above:<br />
+<br />
+Name &quot;Path&quot;<br />
+OutFile &quot;Path.exe&quot;<br />
+InstallDir &quot;C:\Foobar&quot;<br />
+<br />
+page directory<br />
+page instfiles<br />
+<br />
+Section<br />
+  SetOutPath $INSTDIR<br />
+  DetailPrint 'Now intsalling stuff to &quot;$INSTDIR&quot;'<br />
+SectionEnd<br />
+<br />
+Function .onVerifyInstDir <br />
+  MessageBox MB_TOPMOST|MB_YESNO 'Is &quot;$INSTDIR&quot; a valid directory?' IDYES +2<br />
+  Abort  <br />
+FunctionEnd<br />
+<br />
+In case you want to display an error message to the user, when an invalid directory has been selected, I would go with the custom leave function instead of .onVerifyInstDir function. Otherwise you would bomb the user with too many message boxes...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AndyBoy</div><div class="date">7th July 2008, 09:21</div></div><div class="posttext">Huge thanx, guys. The installation works fine now.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

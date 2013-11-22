@@ -1,0 +1,82 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Uninstall with MultiUser.nsh, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Uninstall with MultiUser.nsh NSIS Discussion" />
+	
+	<title> Uninstall with MultiUser.nsh [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Uninstall with MultiUser.nsh</div>
+<hr />
+<div class="pda"><a href="t-288468.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=288468">Uninstall with MultiUser.nsh</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">GlibReaper</div><div class="date">14th March 2008, 11:43</div></div><div class="posttext">Hi.<br />
+<br />
+I'm fairly new to NSIS, so I might be missing a trick, but I've checked the forums, the interweb, etc and I can't find an answer. I'm running NSIS 2.35 and I just played with the MultiUser options. By using MULTIUSER_PAGE_INSTALLMODE I can ask the user where he wants to install my application to. But the uninstall doesn't work properly. If I use MULTIUSER_INSTALLMODE_COMMANDLINE then the uninstall works perfectly for All User installations, but it doesn't work for Current User. And if I use MULTIUSER_INSTALLMODE_DEFAULT_CURRENTUSER it's the opposite: it works fine for the current user, but not for all users.<br />
+<br />
+Any ideas?<br />
+<br />
+Glib</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">16th March 2008, 20:52</div></div><div class="posttext">Is it the same as the following?<br />
+<br />
+http://sourceforge.net/tracker/index.php?func=detail&amp;aid=1913048&amp;group_id=22049&amp;atid=373085</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">16th March 2008, 21:43</div></div><div class="posttext">No, it's not related to that bug.<br />
+<br />
+The uninstaller should know whether the application it's linked to is installed for the current user or for all users. Note that a system-wide and current-user version may be installed at the same time.<br />
+<br />
+A simple solution is to add the /CurrentUser or /AllUsers command-line switch to your uninstaller location for the Windows Add/Remove programs control panel.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bwinterscheidt</div><div class="date">17th March 2008, 04:21</div></div><div class="posttext">I'm having similar troubles on uninstall with multiuser.nsh...<br />
+<br />
+I don't have MULTIUSER_INSTALLMODE_COMMANDLINE or MULTIUSER_INSTALLMODE_DEFAULT_CURRENTUSER defined, but the uninstaller always runs in 'current' context when installed for AllUsers, in 'all' context when installed for current user.  <br />
+<br />
+@kichik: the bug you link to is noted as fixed, but the current code (2.35) still appears as Ivan described.  do we need to implement his fix ourselves until the next release?<br />
+<br />
+I've tried swapping these around, and it doesn't seem to have any affect?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bwinterscheidt</div><div class="date">17th March 2008, 05:24</div></div><div class="posttext">After throwing messageboxes into each macro to see if it fires, I'm noticing that things are breaking somewhere in MULTIUSER_INIT_CHECKS Un un., and it's never calling the MULTIUSER_INSTALLMODE_ALLUSERS/CURRENTUSER macros where SetShallVarContext is set.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bwinterscheidt</div><div class="date">17th March 2008, 06:02</div></div><div class="posttext">Hmm.  These are always undefined (install *and* uninstall)...<br />
+<br />
+!ifdef MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY &amp; MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_VALUENAME<br />
+<br />
+Are these *designed* to be different values than the MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY &amp; MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUENAME ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bwinterscheidt</div><div class="date">17th March 2008, 06:08</div></div><div class="posttext">Okay, my problem is fixed with these steps:<br />
+<br />
+1) Implement Ivan's suggestion, swapping the CurrentUser/AllUsers at lines 256 and 264 of NSIS 2.35's MultiUser.nsh<br />
+<br />
+2) add two lines as follows into my script:<br />
+!define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY &quot;${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY}&quot;<br />
+!define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_VALUENAME &quot;${MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUENAME}&quot;<br />
+<br />
+Thanks for letting me post to myself.  Hopefully someone else finds this useful.  ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">18th March 2008, 14:24</div></div><div class="posttext">For the uninstaller I would recommend you to also implement what I suggested in my previous post. A registry key won't work for uninstallation if both a per-user as well as a per-machine installation exists.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bwinterscheidt</div><div class="date">21st March 2008, 05:51</div></div><div class="posttext">Thanks.  Is this switch added to the UninstallString registry value?  Or somewhere else?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">21st March 2008, 14:16</div></div><div class="posttext">Yes, that's right. You also need to set MULTIUSER_INSTALLMODE_COMMANDLINE.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

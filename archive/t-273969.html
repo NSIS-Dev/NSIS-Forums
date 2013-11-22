@@ -1,0 +1,138 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Skip a Built-In Page, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Skip a Built-In Page NSIS Discussion" />
+	
+	<title> Skip a Built-In Page [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Skip a Built-In Page</div>
+<hr />
+<div class="pda"><a href="t-273969.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=273969">Skip a Built-In Page</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">backpacker299</div><div class="date">6th July 2007, 21:22</div></div><div class="posttext">My code can detect if a previous version of the application is installed. If the user elects to do an upgrade, I want to skip the welcome and the directory selection pages and go straight to the install files page (and be in the Install section). I'm using MUI v1.67, how do I do this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">6th July 2007, 21:37</div></div><div class="posttext">you can skip a page by using the abort instruction in the pre callback function for that page</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">backpacker299</div><div class="date">6th July 2007, 21:56</div></div><div class="posttext">I have tried this:<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE welcomePre<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+<br />
+...<br />
+<br />
+Function welcomePre<br />
+<br />
+        ${If} $Upgrading == &quot;Yes&quot;<br />
+              Abort<br />
+        ${EndIf}<br />
+<br />
+FunctionEnd<br />
+<br />
+But when it executes (assume $Upgrading does equal &quot;Yes&quot;) the Abort call aborts the entire setup.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">6th July 2007, 22:05</div></div><div class="posttext">Does this happen when you hit the back button to go back to welcome page?<br />
+<br />
+You may want to take a look on this wiki page,<br />
+<br />
+http://nsis.sourceforge.net/Demonstrating_Page%27s_Custom_Functions_Pre_Show_Leave</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">backpacker299</div><div class="date">6th July 2007, 22:12</div></div><div class="posttext">This code is invoked before the Welcome page is shown (which you knew). If you click back to go back to the welcome page, the $Upgrading variable won't have changed so Abort won't be invoked. If $Upgrading is going to be &quot;Yes&quot;, it will happen before any UI is shown so I want to go straight to the InstFiles page, skipping the all UI pages before it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">6th July 2007, 22:57</div></div><div class="posttext">Check out this wiki page,<br />
+<br />
+http://nsis.sourceforge.net/Go_to_a_NSIS_page</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">backpacker299</div><div class="date">9th July 2007, 15:09</div></div><div class="posttext">I have a welcome page, an installation selection page, and a database location selection page. Then comes the install files page and finally the setup complete page. This is my my .onInit function in which, when we are upgrading, I try to skip the first three pages. Does anyone see anything incorrect about what I am doing? As of right now, it shows the welcome page once it completes its run of this function (it is correctly identifying the need for any upgrade though).<br />
+<br />
+Function .onInit<br />
+<br />
+        #----- Set the version number<br />
+        StrCpy $Version &quot;00.621.70&quot;<br />
+<br />
+        #----- Set upgrading variable. If we are upgrading, it will be changed<br />
+        #      below.<br />
+        StrCpy $Upgrading &quot;No&quot;<br />
+<br />
+        #----- Read registry for install key<br />
+        ReadRegStr $8 HKLM &quot;Software\Liebert\Install&quot; &quot;NAMInstallDirectory&quot;<br />
+        ReadRegStr $9 HKLM &quot;Software\Liebert\Install&quot; &quot;NAMVersion&quot;<br />
+<br />
+        #----- If key is not blank, NAM already installed, alert and abort if<br />
+        #      we are not upgrading, otherwise, alert to upgrade and act as<br />
+        #      requested by user<br />
+        ${If} $8 != &quot;&quot; ; install key has a value, indicates that NAM is already installed<br />
+              ${If} $9 == $Version ; version that installer has is same as already installed, no need to install<br />
+                    MessageBox MB_ICONINFORMATION|MB_OK &quot;Setup has detected an \<br />
+                                                        installation of this \<br />
+                                                        version of Network \<br />
+                                                        Asset Manager. Setup \<br />
+                                                        will not continue, now \<br />
+                                                        exiting.&quot;<br />
+<br />
+                    Abort<br />
+              ${Else} ; version that installer has is not the same as version currently installed (assume installer has newer version), can perform upgrade<br />
+                    MessageBox MB_ICONINFORMATION|MB_YESNO &quot;Setup has detected a \<br />
+                                                           previous version of \<br />
+                                                           Network Asset Manager. \<br />
+                                                           Setup will upgrade the \<br />
+                                                           version if you select \<br />
+                                                           Yes. Otherwise, setup \<br />
+                                                           will exit.&quot; IDYes Upgrade IDNo Skip<br />
+<br />
+                    Upgrade:<br />
+                         #----- Copy locations to variables<br />
+                         StrCpy $INSTALL_DIRECTORY $8 ; read from registry above<br />
+                         ReadRegStr $DATA_DIRECTORY HKLM &quot;Software\Liebert\Database&quot; \<br />
+                                                         &quot;NAMDatabaseDirectory&quot;<br />
+                                                         <br />
+                         #----- Reset upgrading variable for Install section<br />
+                         StrCpy $Upgrading &quot;Yes&quot;<br />
+<br />
+                         #----- Skip pages to installer page<br />
+                         SendMessage $HWND 0x408 3 &quot;&quot; $R1<br />
+<br />
+                    Skip:<br />
+                         #Abort<br />
+              ${EndIf}<br />
+        ${Else}<br />
+               #----- Copy default locations to variables<br />
+               StrCpy $INSTALL_DIRECTORY &quot;C:\Apps\Liebert\NetworkAssetManager&quot;<br />
+               StrCpy $DATA_DIRECTORY &quot;C:\Data&quot;<br />
+        ${EndIf}<br />
+<br />
+FunctionEnd<br />
+<br />
+Thank you in advance and i apologize that I am not understanding how to do this from the help already provided.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">9th July 2007, 19:54</div></div><div class="posttext">I don't think $HWND is set or would even be available this soon to send the page skip message. Your code is also dropping from the Upgrade: label into the Skip: block and does the Abort command when you want to do the Upgrade.<br />
+<br />
+You should wait until the Welcome page is initialized before trying to skip to the other pages.<br />
+<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">backpacker299</div><div class="date">9th July 2007, 20:19</div></div><div class="posttext">The problem was the Skip: Abort. I moved that above the Upgrade goto and added abort statements to the pre functions of the pages that I wanted to skip and now it works.<br />
+<br />
+Thanks all for the help.<br />
+<br />
+Nik</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

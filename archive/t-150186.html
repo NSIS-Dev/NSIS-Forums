@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Another Problem with NAME, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Another Problem with NAME NSIS Discussion" />
+	
+	<title> Another Problem with NAME [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Another Problem with NAME</div>
+<hr />
+<div class="pda"><a href="t-150186.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=150186">Another Problem with NAME</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jaschulz</div><div class="date">23rd September 2003, 18:41</div></div><div class="posttext">This code crashes when it is run:<br />
+<br />
+  ;General<br />
+  Name &quot;My App&quot;<br />
+  !define VERSION &quot;v. 1.0&quot;<br />
+  Caption &quot;$(^NAME) ${VERSION}&quot;<br />
+  OutFile &quot;MyApp.exe&quot;<br />
+<br />
+  ;Folder selection page<br />
+  InstallDir &quot;$PROGRAMFILES\MyFirm\$(^NAME)&quot;<br />
+  <br />
+  ;Get install folder from registry if available<br />
+  InstallDirRegKey HKCU &quot;Software\MyFirm\$(^NAME)&quot; &quot;&quot;<br />
+<br />
+But this runs fine:<br />
+<br />
+  ;General<br />
+  Name &quot;My App&quot;<br />
+  !define VERSION &quot;v. 1.0&quot;<br />
+  Caption &quot;$(^NAME) ${VERSION}&quot;<br />
+  OutFile &quot;MyApp.exe&quot;<br />
+<br />
+  ;Folder selection page<br />
+  InstallDir &quot;$PROGRAMFILES\MyFirm\$(^NAME)&quot;<br />
+  <br />
+  ;Get install folder from registry if available<br />
+  InstallDirRegKey HKCU &quot;Software\MyFirm\My App&quot; &quot;&quot;<br />
+<br />
+Obviously, the only difference is in the last line, so why does the call to InstallDirRegKey fail when $(^NAME) is used?<br />
+<br />
+JAS</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">23rd September 2003, 19:19</div></div><div class="posttext">It's actually InstallDir that uses the language string when the language tables have not yet been initalized. If you want the folder name to be localized you'd have to copy the translation into $INSTDIR after the language have been chosen (.onGUIInit for example). I will address the crash, but I won't make it fill $INSTDIR after .onInit because usually .onInit is a place to test and set $INSTDIR.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jaschulz</div><div class="date">23rd September 2003, 19:33</div></div><div class="posttext">I am sorry, but I don't understand.  The code I showed is modeled directly on the WelcomeFinish.nsi example.  All the lines I quoted are from the Configuration section of the script.  I don't see how onInit or onGUIinit are relevant.<br />
+<br />
+JAS</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">23rd September 2003, 19:37</div></div><div class="posttext">Because $(^Name) will only have the value you want it to have after .onInit. See the manual for more information about how the language is selected, that should clear it up.<br />
+<br />
+Back to your question, set $INSTDIR on .onGUIInit with the LangString and it should work.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jaschulz</div><div class="date">23rd September 2003, 19:54</div></div><div class="posttext">I am beginning to understand.  If I customize onInit, can I us $(^Name) in my custom code, like this:<br />
+<br />
+;--------------------------------<br />
+;Installer Functions<br />
+<br />
+Function .onInit<br />
+check:<br />
+  ReadRegStr $1 HKCU &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\$(^NAME)&quot; &quot;UninstallString&quot;<br />
+  StrCmp $1 &quot;&quot; done cont<br />
+cont:<br />
+  HideWindow<br />
+  MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION &quot;'$(^NAME)' is already installed.$\n$\r$\n$\r \<br />
+  Click 'OK' to remove the previous version or 'Cancel' to abandon this upgrade.&quot; IDOK uninst<br />
+  Abort<br />
+uninst:<br />
+  ClearErrors<br />
+  ExecWait '$1'<br />
+  IfErrors cont<br />
+uninst_wait:<br />
+  Sleep 500<br />
+  FindWindow $0 &quot;&quot; &quot;$(^NAME) Uninstall&quot;<br />
+  IsWindow $0 uninst_wait &quot;&quot;<br />
+done:<br />
+  BringToFront<br />
+FunctionEnd<br />
+<br />
+Or would I have to move this code to onGUIinit?<br />
+<br />
+JAS</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">23rd September 2003, 20:38</div></div><div class="posttext">Oh, that last piece of code was what you changed it too. As the InstallDirRegKey strings are not processed, LangStrings can be used in them. The crash still resulted from $(^Name) in InstallDir, but that has already been fixed in the latest CVS version.<br />
+<br />
+You know what... I have seem to have taken this question a bit out of propertion. You don't want the key to depend on the language, otherwise you would have used Name with a LangString.<br />
+<br />
+Simply add a define such as:<br />
+<br />
+!define PRODUCT &quot;My App&quot;<br />
+<br />
+and use it where needed, just like the old script. $(^Name) is only needed if you want it to be multilingual and to depend on the language used.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jaschulz</div><div class="date">23rd September 2003, 20:41</div></div><div class="posttext">Yes, that makes sense.  Thanks.<br />
+<br />
+JAS</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

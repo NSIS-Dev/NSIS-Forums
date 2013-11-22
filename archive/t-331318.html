@@ -1,0 +1,324 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" UAC: CreateShortcut not created in user directory, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  UAC: CreateShortcut not created in user directory NSIS Discussion" />
+	
+	<title> UAC: CreateShortcut not created in user directory [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  UAC: CreateShortcut not created in user directory</div>
+<hr />
+<div class="pda"><a href="t-331318.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=331318">UAC: CreateShortcut not created in user directory</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">floyd82</div><div class="date">7th June 2011, 21:32</div></div><div class="posttext">Hi,<br />
+<br />
+I have the problem, that I want to execute my NSIS installer with user privilegues via the UAC plugin. In my opinion I did everything right with the UAC plugin, but all shortcuts (desktop and startmenu) are not created in the user directories, but in the administrator directories.<br />
+<br />
+These following lines are the most important in my opinion:<br />
+<br />
+!include &quot;UAC.nsh&quot;<br />
+<br />
+RequestExecutionLevel user<br />
+<br />
+; Attempt to give the UAC plug-in a user process and an admin process.<br />
+Function .OnInit<br />
+ <br />
+UAC_Elevate:<br />
+    !insertmacro UAC_PageElevation_RunElevated<br />
+    StrCmp 1223 $0 UAC_ElevationAborted ; UAC dialog aborted by user?<br />
+    StrCmp 0 $0 0 UAC_Err ; Error?<br />
+    StrCmp 1 $1 0 UAC_Success ;Are we the real deal or just the wrapper?<br />
+    Quit<br />
+ <br />
+UAC_Err:<br />
+    MessageBox mb_iconstop &quot;Unable to elevate, error $0&quot;<br />
+    Abort<br />
+ <br />
+UAC_ElevationAborted:<br />
+    # elevation was aborted, run as normal?<br />
+    MessageBox mb_iconstop &quot;This installer requires admin access, aborting!&quot;<br />
+    Abort<br />
+ <br />
+UAC_Success:<br />
+    StrCmp 1 $3 +4 ;Admin?<br />
+    StrCmp 3 $1 0 UAC_ElevationAborted ;Try again?<br />
+    MessageBox mb_iconstop &quot;This installer requires admin access, try again&quot;<br />
+    goto UAC_Elevate <br />
+ <br />
+FunctionEnd<br />
+<br />
+!insertmacro UAC_AsUser_Call Function CreateUserShortcuts ${UAC_SYNCREGISTERS}<br />
+<br />
+Function CreateUserShortcuts<br />
+    # start menu<br />
+    createDirectory &quot;$SMPROGRAMS\genialix 1x1\&quot;<br />
+    createShortCut &quot;$SMPROGRAMS\genialix 1x1\genialix 1x1.lnk&quot; &quot;$INSTDIR\genialix-1x1-launcher.exe&quot; &quot;&quot; &quot;$INSTDIR\genialix.ico&quot;<br />
+    createShortCut &quot;$SMPROGRAMS\genialix 1x1\genialix 1x1 deinstallieren.lnk&quot; &quot;$INSTDIR\uninstall.exe&quot; &quot;&quot;<br />
+<br />
+    # desktop shortcut<br />
+    createShortCut &quot;$DESKTOP\genialix 1x1.lnk&quot; &quot;$INSTDIR\genialix-1x1-launcher.exe&quot; &quot;&quot; &quot;$INSTDIR\genialix.ico&quot;<br />
+FunctionEnd<br />
+<br />
+I also have the whole NSIS script attached, if it helps...<br />
+I used NSIS version 2.46, with UAC version 0.2.2d from here:<br />
+http://nsis.sourceforge.net/UAC_plug-in<br />
+<br />
+Thanks in advance for your help!<br />
+<br />
+!include &quot;MUI2.nsh&quot;<br />
+!include LogicLib.nsh<br />
+!include &quot;UAC.nsh&quot;<br />
+<br />
+#required: jre 1.6<br />
+!define MIN_JAVA_MAJOR_VERSION 1<br />
+!define MIN_JAVA_MINOR_VERSION 6<br />
+<br />
+#name<br />
+!define APPLICATION_NAME &quot;genialix 1x1&quot;<br />
+<br />
+outFile &quot;genialix-1x1-installer.exe&quot;<br />
+Name &quot;${APPLICATION_NAME}&quot;<br />
+Icon &quot;genialix.ico&quot;<br />
+!define MUI_ICON &quot;genialix.ico&quot;<br />
+!define MUI_UNICON &quot;genialix.ico&quot;<br />
+installDir &quot;$PROGRAMFILES\genialix 1x1&quot;<br />
+RequestExecutionLevel user<br />
+<br />
+;Get installation folder from registry if available<br />
+InstallDirRegKey HKCU &quot;Software\genialix 1x1&quot; &quot;&quot;<br />
+<br />
+;Request application privileges for Windows Vista<br />
+RequestExecutionLevel admin<br />
+<br />
+;--------------------------------<br />
+;Interface Settings<br />
+<br />
+  !define MUI_HEADERIMAGE<br />
+  !define MUI_HEADERIMAGE_BITMAP &quot;OneHundred_NSIS_Header.bmp&quot; #optional<br />
+  !define MUI_ABORTWARNING<br />
+  !define MUI_WELCOMEFINISHPAGE_BITMAP &quot;OneHundred_NSIS_WelcomeFinishPage.bmp&quot; #optional<br />
+<br />
+<br />
+;--------------------------------<br />
+;Pages<br />
+<br />
+  !insertmacro MUI_PAGE_WELCOME<br />
+#  !insertmacro MUI_PAGE_LICENSE &quot;${NSISDIR}\Docs\Modern UI\License.txt&quot;<br />
+  !insertmacro MUI_PAGE_LICENSE &quot;license.txt&quot;<br />
+  !insertmacro MUI_PAGE_DIRECTORY<br />
+  !insertmacro MUI_PAGE_INSTFILES<br />
+  !insertmacro MUI_PAGE_FINISH<br />
+<br />
+  !insertmacro MUI_UNPAGE_WELCOME<br />
+  !insertmacro MUI_UNPAGE_CONFIRM<br />
+  !insertmacro MUI_UNPAGE_INSTFILES<br />
+  !insertmacro MUI_UNPAGE_FINISH<br />
+<br />
+;--------------------------------<br />
+;Languages<br />
+<br />
+  !insertmacro MUI_LANGUAGE &quot;German&quot;<br />
+<br />
+<br />
+; Attempt to give the UAC plug-in a user process and an admin process.<br />
+Function .OnInit<br />
+ <br />
+UAC_Elevate:<br />
+    !insertmacro UAC_PageElevation_RunElevated<br />
+    StrCmp 1223 $0 UAC_ElevationAborted ; UAC dialog aborted by user?<br />
+    StrCmp 0 $0 0 UAC_Err ; Error?<br />
+    StrCmp 1 $1 0 UAC_Success ;Are we the real deal or just the wrapper?<br />
+    Quit<br />
+ <br />
+UAC_Err:<br />
+    MessageBox mb_iconstop &quot;Unable to elevate, error $0&quot;<br />
+    Abort<br />
+ <br />
+UAC_ElevationAborted:<br />
+    # elevation was aborted, run as normal?<br />
+    MessageBox mb_iconstop &quot;This installer requires admin access, aborting!&quot;<br />
+    Abort<br />
+ <br />
+UAC_Success:<br />
+    StrCmp 1 $3 +4 ;Admin?<br />
+    StrCmp 3 $1 0 UAC_ElevationAborted ;Try again?<br />
+    MessageBox mb_iconstop &quot;This installer requires admin access, try again&quot;<br />
+    goto UAC_Elevate <br />
+ <br />
+FunctionEnd<br />
+<br />
+<br />
+# start default section<br />
+section<br />
+ <br />
+    # set the installation directory as the destination for the following actions<br />
+    setOutPath $INSTDIR<br />
+<br />
+    call jre_installation<br />
+<br />
+    file &quot;genialix.ico&quot;<br />
+    file &quot;genialix-1x1-launcher.exe&quot;<br />
+    file /r &quot;..\..\dist\*.*&quot;<br />
+ <br />
+    # create the uninstaller<br />
+    writeUninstaller &quot;$INSTDIR\uninstall.exe&quot;<br />
+<br />
+    !insertmacro UAC_AsUser_Call Function CreateUserShortcuts ${UAC_SYNCREGISTERS}<br />
+<br />
+sectionEnd<br />
+ <br />
+# jre installation<br />
+function jre_installation<br />
+<br />
+    # read jre version from registry<br />
+    ClearErrors<br />
+    ReadRegStr $R1 HKLM &quot;SOFTWARE\JavaSoft\Java Runtime Environment&quot; &quot;CurrentVersion&quot;<br />
+    #ReadRegStr $R0 HKLM &quot;SOFTWARE\JavaSoft\Java Runtime Environment\$R1&quot; &quot;JavaHome&quot;<br />
+    IfErrors no_jre_found<br />
+<br />
+    # check if java version suits our needs<br />
+    Push &quot;.&quot;<br />
+    Push $R1<br />
+    call SplitFirstStrPart<br />
+    Pop $R0 #1st part (hopefully something like &quot;1&quot;)<br />
+    Pop $R1 #rest     (hopefully something like &quot;6&quot;)<br />
+    ${If} $R0 == ${MIN_JAVA_MAJOR_VERSION}<br />
+        ${If} $R1 &lt; ${MIN_JAVA_MINOR_VERSION}<br />
+            goto old_jre_found<br />
+        ${Else}<br />
+            return<br />
+        ${EndIf}<br />
+    ${ElseIf} $R0 &lt; ${MIN_JAVA_MAJOR_VERSION}<br />
+        goto old_jre_found<br />
+    ${Else}<br />
+        return<br />
+    ${EndIf}<br />
+<br />
+    MessageBox MB_OK &quot;Fehler bei der Java-Erkennung. $\nInstallation wird ohne Java fortgesetzt.&quot;<br />
+    return<br />
+<br />
+    # jre version could not be detected -&gt; probably no java installed<br />
+    no_jre_found:<br />
+    MessageBox MB_YESNO &quot;Für ${APPLICATION_NAME} wird Java benötigt. Auf diesem Computer wurde kein Java gefunden. $\n$\nWollen Sie es jetzt installieren?&quot; /SD IDYES IDYES do_jre_installation<br />
+    Abort<br />
+<br />
+    # jre version is too old<br />
+    old_jre_found:<br />
+    MessageBox MB_YESNO &quot;Für ${APPLICATION_NAME} wird eine aktuelle Version von Java benötigt. $\nDas auf diesem Computer installierte Java ist jedoch veraltet. $\n$\nWollen Sie es jetzt eine aktuelle Version von Java installieren?&quot; /SD IDYES IDYES do_jre_installation<br />
+    Abort<br />
+<br />
+    # the actual jre installer <br />
+    do_jre_installation:<br />
+    file &quot;jre-6u22-windows-i586-s.exe&quot;<br />
+    ClearErrors<br />
+    ExecWait &quot;$INSTDIR\jre-6u22-windows-i586-s.exe&quot;<br />
+    IfErrors installing_jre_error<br />
+    return<br />
+<br />
+    # jre not installed?  -&gt; quit<br />
+    installing_jre_error:<br />
+    MessageBox MB_OK &quot;Install JRE error&quot;<br />
+    Abort<br />
+<br />
+functionEnd<br />
+<br />
+Function SplitFirstStrPart<br />
+  Exch $R0<br />
+  Exch<br />
+  Exch $R1<br />
+  Push $R2<br />
+  Push $R3<br />
+  StrCpy $R3 $R1<br />
+  StrLen $R1 $R0<br />
+  IntOp $R1 $R1 + 1<br />
+  loop:<br />
+    IntOp $R1 $R1 - 1<br />
+    StrCpy $R2 $R0 1 -$R1<br />
+    StrCmp $R1 0 exit0<br />
+    StrCmp $R2 $R3 exit1 loop<br />
+  exit0:<br />
+  StrCpy $R1 &quot;&quot;<br />
+  Goto exit2<br />
+  exit1:<br />
+    IntOp $R1 $R1 - 1<br />
+    StrCmp $R1 0 0 +3<br />
+     StrCpy $R2 &quot;&quot;<br />
+     Goto +2<br />
+    StrCpy $R2 $R0 &quot;&quot; -$R1<br />
+    IntOp $R1 $R1 + 1<br />
+    StrCpy $R0 $R0 -$R1<br />
+    StrCpy $R1 $R2<br />
+  exit2:<br />
+  Pop $R3<br />
+  Pop $R2<br />
+  Exch $R1 ;rest<br />
+  Exch<br />
+  Exch $R0 ;first<br />
+FunctionEnd<br />
+<br />
+# uninstaller section start<br />
+section &quot;uninstall&quot;<br />
+ <br />
+    # first, delete the uninstaller<br />
+    delete &quot;$INSTDIR\uninstall.exe&quot;<br />
+<br />
+    # delete files <br />
+    delete &quot;$INSTDIR\genialix.ico&quot;<br />
+    delete &quot;$INSTDIR\genialix-1x1-launcher.exe&quot;<br />
+    delete &quot;$INSTDIR\OneHundred.jar&quot;<br />
+    delete &quot;jre-6u22-windows-i586-s.exe&quot;<br />
+    RMDir &quot;$INSTDIR&quot;<br />
+<br />
+    !insertmacro UAC_AsUser_Call Function Un.CreateUserShortcuts ${UAC_SYNCREGISTERS}<br />
+ <br />
+# uninstaller section end<br />
+sectionEnd<br />
+<br />
+<br />
+Function CreateUserShortcuts<br />
+    # start menu<br />
+    createDirectory &quot;$SMPROGRAMS\genialix 1x1\&quot;<br />
+    createShortCut &quot;$SMPROGRAMS\genialix 1x1\genialix 1x1.lnk&quot; &quot;$INSTDIR\genialix-1x1-launcher.exe&quot; &quot;&quot; &quot;$INSTDIR\genialix.ico&quot;<br />
+    createShortCut &quot;$SMPROGRAMS\genialix 1x1\genialix 1x1 deinstallieren.lnk&quot; &quot;$INSTDIR\uninstall.exe&quot; &quot;&quot;<br />
+<br />
+    # desktop shortcut<br />
+    createShortCut &quot;$DESKTOP\genialix 1x1.lnk&quot; &quot;$INSTDIR\genialix-1x1-launcher.exe&quot; &quot;&quot; &quot;$INSTDIR\genialix.ico&quot;<br />
+FunctionEnd<br />
+<br />
+Function Un.CreateUserShortcuts<br />
+    # start menu<br />
+    delete &quot;$SMPROGRAMS\genialix 1x1\genialix 1x1.lnk&quot;<br />
+    delete &quot;$SMPROGRAMS\genialix 1x1\genialix 1x1 deinstallieren.lnk&quot;<br />
+    RMDir &quot;$SMPROGRAMS\genialix 1x1\&quot;<br />
+<br />
+    # desktop shortcut<br />
+    delete &quot;$DESKTOP\genialix 1x1.lnk&quot;<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">8th June 2011, 06:44</div></div><div class="posttext">Well, I can only find one problem and that's that you don't syncinstdir for your userlevel function. But that wouldn't change the location where the shortcut is created. How about if you explicitly setshellvarcontext user in the userlevel function?<br />
+<br />
+Also, please do NOT post such large amounts of code in the forums. Either use pastebin or add a file attachment.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">floyd82</div><div class="date">8th June 2011, 09:20</div></div><div class="posttext">Thanks for your answer! Using setshellvarcontext seems to be a hack, I would feel better when finding out what the real problem is... And how should I use it anyway? I only found this doc and no real example:<br />
+http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.7.7<br />
+<br />
+Sorry for posting the whole script, I can't edit it anymore now...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">8th June 2011, 12:03</div></div><div class="posttext">Err... Why would using a proper NSIS command be a hack? Just try it and see if it works. And as you can read in the manual entry you linked, the user's context can be set by passing the parameter 'current'. <br />
+<br />
+Anyway, better still, add a MessageBox to verify that the path you're passing to createshortcut is actually correct.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

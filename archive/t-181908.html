@@ -1,0 +1,248 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" mac address with system plugin, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  mac address with system plugin NSIS Discussion" />
+	
+	<title> mac address with system plugin [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  mac address with system plugin</div>
+<hr />
+<div class="pda"><a href="t-181908.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=181908">mac address with system plugin</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">kike_velez</div><div class="date">1st June 2004, 13:22</div></div><div class="posttext">Hello ¡¡¡ And congratulations for NSIS¡¡¡<br />
+<br />
+    I want to know the Mac address with the system plugin but i don´t know how to do that. I read the tutorials of brainsucker , Lobo Lunal and a lot of examples but i don´t know how to do  :(<br />
+In msdn i found this information:<br />
+<br />
+   DWORD GetAdaptersInfo(<br />
+      PIP_ADAPTER_INFO pAdapterInfo,<br />
+      PULONG pOutBufLen);<br />
+<br />
+<br />
+   typedef struct _IP_ADAPTER_INFO {<br />
+       struct _IP_ADAPTER_INFO* Next;<br />
+       DWORD ComboIndex;<br />
+       char AdapterName[MAX_ADAPTER_NAME_LENGTH + 4];<br />
+       char Description MAX_ADAPTER_DESCRIPTION_LENGTH + 4];<br />
+       UINT AddressLength;<br />
+       BYTE Address[MAX_ADAPTER_ADDRESS_LENGTH];<br />
+       DWORD Index;<br />
+       UINT Type;<br />
+       UINT DhcpEnabled;<br />
+       PIP_ADDR_STRING CurrentIpAddress;<br />
+       IP_ADDR_STRING IpAddressList; <br />
+       IP_ADDR_STRING GatewayList;<br />
+       IP_ADDR_STRING DhcpServer; <br />
+       BOOL HaveWins;<br />
+       IP_ADDR_STRING PrimaryWinsServer;<br />
+       IP_ADDR_STRING SecondaryWinsServer;<br />
+       time_t LeaseObtained;<br />
+       time_t LeaseExpires;<br />
+      } IP_ADAPTER_INFO, *PIP_ADAPTER_INFO;<br />
+<br />
+I looking for samples and i don´t know why my code dont´work. What´s wrong with my code?<br />
+<br />
+<br />
+Section &quot;GetMac&quot; GetMac<br />
+System::Alloc 400<br />
+pop $2<br />
+<br />
+System::Call 'iphlpapi::GetAdaptersInfo(*i .r3 ,i )v .r1'<br />
+<br />
+System::Call '$3(i,i,i,i,i,i .r4,i,i,i,i,i,i,i,i,i,i,i,i)'<br />
+MessageBox MB_OK &quot;Mac is $4&quot;<br />
+<br />
+System::Free $2<br />
+SectionEnd<br />
+<br />
+<br />
+Thanks in advance</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kike_velez</div><div class="date">3rd June 2004, 13:50</div></div><div class="posttext">Hello¡¡¡¡<br />
+<br />
+   I study this problem more . And I think this code must run .But I´m wrong in something.:(<br />
+<br />
+Section &quot;GetMac&quot; GetMac<br />
+System::Alloc 640<br />
+pop $2<br />
+System::Call 'iphlpapi::GetAdaptersInfo( i .r3,*l r2)i.r1'<br />
+MessageBox MB_OK &quot;GetAdaptersInfo return is $1&quot;<br />
+System::Call '*$3(v,v,&amp;t.r5,v,v,v,v,v,v,v,v,v,v,v,v,v,v,v)'<br />
+MessageBox MB_OK &quot;Adapter name is is $5&quot;<br />
+System::Free $2<br />
+SectionEnd<br />
+<br />
+The var $1 is always 111 (ERROR_BUFFER_OVERFLOW). And var $5 is allways null.<br />
+Sorry but i don´t know what´s the problem . I think that i need more bytes to allocates but i increase more than 640 and the results is always the same.<br />
+What´s wrong?<br />
+<br />
+Thanks a lot and sorry for my poor english.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">3rd June 2004, 17:52</div></div><div class="posttext">Remove the asterisk, you don't want a pointer to $2.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">brainsucker</div><div class="date">4th June 2004, 11:45</div></div><div class="posttext">Hello guys ;)<br />
+Script enumerates thru all installed adapters.<br />
+Math used only for formating, so if you don't need pretty mac addr, remove math::script lines.<br />
+GL.<br />
+<br />
+<br />
+Name &quot;MacAddr Plugin Example&quot;<br />
+OutFile &quot;macaddr.exe&quot;<br />
+SetPluginUnload  alwaysoff<br />
+<br />
+Section &quot;ThisNameIsIgnoredSoWhyBother?&quot;<br />
+    SetOutPath $TEMP<br />
+<br />
+!define maxsize 4096<br />
+ <br />
+    System::Alloc ${maxsize}<br />
+    pop $3<br />
+    System::Call 'iphlpapi::GetAdaptersInfo(i r3r4, *l ${maxsize} r2)i.r1'<br />
+    MessageBox MB_OK &quot;GetAdaptersInfo return is $1&quot;<br />
+    strcmp $1 0 0 finish ;in case of errors<br />
+<br />
+cont:<br />
+    strcmp $4 0 finish ; no more adapters<br />
+    System::Call '*$4(i.r4,i,&amp;t260.r5, &amp;t132.r6, i.r7, l.r8)'<br />
+<br />
+    Math::Script &quot;hex={'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};&quot;<br />
+    Math::Script &quot;s=''; a=r8; b=r7; #{b--&gt;0,s=s+hex[a/16%16]+hex[a%16]+#[b&gt;0,'-','']; a=a/256;}; r9=s;&quot;<br />
+    <br />
+    MessageBox MB_OK &quot;Adapter name is $5$\ndesc $6$\naddr len $7$\naddr $8$\nMacAddr: $9&quot;<br />
+<br />
+goto cont<br />
+<br />
+finish:<br />
+    System::Free $3<br />
+    <br />
+     ; last plugin call must not have /NOUNLOAD so NSIS will be able to delete the temporary DLL<br />
+     SetPluginUnload manual<br />
+     ; do nothing<br />
+    System::Free 0<br />
+    Math::Script &quot;&quot;<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kike_velez</div><div class="date">7th June 2004, 08:57</div></div><div class="posttext">Hello <br />
+<br />
+Thanks to Kichik and of course to brainsucker¡¡¡¡¡<br />
+<br />
+The solution is incredible ¡¡¡¡ :D <br />
+<br />
+I think that i need two weeks o more to understand the solution ¡¡¡ <br />
+Where´s the system plugin school? :p<br />
+<br />
+Can i do some questions ?<br />
+<br />
+System::Call 'iphlpapi::GetAdaptersInfo(i r3r4, *l ${maxsize} r2)i.r1' <br />
+<br />
+a) why &quot;i r3r4&quot;? If r3 is the space of memory , what´s r4?<br />
+<br />
+b) &quot;*l ${maxsize} r2&quot; . What´s  r2? <br />
+<br />
+Thatks a lot brainsucker i´m impressed :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">brainsucker</div><div class="date">7th June 2004, 13:34</div></div><div class="posttext">The school is here: nsis.sourceforge.net/system.html.<br />
+r4 gets the value of r3.<br />
+r2 gets the resulting length.<br />
+the system parameter consists of two parts: the input and the output one. r3, ${maxsize} - input, r4, r2 - output.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kike_velez</div><div class="date">7th June 2004, 13:42</div></div><div class="posttext">thank you very much for you help¡¡¡¡</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kike_velez</div><div class="date">7th June 2004, 13:50</div></div><div class="posttext">thank you very much for you help¡¡¡¡</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JoeMcC00L</div><div class="date">18th December 2006, 20:58</div></div><div class="posttext">FYI... the link is broken. I think it might have something to do with the migration to a wiki for the NSIS homepage.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th December 2006, 19:35</div></div><div class="posttext">It was just a temporary file which is now available at:<br />
+<br />
+http://nsis.sourceforge.net/Docs/System/System.html</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Andvar</div><div class="date">1st November 2007, 03:11</div></div><div class="posttext">Hi,brainsucker .<br />
+I use the following script in my installation script,but<br />
+when i run the setup.exe,i got the following error msg,and the setup.exe aborted.I just use your script as a standalone<br />
+function,am i do something wrong?Many thanks.<br />
+------------------------------------------------------------<br />
+AppName: zimssetup.exe	 AppVer: 0.0.0.0	 ModName: math.dll<br />
+ModVer: 0.0.0.0	 Offset: 00001d04<br />
+<br />
+-----------------------------------------------------------<br />
+error report<br />
+-----------------------------------------------------------<br />
+Exception Information<br />
+Code:0x0000005 Flags:0x00000000<br />
+Record 0x0000000000000000 address:0x0000000000d31d04<br />
+but when i run your script alone,it works well.<br />
+...and more<br />
+----------------------------------------------------------<br />
+<br />
+Originally posted by brainsucker <br />
+Hello guys ;)<br />
+Script enumerates thru all installed adapters.<br />
+Math used only for formating, so if you don't need pretty mac addr, remove math::script lines.<br />
+GL.<br />
+<br />
+<br />
+Name &quot;MacAddr Plugin Example&quot;<br />
+OutFile &quot;macaddr.exe&quot;<br />
+SetPluginUnload  alwaysoff<br />
+<br />
+Section &quot;ThisNameIsIgnoredSoWhyBother?&quot;<br />
+    SetOutPath $TEMP<br />
+<br />
+!define maxsize 4096<br />
+ <br />
+    System::Alloc ${maxsize}<br />
+    pop $3<br />
+    System::Call 'iphlpapi::GetAdaptersInfo(i r3r4, *l ${maxsize} r2)i.r1'<br />
+    MessageBox MB_OK &quot;GetAdaptersInfo return is $1&quot;<br />
+    strcmp $1 0 0 finish ;in case of errors<br />
+<br />
+cont:<br />
+    strcmp $4 0 finish ; no more adapters<br />
+    System::Call '*$4(i.r4,i,&amp;t260.r5, &amp;t132.r6, i.r7, l.r8)'<br />
+<br />
+    Math::Script &quot;hex={'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};&quot;<br />
+    Math::Script &quot;s=''; a=r8; b=r7; #{b--&gt;0,s=s+hex[a/16%16]+hex[a%16]+#[b&gt;0,'-','']; a=a/256;}; r9=s;&quot;<br />
+    <br />
+    MessageBox MB_OK &quot;Adapter name is $5$\ndesc $6$\naddr len $7$\naddr $8$\nMacAddr: $9&quot;<br />
+<br />
+goto cont<br />
+<br />
+finish:<br />
+    System::Free $3<br />
+    <br />
+     ; last plugin call must not have /NOUNLOAD so NSIS will be able to delete the temporary DLL<br />
+     SetPluginUnload manual<br />
+     ; do nothing<br />
+    System::Free 0<br />
+    Math::Script &quot;&quot;<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st November 2007, 19:49</div></div><div class="posttext">The script should work fine so long as Math isn't unloaded between the two calls. You can add /NOUNLOAD on the first call to make sure of that and then you won't need SetPluginUnload.<br />
+<br />
+When I add /NOUNLOAD, the script runs fine for me. Let me know if that's not the case for you.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

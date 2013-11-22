@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Remember selections on second install, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Remember selections on second install NSIS Discussion" />
+	
+	<title> Remember selections on second install [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Remember selections on second install</div>
+<hr />
+<div class="pda"><a href="t-204160.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=204160">Remember selections on second install</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">billybillybob</div><div class="date">7th January 2005, 11:28</div></div><div class="posttext">I would like for my installer to store all the sections the user selected and have those be selected/unselected by default the next time the user runs the installer.<br />
+<br />
+I've tried many different ways of doing this, from functions to macros, but I can't seem to get it to work.  <br />
+<br />
+Here is my approach so far:  I read in the stored values from the registry (if they are there) in the .onInit function.  Then I do a !define MUI_PAGE_CUSTOMFUNCTION_PRE right before the components page.  There I (unsuccessfully) try to select or unselect sections based on the values I read in.  Then in the .onInstSuccess function, I want to save off to the registry all the things the user selected on this install.<br />
+<br />
+I also want to do the same thing for checking off a program to run on the MUI finish page (MUI_FINISHPAGE_RUN).  I got good ideas from the dynamic finish page thread.  http://forums.winamp.com/showthread.php?s=&amp;threadid=177448<br />
+ I can read in from the registry and set it, but I don't know how to detect what was selected and save it off.<br />
+<br />
+Here is how I am currently trying to unselect sections:<br />
+<br />
+!include &quot;MUI.nsh&quot;<br />
+!include &quot;Sections.nsh&quot;<br />
+<br />
+...<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE PreComponentsPage<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+...<br />
+<br />
+Function .onInit<br />
+  ReadRegStr $A HKCU &quot;Software\myprogram&quot; &quot;stringA&quot;<br />
+  ReadRegStr $B HKCU &quot;Software\myprogram&quot; &quot;stringB&quot;<br />
+...<br />
+FunctionEnd<br />
+<br />
+Function PreComponentsPage<br />
+  StrCmp $A &quot;false&quot; 0 +2<br />
+  !insertmacro UnselectSection ${section1}<br />
+  StrCmp $B &quot;false&quot; 0 +2<br />
+  !insertmacro UnselectSection ${section2}<br />
+...<br />
+FunctionEnd<br />
+<br />
+<br />
+Can anyone give me some hints on how to do all this?  I appreciate any help you can give.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th January 2005, 11:54</div></div><div class="posttext">According to the example, it seems ${section1} and ${section2} are not defined in the place you're using them. Put the PreComponentsPage function after the section definitions and it should work.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">billybillybob</div><div class="date">7th January 2005, 20:29</div></div><div class="posttext">I already had those defined by the time PreComponentsPage comes along.  I had the sections defined just after the pages and right before the functions.  For brevity, I left that part out of my example.  <br />
+<br />
+I got it working now.  I read in the nsis help file that &quot;Compiler flag commands and SectionIn aren't instructions so jumping over them has no effect.&quot;  I tried jumping to a label instead of an instruction.  I changed my PreComponentsPage to:<br />
+<br />
+Function PreComponentsPage<br />
+  StrCmp $A &quot;false&quot; 0 a_done<br />
+  !insertmacro UnselectSection ${section1}<br />
+  a_done:<br />
+  StrCmp $B &quot;false&quot; 0 b_done<br />
+  !insertmacro UnselectSection ${section2}<br />
+  b_done:<br />
+<br />
+That got it :)<br />
+<br />
+What exactly are macros?  How are they different than functions?  How come !insetmacro isn't an instruction?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">billybillybob</div><div class="date">7th January 2005, 22:00</div></div><div class="posttext">Next part of the problem is how to detect what programs a user selected to run in the finish page - I use the MUI_FINISHPAGE_RUN macro and have 2 check boxes where the user select to run a program and/or a readme.  Any ideas here?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">7th January 2005, 22:16</div></div><div class="posttext">&quot;Remember selections on second install&quot;<br />
+<br />
+http://forums.winamp.com/attachment.php?s=&amp;postid=1553252<br />
+<br />
+Compile: &quot;WordFuncExample.nsi&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">billybillybob</div><div class="date">7th January 2005, 22:59</div></div><div class="posttext">&quot;Remember selections on second install&quot;<br />
+<br />
+http://forums.winamp.com/attachment...;postid=1553252<br />
+<br />
+Compile: &quot;WordFuncExample.nsi&quot;<br />
+Thank you.  Some cool functions in there :). I looked it over and I don't think I can use any of it since I have that part done now.<br />
+<br />
+I'm able to set the checked status of items on the finish page using this stuff I borrowed from http://forums.winamp.com/showthread.php?s=&amp;threadid=177448  I call this as the pre function of the finish page.<br />
+<br />
+Function SetFinishPageOptions  <br />
+  StrCmp $Y &quot;true&quot; show_y hide_y<br />
+  hide_y:<br />
+    GetDlgItem $2 $MUI_HWND &quot;1203&quot; ;$MUI_HWND is defined for us by the MUI macros as the inner dialog hwnd<br />
+    SendMessage $2 ${WM_LBUTTONDOWN} 0 0 ;uncheck it<br />
+    SendMessage $2 ${WM_LBUTTONUP} 0 0 ;<br />
+    ShowWindow $2 ${SW_HIDE}<br />
+  show_y:<br />
+  StrCmp $INS_README &quot;true&quot; show_readme hide_readme<br />
+  hide_readme:<br />
+    GetDlgItem $2 $MUI_HWND &quot;1204&quot; ;control id gathered from Spy++. (1200 + Field number - 1)<br />
+    SendMessage $2 ${WM_LBUTTONDOWN} 0 0 ;uncheck it<br />
+    SendMessage $2 ${WM_LBUTTONUP} 0 0 ;<br />
+    ShowWindow $2 ${SW_HIDE}<br />
+  show_readme:<br />
+FunctionEnd<br />
+Now I just need to find a way to get the checked status of these at the end of installation.  In .onInstSuccess I tried <br />
+GetDlgItem $2 $MUI_HWND &quot;1203&quot;<br />
+GetDlgItem $3 $MUI_HWND &quot;1204&quot;<br />
+with no luck.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">7th January 2005, 23:15</div></div><div class="posttext">You need to use SendMessage:<br />
+GetDlgItem $2 $MUI_HWND &quot;1203&quot;<br />
+SendMessage $2 0x00F2 0 0 $R0<br />
+<br />
+$R0 will be either 0 or 1<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">7th January 2005, 23:15</div></div><div class="posttext">Edit: Double post</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">billybillybob</div><div class="date">8th January 2005, 05:10</div></div><div class="posttext">I can't seem to get it to work.  This code gives a 0 for $R0 whether the checkboxes are checked or not.  What am I doing wrong?<br />
+<br />
+<br />
+Function .onInstSuccess<br />
+  ...<br />
+  GetDlgItem $2 $MUI_HWND &quot;1203&quot;<br />
+  SendMessage $2 0x00F2 0 0 $R0<br />
+  MessageBox MB_ICONEXCLAMATION|MB_OK &quot;$R0&quot;<br />
+  GetDlgItem $2 $MUI_HWND &quot;1204&quot;<br />
+  SendMessage $2 0x00F2 0 0 $R0<br />
+  MessageBox MB_ICONEXCLAMATION|MB_OK &quot;$R0&quot;<br />
+  ...<br />
+<br />
+<br />
+Is there any documentation or code on GetDlgItem or SendMessage?  The info in the NSIS help file is pretty sparse.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th January 2005, 12:17</div></div><div class="posttext">MSDN has all the information you need about GetDlgItem and SendMessage.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">billybillybob</div><div class="date">9th January 2005, 05:45</div></div><div class="posttext">Thanks, kichik.  I looked over the info on MSDN and I have a better understanding of these now.  I still can't figure out why it isn't working, however.  Is SendMessage $2 0x00F2 0 0 $R0 the correct command to use?  I have no idea what message 0x00F2 is and why we send it.  Sorry if I'm being dense.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">billybillybob</div><div class="date">9th January 2005, 09:10</div></div><div class="posttext">ah ha!  The code afro uk posted was correct.  I just needed to call it from the post finish page function (!define MUI_PAGE_CUSTOMFUNCTION_LEAVE function) instead of .onInstSuccess.  I guess because by that time the window is gone and you can't send messages to it anymore :)  <br />
+<br />
+Thank you guys for your help :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th January 2005, 13:15</div></div><div class="posttext">0xF2 is the id of the BM_GETSTATE message.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th January 2005, 13:26</div></div><div class="posttext">My define used is<br />
+!define BM_GETSTATE 0x00F2<br />
+but I simply put 0x00F2 (same as Kichick posted).<br />
+<br />
+Use<br />
+!define BM_SETCHECK 0x00F1<br />
+to check a check-box.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,530 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" windows vista -&gt; nsis using game explorer, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  windows vista -&gt; nsis using game explorer NSIS Discussion" />
+	
+	<title> windows vista -&gt; nsis using game explorer [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  windows vista -&gt; nsis using game explorer</div>
+<hr />
+<div class="pda"><a href="t-258969.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=258969">windows vista -&gt; nsis using game explorer</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">5th November 2006, 22:36</div></div><div class="posttext">hi, could someone help using the igameexplorer interface from windows vista with nsis' system.dll?<br />
+<br />
+i already have my executable modified with the gdf (game definition file) data as described in the ms directx sdk. now, the next step to take is registering the executable via an api call. <br />
+<br />
+here is what the directx sdk readme states<br />
+Once the GDF and related files have been added to a binary resource, it is then possible to integrate the game with Game Explorer. It is strongly advised that games integrate with Game Explorer during the installation process. The outline to the integration process is as follows:<br />
+[list=1]<br />
+ Install ALL files to the user's hard drive. The next step activates parental controls and could potentially lock the user out of the installation directory. <br />
+ Create an instance to the IGameExplorer interface. <br />
+ Call the VerifyAccess method, of the IGameExplorer interface and pass it the path to the GDF. <br />
+ Call the AddGame method, of the IGameExplorer interface and pass it the path to the GDF, the path to the root installation directory, and a unique GUID called the game instance ID. <br />
+ Create shortcuts, which are Game Explorer tasks, by using the game instance ID. Game Explorer tasks are explained in the next section. [/list=1] <br />
+<br />
+<br />
+game explorer: http://windowssdk.msdn.microsoft.com/en-us/library/ms687212.aspx<br />
+interface reference: http://windowssdk.msdn.microsoft.com/en-us/library/ms687221.aspx</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th November 2006, 06:55</div></div><div class="posttext">Completely untested.!include WinVer.nsh<br />
+<br />
+!define GDF $INSTDIR\game.exe<br />
+<br />
+!define GIS_NOT_INSTALLED 0 # might be wrong value<br />
+!define GIS_CURRENT_USER 1 # might be wrong value<br />
+!define GIS_ALL_USERS 2 # might be wrong value<br />
+<br />
+${If} ${AtLeastWinVista}<br />
+  SetOutPath $PLUGINSDIR<br />
+  File GameuxInstallHelper.dll # from dxsdk<br />
+  System::Call &quot;GameuxInstallHelper::GenerateGUID(*g .r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::AddToGameExplorer(t '${GDF}', t d, i ${GIS_ALL_USERS}, *g r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::CreateTask(i ${GIS_ALL_USERS}, *g r0, i 0, i 0, t 'Play', t '${GDF}', t '')&quot;<br />
+  System::Call &quot;GameuxInstallHelper::CreateTask(i ${GIS_ALL_USERS}, *g r0, i 0, i 1, t 'Network Play', t '${GDF}', t '-network')&quot;<br />
+  System::Call &quot;GameuxInstallHelper::CreateTask(i ${GIS_ALL_USERS}, *g r0, i 0, i 2, t 'Safe Mode', t '${GDF}', t '-safe')&quot;<br />
+  System::Call &quot;GameuxInstallHelper::CreateTask(i ${GIS_ALL_USERS}, *g r0, i 1, i 0, t 'Supprt', t 'http://nsis.sf.net/', t '')&quot;<br />
+  System::Call &quot;GameuxInstallHelper::SetupRichSavedGames(t '.ExampleSaveGame', t '${GDF}', t '%1')&quot;<br />
+  SetOutPath $INSTDIR<br />
+${EndIf}# uninstall<br />
+${If} ${AtLeastWinVista}<br />
+  System::Call &quot;GameuxInstallHelper::RetrieveGUIDForApplication(t '${GDF}', *g .r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::RemoveFromGameExplorer(*g .r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::RemoveTasks(*g .r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::RemoveRichSaveGames(t '.ExampleSaveGame')&quot;<br />
+${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dandaman32</div><div class="date">6th November 2006, 10:17</div></div><div class="posttext">Great. From what I can tell there, Microsoft is now using something even more cryptic than the Registry. Now there's a &quot;games database&quot;?<br />
+<br />
+&lt;sarcastic&gt;*sighs* don't you just love it when Microsoft's APIs insist on doing everything for you?&lt;/sarcastic&gt;<br />
+<br />
+-dandaman32</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">6th November 2006, 19:26</div></div><div class="posttext">thanks for your help kichik!<br />
+<br />
+works quite well, except one thing. in my case the guid is generated before - in the game definition file editor.<br />
+i tried both, with the sample binary with gdf information and my own binary and both the last parameter of addline  could be left empty or even should left empty. i am not much into the gdf thing yet, so i don't know why this last parameter is there anyway as in the vista registry the guid of the is taken anyway.<br />
+the line<br />
+  System::Call &quot;GameuxInstallHelper::GenerateGUID(*g .r0)&quot;<br />
+crashes the installer. as i seem not to require it anyway i left it out, everything else seems to run smooth yet though i didn't try the uninstaller yet but looking at the lines you wrote that could be more a problem than addline cause of the guid thing i do not totally understand ;)<br />
+<br />
+DOCa Cola<br />
+<br />
+edit: @dandaman32<br />
+and yes, quite complicated for a simple link with menu :P</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th November 2006, 21:11</div></div><div class="posttext">GenerateGUID might need an allocated buffer like CoCreateGuid. In which case, its usage should be:System::Alloc 16<br />
+System::Call &quot;GameuxInstallHelper::GenerateGUID(i sr0)&quot;or even:System::Call &quot;GameuxInstallHelper::GenerateGUID(g .r0)&quot;I'd need the DLL to verify. Could you attach it? Though you're probably correct that it just generates a new GUID. It doesn't take any parameters relating to the game.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">6th November 2006, 22:29</div></div><div class="posttext">here you go. :)<br />
+<br />
+thanks for your time</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th November 2006, 22:44</div></div><div class="posttext">As I thought, it just calls CoCreateGuid. The last usage example I wrote should work. It'd probably have the same effect if you generate the GUID in advance on your computer, but I can't be sure of that. According to MSDN, it's the InstanceID, so it's probably per-computer after all.<br />
+<br />
+MSDN also says:Callers should store the instanceID returned by this call as it is necessary to call RemoveGame or UpdateGame, and to create tasks for the game within the Game Explorer.<br />
+<br />
+If the call is made to upgrade a legacy title to a supported title the ID returned in pguidInstanceID will be the same as the legacy entry.It seems AddGame would return a different GUID then the one passed, if the game is already installed. All `*g r0` instances in the script above should therefore be changed to `gr0` and the first instance, in the call to AddToGameExplorer should be changed to `gr0r0` so that AddToGameExplorer would be able to change the GUID.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">8th November 2006, 11:43</div></div><div class="posttext">great, installing works now without any problems. the uninstaller is the next step.<br />
+<br />
+thanks for your help kichik!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th November 2006, 17:58</div></div><div class="posttext">Mind creating a page on the Wiki with examples and functions/macros for adding games to the Game Explorer?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">11th November 2006, 11:45</div></div><div class="posttext">yea, as soon as i got this 100% running.<br />
+today i played with the uninstaller and couldn't get it working. i forgot to copy the gameuxinstallhelper.dll in the first place but i added it later so the uninstaller part does now look like that<br />
+${If} ${AtLeastWinVista}<br />
+  SetOutPath $PLUGINSDIR<br />
+  File GameuxInstallHelper.dll # from dxsdk<br />
+  System::Call &quot;GameuxInstallHelper::RetrieveGUIDForApplication(t '${GDF}', *g .r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::RemoveFromGameExplorer(*g .r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::RemoveTasks(*g .r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::RemoveRichSaveGames(t '.ExampleSaveGame')&quot;<br />
+  SetOutPath $INSTDIR<br />
+${EndIf}<br />
+<br />
+i tested it and the path to ${GDF} is also correct set to the gdf binary.<br />
+Another problem i am experiencing are random crashes sometimes the installer calls the dll functions - both with the installer and uninstaller<br />
+http://img170.imageshack.us/my.php?image=11112006123647py9.png</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">11th November 2006, 11:51</div></div><div class="posttext">You need to convert `*g .r0` to `g .r0` for the first call and to `g r0` for the others, just like with the installer code.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">11th November 2006, 12:43</div></div><div class="posttext">damn, i already tried changing the first call but forgot about the others ;) thx i will try it</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DOCa Cola</div><div class="date">12th November 2006, 09:31</div></div><div class="posttext">still no success with<br />
+${If} ${AtLeastWinVista}<br />
+  SetOutPath $PLUGINSDIR<br />
+  File GameuxInstallHelper.dll # from dxsdk<br />
+  System::Call &quot;GameuxInstallHelper::RetrieveGUIDForApplication(t '${GDF}', g .r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::RemoveFromGameExplorer(*g r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::RemoveTasks(*g r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::RemoveRichSaveGames(t '.ExampleSaveGame')&quot;<br />
+  SetOutPath $INSTDIR<br />
+${EndIf}<br />
+<br />
+the uninstaller seems to run fine but the game doesn't seem to be removed from the game browser...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">14th November 2006, 18:49</div></div><div class="posttext">You still have an asterisk before `g`. It should be `gr0` for the last two calls.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kverity</div><div class="date">5th December 2006, 19:51</div></div><div class="posttext">How can I pack the GameuxInstallHelper.dll into the AppNameSetup.exe?  <br />
+<br />
+Is is necessary for our users to only download one file and I need to have the .dll accessible so the calls to the Game Explorer work correctly.<br />
+<br />
+Any help would be appreciated,<br />
+<br />
+Thanks,<br />
+<br />
+Keith</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">necrophilissimo</div><div class="date">8th January 2007, 18:26</div></div><div class="posttext">Okay, I know I'm asking dumb questions, but has anyone made a tutorial on this subject? :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">8th January 2007, 20:32</div></div><div class="posttext">does the dll not exist on every vista system?<br />
+<br />
+if it does exist on every vista system, you should not include it in your setup but rather check, whether the user has the dll already and then call the functions or don't, if he has no windows vista (because then they're all useless).<br />
+<br />
+if it is not installed on vista by default you should indeed include the dll into your installer.<br />
+<br />
+this is quite simple:<br />
+<br />
+SetOutPath $PLUGINSDIR<br />
+File GameuxInstallHelper.dll<br />
+<br />
+you may need to modify your dll calls to:<br />
+<br />
+system::call '$PLUGINSDIR\GameuxInstallHelper.dll::blabla()'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ashre</div><div class="date">21st February 2007, 21:04</div></div><div class="posttext">I've recently written an installer integrating with Game Explorer, thanks for the help kichik and Doca!<br />
+<br />
+I've put up a wiki page with the code at:<br />
+<br />
+http://nsis.sourceforge.net/Game_explorer<br />
+<br />
+One thing of interest I discovered is that if you try and create a game explorer link for the current user it fails unless you are an administrator as it tries to write to HKLM - this is in conflict with what the documentation says but there's very little other information about Game Explorer at the moment.<br />
+<br />
+--<br />
+Marc Sutton<br />
+www.codev.co.uk</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">THiRD</div><div class="date">14th March 2007, 23:28</div></div><div class="posttext">I've been reading through these forums and I have been able to get my game to install in game explorer. My problem is that I can  not uninstall the game from Game Explorer now.  This is the GameEx code that I am using:<br />
+<br />
+!define GDF gdf_wheel.dll<br />
+<br />
+!define GIS_NOT_INSTALLED 0 # might be wrong value<br />
+!define GIS_CURRENT_USER 1 # might be wrong value<br />
+!define GIS_ALL_USERS 2 # might be wrong value<br />
+<br />
+..Other code omitted<br />
+<br />
+Install Code<br />
+<br />
+${If} ${AtLeastWinVista}<br />
+      SetOutPath $PLUGINSDIR<br />
+      File GameuxInstallHelper.dll # from dxsdk<br />
+      System::Call &quot;GameuxInstallHelper::GenerateGUID(*g .r0)&quot;<br />
+      System::Call &quot;GameuxInstallHelper::AddToGameExplorer(t '${GDF}', t d, i ${GIS_ALL_USERS}, *g r0)&quot;<br />
+      System::Call &quot;GameuxInstallHelper::CreateTask(i ${GIS_ALL_USERS}, *g r0, i 0, i 0, t 'Play', t '${GDF}', t '')&quot;<br />
+      SetOutPath $INSTDIR<br />
+    ${EndIf}<br />
+<br />
+<br />
+Uninstall Code<br />
+<br />
+${If} ${AtLeastWinVista}<br />
+      System::Call &quot;GameuxInstallHelper::RetrieveGUIDForApplication(t '${GDF}', *g .r0)&quot;<br />
+      System::Call &quot;GameuxInstallHelper::RemoveFromGameExplorer(*g .r0)&quot;<br />
+      System::Call &quot;GameuxInstallHelper::RemoveTasks(*g .r0)&quot;<br />
+    ${EndIf}<br />
+<br />
+<br />
+<br />
+I'm not sure where to go from here I've read the NSIS wiki on game explorer and I still can not get my game removed from game explorer. So my first step is to actually get the game removed then figure out how to set up the installer/uninstaller correctly.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ashre</div><div class="date">15th March 2007, 09:52</div></div><div class="posttext">Hi Third,<br />
+<br />
+You need to use code more like that in the wiki. For a start the defines at the top of your code are incorrect. Also you need to RequestUserLevel admin at the top (it seems that applies even if you are trying to install for a current user).<br />
+<br />
+Also you need to generate a GUID and store it in the registry when you install, then use that value to uninstall. Copying the code from the wiki entry at:<br />
+<br />
+http://nsis.sourceforge.net/Game_explorer<br />
+<br />
+should make it work. Hope that helps,<br />
+<br />
+--<br />
+Marc Sutton<br />
+http://www.codev.co.uk</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">THiRD</div><div class="date">15th March 2007, 19:52</div></div><div class="posttext">I tried the code from the wiki, but I think my problem is that I can't get the old game to uninstall from gameEx so the code from the wiki doesn't work.  Also I have a gid inside my GDF file do I need to generate one the way you said or should I be able to pull it from the GDF?<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">THiRD</div><div class="date">15th March 2007, 21:07</div></div><div class="posttext">Okay some how i managed to get the old game removed from GameEx I am now using the code from the wiki, but it is not installing GameEx.  I have the GameuxInstallHelper.dll and my gdf.dll in the directory with the installer. My script compiles fine it just doesn't seem to be running the GameEx functions.<br />
+<br />
+<br />
+!define GDF &quot;gdf_wheel.dll&quot;<br />
+<br />
+<br />
+<br />
+!define PRODUCT &quot;MyGame&quot;<br />
+!define FILES &quot;files&quot;<br />
+!define STUDIO &quot;MyStudio&quot;<br />
+<br />
+;Directory selection page<br />
+InstallDir &quot;$PROGRAMFILES\${STUDIO}\${PRODUCT}&quot;<br />
+<br />
+<br />
+<br />
+Function GameExplorer<br />
+  Pop $0<br />
+ <br />
+  ; Check if we have Vista or later<br />
+  ClearErrors<br />
+  ReadRegStr $0 HKLM &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion&quot; CurrentVersion<br />
+  IfErrors finished<br />
+  StrCpy $0 $0 1<br />
+  IntCmp $0 6 0 finished<br />
+  <br />
+  ; Register with Game Explorer if so<br />
+  ;SetOutPath $PLUGINSDIR<br />
+  File &quot;GameuxInstallHelper.dll&quot;<br />
+ <br />
+  ; Remove first to avoid duplication<br />
+  ReadRegStr $0 HKCU &quot;Software\${PRODUCT}&quot; &quot;GameExplorer&quot;<br />
+  StrCmp $0 '' skipUninstall<br />
+  System::Call &quot;GameuxInstallHelper::RemoveFromGameExplorer(g r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::RemoveTasks(g r0)&quot;<br />
+  skipUninstall:<br />
+ <br />
+  ; Now add to GE<br />
+  System::Call &quot;GameuxInstallHelper::GenerateGUID(g .r0)&quot;<br />
+  WriteRegStr HKCU &quot;Software\${PRODUCT}&quot; &quot;GameExplorer&quot; $0<br />
+  System::Call &quot;GameuxInstallHelper::AddToGameExplorer(t ${GDF}, t '$INSTDIR\${PRODUCT}.exe', i ${GIS_ALL_USERS}, g r0 r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::CreateTask(i ${GIS_ALL_USERS}, g r0, i 0, i 0, t 'Play', t '$INSTDIR\${PRODUCT}.exe', t '')&quot;<br />
+  System::Call &quot;GameuxInstallHelper::CreateTask(i ${GIS_ALL_USERS}, g r0, i 1, i 0, t 'Support', t 'http://www.MySite.com/', t '')&quot;<br />
+ <br />
+ finished:<br />
+  Pop $0<br />
+ FunctionEnd<br />
+ <br />
+ Function un.GameExplorer<br />
+  Push $0<br />
+ <br />
+  ; Check if we have Vista or later<br />
+  ClearErrors<br />
+  ReadRegStr $0 HKLM &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion&quot; CurrentVersion<br />
+  IfErrors finished<br />
+  StrCpy $0 $0 1<br />
+  IntCmp $0 6 0 finished<br />
+ <br />
+  ; Remove from game explorer<br />
+  ;SetOutPath $Temp<br />
+  File &quot;GameuxInstallHelper.dll&quot;<br />
+  ReadRegStr $0 HKCU &quot;Software\${PRODUCT}&quot; &quot;GameExplorer&quot;<br />
+  StrCmp $0 '' finished<br />
+  System::Call &quot;GameuxInstallHelper::RemoveFromGameExplorer(g r0)&quot;<br />
+  System::Call &quot;GameuxInstallHelper::RemoveTasks(g r0)&quot;<br />
+ finished:<br />
+ <br />
+ Pop $0<br />
+ FunctionEnd<br />
+<br />
+<br />
+Sorry for all of the code just wasn't sure if i was missing something.  Like I said, I have the dll's in the same directory as the install script and I also copied them into the directory of the app just to make sure they were found but still no luck.<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">oborstad</div><div class="date">5th April 2007, 17:44</div></div><div class="posttext">Umm.. Does anyone have any ideas why I might be getting empty GUIDs from the System::Call &quot;GameuxInstallHelper::GenerateGUID(g .r0)&quot; line?  I'm not getting &quot;&quot;, but &quot;{00000000-0000-0000-000000000000}&quot; as a GUID...?<br />
+<br />
+   Owen.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">5th April 2007, 17:48</div></div><div class="posttext">GenerateGUID does not take a GUID as argument, but the POINTER TO AN GUID.<br />
+<br />
+try GenerateGUID(i .r0)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">oborstad</div><div class="date">5th April 2007, 18:06</div></div><div class="posttext">GenerateGUID(i .r0) returns simply 0 instead of an empty GUID<br />
+<br />
+Also, this was taken from above and the wiki, so it seems to have worked for others...<br />
+<br />
+  Owen.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">5th April 2007, 21:13</div></div><div class="posttext">you may try GenerateGUID(g r0)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">5th April 2007, 21:27</div></div><div class="posttext">untested:<br />
+<br />
+System::Call &quot;*(g 0) i .r0&quot; # allocate memory for the GUID<br />
+System::Call &quot;GameuxInstallHelper::GenerateGUID (i .r0)&quot; # pass the pointer to the allocated memory to the function<br />
+System::Call &quot;*$0(g .r1)&quot; # read the new data from the pointer<br />
+System::Free $0 # free the allocated memory<br />
+DetailPrint &quot;$1&quot; # ouput the data</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">oborstad</div><div class="date">5th April 2007, 21:55</div></div><div class="posttext">Your code with GenerateGUID (i r0)  (no period), gives me a blank GUID again... (not &quot;&quot;, &quot;{00000000-0000-0000-000000000000}&quot;)  This was the same as simply doing the GenerateGUID(g .r0) (which gave the same thing, all 0's)<br />
+<br />
+I'm wondering if there's something borked on the vista box I'm using... (or flavour, or... sigh)<br />
+<br />
+  Owen.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">oborstad</div><div class="date">6th April 2007, 00:20</div></div><div class="posttext">Well, I found the problem.  There are 2 versions of the GameuxInstallHelper.  One's a 32 bit dll, one's a 64 bit dll.  The 32 bit one works, but if you try to call the 64 bit one, it returns an empty GUID.  So.  Moral of this story.  If you are getting totally weird results, double check you have the right files.<br />
+<br />
+For other people's sanity:<br />
+32 bit version of GameuxInstallerHelper is around 77 k<br />
+64 bit version of GameuxInstallerHelper is around 100 k<br />
+<br />
+  Owen.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Welshman101</div><div class="date">8th April 2007, 01:07</div></div><div class="posttext">If anyone has an install script/s that succesfully add an entry to game explorer I would appreciate it if they would share it with me as I am currently unable to create one of my own.<br />
+<br />
+I've followed the code in the wiki but for some reason my app does not get added to Game Explorer.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mauvecloud</div><div class="date">28th March 2008, 18:49</div></div><div class="posttext">I was able to add an entry to game explorer using the GUID extracted from the GDF resource beforehand, and code like the following:<br />
+<br />
+<br />
+;--------------------------------<br />
+Function GE_AddGame <br />
+  SetOutPath $PLUGINSDIR<br />
+  File &quot;GameuxInstallHelper.dll&quot;<br />
+  System::Call 'GameuxInstallHelper::AddToGameExplorerStrGUID(t &quot;$INSTDIR\${GDF_BINARY}&quot;, t &quot;$INSTDIR\&quot;, i 3, t &quot;${GAME_GUID}&quot;)'<br />
+FunctionEnd<br />
+<br />
+;--------------------------------<br />
+Function GE_AddTasks<br />
+  SetShellVarContext all<br />
+  System::Call 'GameuxInstallHelper::CreateTaskStrGUID(i 3, t &quot;${GAME_GUID}&quot;, i 0, i 0, t &quot;Play&quot;, t &quot;$INSTDIR\${GAME_EXE}&quot;, t &quot;&quot;)'<br />
+  SetShellVarContext current<br />
+FunctionEnd<br />
+<br />
+;--------------------------------<br />
+Function un.GE_RemoveGame<br />
+  SetOutPath $PLUGINSDIR<br />
+  File &quot;GameuxInstallHelper.dll&quot;<br />
+  System::Call 'GameuxInstallHelper::RemoveFromGameExplorerStrGUID(t &quot;${GAME_GUID}&quot;)'<br />
+  System::Call 'GameuxInstallHelper::RemoveTasksStrGUID(t &quot;${GAME_GUID}&quot;)'<br />
+FunctionEnd<br />
+<br />
+<br />
+Possibly the GUID passed to the functions needs to be the same as in the GDF resource, but if that's the case, what's the point of having a GenerateGUID function in GameuxInstallHelper instead of an ExtractGUID function?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">oborstad</div><div class="date">28th March 2008, 19:09</div></div><div class="posttext">Originally posted by mauvecloud <br />
+Possibly the GUID passed to the functions needs to be the same as in the GDF resource, but if that's the case, what's the point of having a GenerateGUID function in GameuxInstallHelper instead of an ExtractGUID function? <br />
+It doesn't, the GUID that you use for passing into the game explorer should be unique so that you could potentially add multiple versions/installs of the game to the explorer if you really wanted to.  The GenerateGUID was failing for me because I had the 64 bit version of the dll instead of the 32 bit version on a 32 bit system.<br />
+<br />
+we use:<br />
+<br />
+  System::Call &quot;GameuxInstallHelper::GenerateGUID(g .r0)&quot;<br />
+  StrCmp $0 '{00000000-0000-0000-0000-000000000000}' finished<br />
+<br />
+  System::Call &quot;GameuxInstallHelper::AddToGameExplorer(t 'path_to_gdf_file', t 'path_to_exe', i ${GIS_ALL_USERS}, g r0) i .r4&quot;<br />
+<br />
+  System::Call &quot;GameuxInstallHelper::CreateTask(i ${GIS_ALL_USERS}, g r0, i  1, i 0, t 'Play', t 'path_to_exe', t 'arguments') i .r4&quot;<br />
+  System::Call &quot;GameuxInstallHelper::CreateTask(i ${GIS_ALL_USERS}, g r0, i  0, i 0, t 'Support', t 'path_to_exe', t 'arguments') i .r4&quot;<br />
+<br />
+  System::Call &quot;GameuxInstallHelper::SetupRihcSavedGames(t '.save_game_extension', t 'path_to_exe', t 'Save_game_descriptor') i .r4&quot;<br />
+<br />
+  System::Call &quot;GameuxInstallHelper::RegisterWithMediaCenter(t 'path_to_gdf_file', t 'path_to_mcl_location', i ${GIS_ALL_USERS}, t 'path_to_exe', t 'args', i 0) i .r4&quot;<br />
+finished:<br />
+<br />
+<br />
+${GIS_ALL_USERS} = 3, can be 1 for current user instead (HKCU vs LM and for limited user can be 1)<br />
+<br />
+Hope that helps anyone else that is trying to get this up and running.<br />
+<br />
+   Owen.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th March 2008, 16:42</div></div><div class="posttext">There's no need to use GameuxInstallHelper. There are better solutions available.<br />
+<br />
+http://nsis.sourceforge.net/Game_explorer<br />
+http://nsis.sourceforge.net/Games_plug-in</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mauvecloud</div><div class="date">29th March 2008, 17:32</div></div><div class="posttext">I fail to see how either of those is better than GameuxInstallHelper. The &quot;Games&quot; plugin looks like it will only work if the GDF is embedded in the EXE, not if it's in a separate DLL, and requires MSVCR80.dll. The &quot;GameExplorer&quot; header doesn't handle Media Center (and also looks a little buggy - I mean, why swap the GDF path and INSTDIR depending on current or all users?), and neither currently supports rich saved games.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th March 2008, 17:47</div></div><div class="posttext">GameExplorer header is smaller, simpler, easier to get and just works. Just look at the length of this GameuxInstallHelper related thread to see what I mean. I've created the GameExplorer headers to help users avoid this DLL.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mauvecloud</div><div class="date">29th March 2008, 19:01</div></div><div class="posttext">I'm doubtful of the &quot;just works&quot; part. I still don't understand the reversal of R0 and R1 depending on ${CONTEXT} in the following snippet:<br />
+<br />
+  !if ${CONTEXT} == all<br />
+    System::Call &quot;$1-&gt;${IGameExplorer_AddGame}(w R0, w R1, i ${GIS_ALL_USERS}, g R2) i .r0&quot;<br />
+  !else if ${CONTEXT} == user<br />
+    System::Call &quot;$1-&gt;${IGameExplorer_AddGame}(w R1, w R0, i ${GIS_CURRENT_USER}, g R2) i .r0&quot;<br />
+  !else<br />
+    !error &quot;Invalid CONTEXT passed to GameExplorer_AddGame! Must be `user` or `all`.&quot;<br />
+  !endif<br />
+<br />
+<br />
+Anyway, I think the clarifications in this thread can be summarized as follows, and maybe added to a wiki page about GameuxInstallHelper:<br />
+1. The correct parameter type to use for the GUID (it's &quot;g&quot;, not &quot;i&quot; or &quot;*g&quot; - the System plugin takes care of creating a GUID from the string and passing a pointer to it)<br />
+2. Use the 32-bit version of GameuxInstallHelper.dll, not the 64-bit version (unless maybe you want to only allow the game to be installed on a 64-bit system)<br />
+3. The GUID can be generated during the install, and shouldn't be the same as the gameID in the GDF resource.<br />
+Once those three things are understood, using GameuxInstallHelper is almost as easy as the GameExplorer header or Games plugin.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th March 2008, 20:38</div></div><div class="posttext">If you're going to create a Wiki page for GameuxInstallHelper, I suggest you put a direct link to the correct version or step by step instructions for its location.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mauvecloud</div><div class="date">30th March 2008, 02:20</div></div><div class="posttext">Here you go:<br />
+http://nsis.sourceforge.net/Game_Explorer_with_Helper<br />
+(I haven't figured out yet how this forum decides which links to block, so I'm leaving it as text for now)<br />
+<br />
+For comparison:<br />
+Weaknesses of old Game Explorer header:<br />
+1. No save game support<br />
+2. No media center support<br />
+3. Additional tasks have to be created manually (with long paths to remember)<br />
+4. No support for pre-Vista systems that might get upgraded<br />
+<br />
+Weaknesses of Games plug-in:<br />
+1. Requires msvcr80.dll (612 KB)<br />
+2. Can't handle GDF in separate dll<br />
+3. No save game support<br />
+4. All tasks have to be created manually<br />
+5. No support for pre-Vista systems that might get upgraded<br />
+<br />
+Weaknesses of Game Explorer with Helper header:<br />
+1. Requires GameuxInstallHelper.dll (95 KB)<br />
+2. Doesn't support more than one game per installer</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">oborstad</div><div class="date">30th March 2008, 04:29</div></div><div class="posttext">2. Doesn't support more than one game per installer<br />
+<br />
+If you change the macro for the adding the game to do a check to see if the dll is already written out, then it should work fine to add multiple games, as long as you make sure to always add them in sequence.<br />
+<br />
+  !ifndef GAME_EXPLORER_DLL_EXISTS<br />
+    !ifdef GAME_EXPLORER_HELPER_PATH<br />
+      File &quot;/oname=GameuxInstallHelper.dll&quot; &quot;${GAME_EXPLORER_HELPER_PATH}&quot;<br />
+    !else<br />
+      File &quot;GameuxInstallHelper.dll&quot;<br />
+    !endif<br />
+    !define GAME_EXPLORER_DLL_EXISTS<br />
+  !endif<br />
+<br />
+<br />
+Also, another suggestion, for localization reasons, I'd pull the &quot;Play&quot; task out of the first macro, otherwise the French will see &quot;Play&quot;.  Or put them in as extra label options.  (Same for support), or make them come from language strings $(GameExplorerPlayTask) or something.<br />
+<br />
+   Owen.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mauvecloud</div><div class="date">30th March 2008, 06:29</div></div><div class="posttext">Supporting more than one game per installer took a little more than just checking for the dll, due to the way it had been using defines for the play task number and support task number, which wouldn't work if the task adding was done in a function declared before the one that added the game, so I switched to variables, and it should be more robust now.<br />
+<br />
+As far as localization, I see your point, but I don't want to force the use of LangStrings, so I pulled the task adding out of the GameExplorer_AddGame, and GameExplorer_AddPlayTask and GameExplorer_AddSupportTask already allow the task names to be specified separately.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nico_BF</div><div class="date">26th August 2008, 17:24</div></div><div class="posttext">Hi Everybody,<br />
+<br />
+I tried both posted versions of the game explorer integration and both worked quite well except for one thing. I was not able to insert the age control to the game explorer. It is definately set in the GDF file but it just doesn't show up.<br />
+<br />
+In the old version it is missing and so I tried to add VerifyAccess to the macro like this<br />
+<br />
+System::Call &quot;$1-&gt;${IGameExplorer_VerifyAccess}(w R0, i R4) i .r0&quot;<br />
+<br />
+Unfortunately with no success.<br />
+<br />
+In the new version it seems to me that the VerifyAccess is already implemented into the AddToGameExplorerA function but the age control still doesn't work.<br />
+<br />
+Does anybody have any idea what the problem might be?<br />
+<br />
+Thanks a lot for your help!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

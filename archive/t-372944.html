@@ -1,0 +1,266 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Check existing file associations, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Check existing file associations NSIS Discussion" />
+	
+	<title> Check existing file associations [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Check existing file associations</div>
+<hr />
+<div class="pda"><a href="t-372944.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=372944">Check existing file associations</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">empezar</div><div class="date">10th October 2013, 22:07</div></div><div class="posttext">Is there a way to check if a certain filetype is already associated with a program?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">10th October 2013, 22:51</div></div><div class="posttext">The documented way to do this is with the Assoc* API, but guess what, it sucks:<br />
+<br />
+ It does not check &quot;deep enough&quot; (SystemFileAssociations etc), it only checks HKCR\.exe and its HKCR\ProgId mapping but for most people that is probably fine. But just because the API said no does not mean that doubleclicking the file will fail or open the openwith dialog. The filetype could have something under SystemFileAssociations or there could be a registered dynamic verb (IContextMenu).<br />
+  stackoverflow.com/questions/18682679/using-assocquerystring-to-get-64-bit-application-command-from-32-bit-application<br />
+<br />
+<br />
+<br />
+!include Win\COM.nsh<br />
+!include LogicLib.nsh<br />
+!define ASSOCF_NOFIXUPS        0x0100<br />
+!define ASSOCF_IGNOREBASECLASS 0x0200<br />
+!define ASSOCSTR_COMMAND 1<br />
+!define ASSOCKEY_SHELLEXECCLASS 1<br />
+!define AT_FILEEXTENSION 0<br />
+!define AL_EFFECTIVE 1<br />
+<br />
+StrCpy $2 &quot;.txt&quot;<br />
+<br />
+; Choose one of these 3 methods, IApplicationAssociationRegistration is Vista+ and AssocQuery* is IE5/Win98SE/2000+<br />
+<br />
+!insertmacro ComHlpr_CreateInProcInstance ${CLSID_ApplicationAssociationRegistration} ${IID_IApplicationAssociationRegistration} r1 &quot;&quot;<br />
+${If} $1 &lt;&gt; 0<br />
+	${IApplicationAssociationRegistration::QueryCurrentDefault} $1 '(&quot;$2&quot;,${AT_FILEEXTENSION},${AL_EFFECTIVE},0r3).r0'<br />
+	DetailPrint &quot;HRESULT=$0,ProgId WStr pointer=$3&quot;<br />
+	${If} $0 = 0<br />
+		System::Call *$3(&amp;w1024.r0)<br />
+		System::Call OLE32::CoTaskMemFree(ir3)<br />
+		DetailPrint &quot;SUCCESS: ProgId=$0&quot;<br />
+	${EndIf}<br />
+	${IUnknown::Release} $1 &quot;&quot;<br />
+${EndIf}<br />
+<br />
+System::Call 'SHLWAPI::AssocQueryString(i${ASSOCF_NOFIXUPS}|${ASSOCF_IGNOREBASECLASS},i${ASSOCSTR_COMMAND},t&quot;$2&quot;,i0,t.r1,*i1024)i.r0'<br />
+DetailPrint &quot;HRESULT=$0,Cmd=$1&quot;<br />
+<br />
+System::Call 'SHLWAPI::AssocQueryKey(i${ASSOCF_NOFIXUPS},i${ASSOCKEY_SHELLEXECCLASS},t&quot;$2&quot;,i0,*i0r1)i.r0'<br />
+DetailPrint &quot;HRESULT=$0&quot;<br />
+${If} $0 = 0<br />
+	System::Call 'ADVAPI32::RegCloseKey(i$1)'<br />
+	DetailPrint &quot;SUCCESS: $2 is registered&quot;<br />
+${EndIf}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">empezar</div><div class="date">10th October 2013, 23:29</div></div><div class="posttext">I can't get that code to work. What is COM.nsh?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">11th October 2013, 00:37</div></div><div class="posttext">I can't get that code to work. What is COM.nsh?<br />
+<br />
+I believe that code should work on 2.46 but I only tested on 3.0, anyway, the AssocQueryString line is probably the method you want...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">empezar</div><div class="date">11th October 2013, 10:58</div></div><div class="posttext">That worked, though I don't know what to do with the result.<br />
+<br />
+HRESULT is always 0 even if the file is not associated, because it's always associated with either a program or the &quot;Open with&quot;-program.<br />
+<br />
+How do I tell if &quot;rundll32&quot; can be found within the $1 string? StrContains doesn't work because it seems to be looking to match a whole word, while &quot;rundll&quot; is just a part of the program path.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">11th October 2013, 19:10</div></div><div class="posttext">HRESULT is always 0 even if the file is not associated, because it's always associated with either a program or the &quot;Open with&quot;-program.<br />
+<br />
+And you used ASSOCF_IGNOREBASECLASS? Which extension are you checking and which OS is this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">empezar</div><div class="date">11th October 2013, 22:00</div></div><div class="posttext">Yes. I've tried the bottom two methods. Both of them fail to differentiate between associated and not associated file types. I've tested the file types &quot;qwz&quot; and &quot;qwp&quot;, where &quot;qwz&quot; files open with ezQuake when double clicked. Using Windows 7 64-bit.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">12th October 2013, 04:09</div></div><div class="posttext">You can try adding ASSOCF_INIT_IGNOREUNKNOWN (0x00000400) as well but openwith was never returned for me when I tested on Win7 (32bit).<br />
+<br />
+The following code is a bad attempt at doing it manually, it is incomplete and half of this stuff is probably undocumented.<br />
+<br />
+!include LogicLib.nsh<br />
+Section<br />
+StrCpy $2 &quot;.flac&quot;<br />
+;BUGBUG: Should check HKLM\Software\Microsoft\Windows\CurrentVersion\Explorer\KindMap\.ext first?<br />
+ReadRegStr $0 HKCU &quot;Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$2\UserChoice&quot; &quot;ProgId&quot;<br />
+Push $0<br />
+Call Assoc_RedirectProgId<br />
+Pop $0<br />
+Push $0<br />
+Call Assoc_QueryHasKey<br />
+Pop $1<br />
+${If} $1 = 0 ; ProgId did not exist?<br />
+${OrIf} $0 == &quot;&quot; ;UserChoice did not exist?<br />
+	ReadRegStr $0 HKCR $2 &quot;&quot;<br />
+	Push $0<br />
+	Call Assoc_RedirectProgId<br />
+	Pop $0<br />
+${EndIf}<br />
+Push $0<br />
+Call Assoc_QueryProgIdDefVerb<br />
+Pop $1<br />
+${IfThen} &quot;$0$1&quot; != &quot;$1$0&quot; ${|} Goto assoc_done ${|}<br />
+StrCpy $0 &quot;SystemFileAssociations\$2&quot;<br />
+Push $0<br />
+Call Assoc_QueryProgIdDefVerb<br />
+Pop $1<br />
+${IfThen} &quot;$0$1&quot; != &quot;$1$0&quot; ${|} Goto assoc_done ${|}<br />
+<br />
+ReadRegStr $0 HKCR $2 &quot;PerceivedType&quot;<br />
+${If} $0 != &quot;&quot;<br />
+	StrCpy $0 &quot;SystemFileAssociations\$0&quot;<br />
+	Push $0<br />
+	Call Assoc_QueryProgIdDefVerb<br />
+	Pop $1<br />
+	${IfThen} &quot;$0$1&quot; != &quot;$1$0&quot; ${|} Goto assoc_done ${|}<br />
+${EndIf}<br />
+<br />
+ReadRegStr $0 HKCR &quot;SystemFileAssociations\$2&quot; &quot;PerceivedType&quot;<br />
+${If} $0 != &quot;&quot;<br />
+	StrCpy $0 &quot;SystemFileAssociations\$0&quot;<br />
+	Push $0<br />
+	Call Assoc_QueryProgIdDefVerb<br />
+	Pop $1<br />
+	${IfThen} &quot;$0$1&quot; != &quot;$1$0&quot; ${|} Goto assoc_done ${|}<br />
+${EndIf}<br />
+<br />
+;BUGBUG: If we still have not found anything we are supposed to look under %ProgId/UserChoice%\Clsid\ for a GUID and its ShellFolder data, what to do after that I did not investigate<br />
+;NOTE: Last resort is to look under HKCR\*, HKCR\AllFilesystemObjects and finally HKCR\Unknown but that is not a good idea for what we are trying to detect, skipping<br />
+<br />
+assoc_done:<br />
+${If} &quot;$0$1&quot; != &quot;$1$0&quot;<br />
+	DetailPrint $2:PID=$0,Verb=$1<br />
+${EndIF}<br />
+SectionEnd<br />
+<br />
+Function Assoc_QueryHasKey<br />
+Exch $0<br />
+Push $1<br />
+ClearErrors<br />
+EnumRegKey $1 HKCR $0 0<br />
+IfErrors 0 yes<br />
+EnumRegValue $1 HKCR $0 0<br />
+StrCpy $1 &quot;&quot;<br />
+IfErrors done<br />
+yes:<br />
+StrCpy $0 &quot;1$1&quot; ; &lt;&gt; 0 for checking and store subkey if found<br />
+done:<br />
+Pop $1<br />
+Exch $0<br />
+FunctionEnd<br />
+<br />
+Function Assoc_QueryHasNamedValue<br />
+Exch $0 ;name<br />
+Exch<br />
+Exch $1 ;key<br />
+Push $2<br />
+Push $3<br />
+StrCpy $3 0<br />
+loop:<br />
+	ClearErrors<br />
+	EnumRegValue $2 HKCR $1 $3<br />
+	IfErrors done<br />
+	IntOp $3 $3 + 1<br />
+	StrCmp $0 $2 0 loop<br />
+	StrCpy $2 1<br />
+done:<br />
+StrCpy $0 $2<br />
+Pop $3<br />
+Pop $2<br />
+Pop $1<br />
+Exch $0<br />
+FunctionEnd<br />
+<br />
+Function Assoc_RedirectProgId<br />
+Exch $0<br />
+Push $1<br />
+ReadRegStr $1 HKCR &quot;$0\CurVer&quot; &quot;&quot;<br />
+StrCmp $1 &quot;&quot; +2<br />
+StrCpy $0 $1<br />
+Pop $1<br />
+Exch $0<br />
+FunctionEnd<br />
+<br />
+Function Assoc_QueryProgIdDefVerb<br />
+Exch $0<br />
+Push $1 ; save reg<br />
+Push $2<br />
+Push $0<br />
+Push &quot;NoStaticDefaultVerb&quot;<br />
+Call Assoc_QueryHasNamedValue<br />
+Pop $1<br />
+${If} $1 &lt;&gt; 0<br />
+	StrCpy $0 &quot;&quot;<br />
+${Else}<br />
+	StrCpy $1 $0<br />
+	ReadRegStr $0 HKCR &quot;$1\Shell&quot; &quot;&quot; ; BUGBUG: The default verb string can contain space/comma separated verb names, parsing required<br />
+	${IfThen} $0 == &quot;&quot; ${|} StrCpy $0 &quot;open&quot; ${|}<br />
+	Push &quot;$1\Shell\$0&quot;<br />
+	Call Assoc_QueryHasKey<br />
+	Pop $2<br />
+	${If} $2 = 0<br />
+		Push &quot;$1\Shell&quot;<br />
+		Call Assoc_QueryHasKey<br />
+		Pop $2<br />
+		StrCpy $0 $2 &quot;&quot; 1<br />
+		${If} $2 &lt;&gt; 0<br />
+		${AndIf} $0 != &quot;&quot;<br />
+			Push &quot;$1\Shell\$0&quot;<br />
+			Call Assoc_QueryHasKey<br />
+			Pop $2<br />
+			${IfThen} $2 = 0 ${|} StrCpy $0 &quot;&quot; ${|} <br />
+		${EndIf}<br />
+	${EndIf}<br />
+${EndIf}<br />
+Pop $2 ;restore reg<br />
+Pop $1<br />
+Exch $0<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">empezar</div><div class="date">12th October 2013, 11:42</div></div><div class="posttext">I've tried upgrading to NSIS 3.0 to no avail in this matter.<br />
+<br />
+Tried both IApplicationAssociationRegistration and AssocQuery*.<br />
+<br />
+Nothing works.<br />
+<br />
+I'd rather not use undocumented &quot;bad attempts&quot; at solving this matter, and simply checking for a file association shouldn't require that much code?<br />
+<br />
+How do I check for associations using the documented version? The Assoc* API you mentioned? I can only find information on how to SET and REMOVE associations using that thing.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">12th October 2013, 17:56</div></div><div class="posttext">How do I check for associations using the documented version? The Assoc* API you mentioned? I can only find information on how to SET and REMOVE associations using that thing.<br />
+AssocQueryString and there is no API to Set/Remove, only query, not sure what you are looking at...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stass</div><div class="date">14th October 2013, 05:56</div></div><div class="posttext">With what program associated specific files can be found as follows:<br />
+OutFile &quot;opens_by_default.exe&quot;<br />
+; For example HTM files<br />
+Section<br />
+StrCpy $R1 htm<br />
+FileOpen $0 &quot;$TEMP\opens_by_default.$R1&quot; &quot;w&quot;<br />
+FileClose $0<br />
+System::Call &quot;Shell32::FindExecutable(t '$TEMP\opens_by_default.$R1', i 0, t .r1)&quot; <br />
+Delete &quot;$TEMP\opens_by_default.$R1&quot;<br />
+MessageBox MB_OK '$R1 files by default opens the program:  : $1 '<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">14th October 2013, 21:09</div></div><div class="posttext">shell32!FindExecutableW on Win7(x86) uses AssocQueryString(ASSOCF_INIT_IGNOREUNKNOWN,ASSOCSTR_EXECUTABLE,file,...) and XP uses AssocQueryString(0,ASSOCSTR_EXECUTABLE,file,...)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

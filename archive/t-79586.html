@@ -1,0 +1,462 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Font, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Font NSIS Discussion" />
+	
+	<title> Font [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Font</div>
+<hr />
+<div class="pda"><a href="t-79586.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=79586">Font</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ghale</div><div class="date">17th March 2002, 10:55</div></div><div class="posttext">Hi!<br />
+<br />
+Ok, I create an installer that include a font.<br />
+I install font to target machine.<br />
+<br />
+But!:eek: <br />
+<br />
+The font is not &quot;registered(?)&quot; in Windows automatically.<br />
+<br />
+I have to manually open and close Fonts Dir with Control Panel.<br />
+<br />
+What can I do to install a font and &quot;register&quot; it with Windows automagically?<br />
+<br />
+Sorry for my english,<br />
+I speak only Italiano (and not so very well).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">26th March 2002, 02:04</div></div><div class="posttext">i'm not 100% sure since i didn't test it, but try the following (i used example Time New Roman):<br />
+<br />
+Windows NT/2000/XP<br />
+WriteRegStr HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts&quot; \<br />
+&quot;Times New Roman (TrueType)&quot; &quot;TIMES.TTF&quot;<br />
+<br />
+Windows 95/98/ME<br />
+WriteRegStr HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Fonts&quot; \<br />
+&quot;Times New Roman (TrueType)&quot; &quot;TIMES.TTF&quot;<br />
+<br />
+you can use the GetWindowsVersion function (see NSIS\functions.htm) to determine the windows version.<br />
+<br />
+hope it works, let us know :p</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ghale</div><div class="date">28th March 2002, 09:27</div></div><div class="posttext">Yes, yes. It works!!!:) <br />
+Thank you.<br />
+After writing keys in registry, I need to reboot machine.<br />
+<br />
+After, I find all fonts ready for applications!!!<br />
+<br />
+Thank you!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">28th March 2002, 16:46</div></div><div class="posttext">There is a way of doing this without requiring a reboot.<br />
+This way involves Windows' API calls so you will need an external DLL or EXE.<br />
+<br />
+First you need to call AddFontResource(lpszFilename) with the font's file name (for example: AddFontResource(&quot;TIMES.TTF&quot;). Next you need to broadcast a message so all of the runnint applications will reload the system font table. To do so, you should use PostMessage(HWND_BROADCAST, WM_FONTCHANGE, 0, 0).<br />
+<br />
+If you need any help writing the DLL/EXE let me know.<br />
+<br />
+KiCHiK<br />
+<br />
+EDIT: If you are building an uninstaller too you will need to use RemoveFontResource(lpszFilename), and manually delete the registry entry. You will also need to send another WM_FONTCHANGE message.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ghale</div><div class="date">28th March 2002, 23:23</div></div><div class="posttext">:weird: I need a DLL to call AddFontResource(&quot;TIMES.TTF&quot;) and PostMessage(HWND_BROADCAST, WM_FONTCHANGE, 0, 0).<br />
+<br />
+Ok.<br />
+<br />
+I can use some NSIS function to do the same thing?<br />
+<br />
+Sorry, but I have no idea on writing a DLL making this...:cry:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th March 2002, 10:08</div></div><div class="posttext">Don't worry, be happy :D<br />
+<br />
+Attached is the DLL + source.<br />
+<br />
+To use it in your installation add the following code:<br />
+<br />
+GetTempFileName $R0<br />
+File /oname=$R0 fonts.dll<br />
+; Change this line to your real font name.<br />
+; If it is not in the default Windows' directory wirte it's full path!<br />
+Push &quot;MyFontName.TTF&quot;<br />
+CallInstDLL $R0 registerFont <br />
+<br />
+<br />
+To use it in your uninstallation add the following code:<br />
+<br />
+GetTempFileName $R0<br />
+File /oname=$R0 fonts.dll<br />
+; Change this line to your real font name.<br />
+; If it is not in the default Windows' directory wirte it's full path!<br />
+Push &quot;MyFontName.TTF&quot;<br />
+CallInstDLL $R0 unregisterFont <br />
+<br />
+<br />
+These functions only call AddFontResource/RemoveFontResource and PostMessage so don't forget to copy/delete the font yourself and add/remove it from the registry.<br />
+<br />
+KiCHiK</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">cchian</div><div class="date">3rd May 2002, 04:49</div></div><div class="posttext">Kichik,<br />
+<br />
+Your code and dll works great, but how do you make it register more than one font? Will this work?:<br />
+<br />
+GetTempFileName $R0<br />
+File /oname=$R0 fonts.dll<br />
+; Change this line to your real font name.<br />
+; If it is not in the default Windows' directory write it's full path!<br />
+Push &quot;Font1.TTF&quot;<br />
+CallInstDLL $R0 registerFont<br />
+Push &quot;Font2.TTF&quot;<br />
+CallInstDLL $R0 registerFont<br />
+Push &quot;Font3.TTF&quot;<br />
+CallInstDLL $R0 registerFont<br />
+Push &quot;Font4.TTF&quot;<br />
+CallInstDLL $R0 registerFont</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">3rd May 2002, 11:43</div></div><div class="posttext">Your code should work just fine.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">10th July 2002, 18:29</div></div><div class="posttext">did not work in nsis 2.0 alpha :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">10th July 2002, 19:34</div></div><div class="posttext">Could you be a little bit more specific please?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">10th July 2002, 21:26</div></div><div class="posttext">Just to remind you: NSIS 2.0a0 is not free of bugs! The latest supported and official version is NSIS 1.98. I suggest that you use that one for compiling your scripts.<br />
+<br />
+-Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ParallaxTZ</div><div class="date">20th July 2002, 16:41</div></div><div class="posttext">I followed all the instructions above, but when I run the installer, this happens:<br />
+<br />
+rosInst.exe - Bad Image<br />
+The application or DLL G:\Documen~1\Markri~Locals~1\Tempnst964.tmp is not a valid Windows image. Please check this against your installation disk.<br />
+<br />
+my script file is attached. <br />
+<br />
+Any help would be most appreciated.<br />
+<br />
+[edit]<br />
+I'm on an XP Pro system.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">20th July 2002, 18:26</div></div><div class="posttext">Are you using using about NSIS 2 or 1.98/9?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ParallaxTZ</div><div class="date">20th July 2002, 18:29</div></div><div class="posttext">I used both 1.96 and now 1.98.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">20th July 2002, 18:45</div></div><div class="posttext">Please try the attached script and tell me which messages you get.<br />
+Don't forget to change the file extension to .nsi.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">20th July 2002, 22:47</div></div><div class="posttext">Originally posted by ParallaxTZ <br />
+I followed all the instructions above, but when I run the installer, this happens:<br />
+<br />
+rosInst.exe - Bad Image<br />
+The application or DLL G:\Documen~1\Markri~Locals~1\Tempnst964.tmp is not a valid Windows image. Please check this against your installation disk.<br />
+<br />
+my script file is attached. <br />
+<br />
+Any help would be most appreciated.<br />
+I'm on an XP Pro system. <br />
+<br />
+<br />
+   GetTempFileName $R0<br />
+   File /oname=$R0 G:\windows\system32\fonts.dll<br />
+   Push &quot;MAEL____.TTF&quot;<br />
+   CallInstDLL $R0 registerFont<br />
+<br />
+You are using GetTempFileName. This creates the temp file. The File command does not overwrite the file created by GetTempFileName, that's why the DLL does not work.<br />
+<br />
+You should SetOverwrite On before the File command.<br />
+<br />
+<br />
+   GetTempFileName $R0<br />
+   SetOverwrite On<br />
+   File /oname=$R0 G:\windows\system32\fonts.dll<br />
+   SetOverwrite ifnewer<br />
+   Push &quot;MAEL____.TTF&quot;<br />
+   CallInstDLL $R0 registerFont<br />
+<br />
+<br />
+I have not tested this ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ParallaxTZ</div><div class="date">21st July 2002, 04:21</div></div><div class="posttext">Thanks to both of you, but only Joost's fix worked. Thanks again, no more restarts after my installer, YAY! :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">2nd August 2002, 20:51</div></div><div class="posttext">i had no errors during the compilation, but it just didnt install or copy the fonts. maybe i am stupid, could you please paste some code doing this with a common windows font, so it will work in my code only copy+pasted? pleeease ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd August 2002, 20:56</div></div><div class="posttext">All of the code you need to copy+paste it up there :up:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ParallaxTZ</div><div class="date">4th August 2002, 16:08</div></div><div class="posttext">Attached is my .nsi file (.zipped since you can't upload .nsi files), it appears to work perfectly for both 9x based and NT based systems. Hopefully you can follow it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">4th August 2002, 16:51</div></div><div class="posttext">can i use the same .dll to uninstall the font again? it would surely be better -even for testing purposes- to remove the font everytime for the system i'm testing on. so far i had to send all installers to friends, which consumes quite some time. uninstalling would be a great help!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th August 2002, 16:53</div></div><div class="posttext">You can use the same DLL for uninstalling... Please check the code above...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">6th September 2002, 13:23</div></div><div class="posttext">is it necessary to use that .dll for old .fon fonts, or can i just copy them without registering them?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th September 2002, 14:18</div></div><div class="posttext">As far as I know you should register them too.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">6th September 2002, 18:00</div></div><div class="posttext">Just a little reminder that since NSIS 2.0a4 you can make this kinda thing:-GetTempFileName $R0 <br />
+File /oname=$R0 fonts.dll <br />
+Push &quot;Font1.TTF&quot; <br />
+CallInstDLL $R0 registerFont <br />
+Push &quot;Font2.TTF&quot; <br />
+CallInstDLL $R0 registerFont <br />
+Push &quot;Font3.TTF&quot; <br />
+CallInstDLL $R0 registerFont <br />
+Push &quot;Font4.TTF&quot; <br />
+CallInstDLL $R0 registerFontmuch simpler:-fonts::registerFont &quot;Font1.TTF&quot;<br />
+fonts::registerFont &quot;Font2.TTF&quot;<br />
+fonts::registerFont &quot;Font3.TTF&quot;<br />
+fonts::registerFont &quot;Font4.TTF&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">9th December 2002, 18:55</div></div><div class="posttext">Sorry to bring up and old topic, but...<br />
+<br />
+I'm still not clear on how to register a font without rebooting... :confused:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th December 2002, 19:08</div></div><div class="posttext">Put Fonts.dll in your Plugins directory.<br />
+After you copy the font over and write the registry entries, just call Fonts::registerFont &quot;FontName&quot;<br />
+If you have installed the font in the Windows font folder, just use its name (times.ttf for example), if not use its full path ($INSTDIR\times.ttf for example).<br />
+<br />
+That's it, the font is then registered, and you don't need a reboot.<br />
+<br />
+For the uninstaller, remove the registry entries, call Fonts::unregisterFont &quot;FontName&quot; and delete the font.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">9th December 2002, 19:25</div></div><div class="posttext">I can't find Fonts.dll, is fontreg.exe the same thing?  It seems to work okay compiling...<br />
+<br />
+fyi I'm running Win98 SE.<br />
+<br />
+Am I right in assuming that I need to put the GetWindowsVersion function at the top of the script, and use something along the lines of ParalaxTZ's script:<br />
+<br />
+Section &quot;Adolescense font&quot;<br />
+SectionIn 4<br />
+RegisterFonts:<br />
+StrCmp $0 '95' lbl_95_98_me<br />
+StrCmp $0 '98' lbl_95_98_me<br />
+StrCmp $0 'ME' lbl_95_98_me<br />
+<br />
+lbl_nt_2k_xp:   <br />
+WriteRegStr HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts&quot; &quot;Adolescense&quot; &quot;Adolesce.TTF&quot;<br />
+<br />
+lbl_95_98_me:<br />
+WriteRegStr HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Fonts&quot; &quot;Adolescense&quot; &quot;Adolesce.TTF&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th December 2002, 19:31</div></div><div class="posttext">Never heard of font reg... A zip file containing fonts.dll is attached above in one of my posts...<br />
+<br />
+To add the registry writing you must call GetWindowsVersion (find it in the useful functions section in the docs), Pop and compare like in the script you just wrote. Then call registerFont like I said in the earlier post.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">9th December 2002, 19:44</div></div><div class="posttext">Thanx, didn't see that.<br />
+<br />
+Now I'm getting an error message:<br />
+WriteRegStr: HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts\Adolescense=Adolesce.TTF<br />
+WriteRegStr: HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Fonts\Adolescense=Adolesce.TTF<br />
+Invalid command: fonts::registerfont<br />
+Error in script &quot;C:\NSIS\tff2.0\custom.nsi&quot; on line 229 -- aborting creation process<br />
+<br />
+This is the end of my script:<br />
+<br />
+lbl_nt_2k_xp:   <br />
+WriteRegStr HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts&quot; &quot;Adolescense&quot; &quot;Adolesce.TTF&quot;<br />
+<br />
+lbl_95_98_me:<br />
+WriteRegStr HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Fonts&quot; &quot;Adolescense&quot; &quot;Adolesce.TTF&quot;<br />
+<br />
+fonts::registerfont &quot;Adolesce.TTF&quot;<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th December 2002, 20:09</div></div><div class="posttext">Put Fonts.dll in your Plugins directory. <br />
+<br />
+If you don't have a plugins directory you either installed a minimal version of NSIS or you are not using NSIS 2.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">9th December 2002, 20:59</div></div><div class="posttext">Oops.  I thought you were talking about the Winamp plugins directory :p<br />
+<br />
+But I'm still getting the same error message.  Is this code wrong?<br />
+<br />
+SetOutPath &quot;$WINDIR\system32\&quot;<br />
+File &quot;c:\nsis\plugins\Fonts.dll&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">9th December 2002, 21:47</div></div><div class="posttext">First, make sure you got the latest NSIS 2 version, beta 0. You can download it from http://prdownloads.sourceforge.net/nsis/nsis20b0.exe?download.<br />
+<br />
+Now copy fonts.dll to the Plugins dir of NSIS (that is a directory on the system where NSIS is installed). Usually the path is C:\Program Files\NSIS\Plugins.<br />
+<br />
+NSIS will detect your plugin and you can use fonts::registerFont in your NSIS script. NSIS handles the extracting, deleting etc. of the file. There is nothing else where you have to worry about.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">9th December 2002, 22:09</div></div><div class="posttext">I have the latest NSIS2.  I'm still getting an error message when I compile that says fonts::registerfont is an invalid function.<br />
+<br />
+I'll try rebooting...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">9th December 2002, 22:29</div></div><div class="posttext">Didn't work.  Where does the DLL have to be in relation to the .NSI file, and where does the .NSI file have to be in relation to the NSIS installation path?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">9th December 2002, 22:47</div></div><div class="posttext">The DLL should be copied to the NSIS Plugins directory of YOUR system. That is the subdirectory 'Plugins' in the directory of the NSIS installation. You don't have to worry about extracting it on the user's system, NSIS does everything for you.<br />
+<br />
+At the beginning of the NSIS compiler output, you can see a list of all detected plugins.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">10th December 2002, 06:49</div></div><div class="posttext">Okay, so it doesn't matter where the .NSI file is, I take it...?<br />
+<br />
+I'm gonna post my script here.  I'm also having troubles with the instdir page not having the default path...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">10th December 2002, 14:31</div></div><div class="posttext">That's not a NSIS 2.0b0 script, it has .onNextPage and .onPrevPage in it. If you are sure it is supposed to work with b0 notify Jheriko that it is highly out of date.<br />
+<br />
+When you compile the script do you see on the top of the output after the credits stuff a list that starts with:<br />
+<br />
+Processing plugin dlls: &quot;&lt;nsis dir&gt;\plugins\*.dll&quot;<br />
+<br />
+?<br />
+<br />
+If you don't see that line and a list after it you are not using NSIS 2.0b0. If you do, do you see fonts::registerFont there? If it is there, try copying the line exactly as it is and paste into the script, then see if you get errors (don't forget to add the font name if it works). If there is a list and fonts::registerFont is not there you didn't put fonts.dll in the right directory (use !error &quot;${NSISDIR}\Plugins&quot; in any script to see what it is).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">10th December 2002, 18:11</div></div><div class="posttext">Ooookay...I'm gonna tell Jheriko that, after I smack the fuckin shit out of him.<br />
+<br />
+The script compiles to fast for me to read anything at the top, so I wouldn't know<br />
+<br />
+<br />
+Anyway, thanx, sorry for all the trouble :rolleyes:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">10th December 2002, 18:20</div></div><div class="posttext">Aren't you using MakeNSISw? It's a windows wrapper for NSIS that comes with NSIS. Just right click a script and choose Compile NSI. If you still get a DOS box you are not using NSIS 2 for sure.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">10th December 2002, 18:35</div></div><div class="posttext">I am, but the wrapper kept crashing for inexplicable reasons...That, and I still couldn't read the whole thing with the wrapper.<br />
+<br />
+Anyway, I just figured out how to log the output, and did.  I read the .dll plugin functions listing and - guess what - fonts.DLL::registerfont.<br />
+Gee, thanx for not ever telling me that, guys :rolleyes:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">10th December 2002, 18:40</div></div><div class="posttext">Are you or are you not using NSIS 2.0b0?<br />
+MakeNSISw crashes, .dll after plug-in names, and .onNextPage and .onPrevPage are all from a7 and below.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">10th December 2002, 19:01</div></div><div class="posttext">Absolutely sure.  But the problem's fixed now, I'm movin on...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">10th December 2002, 19:06</div></div><div class="posttext">Maybe you are ready to move on, but I am not after you are telling me MakeNSISw crashes and plug-in detection doesn't occur as should.<br />
+<br />
+Please attach a screen shot of MakeNSISw crash.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">10th December 2002, 19:36</div></div><div class="posttext">The plugin detection happens, I just can't see it unless I log it.  I'd rather not post a screenshot, because it really is a lot of trouble for me on this computer (and *DON'T* suggest programs I download, I've already been through that a million times, the answer is still 'THEY WON'T WORK!')</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">10th December 2002, 19:40</div></div><div class="posttext">Can you at least attach the log?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">10th December 2002, 20:16</div></div><div class="posttext">I think you are using an old development snapshot which has the beta 0 label. That is not the final beta 0 release, which has been released a few days ago.<br />
+<br />
+Please download the final release at http://prdownloads.sourceforge.net/nsis/nsis20b0.exe?download</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">10th December 2002, 21:50</div></div><div class="posttext">Okay, thanx joost</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">10th December 2002, 22:34</div></div><div class="posttext">Is the filename of your script really &quot;c:\nsis\tff2/0\tff2.0.nsi.nsi&quot; ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">11th December 2002, 07:16</div></div><div class="posttext">Whoah...didn't see that.  That'd explain a couple things....</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">11th December 2002, 14:53</div></div><div class="posttext">MakeNSIS v2.0a7 - Copyright 1999-2002 Nullsoft, Inc.<br />
+<br />
+Your log clearly shows you are using NSIS 2.0a7. Install NSIS 2.0b0 from http://nsis.sf.net/ and all of the problems above will be gone.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Mottel</div><div class="date">12th December 2002, 04:34</div></div><div class="posttext">Kichik, that fonts.dll that you posted looks like a very useful addon to NSIS.  I will be using it myself eventually.  You should include it in the Plugins dir on CVS so it will come standard with future downloads, but, I would suggest you call it RegisterFont.DLL.<br />
+/Edit/<br />
+P.S. BTW, FontReg.exe is a Microsoft program in the $SYSDIR of Win98.  Looking at the strings in the file, I see that: (a) it describes itself as &quot;Font Sweeper Application&quot; (??) and, (b) from the function names, I'd say it's a fair bet that it does the same thing as your DLL, but is specific to Win98 (and maybe 95 and ME).<br />
+/Edit2/<br />
+Maybe not. I've just been playing with it, and it doesn't seem to do what I thought it did.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Kypec</div><div class="date">12th December 2002, 13:58</div></div><div class="posttext">I agree with Mottel, please<br />
+include kichik's fonts.dll as<br />
+the standard plugin in Plugins\<br />
+directory for all future releases, thanx.<br />
+<br />
+Kypec</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">12th December 2002, 14:47</div></div><div class="posttext">It's just a singe API call, so you can also use the System plugins which is already included.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">21st December 2002, 08:10</div></div><div class="posttext">One last round on this thread and I'm done, I promise :D<br />
+<br />
+I have now (almost) completed my installer.  However when I run it and install the font, I get an error message saying &quot;Could not find symbol: registerfont&quot;.  I sent it to a friend and he got the same thing.<br />
+<br />
+Here's the font section of the installer:<br />
+Section &quot;Adolescense font (reccommended)&quot;<br />
+SectionIn 1 2<br />
+<br />
+SetOutPath &quot;$WINDIR\fonts\&quot;<br />
+File &quot;c:\windows\fonts\Adolesce.TTF&quot;<br />
+<br />
+RegisterFonts:<br />
+StrCmp $0 '95' lbl_95_98_me<br />
+StrCmp $0 '98' lbl_95_98_me<br />
+StrCmp $0 'ME' lbl_95_98_me<br />
+<br />
+lbl_nt_2k_xp:   <br />
+WriteRegStr HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts&quot; &quot;Adolesce.TTF&quot; &quot;Adolescense&quot;<br />
+<br />
+lbl_95_98_me:<br />
+WriteRegStr HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Fonts&quot; &quot;Adolesce.TTF&quot; &quot;Adolescense&quot;<br />
+fonts::registerfont &quot;Adolesce.TTF&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+Spot anything wrong?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">21st December 2002, 08:46</div></div><div class="posttext">Yes, the function name is case sensitive... I never noticed this before, I will fix it for the next version (already found in the CVS). For now, use the DLL function name exactly as mentioned on the top of the output.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dirkdeftly</div><div class="date">21st December 2002, 16:11</div></div><div class="posttext">Thanx, fixed :)<br />
+<br />
+Also thanx for not giving me crap about &lt;PHP&gt; taking out the slashes :rolleyes:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">prichindel</div><div class="date">5th April 2005, 15:29</div></div><div class="posttext">where can i find an official nsis example how to add &amp; register a font in windows??<br />
+<br />
+does anybody have an example with &quot;fonts::registerfont &quot;myfont.ttf&quot; &quot;; registration of fonts in different windows versions; to post it??</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

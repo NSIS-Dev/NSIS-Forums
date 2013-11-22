@@ -1,0 +1,129 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" nsExec hangs (reproducible), media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  nsExec hangs (reproducible) NSIS Discussion" />
+	
+	<title> nsExec hangs (reproducible) [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  nsExec hangs (reproducible)</div>
+<hr />
+<div class="pda"><a href="t-304950.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=304950">nsExec hangs (reproducible)</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">silo5</div><div class="date">3rd April 2009, 17:37</div></div><div class="posttext">Script compiled with v2.44 running on WinXP SP3 hangs executing nsExec::ExecToStack (and ExeDos).<br />
+Necessary conditions include:<br />
+- custom page<br />
+- ExecToStack is executed in the custom page show function<br />
+- the executed program broadcasts a windows SetNonClientMetrics message.<br />
+<br />
+Below you can find two scripts that reproduce this problem.<br />
+The second script is written in AutoIt3, it just broadcasts the message.<br />
+The first script is NSIS, it execs once in .onInit, which demonstrates that there is no failure (because it's outside the custom page). Then it execs in the custom page show function where it hangs.<br />
+You should be seeing exactly four message boxes, but you will actually see only three, one before and one after exec in .onInit, and one before exec in the show function. Then you need to kill _prog.exe which hangs in the background.<br />
+<br />
+_bug.nsi<br />
+!include &quot;MUI2.nsh&quot;<br />
+<br />
+AutoCloseWindow false<br />
+WindowIcon on<br />
+XPSTYLE on<br />
+<br />
+Name &quot;_bug&quot;<br />
+OutFile &quot;_bug.exe&quot;<br />
+Caption &quot;_bug&quot;<br />
+<br />
+VIProductVersion &quot;1.0&quot;<br />
+Var program<br />
+<br />
+Page custom Show Leave &quot;&quot;<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+!macro _RunProgram<br />
+	MessageBox mb_ok &quot;in function ${__FUNCTION__} line ${__LINE__}...&quot;<br />
+	nsExec::ExecToStack $program<br />
+	Pop $0<br />
+	MessageBox mb_ok &quot;in function ${__FUNCTION__} line ${__LINE__} exec status was $0&quot;<br />
+!macroend<br />
+!define RunProgram `!insertmacro _RunProgram`<br />
+<br />
+Function Show<br />
+  ${RunProgram}<br />
+FunctionEnd<br />
+<br />
+Function Leave<br />
+FunctionEnd<br />
+<br />
+Function .onInit<br />
+  InitPluginsDir<br />
+  strcpy $program &quot;$EXEDIR\\_prog.exe&quot;<br />
+	${RunProgram}<br />
+FunctionEnd<br />
+<br />
+Section<br />
+SectionEnd<br />
+<br />
+<br />
+_prog.au3<br />
+Global Const $WM_SETTINGCHANGE = 0x1A<br />
+Global Const $HWND_BROADCAST = 0xFFFF<br />
+Global Const $SPI_SETNONCLIENTMETRICS = 42<br />
+<br />
+DllCall(&quot;user32.dll&quot;, &quot;int&quot;, &quot;SendMessage&quot;, _<br />
+	&quot;hwnd&quot;, $HWND_BROADCAST, _<br />
+	&quot;uint&quot;, $WM_SETTINGCHANGE, _<br />
+	&quot;wparam&quot;, $SPI_SETNONCLIENTMETRICS, _<br />
+	&quot;str&quot;, &quot;WindowMetrics&quot; _<br />
+)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">3rd April 2009, 17:57</div></div><div class="posttext">*SendMessage is a built-in nsis command, why not just use that?<br />
+<br />
+*you might want to try '&quot;$EXEDIR\_prog.exe&quot;'<br />
+<br />
+*Can AutoIt even produce console programs?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">silo5</div><div class="date">3rd April 2009, 19:59</div></div><div class="posttext">The point of my post was to provide some sure way to reproduce this problem, which might even be an NSIS bug. I say might -- only the NSIS developers could say more.<br />
+<br />
+After trimming down all the fat to make the example crispy, it looks obviously artificial, but I can assure you that it is a real problem.<br />
+<br />
+I read other postings where people were reporting obscure issues with nsExec, but no clear ways to reproduce them. Maybe reproduce this problem could lead to solving other people's problems?<br />
+<br />
+Using SendMessage in my installer isn't the point. I've just tried to categorize one type of application which fails with nsExec.<br />
+<br />
+I don't know how to answer your question about AutoIt3. I don't know AutoIt3. This is the first time I use it. Does it matter?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">3rd April 2009, 22:09</div></div><div class="posttext">I can't reproduce this problem, I get all 4 message boxes (NSIS 2.44, random autoit3 version)<br />
+<br />
+You need to come up with a better example, a SendMessage broadcast can lock up if there is a window in your system that is not processing messages</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">silo5</div><div class="date">4th April 2009, 07:45</div></div><div class="posttext">Thanks for testing it! Are you on XP, which version? This example locks on two different XP boxes here. I want to test it again in a VM, so I can pair down running processes.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">4th April 2009, 15:07</div></div><div class="posttext">Tested on Vista Home Premium SP1, both nsExec and ExecDos worked correct. IMHO ping is simple test CLI applicationstrcpy $program &quot;ping -n 2 localhost&quot;should give one second delay. Also might be good to test your sample with ExecWait/Exec first - may be something happens in CLI window. autoit3 might just hang (as Anders already wrote). Or might wait for user input. Earlier we had reports about nsExec hangs only.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">4th April 2009, 15:55</div></div><div class="posttext">Originally posted by silo5 <br />
+Thanks for testing it! Are you on XP, which version?  <br />
+XP SP2</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AaronLS</div><div class="date">5th April 2009, 01:36</div></div><div class="posttext">@silo, What options are you using when you compile your AutoIt script?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">silo5</div><div class="date">6th April 2009, 19:33</div></div><div class="posttext">AaronLLS, I let SciTE compile it, using whatever are the default compiler options in the standard Scite4AutoIt distribution. I'll be happy to be more precise if you tell me where to look. I really don't know AutoIt. Thanks.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

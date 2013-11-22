@@ -1,0 +1,125 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Finish page not showing when custom page aborted, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Finish page not showing when custom page aborted NSIS Discussion" />
+	
+	<title> Finish page not showing when custom page aborted [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Finish page not showing when custom page aborted</div>
+<hr />
+<div class="pda"><a href="t-298779.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=298779">Finish page not showing when custom page aborted</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">niallk</div><div class="date">16th October 2008, 17:46</div></div><div class="posttext">Hi<br />
+<br />
+I'm a newbie so hopefully this is an easy one to answer.<br />
+If I abort a custom page because I do not want to display it (normally based on a condition), the installation carries on as expected but the Finish page does not appear.<br />
+If I &quot;show&quot; the custom form then the Finish Page appears.<br />
+<br />
+Thanks<br />
+Niall<br />
+<br />
+Here's a simple example...<br />
+(MakeNSIS v2.34)<br />
+<br />
+!include &quot;MUI2.nsh&quot;<br />
+<br />
+Name &quot;test&quot;<br />
+XPStyle on<br />
+<br />
+OutFile &quot;test.exe&quot;<br />
+<br />
+Var Dialog<br />
+<br />
+!insertmacro MUI_PAGE_WELCOME <br />
+Page custom nsDialogsPage<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!insertmacro MUI_PAGE_FINISH<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+; The stuff to install<br />
+Section Test Section1<br />
+	MessageBox MB_OK &quot;Section 1&quot;<br />
+Sectionend<br />
+<br />
+Function nsDialogsPage<br />
+<br />
+	nsDialogs::Create /NOUNLOAD 1018<br />
+	Pop $Dialog<br />
+<br />
+	${If} $Dialog == error<br />
+		abort<br />
+	${EndIf}<br />
+<br />
+	; Don't want to display this so...<br />
+	abort<br />
+	;nsDialogs::Show<br />
+<br />
+FunctionEnd<br />
+__________________</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">16th October 2008, 17:59</div></div><div class="posttext">Your method seems odd to me...<br />
+In your example, you go to all the trouble of creating the page and then use abort to bail out.<br />
+<br />
+Wouldn't it make more sense to just skip over all the page creation stuff if you wanted to abort?<br />
+Like maybe try this: Function nsDialogsPage<br />
+; skip now if you want:<br />
+${If} [some condition]<br />
+   Return<br />
+${EndIf}<br />
+<br />
+nsDialogs::Create /NOUNLOAD 1018<br />
+Pop $Dialog<br />
+<br />
+${If} $Dialog == error<br />
+abort<br />
+${EndIf}<br />
+<br />
+nsDialogs::Show<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">niallk</div><div class="date">16th October 2008, 20:32</div></div><div class="posttext">Hello <br />
+<br />
+You're absolutely right.  I was too busy looking for a technical solution to see my approach was dumb anyway.<br />
+<br />
+Out of interest, is there an explanation as to why an abort would stop the Final page?<br />
+<br />
+Thanks for your help<br />
+Niall</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">16th October 2008, 23:09</div></div><div class="posttext">As far as I understand calling &quot;Abort&quot; only has a special purpose in the Callback-Functions for built-in pages (pre_function, show_function, leave_function). In those Callback-Functions &quot;Abort&quot; will either prevent the page from being displayed (pre_function) or will force the user to stay on the current page (leave_function). But when calling &quot;Abort&quot; in your custom page function (here &quot;nsDialogsPage&quot;), then &quot;Abort&quot; will have it's normal effect. And that is: Setup has failed, stop execution of script, abort setup! Hence the Finish page won't be displayed...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">niallk</div><div class="date">17th October 2008, 08:42</div></div><div class="posttext">Hi<br />
+<br />
+From the example I worked on, it would appear that the Abort did not stop MUI_PAGE_INSTFILES and the Sections code from executing, in fact removing the Abort altogether had no effect either way i.e. the display of the final page depended on whether nsDialogs::Show was called or not.<br />
+Anyway, I guess it's academic, the best solution would appear to be to include the &quot;Condidion&quot; before the nsDialogs::Create.<br />
+<br />
+Thanks again to all<br />
+Niall</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">17th October 2008, 14:08</div></div><div class="posttext">Read the docs. It clearly says what &quot;Abort&quot; does, it stops the execution of the script. There are some Callback-Functions where &quot;Abort&quot; has a special purpose and these functions are also mentioned in the docs. Unless explicitly stated, calling the &quot;Abort&quot; instruction will terminated your installer. I don't see any statement like &quot;Calling 'Abort' in your custom page 'creator_function' will skip that page&quot; in the docs. Do you ???</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">niallk</div><div class="date">17th October 2008, 14:56</div></div><div class="posttext">In my last post, I was making the observation that, in my example, &quot;Abort [in the custom page] did not stop [the subsequent] MUI_PAGE_INSTFILES and the Sections code from executing&quot; - behaviour which can be observed by running the code I included.<br />
+<br />
+I subsequently realised that this behaviour is caused by the absense of &quot;nsDialogs::Show&quot;.<br />
+<br />
+Calling nsDialogs::Show and then Abort produces the documented behaviour; so the lesson is, don't use &quot;Create&quot;  without &quot;Show&quot;!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

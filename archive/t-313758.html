@@ -1,0 +1,137 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Set file attributes recurisvely, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Set file attributes recurisvely NSIS Discussion" />
+	
+	<title> Set file attributes recurisvely [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Set file attributes recurisvely</div>
+<hr />
+<div class="pda"><a href="t-313758.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=313758">Set file attributes recurisvely</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ChocJunkie</div><div class="date">13th October 2009, 08:16</div></div><div class="posttext">Is there a easy way to set just change the write protection attributes of a folder and its files and subfolders? I'm asking because SetFileAttributes works just for one file/folder - or am I wrong?<br />
+<br />
+Thanks :)<br />
+<br />
+CJ</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">13th October 2009, 08:33</div></div><div class="posttext">Quickest option I can think of is use FindFirst/Next<br />
+<br />
+http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.5.8</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ChocJunkie</div><div class="date">13th October 2009, 12:30</div></div><div class="posttext">I think getting the file attributes, check for READONLY and eventually extract the string in a loop is a kind of complicated way, isn't it?<br />
+<br />
+Do you think, it would be a appropriate way to use:<br />
+ExecShell &quot;attrib&quot; &quot;-R /D /S C:\mydir\*&quot;?<br />
+<br />
+Thanks :)<br />
+<br />
+CJ</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">13th October 2009, 14:30</div></div><div class="posttext">I'm sure this can be done a lot more reliable using the system plugin and win32 api.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ChocJunkie</div><div class="date">13th October 2009, 15:07</div></div><div class="posttext">I don't know, if I don't see something, but for me it looks like using the System plugin an the WinApi results in the same like using SetFileAttributes. Am I wrong?<br />
+<br />
+Added:<br />
+<br />
+I'm having a look at http://msdn.microsoft.com/en-us/library/aa365522(VS.85).aspx and it seems, that your first hint about using FindFirstFile and FindNextFile is the only way I can do it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ChocJunkie</div><div class="date">13th October 2009, 15:35</div></div><div class="posttext">I've got a new problem ... *hurrah!* -.-'<br />
+I'm to stupid to set the attributes for the files using a variable.<br />
+${GetFileAttributes} &quot;C:\mydir\file.txt&quot; &quot;ALL&quot; $R5<br />
+StrCpy $R5 &quot;READONLY|$R5&quot;<br />
+SetFileAttributes &quot;C:\mydir\file.txt&quot; $R5Is it not allowed pass the values using a variable?<br />
+<br />
+The compiler message aren't usefull for me this time.<br />
+StrCpy $R5 &quot;READONLY|$R5&quot; () ()<br />
+Usage: SetFileAttributes file attribute[|attribute[...]]<br />
+attribute=(NORMAL|ARCHIVE|HIDDEN|OFFLINE|READONLY|SYSTEM|TEMPORARY|0)<br />
+Error in script &quot;D:\[..]\Installer.nsi&quot; on line 475 -- aborting creation process<br />
+Are there any workarounds?<br />
+<br />
+Thanks :)<br />
+<br />
+CJ</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ChocJunkie</div><div class="date">14th October 2009, 10:53</div></div><div class="posttext">I've written a algorithm to solve my problem.<br />
+<br />
+1. The write protection can be removed recursively from directory.<br />
+2. The attributes mask of the current file will not be destroyed - what could happen if just set the mask to 'NORMAL'.<br />
+-&gt; The functionality shall be used using the macro.<br />
+<br />
+<br />
+!macro removeWriteProtection _file<br />
+   Push $0<br />
+<br />
+   StrCpy $0 &quot;${_file}&quot;<br />
+   Call removeWriteProtection<br />
+   <br />
+   Pop $0<br />
+!macroend<br />
+<br />
+Function removeWriteProtection<br />
+   Push $R0<br />
+   Push $R1<br />
+   <br />
+   System::Call &quot;kernel32::GetFileAttributes(t '$0') i.R0&quot;<br />
+   IntOp $R1 $R0 % 2<br />
+   ${If} $R1 == 1  # odd number -&gt; readonly attribute's set<br />
+      IntOp $R0 $R0 - 1<br />
+      System::Call &quot;kernel32::SetFileAttributes(t '$0', i R0)&quot;<br />
+   ${EndIf}<br />
+   <br />
+   ${GetFileAttributes} &quot;$0&quot; &quot;DIRECTORY&quot; $R1<br />
+   ${If} $R1 == 1      <br />
+      loop:<br />
+         StrCmp $R1 &quot;&quot; done<br />
+         StrCmp $R1 &quot;.&quot; next<br />
+         StrCmp $R1 &quot;..&quot; next<br />
+         <br />
+         StrCpy $R1 &quot;$0\$R1&quot;<br />
+         !insertmacro removeWriteProtection &quot;$R1&quot;<br />
+<br />
+         next:<br />
+         FindNext $R0 $R1<br />
+         Goto loop<br />
+<br />
+      done:<br />
+      ClearErrors<br />
+      FindClose $R0<br />
+   ${EndIf}   <br />
+<br />
+   Pop $R1<br />
+   Pop $R0<br />
+FunctionEnd<br />
+<br />
+But I still have a problem to solve:<br />
+<br />
+I would like to break the whole recursion if a error occured using: System::Call &quot;kernel32::SetFileAttributes(t '$0', i R0)&quot;But at the moment, I can't imagine how to do so by just returning from a call deep inside the recursion.<br />
+<br />
+Any ideas?<br />
+<br />
+<br />
+Thanks :)<br />
+<br />
+CJ</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">14th October 2009, 20:52</div></div><div class="posttext">Couldn't you just do ${If} ${Errors} goto YourBreakLabel?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

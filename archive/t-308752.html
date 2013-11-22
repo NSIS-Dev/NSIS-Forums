@@ -1,0 +1,117 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problem getting start menu folder uninstallation, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problem getting start menu folder uninstallation NSIS Discussion" />
+	
+	<title> Problem getting start menu folder uninstallation [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problem getting start menu folder uninstallation</div>
+<hr />
+<div class="pda"><a href="t-308752.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=308752">Problem getting start menu folder uninstallation</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">skuallpa</div><div class="date">22nd July 2009, 15:51</div></div><div class="posttext">Hello,<br />
+<br />
+I am working on an updater that overwrite and add some files to my application.<br />
+<br />
+Because I add some files, I have to rewrite my uninstaller also. <br />
+But I have trouble in getting the start menu folder uninstallation<br />
+<br />
+This is what I do<br />
+<br />
+<br />
+!insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder<br />
+RMDir /r &quot;$SMPROGRAMS\$StartMenuFolder&quot;<br />
+<br />
+<br />
+But I am getting during compilation the following error<br />
+<br />
+warning: unknow variable/constant &quot;&lt;MUI_STARTMENUPAGE_Application_DEFAULTFOLDER&gt;&quot; detected, ignoring &lt;macro:MUI_STARTMENU_GETFOLDER:20&gt;<br />
+error in macro MUI_STARTMENU_GETFOLDER on macro line 20<br />
+<br />
+The problem seem that I have not define the variable &quot;Application&quot;. But this variable is define in my installer like this<br />
+<br />
+;page STARTMENU<br />
+Var StartMenuFolder<br />
+!insertmacro MUI_PAGE_STARTMENU &quot;Application&quot; $StartMenuFolder<br />
+<br />
+but not in my updater because I don't want to reinstall a Start Menu, just want to get the existing one.<br />
+<br />
+So,how can I get this value?<br />
+Thanks in advance for your help</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">skuallpa</div><div class="date">23rd July 2009, 14:17</div></div><div class="posttext">I have still not find any issue to this problem<br />
+<br />
+I have found another post http://forums.winamp.com/showthread.php?postid=969873#post969873 that explains that we could write in the registry some value to remember of the startmenufolder (that is choosen during installation)<br />
+<br />
+I have reported below the code that Brummelchen has given<br />
+<br />
+;Configuration<br />
+<br />
+  ;Remember the Start Menu Folder<br />
+  !define MUI_STARTMENUPAGE_REGISTRY_ROOT &quot;HKCU&quot; <br />
+  !define MUI_STARTMENUPAGE_REGISTRY_KEY &quot;Software\&lt;yoursoft&gt;&quot; <br />
+  !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME &quot;StartMenuFolder&quot;<br />
+<br />
+;Installer Sections<br />
+<br />
+  !insertmacro MUI_STARTMENU_WRITE_BEGIN<br />
+    ;Create shortcuts<br />
+    CreateDirectory &quot;$SMPROGRAMS\${MUI_STARTMENUPAGE_VARIABLE}&quot;<br />
+    CreateShortCut &quot;$SMPROGRAMS\${MUI_STARTMENUPAGE_VARIABLE}\&lt;yourapp&gt;.lnk&quot; &quot;$INSTDIR\&lt;yourfile&gt;.ext&quot;<br />
+  !insertmacro MUI_STARTMENU_WRITE_END<br />
+<br />
+;Uninstaller Section<br />
+<br />
+  ;must be the first in this sektion<br />
+  ;when you are going to delete the whole key later<br />
+  ; DeleteRegKey HKCU &quot;Software\&lt;yoursoft&gt;&quot;<br />
+<br />
+  ;Remove shortcuts<br />
+  Push $R0<br />
+  ;ReadRegStr $R0 HKCU &quot;Software\&lt;yoursoft&gt;&quot; &quot;StartMenuFolder&quot;<br />
+  ReadRegStr $R0 ${MUI_STARTMENUPAGE_REGISTRY_ROOT} ${MUI_STARTMENUPAGE_REGISTRY_KEY} <br />
+                                                     ${MUI_STARTMENUPAGE_REGISTRY_VALUENAME}<br />
+  StrCmp $R0 &quot;&quot; noshortcuts<br />
+    RMDir /r &quot;$SMPROGRAMS\$R0&quot;<br />
+  Pop $R0<br />
+<br />
+  noshortcuts:<br />
+<br />
+<br />
+But here the user have already installed the software, I work on an updater that overwrite some files. So is it to late to refind the startMenuFolder?<br />
+<br />
+Also I have some trouble to overwrite the uninstaller. Because I have create some new file, I have also to tell the uninstaller to delete these new files.<br />
+<br />
+So, I have rewrite in my updater an uninstaller section, (the code is quite the same as in my installer but with some additional RMDir)<br />
+<br />
+Section &quot;Uninstall&quot;<br />
+   .....<br />
+    RMDir /r &quot;$INSTDIR\MyNewFolderAndNewFiles&quot;<br />
+SectionEnd<br />
+<br />
+But the uninstaller is not overwrite..<br />
+<br />
+I can't figure out why<br />
+<br />
+Can anyone help?<br />
+<br />
+Thanks in advance</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">3rd August 2009, 10:00</div></div><div class="posttext">Even if you don't use it, you'll have to insert the MUI_PAGE_STARTMENU macro so everything will be properly defined. You can define a pre callback function for it and skip it.<br />
+<br />
+Another solution would be to dig into the MUI macros, figure out where it writes stuff to the registry and just use that directly.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

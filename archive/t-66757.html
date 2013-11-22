@@ -1,0 +1,87 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Add/remove progrrams, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Add/remove progrrams NSIS Discussion" />
+	
+	<title> Add/remove progrrams [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Add/remove progrrams</div>
+<hr />
+<div class="pda"><a href="t-66757.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=66757">Add/remove progrrams</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">aquarii</div><div class="date">26th November 2001, 20:21</div></div><div class="posttext">NSIS newbie here -- I am using NSIS to deliver my app.  I would like to have an entry in the add/remove programs window for my app.  Right now I run the installer and it does not show up in add/remove.. How can I right this wrong?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mgentry</div><div class="date">26th November 2001, 22:25</div></div><div class="posttext">In your installer, do this:<br />
+WriteRegStr HKEY_LOCAL_MACHINE &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\YourProductHere&quot; &quot;DisplayName&quot; &quot;Your Product&quot;<br />
+<br />
+WriteRegStr HKEY_LOCAL_MACHINE &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\YourProductHere&quot; &quot;UninstallString&quot; &quot;uninst.exe&quot;<br />
+<br />
+The first is the text displayed in the Add/Remove dialog, the 2nd is the command line to execute.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dbareis</div><div class="date">27th November 2001, 07:14</div></div><div class="posttext">You can do a much better job than just set up the basic items, I have extracted some code out of my header (this will add &quot;support information&quot; with web links etc - formatting stuffed up):<br />
+<br />
+;--- Set up the uninstall (and add/remove program) Information --------------<br />
+&lt;$NsisCmt  &quot;Specify ADD/REMOVE Programs Info&quot;&gt;<br />
+&lt;$WriteReg SUBKEY=&quot;&lt;$MachKeyUninstall&gt;&quot; KEY=&quot;UninstallString&quot; VALUE=&quot;&lt;$UninstallEXEThere&gt;&quot;&gt;<br />
+&lt;$WriteReg SUBKEY=&quot;&lt;$MachKeyUninstall&gt;&quot; KEY=&quot;DisplayName&quot;     VALUE=&quot;&lt;$DisplayName&gt;&quot;&gt;<br />
+&lt;$WriteReg SUBKEY=&quot;&lt;$MachKeyUninstall&gt;&quot; KEY=&quot;DisplayIcon&quot;     VALUE=&quot;&lt;$UninstallIcon&gt;&quot;&gt;<br />
+&lt;$WriteReg SUBKEY=&quot;&lt;$MachKeyUninstall&gt;&quot; KEY=&quot;DisplayVersion&quot;  VALUE=&quot;&lt;$ProductVersion&gt; (&lt;$PackagedWhen&gt;)&quot;&gt;<br />
+#ifdef HelpLink<br />
+   &lt;$WriteReg SUBKEY=&quot;&lt;$MachKeyUninstall&gt;&quot; KEY=&quot;HelpLink&quot; VALUE=&quot;&lt;$HelpLink&gt;&quot;&gt;<br />
+#endif<br />
+#ifdef Publisher<br />
+   &lt;$WriteReg SUBKEY=&quot;&lt;$MachKeyUninstall&gt;&quot; KEY=&quot;Publisher&quot; VALUE=&quot;&lt;$Publisher&gt;&quot;&gt;<br />
+#endif<br />
+#ifdef Comments<br />
+   #RexxVar RxComments = ^&lt;$Comments&gt;^<br />
+   #DefineRexx ''<br />
+       ;--- Work around Windows bug #1,456,321 ------------------------------<br />
+       RxComments = ReplaceString(RxComments, '&quot;', &quot;'&quot;);<br />
+   #DefineRexx<br />
+   &lt;$WriteReg SUBKEY=&quot;&lt;$MachKeyUninstall&gt;&quot; KEY=&quot;Comments&quot; VALUE=&quot;&lt;??RxComments&gt;&quot;&gt;<br />
+#endif<br />
+#ifndef NSIS_NO_README<br />
+   ;--- If local readme exists assume it will in the &quot;INSTDIR&quot; as well ------<br />
+   #define? ReadmeFileHere           &lt;$ProductName&gt;.txt<br />
+   #define? ReadmeFileThere          $INSTDIR\&lt;$ReadmeFileHere&gt;<br />
+   &lt;$NsisCmt &quot;Want the readme in the package&quot;&gt;<br />
+   #DependsOn INPUT &quot;&lt;$ReadmeFileHere&gt;&quot;<br />
+   &lt;$FILE   &quot;&lt;$ReadmeFileHere&gt;&quot;&gt;<br />
+<br />
+   ;--- Add to Uninstall Information ----------------------------------------<br />
+   #ifndef NSIS_NO_README_IN_ADD_REMOVE<br />
+           #DefineRexx ''<br />
+               ArFile = ReplaceString('&lt;$ReadmeFileThere&gt;', ':', '|');<br />
+               ArFile = 'file:///' || ArFile;<br />
+           #DefineRexx<br />
+           &lt;$WriteReg SUBKEY=&quot;&lt;$MachKeyUninstall&gt;&quot; KEY=&quot;Readme&quot; VALUE=&quot;&lt;??ArFile&gt;&quot;&gt;<br />
+   #endif<br />
+<br />
+<br />
+There are some other keys but from what I can see of limited use.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">vajuras</div><div class="date">2nd December 2001, 01:15</div></div><div class="posttext">Originally posted by mgentry <br />
+In your installer, do this:<br />
+WriteRegStr HKEY_LOCAL_MACHINE &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\YourProductHere&quot; &quot;DisplayName&quot; &quot;Your Product&quot;<br />
+<br />
+WriteRegStr HKEY_LOCAL_MACHINE &quot;Software\Microsoft\Windows\CurrentVersion\Uninstall\YourProductHere&quot; &quot;UninstallString&quot; &quot;uninst.exe&quot;<br />
+<br />
+The first is the text displayed in the Add/Remove dialog, the 2nd is the command line to execute. <br />
+<br />
+Thanks, these few lines helped me achieve the one thing I didn't like bout my installer.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

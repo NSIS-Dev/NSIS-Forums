@@ -1,0 +1,76 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" 64-bit Registry Values Not Written in One Case, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  64-bit Registry Values Not Written in One Case NSIS Discussion" />
+	
+	<title> 64-bit Registry Values Not Written in One Case [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  64-bit Registry Values Not Written in One Case</div>
+<hr />
+<div class="pda"><a href="t-358231.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=358231">64-bit Registry Values Not Written in One Case</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">GTVic</div><div class="date">27th March 2013, 22:50</div></div><div class="posttext">My script sets values both under HKCR\Interface and under HKCR\Wow6432Node\Interface<br />
+<br />
+When I run the NSIS compiled EXE it works, I have SetRegView 64 in the script which also has requestexecutionlevel admin. Everything is running in a UAC environment, Windows 7 64.<br />
+<br />
+So far so good.<br />
+<br />
+But when I run a VBS script that runs the NSIS EXE, then the HKCR\Interface values are not set, presumably redirected to HKCR\Wow6432Node\Interface.<br />
+<br />
+The details of the VBS script are that it checks if there are any command line parameters and then it executes itself with admin rights<br />
+if WSCript.Arguments.length = 0 then<br />
+    oShell.ShellExecute &quot;wscript.exe&quot;, Chr(34) &amp; strScriptPath &amp; Chr(34) &amp; &quot; uac&quot;, &quot;&quot;, &quot;runas&quot;, 1<br />
+end if<br />
+where oShell is defined as <br />
+Set oShell = CreateObject(&quot;Shell.Application&quot;)<br />
+<br />
+To run the NSIS compiled EXE which edits the registry, the VBS Script uses oWSH.Exec(runstring) where oWSH is defined as <br />
+Set oWSH = CreateObject(&quot;WScript.Shell&quot;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th March 2013, 00:29</div></div><div class="posttext">Can you check in Process Explorer to make sure the installer is running at high integrity level?<br />
+You could also try Process Monitor and see where it writes in the registry.<br />
+<br />
+Why use oWSH.Exec? Could you try one of the other two methods (Run, ShellExecute) that use ShellExecute internally so we know you are getting UAC elevation handling...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GTVic</div><div class="date">28th March 2013, 00:58</div></div><div class="posttext">Thanks, ShellExecute, Run have no wait option, but I was able to find an intermediary program that will do the waiting. First test went ok.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GTVic</div><div class="date">28th March 2013, 02:00</div></div><div class="posttext">Thanks for the tip.<br />
+<br />
+So in summary I wasn't concerned about running elevated because the entire script is elevated to start, guaranteed. Since the problem NSIS compiled script was working partially, adding 32-bit registry entries, I was not concerned about elevation.<br />
+<br />
+In the end it seems as though oWSH.Exec can force a child process in a 32-bit compatibility mode.<br />
+<br />
+Whereas Run or ShellExecute don't appear to have that restriction. The problem with these is that they cannot wait for the process to finish.<br />
+<br />
+I did find a website Bill Stewart's Site - Miscellaneous Tools (http://www.westmesatech.com/misctools.html). That has a set of elevate tools that allow use of Run or ShellExecute with proper UAC control and will wait for the process to finish. <br />
+<br />
+So that was my solution. I have an NSIS script which downloads/runs another NSIS script which extracts files and runs an extracted VBS script which uses ELEVATE to run a third NSIS script to modify the registry and set both 32-bit and 64-bit values. :confused:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th March 2013, 02:56</div></div><div class="posttext">Run can wait...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">28th March 2013, 12:56</div></div><div class="posttext">I would avoid using a VBS because wscript/cscript can be disabled by group policy and this has been common with my users in the past (for example those in a domain/workstation environment). You'll just get a message box appear and then your installer will never run. Similar issue can happen with cmd.exe. The only real alternative is to use a MSI wrapper which can run embedded VBS using its own built in interpreter.<br />
+<br />
+Also if you use RequestExecutionLevel admin, you still actually need to check the user is running as an administrator. You can use the UserInfo plug-in for this.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GTVic</div><div class="date">28th March 2013, 23:27</div></div><div class="posttext">Thanks, this is a very controlled environment so no issues with VBS not working. I've removed the ELEVATE utilities, the only requirement was to use Run in place of Exec.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

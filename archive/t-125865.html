@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Using GetDLLVersion  and assign to MUI_VERSION ?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Using GetDLLVersion  and assign to MUI_VERSION ? NSIS Discussion" />
+	
+	<title> Using GetDLLVersion  and assign to MUI_VERSION ? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Using GetDLLVersion  and assign to MUI_VERSION ?</div>
+<hr />
+<div class="pda"><a href="t-125865.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=125865">Using GetDLLVersion  and assign to MUI_VERSION ?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">GeoffCoope</div><div class="date">21st February 2003, 12:45</div></div><div class="posttext">Hi<br />
+<br />
+I have a script that needs to get the version number from an exe file within the installation itself.<br />
+<br />
+I can get the exe version of a file after it has been installed using the below code:<br />
+<br />
+; Get Version of EXE file<br />
+GetDLLVersion &quot;$INSTDIR\MyApp.exe&quot; $R0 $R1<br />
+IntOp $R2 $R0 / 0x00010000 ; $R2 now contains major version<br />
+IntOp $R3 $R0 &amp; 0x0000FFFF ; $R3 now contains minor version<br />
+IntOp $R4 $R1 / 0x00010000 ; $R4 now contains release<br />
+IntOp $R5 $R1 &amp; 0x0000FFFF ; $R5 now contains build<br />
+StrCpy $0 &quot;$R2.$R3.$R4.$R5&quot; ; $0 now contains full version number<br />
+<br />
+What I really want to do is get the version number of MyApp.EXE and assign that version number to the MUI_VERSION var at the start of the script.  (I want to set the OutFile as MyApp + MUI_VERSION)<br />
+<br />
+Is this possible ?<br />
+<br />
+Thanks for any help<br />
+Geoff Coope</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">21st February 2003, 13:18</div></div><div class="posttext">Have a look at the FAQ question &quot;How can I make my script depend on some registry value/the version of my product/&lt;something dynamic&gt;?&quot;. It will help you here. What you basically need to do is create another script that will compile your script with makensis /DMUI_VERSION=1.2.3.4. It will get 1.2.3.4 from the script you posted above.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GeoffCoope</div><div class="date">21st February 2003, 13:42</div></div><div class="posttext">Great idea, I understand.<br />
+<br />
+Thanks<br />
+Geoff Coope</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GeoffCoope</div><div class="date">21st February 2003, 14:14</div></div><div class="posttext">Hi Kichik<br />
+<br />
+What is the minimum I need to create this installer that runs my script?<br />
+<br />
+I tried this but it doesn't do anthing.<br />
+<br />
+Caption &quot;Make MyApp&quot;<br />
+InstallDir &quot;.&quot;<br />
+OutFile &quot;make.exe&quot;<br />
+<br />
+Section &quot;Go&quot;<br />
+  SetOutPath &quot;empty&quot;<br />
+  Call GetVersion <br />
+SectionEnd<br />
+<br />
+<br />
+; Get Version of EXE file and send to install_data.nsi<br />
+; ----------------------------------------------------<br />
+Function GetVersion<br />
+<br />
+GetDLLVersion &quot;c:\MyApp.Exe&quot; $R0 $R1<br />
+<br />
+  IntOp $R2 $R0 / 0x00010000 ; $R2 now contains major version<br />
+  IntOp $R3 $R0 &amp; 0x0000FFFF ; $R3 now contains minor version<br />
+  IntOp $R4 $R1 / 0x00010000 ; $R4 now contains release<br />
+  IntOp $R5 $R1 &amp; 0x0000FFFF ; $R5 now contains build<br />
+  StrCpy $0 &quot;$R2.$R3.$R4.$R5&quot; ; $0 now contains string like &quot;1.2.0.192&quot;<br />
+<br />
+  Exec '&quot;C:\Program Files\NSIS\makensis.exe /DVERSION=$0 C:\Projects\MyApp\NSIS\install_data.nsi&quot;'<br />
+  <br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">21st February 2003, 14:39</div></div><div class="posttext">Could be wrong, but try prefixing the &quot;Go&quot; name with a minus sign. Sections with a leading minus are always executed, e.g. Section -Go or Section &quot;-Go&quot; (not sure about whether the quotes are needed or not, and no time to test this i'm afraid)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GeoffCoope</div><div class="date">21st February 2003, 15:01</div></div><div class="posttext">Done it,<br />
+<br />
+Here it is....<br />
+<br />
+This Script will get a version number (if you set one) from your EXE file and pass it to another script (your main install script) as a parameter.<br />
+<br />
+1. Create a script called make.nsi<br />
+<br />
+------------------------------------------------------------------<br />
+; Make.nsi<br />
+; Geoff Coope<br />
+; Gets the Version Number from an EXE file and passes it as <br />
+; a parameter $VERSION to another script.<br />
+<br />
+Caption &quot;Make&quot;<br />
+InstallDir &quot;.&quot;<br />
+OutFile &quot;make.exe&quot;<br />
+SilentInstall silent<br />
+<br />
+Section &quot;DoNothing&quot;<br />
+SectionEnd<br />
+<br />
+ Function .onInit<br />
+<br />
+  GetDLLVersion &quot;c:\path\afile.exe&quot; $R0 $R1<br />
+<br />
+  IntOp $R2 $R0 / 0x00010000 ; $R2 now contains major version<br />
+  IntOp $R3 $R0 &amp; 0x0000FFFF ; $R3 now contains minor version<br />
+  IntOp $R4 $R1 / 0x00010000 ; $R4 now contains release<br />
+  IntOp $R5 $R1 &amp; 0x0000FFFF ; $R5 now contains build<br />
+  StrCpy $0 &quot;$R2.$R3.$R4.$R5&quot; ; $0 now contains string like &quot;1.2.0.192&quot;<br />
+<br />
+  Exec '&quot;C:\Program Files\NSIS\makensis.exe&quot; &quot;/DVERSION=$0&quot; &quot;c:\projects\aProject\data.nsi&quot;'<br />
+ FunctionEnd<br />
+<br />
+------------------------------------------------------------------<br />
+2. Compile the above script and you end up with &quot;Make.exe&quot;<br />
+3. Open your main install script (ive called mine data.nsi in the above example) and add the line <br />
+!define MUI_VERSION ${VERSION}<br />
+<br />
+4. Run Make.exe and it will:<br />
+   a) Get version number from exe in the form (x.x.x.x)<br />
+   b) Calls another script passing the version number as $VERSION to it<br />
+<br />
+You can now create installations that have the Build number in the Folder, path, install file name, registry etc...<br />
+<br />
+Thanks<br />
+Geoff Coope</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sealite</div><div class="date">21st February 2003, 16:26</div></div><div class="posttext">This method is not very usefull and slow down the compilation process.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">21st February 2003, 16:36</div></div><div class="posttext">Compiling one installer one time is a lot faster than letting NSIS parse your script for __DATE__ and __MYPROG.EXE_VERSION__.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

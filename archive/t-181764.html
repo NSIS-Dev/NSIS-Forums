@@ -1,0 +1,168 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" I wrote some handy NSIS functions for C Programmers, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  I wrote some handy NSIS functions for C Programmers NSIS Discussion" />
+	
+	<title> I wrote some handy NSIS functions for C Programmers [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  I wrote some handy NSIS functions for C Programmers</div>
+<hr />
+<div class="pda"><a href="t-181764.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=181764">I wrote some handy NSIS functions for C Programmers</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">TimeHorse</div><div class="date">31st May 2004, 05:49</div></div><div class="posttext">NSIS, unlike Python, does not have a List Type and this is good because it makes the language more like Assembly and therefore faster.  However, the handy dandy C functions strtok and strchr allow list-like operations on pure strings.  This IMHO goes well beyond the quite limited functionality of SPLIT_STRING and allows arbitrary delimiters, sets of delimiters (i.e. use &quot;,.!? $\n$\t$\r&quot; to split the input as words) and can be called repeatedly until all tokens are found.  The resulting list should be tested for &quot;&quot; to terminate any loop.  Here is the code:<br />
+<br />
+; StrTok works just like ISO C strtok, where input is modified as in that function<br />
+;    Parameter 2 is popped and it is the delimiter to split the string with<br />
+;    Parameter 1 is then popped and it is the string to parse<br />
+;    The resulting remaining part of input is pushed onto the stack<br />
+;    The resulting substring is pushed onto the stack<br />
+;<br />
+; Example:<br />
+;    Push $Input<br />
+;    Push $Delim<br />
+;    Call StrTok<br />
+;    Pop $0<br />
+;    Pop $Input<br />
+;    MessageBox MB_OK &quot;My next token is $0&quot;<br />
+;    MessageBox MB_OK &quot;The remaining text is $Input&quot;<br />
+;<br />
+; StrChr works just like ISO C strchr, where DELIM must be 1 char long and error is returned if DELIM is not found<br />
+;    Parameter 2 is popped and it is the delimiter to split the string with<br />
+;    Parameter 1 is then popped and it is the string to parse<br />
+;    The resulting integer offset is pushed onto the stack<br />
+;<br />
+; Example:<br />
+;    Push $Input<br />
+;    Push $Delim<br />
+;    Call StrChr<br />
+;    Pop $0<br />
+;    StrCmp $0 error +3<br />
+;    MessageBox MB_OK &quot;Delimiter found at offset $R0&quot;<br />
+;    goto +2<br />
+;    MessageBox MB_OK &quot;Delemiter not found&quot;<br />
+<br />
+Function StrTok<br />
+	; Get the Delimiter ($R0)<br />
+	Exch $R0<br />
+<br />
+	; Get the Input ($R1)<br />
+	; This is second on the stack so switch it to the first and then $R0 becomes second<br />
+	Exch 1<br />
+	Exch $R1<br />
+<br />
+	; Need 2 more variables<br />
+	Push $R2 ; A Character from the Input<br />
+	Push $R3 ; An index into the Input<br />
+<br />
+	StrCpy $R3 -1<br />
+<br />
+	; Loop<br />
+	StrTokLoop:<br />
+	IntOp $R3 $R3 + 1<br />
+	StrCpy $R2 $R1 1 $R3<br />
+	StrCmp $R2 &quot;&quot; StrTokBreak<br />
+	Push $R0 ; Delimiter<br />
+	Push $R2 ; Character to find in the Delimeter <br />
+	Call StrChr<br />
+	Pop $R2 ; The position of old $R2 in the Delimeter<br />
+	StrCmp $R2 error StrTokLoop<br />
+<br />
+	StrTokBreak:<br />
+	Push $R5<br />
+	StrCpy $R5 $R0 ; Store the Delimeter in $R5<br />
+	<br />
+	StrCpy $R0 $R1 $R3 ; $R0 now has the parsed string<br />
+<br />
+	; Need to find all the delimeter and delete them<br />
+	StrTokIsDelim:<br />
+	IntOp $R3 $R3 + 1<br />
+	StrCpy $R2 $R1 1 $R3<br />
+	StrCmp $R2 &quot;&quot; StrTokDone<br />
+	Push $R5 ; Delimiter<br />
+	Push $R2 ; Character to find in the Delimeter<br />
+	Call StrChr<br />
+	Pop $R2 ; The position of old $R2 in the Delimeter<br />
+	StrCmp $R2 error &quot;&quot; StrTokIsDelim<br />
+<br />
+	StrTokDone:<br />
+	Pop $R5 ; Don't need the Delimeter copy anymore<br />
+<br />
+	StrCpy $R1 $R1 &quot;&quot; $R3 ; $R1 now has the rest of the input<br />
+<br />
+	Pop $R3 ; Reversal<br />
+	Pop $R2 ; Reversal<br />
+	Exch $R1 ; Push Input back on Stack where $R1 is<br />
+<br />
+	; Swap Input with stored $R0 and swap it for the result<br />
+	Exch 1<br />
+	Exch $R0 ; Result<br />
+FunctionEnd<br />
+<br />
+Function StrChr<br />
+	; Get the Delimiter ($R0) (What you're looking for)<br />
+	Exch $R0<br />
+<br />
+	; Get the Input ($R1)<br />
+	; This is second on the stack so switch it to the first and then $R0 becomes second<br />
+	Exch 1<br />
+	Exch $R1<br />
+<br />
+	; Need 2 more variables<br />
+	Push $R2 ; A Character from the Input<br />
+	Push $R3 ; An index into the Input<br />
+<br />
+	StrLen $R3 $R0 ; $R2 has the String Length<br />
+	StrCmp $R3 1 +3<br />
+<br />
+	; Error -- Delim has to be 1 char<br />
+	StrCpy $R0 error<br />
+	Goto StrChrDone<br />
+<br />
+	StrCpy $R3 -1<br />
+<br />
+	; Loop<br />
+	StrChrLoop:<br />
+	IntOp $R3 $R3 + 1<br />
+	StrCpy $R2 $R1 1 $R3<br />
+	StrCmp $R2 &quot;&quot; &quot;&quot; +3<br />
+<br />
+	; Error -- Delim not found<br />
+	StrCpy $R0 error<br />
+	Goto StrChrDone<br />
+<br />
+	StrCmp $R2 $R0 &quot;&quot; StrChrLoop<br />
+	; End Loop<br />
+<br />
+	; Need to move result to $R0<br />
+	StrCpy $R0 $R3<br />
+<br />
+	StrChrDone:<br />
+	Pop $R3 ; Reversal<br />
+	Pop $R2 ; Reversal<br />
+	Pop $R1 ; Reversal<br />
+	Exch $R0 ; Result<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">31st May 2004, 13:25</div></div><div class="posttext">Ahnnn... StrTok was already included inside StrFunc.nsh header file (look for it at &quot;Include&quot; subdir) as a command ${StrTok}. And about StrChr, I don't use it much often... <br />
+<br />
+But you can post your functions in the Archive if you want to.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">scully13</div><div class="date">1st June 2004, 20:45</div></div><div class="posttext">I think StrChr would be handy. Please post to the Archive.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">2nd June 2004, 02:38</div></div><div class="posttext">Is better you do it, as not everytime I'm available to update and fix the function at the time. If you know, I have several projects and manage more one is even worse for me. Register at Archive or create a page as anonymous (which doesn't need to register, but anyone can edit the page).</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

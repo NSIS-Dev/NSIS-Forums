@@ -1,0 +1,111 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Get local machine name, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Get local machine name NSIS Discussion" />
+	
+	<title> Get local machine name [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Get local machine name</div>
+<hr />
+<div class="pda"><a href="t-255085.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=255085">Get local machine name</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">mayPol</div><div class="date">8th September 2006, 07:59</div></div><div class="posttext">Hi,<br />
+<br />
+How can I get in the NSIS the local machine name. I checked the constants and didn't find a sutable one.<br />
+<br />
+Thanks,<br />
+May</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">{_trueparuex^}</div><div class="date">8th September 2006, 10:29</div></div><div class="posttext">One way is to read it from registry...<br />
+HKLM\System\CurrentControlSet\Control\ComputerName\ComputerName ComputerName<br />
+<br />
+This key should exist from windows 95 to windows XP (not sure about NT). There is also other key (HKLM System\...\ComputerName\ActiveComputerName ComputerName)<br />
+containing the computer name and this should be the &quot;right&quot; key to read the computer name, but as far as I know this key doesn't exist in windows 9x systems.<br />
+<br />
+I am using code like this, to read the name from registry.<br />
+ReadRegStr $0 HKLM &quot;System\CurrentControlSet\Control\ComputerName\ActiveComputerName&quot; &quot;ComputerName&quot;<br />
+StrCmp $0 &quot;&quot; 0 nameok<br />
+ReadRegStr $0 HKLM &quot;System\CurrentControlSet\Control\ComputerName\ComputerName&quot; &quot;ComputerName&quot;<br />
+StrCmp $0 &quot;&quot; 0 nameok<br />
+MessageBox MB_ICONSTOP|MB_OK &quot;Couldn't resolve computer name!&quot;<br />
+Abort<br />
+nameok:<br />
+<br />
+Better way would be using system plug-in and call GetComputerName with it. I really don't understand all those cryptic system plug-in calls so I won't write example code here, but maybe someone else will ;) Anyone...?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">mayPol</div><div class="date">8th September 2006, 10:53</div></div><div class="posttext">Thanks. It's greate:up:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LuP</div><div class="date">18th December 2007, 16:06</div></div><div class="posttext">... How to get computer name via System::Call (...???) GetComputerName (LPCSTR buf, DWORD size)?<br />
+<br />
+- I don't understand system function call conventions...<br />
+<br />
+Thanks.<br />
+<br />
+LuP</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pospec</div><div class="date">18th December 2007, 16:52</div></div><div class="posttext">I don't understand system function call conventions...<br />
+Neither do I :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LuP</div><div class="date">18th December 2007, 17:03</div></div><div class="posttext">... I tried something like this:<br />
+<br />
+  System::Call 'kernel32::GetComputerName(t.r0, *i.${NSIS_MAX_STRLEN} r1) i.r2'<br />
+<br />
+  MessageBox MB_OK $R0<br />
+  MessageBox MB_OK $R1<br />
+  MessageBox MB_OK $R2<br />
+<br />
+But all three message boxes display nothing :-(<br />
+<br />
+LuP</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">18th December 2007, 18:18</div></div><div class="posttext">... But all three message boxes display nothing :-(That's because you are looking in $R0,$R1,$R2 but your system call uses $0, $1 and $2 (namely r0, r1 and r2). The correct call is:<br />
+System::Call 'kernel32.dll::GetComputerNameA(t .r0,*i ${NSIS_MAX_STRLEN} r1)i.r2'$0 will contain the computer name, $1 will get the number of characters of that name (+1) and $2 will be zero if the function fails (or any number if the function succeeds).<br />
+You can use GetComputerNameEx (http://msdn2.microsoft.com/en-us/library/ms724301.aspx) which gives a bit more info:System::Call 'kernel32.dll::GetComputerNameExA(i 4, t .r0,*i ${NSIS_MAX_STRLEN} r1)i.r2'will get you in $0 the ComputerNamePhysicalNetBIOS. Or just follow the enumeration:; ComputerNameNetBIOS 0<br />
+; ComputerNameDnsHostname 1<br />
+; ComputerNameDnsDomain 2<br />
+; ComputerNameDnsFullyQualified 3<br />
+; ComputerNamePhysicalNetBIOS 4<br />
+; ComputerNamePhysicalDnsHostname 5<br />
+; ComputerNamePhysicalDnsDomain 6<br />
+; ComputerNamePhysicalDnsFullyQualified 7<br />
+Hope this helps,<br />
+<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LuP</div><div class="date">18th December 2007, 18:32</div></div><div class="posttext">... Thanks, you helped me much - I may start understanding this all about System::...<br />
+<br />
+I use this code (I realized I need to get user name):<br />
+<br />
+System::Call &quot;advapi32::GetUserName(t.R0, *i${NSIS_MAX_STRLEN}.R1) i.R2&quot;<br />
+StrCpy $BatDir &quot;C:\$R0\Bat&quot;<br />
+<br />
+Thanks a lot.<br />
+<br />
+LuP</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pospec</div><div class="date">18th December 2007, 19:16</div></div><div class="posttext">Nice! Thank you CancerFace</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">nsnb</div><div class="date">26th September 2010, 18:41</div></div><div class="posttext">Better way would be using system plug-in and call GetComputerName with it<br />
+Why is it a better way? System's GetComputerName gets this value from the registry, too, just as exemplified here: http://nsis.sourceforge.net/Your_Computer_Name</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

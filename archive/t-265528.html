@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Jump back over a disabled page, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Jump back over a disabled page NSIS Discussion" />
+	
+	<title> Jump back over a disabled page [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Jump back over a disabled page</div>
+<hr />
+<div class="pda"><a href="t-265528.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=265528">Jump back over a disabled page</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">DrWatson</div><div class="date">10th February 2007, 16:36</div></div><div class="posttext">Hi there,<br />
+<br />
+disabling a certain page during install is easy. You execute 'Abort' in the page's pre_function or the custom page's creator_function.<br />
+<br />
+If you press the 'Back' button in a page that follows an aborted page, the aborted page's pre_function is called and the 'Abort' is executed again which results in an exit of the installer.<br />
+<br />
+In this situation I would need the information that the page which will be aborted is called from the next page of the wizard and I would need a command to call the previous page before aborting.<br />
+<br />
+Is that possible in any way ?<br />
+<br />
+Thanks a lot for every help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">10th February 2007, 20:06</div></div><div class="posttext">If you press the 'Back' button in a page that follows an aborted page, the aborted page's pre_function is called and the 'Abort' is executed again which results in an exit of the installer.This happens only when the 'aborted page' is the 1st page in pages sequence, and sounds quite normal if you hit back from the 2nd page then 1st is aborted, where do you think it should jump?<br />
+<br />
+If you want to avoid the possible back thus the end of the installer, you should add some code that disables the back button in 2nd page to cover this case.<br />
+<br />
+There is a related example at wiki,<br />
+<br />
+http://nsis.sourceforge.net/Demonstrating_Page%27s_Custom_Functions_Pre_Show_Leave</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DrWatson</div><div class="date">11th February 2007, 08:48</div></div><div class="posttext">Unfortunately it's not the first page in the page sequence:<br />
+<br />
+  !insertmacro MUI_PAGE_WELCOME<br />
+  Page custom  MUI_CUST_UPGRADE<br />
+  !insertmacro MUI_PAGE_LICENSE &quot;$(TEXT_License)&quot;<br />
+  ...<br />
+<br />
+Function MUI_CUST_UPGRADE<br />
+  ;If VersionCheck detects no installed version, this page needs not to be shown<br />
+  ${If} $CURRENT_VERSION == &quot;&quot;<br />
+    Abort<br />
+  ${EndIf}<br />
+  ;Otherwise display warning message on page<br />
+  !insertmacro MUI_HEADER_TEXT &quot;$(TEXT_UpgradeTitle)&quot; &quot;$(TEXT_UpgradeSubTitle)&quot;<br />
+  ...<br />
+<br />
+The jump should go back from the license page to the welcome page, which works well if the custom page is not programmed. In addition, all back jumps are working, if the custom page is not aborted.<br />
+<br />
+Any other ideas ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">11th February 2007, 09:21</div></div><div class="posttext">I'd suggest check your code twice,<br />
+the following example shows a custom page when a custom install is selected and never exits the installer no matter how many back/next performed.<br />
+OutFile 'test.exe'<br />
+InstallDir &quot;$PROGRAMFILES\boo&quot;<br />
+LicenseData '${NSISDIR}\License.txt'<br />
+<br />
+InstType Typical<br />
+InstType Full<br />
+<br />
+Page License<br />
+Page Components<br />
+Page Custom custcreate<br />
+Page Directory<br />
+Page InstFiles<br />
+<br />
+Section &quot;common&quot; sec1<br />
+   SectionIn 1 2<br />
+SectionEnd<br />
+<br />
+Section &quot;data&quot; sec2<br />
+   SectionIn 1 2<br />
+SectionEnd<br />
+<br />
+Section /o &quot;examples&quot; sec3<br />
+   SectionIn 2<br />
+SectionEnd<br />
+<br />
+Function custcreate<br />
+   GetCurInstType $0<br />
+   StrCmp $0 32 next<br />
+   Abort<br />
+ next:<br />
+   InstallOptions::Dialog &quot;$PLUGINSDIR\custom.ini&quot;<br />
+FunctionEnd<br />
+<br />
+Function .onInit<br />
+   InitPluginsDir<br />
+   GetTempFileName $0<br />
+   Rename $0 &quot;$PLUGINSDIR\custom.ini&quot;<br />
+<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;settings&quot; &quot;numfields&quot; &quot;1&quot;<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;field 1&quot; &quot;type&quot; &quot;groupbox&quot;<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;field 1&quot; &quot;text&quot; &quot;I'm a GroupBox, or not...&quot;<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;field 1&quot; &quot;left&quot; &quot;10&quot;<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;field 1&quot; &quot;right&quot; &quot;-10&quot;<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;field 1&quot; &quot;top&quot; &quot;10&quot;<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;field 1&quot; &quot;bottom&quot; &quot;-10&quot;<br />
+FunctionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

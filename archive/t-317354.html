@@ -1,0 +1,140 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" abort in leave function should force to reload the page, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  abort in leave function should force to reload the page NSIS Discussion" />
+	
+	<title> abort in leave function should force to reload the page [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  abort in leave function should force to reload the page</div>
+<hr />
+<div class="pda"><a href="t-317354.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=317354">abort in leave function should force to reload the page</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">vogliadicane</div><div class="date">27th February 2010, 16:38</div></div><div class="posttext">I have one page where the user is requested to download some files by links given on the page.<br />
+<br />
+In the leave function of this page I check if all files are present, if not Abort.<br />
+What happens (as expected is) that the page is only NOT LEFT, which means stays as it was before.<br />
+But I would like to have it reloaded, because some parameters for dinamically creating the page have changed so far, e.g. the user has downloaded some of the files so the links still present on the page are not needed anymore.<br />
+<br />
+So is it possible to force the page to reload when abort is executed in the leave function?<br />
+<br />
+(IÂ´ve tried to call the show function of this page but that makes the installer crash)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">27th February 2010, 20:50</div></div><div class="posttext">You don't need to use a leave function to do this. Just use a loop in your custom page function and generate the page again if some files are missing.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">vogliadicane</div><div class="date">28th February 2010, 09:58</div></div><div class="posttext">not shure, if I get you right. For the &quot;show&quot; function of this cusom page I HAVE a loop, checking for every file if present, and if not an entry for link and text is generated in the ini fields. This works right.<br />
+The thing is, I donÂ´t know how to invoke this show function again, if the user did not download some files, when he wants to leave the page (so the page should be shown again updated to the new situation).<br />
+To your post, I donÂ´t know how to generate the page AGAIN.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">28th February 2010, 10:59</div></div><div class="posttext">I think he means jumping back to the beginning of the page creation function after nsDialogs::Show finishes.<br />
+<br />
+Unrelated question: Why don't you use a download plugin to download the missing files automatically?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">vogliadicane</div><div class="date">28th February 2010, 12:19</div></div><div class="posttext">these must be downloaded manually (for legal reasons), ad clicks and so... all others are downloaded automatically :)<br />
+<br />
+btw IÂ´m using InstallOptions.. <br />
+hereÂ´s my code (truncated):<br />
+<br />
+Function ShowCustomMan  <br />
+  StrCpy $MaxField 1<br />
+<br />
+${ForEach} $R1 1 8 + 1<br />
+   StrCmp $FileXPresent 0 +1 +6<br />
+   WriteIniStr &quot;$PLUGINSDIR\man.ini&quot; &quot;Field $R1&quot; &quot;State&quot; &quot;${FileX_URL}&quot;<br />
+   WriteIniStr &quot;$PLUGINSDIR\man.ini&quot; &quot;Field $R1&quot; &quot;Text&quot; &quot;FileX&quot;<br />
+   StrCpy $FileXPresent 2<br />
+   IntOp $MaxField $R1 + 1<br />
+   Goto End<br />
+<br />
+... other file exitence checks and writeinistr... <br />
+<br />
+   End:<br />
+${Next}<br />
+<br />
+StrCmp $MaxField 9 Skip +1<br />
+${ForEach} $R1 $MaxField 8 + 1<br />
+   WriteIniStr &quot;$PLUGINSDIR\man.ini&quot; &quot;Field $R1&quot; &quot;State&quot; &quot;&quot;<br />
+   WriteIniStr &quot;$PLUGINSDIR\man.ini&quot; &quot;Field $R1&quot; &quot;Text&quot; &quot;&quot;<br />
+${Next}<br />
+Skip: <br />
+<br />
+StrCmp $MaxField 1 +1 +2<br />
+Abort<br />
+  InstallOptions::dialog &quot;$PLUGINSDIR\man.ini&quot;<br />
+  Pop $0<br />
+  InstallOptions::show<br />
+  Pop $0<br />
+FunctionEnd<br />
+<br />
+edit: for information $FileXPresent is the variable that is updated to 1 in the leave function, if the file now exists.<br />
+<br />
+I donÂ´t get, how to jump back to this function, when leaving the page and some files are still missing, sorry, if IÂ´m repeating myself, but I think thereÂ´s something basic I donÂ´t get here...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">28th February 2010, 14:28</div></div><div class="posttext">You should have mentioned you were using InstallOptions earlier. Here is a simple example of the idea I suggested you try:Function ShowFileList<br />
+<br />
+loop:<br />
+  StrCpy $0 0<br />
+<br />
+  IfFileExists &quot;$PLUGINSDIR\file-1.exe&quot; check_2<br />
+  IntOp $0 $0 + 1<br />
+  WriteIniStr &quot;$PLUGINSDIR\sfl.ini&quot; &quot;Field $0&quot; &quot;Text&quot; &quot;Download file-1.exe&quot;<br />
+<br />
+check_2:<br />
+  IfFileExists &quot;$PLUGINSDIR\file-2.exe&quot; check_3<br />
+  IntOp $0 $0 + 1<br />
+  WriteIniStr &quot;$PLUGINSDIR\sfl.ini&quot; &quot;Field $0&quot; &quot;Text&quot; &quot;Download file-2.exe&quot;<br />
+<br />
+check_3:<br />
+  IfFileExists &quot;$PLUGINSDIR\file-3.exe&quot; check_4<br />
+  IntOp $0 $0 + 1<br />
+  WriteIniStr &quot;$PLUGINSDIR\sfl.ini&quot; &quot;Field $0&quot; &quot;Text&quot; &quot;Download file-3.exe&quot;<br />
+  <br />
+check_4:<br />
+  IfFileExists &quot;$PLUGINSDIR\file-4.exe&quot; show_page<br />
+  IntOp $0 $0 + 1<br />
+  WriteIniStr &quot;$PLUGINSDIR\sfl.ini&quot; &quot;Field $0&quot; &quot;Text&quot; &quot;Download file-4.exe&quot;<br />
+  <br />
+show_page:<br />
+  StrCmp $0 0 all_done<br />
+  WriteIniStr &quot;$PLUGINSDIR\sfl.ini&quot; &quot;Settings&quot; &quot;NumFields&quot; &quot;$0&quot;<br />
+  !insertmacro INSTALLOPTIONS_DISPLAY &quot;sfl.ini&quot;<br />
+  Goto loop<br />
+  <br />
+all_done:<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">vogliadicane</div><div class="date">28th February 2010, 15:49</div></div><div class="posttext">hmm more elegant than my way. But isnÂ´t it creating an infinite loop I mean one which hangs up the machine, if some file is missing?<br />
+Anyway thanks IÂ´ll give it a try!<br />
+<br />
+edit: No loop! Integrated the &quot;Loop .... Goto Loop&quot; into my script and it works! Seems the INSTALLOPTIONS_DISPLAY macro stops until some notify event happens!<br />
+<br />
+So this was exactly, what I was looking for, Thanks! :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">1st March 2010, 12:59</div></div><div class="posttext">Glad to hear that you have managed to solve your problem.<br />
+<br />
+Sorry my first reply did not go into much detail. INSTALLOPTIONS_DISPLAY and its companion macro INSTALLOPTIONS_DISPLAY_RETURN are documented in the InstallOptions2 Readme installed with NSIS. The Readme is also available online:<br />
+http://nsis.sourceforge.net/Docs/InstallOptions/Readme.html</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">vogliadicane</div><div class="date">1st March 2010, 21:24</div></div><div class="posttext">no prob, actually itÂ´s me who is to blame I have the readme but obviously didnÂ´t read accurately. And I really beleived, a code like that would hang up the machine. next time IÂ´ll just try. (IÂ´m just beginning to script NSIS)<br />
+<br />
+Anyway thanks for help again :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Search for a line, replace or append, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Search for a line, replace or append NSIS Discussion" />
+	
+	<title> Search for a line, replace or append [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Search for a line, replace or append</div>
+<hr />
+<div class="pda"><a href="t-313805.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=313805">Search for a line, replace or append</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">cheryll</div><div class="date">14th October 2009, 08:08</div></div><div class="posttext">Hi,<br />
+<br />
+I'm trying to do something rather specific with my installer right now, and I don't seem to be able to find a macro or code for it.<br />
+<br />
+What I need to do is to search a file for the occurrence of a specific line-beginning. If I find it, I need to replace the full line with a string, if I don't find it, I need to append that string to the file.<br />
+<br />
+I found code snippets for searching for a line- beginning and replacing that line, as well as for appending a line to the file, but I just can't figure out how to piece those together.<br />
+<br />
+I'd be grateful for all help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">cheryll</div><div class="date">14th October 2009, 09:32</div></div><div class="posttext">I hacked something together, but now I'm getting a strange error:<br />
+<br />
+&quot;Processed 1 file, writing output:<br />
+Error: could not resolve label &quot;_LogicLib_Label_1&quot; in unnamed install section (0)<br />
+Error - aborting creation process&quot;<br />
+<br />
+I have no idea what this could mean, here's my code:<br />
+<br />
+Section<br />
+<br />
+;Wert aus INI auslesen<br />
+ReadINIStr $Timeout &quot;Some.ini&quot; &quot;FF&quot; &quot;Value&quot;<br />
+${If} Timeout != &quot;&quot;<br />
+    StrCpy $ReplaceLine ${FindLine} $Timeout<br />
+    StrCpy $ReplaceLine $ReplaceLine &quot;);&quot;<br />
+    ;Die ersten 10 Profile werden durchsucht<br />
+    ${ForEach} $9 0 10 + 1<br />
+        StrCpy $1 &quot;Profile&quot;$9<br />
+        ReadINIStr $2 &quot;${Profile}&quot; &quot;$1&quot; &quot;Default&quot;<br />
+        ;Default-Flag suchen<br />
+        ${If} $2 == &quot;Default&quot;<br />
+            ReadINIStr $4 &quot;${Profile}&quot; $1 &quot;isRelativ&quot;<br />
+            ReadINIStr $0 &quot;${Profile}&quot; $1 &quot;Path&quot;<br />
+            ;wird Ã¼berprÃ¼ft, ob der Pfad relativ ist, und entsprechend zusammengesetzt<br />
+            ${If} $4 == &quot;1&quot;<br />
+                StrCpy $Prof_Path ${Profile}$0<br />
+            ${Else}<br />
+                StrCpy $Prof_Path $0<br />
+            ${EndIf}<br />
+        ${EndIf}<br />
+    ;dannach wird die Schleife abgebrochen (Ergebniss gefunden!)<br />
+    ${Break}<br />
+${Next}<br />
+<br />
+;prÃ¼ft die LÃ¤nge des Vergleichsstrings<br />
+StrLen $R1 ${FindLine}<br />
+ClearErrors<br />
+FileOpen $0 &quot;$Prof_Path\file&quot; &quot;r&quot;<br />
+GetTempFileName $R0<br />
+FileOpen $1 $R0 &quot;w&quot;<br />
+loop:<br />
+    ;Zeile einlesen<br />
+    FileRead $0 $2<br />
+    IfErrors append<br />
+    ;schneidet Zeile auf LÃ¤nge des Vergleichsstring<br />
+    StrCpy $3 &quot;$2&quot; $R1<br />
+    ;vergleicht Zeile mit Vergleichsstring<br />
+    StrCmp &quot;$3&quot; ${FindLine} replace notequal<br />
+    replace:<br />
+        ;wenn Zeile gefunden wurde Zeile ersetzen<br />
+        StrCpy $2 &quot;$ReplaceLine$\r$\n&quot;<br />
+        FileWrite $R0 $2<br />
+        Goto done<br />
+    notequal:<br />
+        FileWrite $R0 $2<br />
+        Goto loop<br />
+<br />
+append:<br />
+    ;wenn Flag nicht gesetzt, Zeile an die Datei anhÃ¤ngen<br />
+    FileClose $R0<br />
+    FileOpen $R0 &quot;$Prof_Path\file&quot; a<br />
+    FileSeek $R0 0 END<br />
+    FileWrite $R0 &quot;$ReplaceLine$\r$\n&quot;<br />
+;Dateien schlieÃŸen und Ausgangsdatei mit Tempdatei ersetzen<br />
+done:<br />
+FileClose $0<br />
+FileClose $R0<br />
+Delete &quot;$Prof_Path\file&quot;<br />
+CopyFiles /SILENT $R0 &quot;$Prof_Path\file&quot;<br />
+Delete $R0<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">14th October 2009, 20:49</div></div><div class="posttext">Originally posted by cheryll <br />
+I hacked something together, but now I'm getting a strange error:<br />
+<br />
+&quot;Processed 1 file, writing output:<br />
+Error: could not resolve label &quot;_LogicLib_Label_1&quot; in unnamed install section (0)<br />
+Error - aborting creation process&quot;<br />
+<br />
+I have no idea what this could mean, here's my code: <br />
+It means that LogicLib is missing a label somewhere. In this case, you're forgetting to ${EndIf} after your ${Next}.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ender78</div><div class="date">9th May 2011, 10:49</div></div><div class="posttext">http://nsis.sourceforge.net/Replace_line_that_starts_with_specified_string</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

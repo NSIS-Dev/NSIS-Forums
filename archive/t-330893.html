@@ -1,0 +1,94 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" AllUsers/CurrentUser install without elevation, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  AllUsers/CurrentUser install without elevation NSIS Discussion" />
+	
+	<title> AllUsers/CurrentUser install without elevation [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  AllUsers/CurrentUser install without elevation</div>
+<hr />
+<div class="pda"><a href="t-330893.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=330893">AllUsers/CurrentUser install without elevation</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Quintus</div><div class="date">25th May 2011, 01:21</div></div><div class="posttext">I've got a game application that I'm trying to write an installer for.  The game is an online game that has its own launcher/patcher and will need to apply frequent updates.  Because of this, its desirable to install to a folder that doesn't require elevation to write to (otherwise the launcher/patcher would constantly have to request elevation to run)<br />
+<br />
+Other applications in this situation have modified the traditional PerUser/AllUsers install paths to be:<br />
+ * AllUsers = install to a common per-machine location (e.g., CSIDL_COMMON_APPDATA)<br />
+ * PerUser = install to something like CSIDL_LOCAL_APPDATA<br />
+<br />
+Microsoft even specifically addresses the problems posed by patching software here (http://msdn.microsoft.com/en-us/library/ee418715(v=vs.85).aspx):<br />
+<br />
+My preference would be to install to a location like:<br />
+<br />
+ AllUsers<br />
+<br />
+ Vista/Win7: C:\Users\Public\Games\<br />
+ XP: C:\Program Files\<br />
+<br />
+ PerUser: C:\&lt;profile&gt;\My Documents\My Games\<br />
+<br />
+<br />
+This seems to be fairly irritating to implement.  For starters, I haven't been able to get NSIS to reliably get me either the user's 'My Documents' folder or the 'Common' folder.  I can get CSIDL_COMMON_APPDATA with something liek this:<br />
+<br />
+System::Call 'shell32::SHGetSpecialFolderPath(i $HWNDPARENT, t .r1, i 46, i0)i.r0'<br />
+<br />
+But that doesn't actually give me the path I want.  It might *work*, but it's not optimal.<br />
+<br />
+The SHGetSpecialFolderPath doesn't seem to work with the 'My Documents' folder.  When I passin the CSIDL for that (12) - I get nothing... I can get it from the registry using <br />
+<br />
+ReadRegStr $0 HKCU &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders&quot; Personal<br />
+<br />
+But I've heard that the registry method may not be reliable in non-English Windows installations (I haven't verified that).<br />
+<br />
+Finally - uninstallation can also be tricky.  If a user installs (without privileges) in an AllUsers context to a folder like C:\Users\Public\ traditional installation/uninstallation tricks like writing registry keys/values to HKLM might not be available.<br />
+<br />
+Does anybody have any experience with the kind of installer I'm talking about? I would really appreciate hearing from anybody who has been down this path before.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">25th May 2011, 06:02</div></div><div class="posttext">My preference would be to install to a location like:<br />
+<br />
+ AllUsers<br />
+<br />
+ Vista/Win7: C:\Users\Public\Games\<br />
+ XP: C:\Program Files\<br />
+<br />
+ PerUser: C:\&lt;profile&gt;\My Documents\My Games\<br />
+<br />
+<br />
+This seems to be fairly irritating to implement.<br />
+It's actually quite easy. Use nsDialogs to create a custom page asking for single/all user install, and use winver.nsh to distinguish between OS versions. Then simply do StrCpy $INSTDIR &quot;Whatever Applies&quot;.<br />
+<br />
+For starters, I haven't been able to get NSIS to reliably get me either the user's 'My Documents' folder or the 'Common' folder.<br />
+It's all there in the manual...<br />
+http://nsis.sourceforge.net/Docs/Chapter4.html#4.2.3<br />
+http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.7.7<br />
+<br />
+But I've heard that the registry method may not be reliable in non-English Windows installations (I haven't verified that).<br />
+The reliability problem occurs on any language Windows. Mostly on newly installed operating systems, actually. But either way, use the constants listed in the manual.<br />
+<br />
+Finally - uninstallation can also be tricky.  If a user installs (without privileges) in an AllUsers context to a folder like C:\Users\Public\ traditional installation/uninstallation tricks like writing registry keys/values to HKLM might not be available.<br />
+A user-level user cannot install in an all users context. Only admins can. Use the userinfo plugin to verify whether you have admin access, and throw an error when you don't. Most people put it in .onInit, and add a &quot;requestexecutionlevel admin&quot; for graceful UAC handling.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Quintus</div><div class="date">25th May 2011, 23:26</div></div><div class="posttext">For what it's worth, the only part that I was having trouble getting to work at all was extracting the public profile path for Vista/Win7.  None of the standard NSIS constants resolve to the root of the public user profile folder (e.g., C:\Users\Public\).<br />
+<br />
+After fishing around however, I found that in Vista/Win7, while there is not a CSIDL value that corresponds withe the public user profile, there is an environment variable %PUBLIC% that gets me what I want, so I now get the root for my AllUsers install on Vista/Win7 with the following:<br />
+<br />
+ExpandEnvStrings $0 &quot;%PUBLIC%\Games&quot;<br />
+<br />
+I have to be careful to only use the %PUBLIC% env. variable in Vista/Win7 (and I gracefully handle an empty result just in case), but for the most part I can just append my product-specific path on the end of that.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th May 2011, 23:30</div></div><div class="posttext">There is no CLSIDL, but there is a knownfolder id. You need to use the system plugin to call that api tho. I use the API in some other example @ http://pastebin.com/MZeNijJJ you can just change the folder guid...</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

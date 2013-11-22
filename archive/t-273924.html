@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Refresh Environment, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Refresh Environment NSIS Discussion" />
+	
+	<title> Refresh Environment [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Refresh Environment</div>
+<hr />
+<div class="pda"><a href="t-273924.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=273924">Refresh Environment</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">5th July 2007, 21:10</div></div><div class="posttext">I am having issues registering a dll file that my installer includes.  I rather not put everything in the sys32 folder, so in order to register it, it needs to be in the $instdir.  However, I need to use addtopath function.  It works 70% of the time.  On some machines, it seems to refuse to refresh the environment until the system reboots.  I rather not reboot the system, but it seems to be the only way to work on certain machines.  So far, it seems to be more of an issue on brand new computers.<br />
+<br />
+It's the  SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 &quot;STR:Environment&quot; /TIMEOUT=5000  function that seems not to work.  <br />
+<br />
+On my development machines, I do notice the delay when this occurs.  On other machines, nothing happens.  If I echo the %path% nothing happens, until i reboot the system.  <br />
+<br />
+Please advise where to go on this.<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th July 2007, 21:13</div></div><div class="posttext">The most common cause for this is that only Explorer refreshes its environment table when WM_WININICHANGE is sent. Any other running process and any other process that's launched from such a process will not get the new environment variable.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">5th July 2007, 21:16</div></div><div class="posttext">How do I fix this?  Or do I need to reboot?  Is there a way for me to detect this, and if so, it will send a reboot flag, so it will ask the user to reboot.  And when the computer is logged back in, it will finish the last steps, like a post install registering the dll I need registered?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th July 2007, 21:19</div></div><div class="posttext">It's not something to be fixed, it's just a question of how you test this. Instead of having an open console window, running the installer from it and then testing %PATH% in that console window, open a new console window after the installer is finished.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">5th July 2007, 21:25</div></div><div class="posttext">You mean run the setup from the CLI?<br />
+<br />
+so: <br />
+echo %path%<br />
+C:\nsis\test\setup.exe<br />
+echo %path%<br />
+?<br />
+<br />
+I ran the echo twice before/post but i just double clicked the icon for setup (not running through the IDE).<br />
+<br />
+The problem persists.  Though, I don't see it in path, if i go to the variables property window, i will see the path there, and it wont refresh it u nl;ess i click okay there, but that happens only 25% of the time when it does fail from the installer.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th July 2007, 21:33</div></div><div class="posttext">No, not through CLI. That's exactly what you shouldn't do. If you keep the console window open, %PATH% won't update. When the installer finishes, open a new console window and test from there.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">5th July 2007, 21:44</div></div><div class="posttext">Allright I ran the test again.  When I ran the installer, after it was completed I went into the CLI, ran echo %path% and the path i needed was not there.  I uninstalled the program, restarted the computer, reran the installer.  Then I did echo again and it was there.  i manually ran regsvr32 and it failed.  I rebooted the computer again and it was successful.<br />
+<br />
+This only happens on brand new machines.  On my development machines, it works every time w/o reboot.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th July 2007, 10:07</div></div><div class="posttext">The differences between the script and the control panel are: The control panel flushes the registry key before sending the message using RegFlushKey. The script uses a longer timeout of 5 seconds instead of 1 second. The control panel uses SMTO_ABORTIFHUNG. The control panel also calls winsta::WinStatationBroadcastSystemMessage for administrators, to update other logged on users. I haven't been able to call that function from the script yet.The only thing that might actually a difference is the key flushing. Try adding that before calling the SendMessage but after modifying the registry.!define HKEY_LOCAL_MACHINE 0x80000002<br />
+System::Call &quot;advapi32::RegOpenKeyExA(i ${HKEY_LOCAL_MACHINE}, \<br />
+  t 'SYSTEM\CurrentControlSet\Control\Session Manager\Environment', \<br />
+  i 0, i ${KEY_QUERY_VALUE}, *i .r0)i.r1&quot;<br />
+System::Call &quot;advapi32::RegFlushKey(i r0)i.r1&quot;<br />
+System::Call &quot;advapi32::RegCloseKey(i r0)i.r1&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">6th July 2007, 14:15</div></div><div class="posttext">Originally posted by kichik <br />
+The only thing that might actually a difference is the key flushing. Try adding that before calling the SendMessage but after modifying the registry. <br />
+<br />
+Kichik,<br />
+<br />
+The one only thing that has me confused here is I am using your AddToPath function.  So do I add this into the nsh file?  Or do I manually call it within my installer?<br />
+<br />
+<br />
+Section &quot;MainSection&quot; SEC01<br />
+  SetDetailsPrint textonly<br />
+  DetailPrint &quot;Installing My Software...&quot;<br />
+  SetDetailsPrint none<br />
+  SetOutPath &quot;$INSTDIR&quot;<br />
+  Push $INSTDIR<br />
+  Call AddToPath<br />
+; snip ....</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th July 2007, 15:26</div></div><div class="posttext">You must add it to the NSH if you have to call it before SendMessage and after the registry key is modified.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">6th July 2007, 15:48</div></div><div class="posttext">So... something like this?<br />
+<br />
+<br />
+!ifndef _AddToPath_nsh<br />
+!define _AddToPath_nsh<br />
+!define HKEY_LOCAL_MACHINE 0x80000002<br />
+!verbose 3<br />
+<br />
+; .... snip ...<br />
+  AddToPath_NTdoIt:<br />
+      WriteRegExpandStr ${WriteEnvStr_RegKey} &quot;PATH&quot; $0<br />
+      System::Call &quot;advapi32::RegOpenKeyExA(i ${HKEY_LOCAL_MACHINE}, \<br />
+        t 'SYSTEM\CurrentControlSet\Control\Session Manager\Environment', \<br />
+        i 0, i ${KEY_QUERY_VALUE}, *i .r0)i.r1&quot;<br />
+        System::Call &quot;advapi32::RegFlushKey(i r0)i.r1&quot;<br />
+        System::Call &quot;advapi32::RegCloseKey(i r0)i.r1&quot;<br />
+      SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 &quot;STR:Environment&quot; /TIMEOUT=5000<br />
+<br />
+<br />
+I don't know if this is right. I am still confused where to put that snippit of code.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th July 2007, 15:53</div></div><div class="posttext">Yes, exactly like that.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">6th July 2007, 17:13</div></div><div class="posttext">So far on my two test systems I am 2 for 2!!  ×ª×•×“×” ×¨×‘×”</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">11th January 2008, 17:15</div></div><div class="posttext">I may have the same problem, what is KEY_QUERY_VALUE defined as?<br />
+<br />
+Could somebody please let me anyone know?<br />
+<br />
+Regards<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">11th January 2008, 17:24</div></div><div class="posttext">I think I have found it.<br />
+<br />
+<br />
+!define KEY_QUERY_VALUE 0x0001</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jweinraub</div><div class="date">20th June 2008, 16:30</div></div><div class="posttext">I am now getting warnings:<br />
+<br />
+3 warnings:<br />
+  unknown variable/constant &quot;{KEY_QUERY_VALUE}&quot; detected, ignoring (AddToPath.nsh:79)<br />
+  uninstall function &quot;un.RemoveFromEnvVar&quot; not referenced - zeroing code (66-138) out<br />
+<br />
+  install function &quot;AddToEnvVar&quot; not referenced - zeroing code (70-119) out<br />
+<br />
+<br />
+<br />
+Even though I did remove the EnVar parts I still get that saying its still there!<br />
+<br />
+But the unknown var i don't get.  <br />
+<br />
+i am getting problems where it doesnt add it to the path at all, and times where i do.  it  seems to be random, though restarting the computer and installing again seems to solve it.  any ideas?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

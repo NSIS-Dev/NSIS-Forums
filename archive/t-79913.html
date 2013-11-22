@@ -1,0 +1,127 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" RegDLL and Dependencies, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  RegDLL and Dependencies NSIS Discussion" />
+	
+	<title> RegDLL and Dependencies [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  RegDLL and Dependencies</div>
+<hr />
+<div class="pda"><a href="t-79913.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=79913">RegDLL and Dependencies</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">partymonkey</div><div class="date">20th March 2002, 16:23</div></div><div class="posttext">I'm trying to register a COM DLL that has static dependencies on other DLLs, but since my install directory is not the current working directory the COMM DLLs cannot be loaded (because the other DLLs cannot be found in the search path). I really don't want to install these files in the system directory (and then move them), nor do I want to install them into the directory that contains the intaller (and then move them).<br />
+<br />
+Any ideas? I've already modified the installer code to support installing/uinstalling services (if you are interested in this support then let me know), but will there be any adverse effects about changing the CWD when registering/unregistering COM DLLs?<br />
+<br />
+thanks,<br />
+t</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">partymonkey</div><div class="date">8th April 2002, 22:34</div></div><div class="posttext">Just an update...I went ahead and added two functions GetCWD and SetCWD, and use them before registering my DLLs. I have not run into any problems with this approach.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th April 2002, 23:09</div></div><div class="posttext">Hi t!<br />
+<br />
+I have an idea:<br />
+Set the output dir to the dir of this DLL (to set the shortcut's working dir).<br />
+Create a shortcut which points to regsrv32 (I think this is the one, not sure...) to register your DLL.<br />
+Run the shortcut with ShellExec or ExecWait.<br />
+Delete the shortcut.<br />
+Set the output dir back.<br />
+DONE!<br />
+<br />
+This should help you avoid changing NSIS code.<br />
+<br />
+KiCHiK</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">27th January 2003, 20:30</div></div><div class="posttext">Then what's the point of having the UnRegDll function if you can only use it on dll's that don't reference other dlls?<br />
+<br />
+There should be a way to set the current directory.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th January 2003, 20:35</div></div><div class="posttext">It has already been fixed in the latest version. The NSIS code has already been changed to set the current directory, there is no need for this trick anymore.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">27th January 2003, 20:46</div></div><div class="posttext">But I still get an error message saying it can't find the other dll (the one referenced but not registered) in a path that includes my $TEMP, ., and my standard $PATH, but not $INSTDIR. Any idea why?<br />
+<br />
+Why would $TEMP be in that path and not $INSTDIR?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">27th January 2003, 21:30</div></div><div class="posttext">Here's some sample code that demonstrates that UnRegDll doesn't work.<br />
+<br />
+  MessageBox MB_YESNO|MB_ICONQUESTION  &quot;before change $EXEDIR&quot;  IDYES &quot;&quot;<br />
+  StrCpy $R0 &quot;$EXEDIR&quot;<br />
+  StrCpy $EXEDIR &quot;$INSTDIR&quot;<br />
+  MessageBox MB_YESNO|MB_ICONQUESTION  &quot;after change $EXEDIR&quot;  IDYES &quot;&quot;<br />
+ UnRegDll &quot;mydll&quot;<br />
+  MessageBox MB_YESNO|MB_ICONQUESTION  &quot;after unregistering variables $EXEDIR&quot;  IDYES &quot;&quot;<br />
+  StrCpy $EXEDIR &quot;$R0&quot;<br />
+<br />
+<br />
+Changing the EXEDIR manually is successfull, but UnRegDll still prepends the $TEMP directory to the path in which the dll's are sought. <br />
+<br />
+And why is it possible to modify the value of $EXEDIR and not $TEMP?<br />
+<br />
+<br />
+StrCpy $R0 &quot;$TEMP&quot; () ()<br />
+Usage: StrCpy $(user_var: output) str [maxlen] [startoffset]<br />
+Error in script &quot;script.nsi&quot; on line 361 -- aborting creation process</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">27th January 2003, 23:47</div></div><div class="posttext">For future reference, if anyone is interested, the way I got around this was by creating a batch file on the fly and then using nsExec::ExecToLog to execute it.<br />
+<br />
+Why the shortcut approach isn't sufficient is because the links aren't opened and processed synchronously, so if you need something done in steps, it doesn't work. <br />
+<br />
+<br />
+; create a batch file to do pre-uninstall stuff<br />
+  FileOpen $R0 &quot;$INSTDIR\\uninstall.bat&quot; w<br />
+  FileWrite $R0 &quot;regsvr32 /s /u commonrefR.dll$\r$\n&quot;<br />
+  FileWrite $R0 &quot;regsvr32 /s /u seg_admin.dll$\r$\n&quot;<br />
+  FileClose $R0<br />
+  nsExec::ExecToLog &quot;$INSTDIR\\uninstall.bat&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">28th January 2003, 12:37</div></div><div class="posttext">regsvr32 is not included in the first Windows 95 versions, so you'd better use rundll32</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">28th January 2003, 13:57</div></div><div class="posttext">It should work if you supply a full path for UnRegDLL ($INSTDIR\bla.dll). $TEMP is not changable because it's a system parameter unlike $INSTDIR which you can set to whatever you want.<br />
+<br />
+What do you need all of those $EXEDIR changes for?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">28th January 2003, 17:41</div></div><div class="posttext">I was supplying the full path, in the first piece of code I provided I removed the actual dll name and path info.<br />
+<br />
+There was thread that in this forum (http://forums.winamp.com/showthread.php?s=&amp;threadid=121884&amp;highlight=UnRegDll) indicated that UnRegDll and RegDll change the $EXEDIR to correctly construct the path to register and unregister variables, the code demonstrates that even with the correct $EXEDIR, UnRegDll still constructs an incorrect path.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">28th January 2003, 17:56</div></div><div class="posttext">[un]RegDLL doesn't touch $EXEDIR. $EXEDIR is just the current directory (untill it was changed for [un]RegDLL in b0) and because of that Windows looks there for DLLs.<br />
+<br />
+Are you sure that all of the DLLs it is looking for are in the same directory? In this version it sets the current directory to the directory where the DLL registered is. It takes the path from the command itself. Try the latest CVS version too, maybe something was fixed since b0 and I don't remember it, very possible ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">28th January 2003, 17:59</div></div><div class="posttext">I meant that the current directory changes in the post.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">28th January 2003, 19:37</div></div><div class="posttext">I am 100% certain that the dlls were in the same directory, calls to &quot;regsvr32 /s /u&quot; from the .bat file were succesfull.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">28th January 2003, 19:40</div></div><div class="posttext">Any chance I can get an example script with the DLLs? If you don't want it public you can email it to me - kichik at users dot sf dot net.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tderouin</div><div class="date">31st January 2003, 20:39</div></div><div class="posttext">Unfortunately, that won't be possible. For now the .bat file is working sufficiently. <br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Hide a dialog window (N00b Question), media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Hide a dialog window (N00b Question) NSIS Discussion" />
+	
+	<title> Hide a dialog window (N00b Question) [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Hide a dialog window (N00b Question)</div>
+<hr />
+<div class="pda"><a href="t-283383.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=283383">Hide a dialog window (N00b Question)</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">inmytime3021</div><div class="date">18th December 2007, 18:06</div></div><div class="posttext">(I am new to NSIS so do pardon me.)<br />
+<br />
+I simply want to hide a dialog window. I found several topics discussing in a round-about way, but nothing that directly/simply showed how to do this. In particular, I'm trying to hide the Finish dialog window inside .onInstSuccess.<br />
+<br />
+This is what I tried:<br />
+<br />
+Function .onInstSuccess<br />
+;FindWindow $0 $HWNDPARENT<br />
+;FindWindow $0 &quot;&quot; &quot;${PRODUCT_NAME} ${PRODUCT_VERSION} Setup&quot; 0 0<br />
+;HideWindow<br />
+<br />
+FindWindow $0 '#32770'<br />
+;FindWindow $0 '#32770' '' 0 $0<br />
+<br />
+ShowWindow $0 ${SW_HIDE}<br />
+;ShowWindow $MUI_HWND ${SW_HIDE}<br />
+FunctionEnd<br />
+<br />
+I cannot get any of these methods to work. Am I doing my ShowWindow line wrong? <br />
+<br />
+Thanks,<br />
+<br />
+Timex</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th December 2007, 19:28</div></div><div class="posttext">HideWindow hides the installer. But if you don't want the finish page, simply don't use the finish page. Remove its macro insertion.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">inmytime3021</div><div class="date">18th December 2007, 19:58</div></div><div class="posttext">kichik,<br />
+<br />
+Thanks for your help (again) :P.<br />
+<br />
+Well, I want to show the finish dialog.<br />
+<br />
+I'm running my SQL script once they click finish, and while it runs,  I'm using the NotifyIcon plugin to show a balloon in the task bar while the script runs. Then when complete, I show success or failure in my NotifyIcon.<br />
+<br />
+However, I discovered that if I call NotifyIcon (or anything else GUI-related), that my NotifyIcon doesn't stay in the task bar when the mouse hovers over - the only thing keeping it open is the baloon message. SO, I moved my code up to .onInstSuccess to fix that. I thus want to hide the dialog while it continues to run, keeping my NotfyIcon in the task bar. Then I tear it down after it completes. I thought it was going to be a slick'n'quick solution, arg!<br />
+<br />
+WHY doesn't this work?<br />
+<br />
+FindWindow $0 '#32770' '' 0 $0<br />
+ShowWindow $0 ${SW_HIDE}<br />
+<br />
+<br />
+-Timex</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th December 2007, 21:10</div></div><div class="posttext">That last piece of code doesn't work because you're trying to hide the internal dialog and not the whole dialog. Just use HideWindow which does all that for you.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">inmytime3021</div><div class="date">18th December 2007, 21:39</div></div><div class="posttext">kichik,<br />
+<br />
+Yeah, that's what I thought. I tried it earlier and didn't seem to work (so I thought) so I moved on to others things. However, when I simplified my code down and tried it again as you suggested, it DOES work. But for some reason, the window paints again once I call NotifyIcon and launch my script. I'm guessing NotfiyIcon is causing it. For example:<br />
+<br />
+<br />
+Function .onInstSuccess<br />
+  HideWindow<br />
+<br />
+  ;...build my script from input of my custom dialog<br />
+<br />
+  ;show our 'job starting' balloon<br />
+  NotifyIcon::Icon /NOUNLOAD &quot;fy&quot; &quot;${NSISDIR}\Contrib\Graphics\Icons\modern-install-colorful.ico&quot;<br />
+<br />
+  ;now run the script<br />
+  ${LogAction} $CommandLine<br />
+  nsExec::ExecToStack $CommandLine<br />
+<br />
+  Pop $0 # return value/error/timeout<br />
+  Pop $1 # printed text, up to ${NSIS_MAX_STRLEN}<br />
+<br />
+  ${If} $0 != 0<br />
+    ;show our job failure balloon<br />
+    NotifyIcon::Icon /NOUNLOAD &quot;.fb&quot; &quot;${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico&quot; &quot;TraCS Data Warehouse Installer&quot; &quot;Warehouse job failed!&quot;<br />
+    Sleep 4000<br />
+  ${Else}<br />
+    ;Use login method used by installer and read results from our job table(s)<br />
+    ${If} $IsSQLLogon == '1'<br />
+      StrCpy $CommandLine 'sqlcmd -Q $\&quot;SELECT BatchType AS Type, BatchTimeLapse AS [Time Taken], BatchAffectedRows AS [Affected Rows] FROM dbo.BatchStatus;$\&quot; \<br />
+                               -d $\&quot;$DatabaseName$\&quot; \<br />
+                               -b -r 0 -V 11 \<br />
+                               -S $\&quot;$ServerName$\&quot; \<br />
+                               -U $\&quot;$UserName$\&quot; \<br />
+                               -P $\&quot;$Password$\&quot; -Y 13'<br />
+    ${Else}<br />
+      StrCpy $CommandLine 'sqlcmd -Q $\&quot;SELECT BatchType AS Type, BatchTimeLapse AS [Time Taken], BatchAffectedRows AS [Affected Rows] FROM dbo.BatchStatus;$\&quot; \<br />
+                               -d $\&quot;$DatabaseName$\&quot; \<br />
+                               -b -r 0 -V 11 \<br />
+                               -S $\&quot;$ServerName$\&quot; -Y 13'<br />
+    ${EndIf}<br />
+<br />
+    ${LogAction} $CommandLine<br />
+    nsExec::ExecToStack $CommandLine<br />
+    Pop $R0 # return value/error/timeout<br />
+    Pop $R1 # printed text, up to ${NSIS_MAX_STRLEN}<br />
+<br />
+    ;display our initial success balloon<br />
+    NotifyIcon::Icon /NOUNLOAD &quot;.fb&quot; &quot;${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico&quot; &quot;TraCS Data Warehouse Installer&quot; &quot;Warehouse job finished successfully!&quot;<br />
+    Sleep 8000 ;sleep, for testing only<br />
+  <br />
+    ;now show our job results as gotten from out table (formatted)<br />
+    NotifyIcon::Icon /NOUNLOAD &quot;.fb&quot; &quot;${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico&quot; &quot;TraCS Data Warehouse Installer&quot; $R1<br />
+    Sleep 8000<br />
+  ${EndIf}<br />
+<br />
+  ;now we tell NotifyIcon to destroy our balloon; we're done.<br />
+  NotifyIcon::Icon &quot;r&quot;<br />
+<br />
+  end:<br />
+FunctionEnd<br />
+<br />
+<br />
+Sorry about the formatting and length. But I am finding that I should post or show the full logic in order for my scenario to make sense. So here it is.<br />
+<br />
+-Timex</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th December 2007, 21:51</div></div><div class="posttext">You can attach script files to avoid formatting issues.<br />
+<br />
+This problem can be solved just like the other one. Create another installer, make it silent, make it use whatever pop-ups it needs and execute it from the main installer. This way, you'll have no dialogs to handle.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">inmytime3021</div><div class="date">18th December 2007, 22:05</div></div><div class="posttext">Thanks for the suggestion. I just might give in! I just can't seem to get it to work the way I want here otherwise. The thing is, I KNOW there is a way to do it given all the nifty abilities of NSIS (and contributions). I think it has something to do with the /NOUNLOAD with the NotfiyIcon plugin, or how it interacts with the dialog. <br />
+<br />
+Anyway, I think I'm just gonna write a quick bootstrap exe to do what I want: Then I have ultimate control. I'll leave NSIS to do what it does best: install stuff.<br />
+<br />
+Thanks for the reminder, kichik. Your idea of splitting it off is gonna be the best approach.<br />
+<br />
+Cheers!<br />
+<br />
+-Timex</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

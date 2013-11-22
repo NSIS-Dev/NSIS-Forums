@@ -1,0 +1,234 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Custom Page - Not displaying, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Custom Page - Not displaying NSIS Discussion" />
+	
+	<title> Custom Page - Not displaying [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Custom Page - Not displaying</div>
+<hr />
+<div class="pda"><a href="t-244123.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=244123">Custom Page - Not displaying</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">MrEyes</div><div class="date">21st April 2006, 12:47</div></div><div class="posttext">I am attempting to display a custom page in my installer but for some reason I cannot seem to get this to work.  Interestingly this has worked using earlier versions of NSIS but since upgrade to the latest version it no longer works.<br />
+<br />
+The custom page asks the user for various details and then calls a custom function that uses these details.  The reason for this seperation is that the installer also supports a silent install mode where the necessary values are passed as command line parameters.<br />
+<br />
+The following is an edited (but compilable) version of the script in question.<br />
+<br />
+<br />
+;########################################################<br />
+; Includes<br />
+;########################################################<br />
+!include &quot;Sections.nsh&quot;<br />
+!include &quot;MUI.nsh&quot;<br />
+; -------------------------------------------------------<br />
+<br />
+;########################################################<br />
+; General Settings<br />
+;########################################################<br />
+Name &quot;${APPNAMEANDVERSION}&quot;<br />
+InstallDir &quot;C:\TestCustomPage\&quot;<br />
+OutFile &quot;TestCustomPage.exe&quot;<br />
+<br />
+; vars<br />
+!define APPNAME &quot;Test Custom Page App&quot;<br />
+!define APPNAMEANDVERSION &quot;Test Custom Page App 1.0&quot;<br />
+var SQL_DB_SERVERNAME<br />
+var SQL_DB_PASSWORD<br />
+var SQL_DB_USER<br />
+; -------------------------------------------------------<br />
+<br />
+;########################################################<br />
+; Pages<br />
+;########################################################<br />
+!define MUI_ABORTWARNING<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+Page custom GetDbDetails<br />
+!insertmacro MUI_PAGE_FINISH<br />
+; -------------------------------------------------------<br />
+<br />
+;########################################################<br />
+; Set languages<br />
+;########################################################<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+!insertmacro MUI_RESERVEFILE_LANGDLL<br />
+; -------------------------------------------------------<br />
+<br />
+;########################################################<br />
+; Section - Execute SQL Scripts<br />
+;########################################################<br />
+Section &quot;Install Database Data&quot; sec_db_data<br />
+	LogSet on<br />
+	DetailPrint 'Start - Installing SQL Scripts'<br />
+	<br />
+	MessageBox MB_OK &quot;In Section sec_db_data&quot;<br />
+	<br />
+	IfSilent silentInstallation end<br />
+	silentInstallation:<br />
+		StrCpy $SQL_DB_SERVERNAME &quot;127.0.0.1&quot;<br />
+		StrCpy $SQL_DB_PASSWORD &quot;sa&quot;<br />
+		StrCpy $SQL_DB_USER &quot;xxxxxxxxxxx&quot;;<br />
+		Call InstallDb<br />
+		goto end<br />
+	end:<br />
+		DetailPrint 'End - Installing SQL Scripts'<br />
+SectionEnd<br />
+;--------------------------------------------------------<br />
+<br />
+<br />
+;########################################################<br />
+; Modern install section descriptions<br />
+;########################################################<br />
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN<br />
+	!insertmacro MUI_DESCRIPTION_TEXT ${sec_db_data} &quot;Install Database.&quot;<br />
+!insertmacro MUI_FUNCTION_DESCRIPTION_END<br />
+;--------------------------------------------------------<br />
+<br />
+;########################################################<br />
+; CUSTOM GUI PAGE FUNCTION (DB Server Details)<br />
+;########################################################<br />
+Function GetDbDetails<br />
+	<br />
+	MessageBox MB_OK &quot;In Function GetDbDetails&quot;<br />
+	<br />
+	SectionGetFlags ${sec_db_data} $R0 <br />
+	IntOp $R0 $R0 &amp; ${SF_SELECTED} <br />
+	IntCmp $R0 ${SF_SELECTED} show<br />
+	Abort <br />
+	<br />
+	MessageBox MB_OK &quot;Showing DB selection&quot;<br />
+<br />
+	;;show the custom page<br />
+	show:<br />
+	!insertmacro MUI_INSTALLOPTIONS_EXTRACT &quot;DBSelection.ini&quot;<br />
+	!insertmacro MUI_HEADER_TEXT &quot;Database Details&quot; &quot;Enter database access details below.&quot; <br />
+	!insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;DBSelection.ini&quot;<br />
+	<br />
+	;;Get the entered values into vars<br />
+	!insertmacro MUI_INSTALLOPTIONS_READ $SQL_DB_SERVERNAME &quot;DBSelection.ini&quot; &quot;Field 2&quot; &quot;State&quot;<br />
+	!insertmacro MUI_INSTALLOPTIONS_READ $SQL_DB_USER &quot;DBSelection.ini&quot; &quot;Field 4&quot; &quot;State&quot;<br />
+	!insertmacro MUI_INSTALLOPTIONS_READ $SQL_DB_PASSWORD &quot;DBSelection.ini&quot; &quot;Field 6&quot; &quot;State&quot;<br />
+	<br />
+	;;call the install DB function<br />
+	Call InstallDb<br />
+FunctionEnd<br />
+;--------------------------------------------------------<br />
+<br />
+<br />
+;########################################################<br />
+; FUNCTION Install DB<br />
+;########################################################<br />
+Function InstallDb<br />
+	DetailPrint 'Checking for the presence of working SQL using given user details'<br />
+	<br />
+	nsExec::ExecToStack 'osql.exe -S$SQL_DB_SERVERNAME -P$SQL_DB_PASSWORD -U$SQL_DB_USER -dmaster -Q&quot;print 1&quot;'<br />
+	pop $R0<br />
+	<br />
+	StrCmp $R0 &quot;0&quot; 0 sqlNotFound<br />
+	<br />
+	DetailPrint 'SQL instance found lauching DB installation scripts'<br />
+	nsExec::ExecToLog /TIMEOUT=5000 '$INSTDIR\SQLScripts\script_installer.bat $SQL_DB_SERVERNAME $SQL_DB_PASSWORD $SQL_DB_USER $INSTDIR\SqlScripts\ $INSTDIR\logs\SqlInstallLogs\ &gt; $INSTDIR\Logs\SqlInstallLogs\ScriptInstaller.log'<br />
+	goto end<br />
+	<br />
+	sqlNotFound:<br />
+	DetailPrint &quot;SQL instance not found using given details, aborting SQL install process&quot;;<br />
+	<br />
+	end:<br />
+FunctionEnd<br />
+;--------------------------------------------------------<br />
+<br />
+<br />
+This is what I have in the DBSelection.ini file<br />
+<br />
+<br />
+[Settings]<br />
+NumFields=6<br />
+<br />
+[Field 1]<br />
+Type=Label<br />
+Text=Database Server Name / IP<br />
+Left=0<br />
+Right=300<br />
+Top=10<br />
+Bottom=23<br />
+<br />
+[Field 2]<br />
+Type=Text<br />
+State=127.0.0.1<br />
+Left=0<br />
+Right=300<br />
+Top=23<br />
+Bottom=36<br />
+<br />
+[Field 3]<br />
+Type=Label<br />
+Text=SA Username<br />
+Left=0<br />
+Right=300<br />
+Top=54<br />
+Bottom=68<br />
+<br />
+[Field 4]<br />
+Type=Text<br />
+State=SA<br />
+Left=0<br />
+Right=300<br />
+Top=68<br />
+Bottom=82<br />
+<br />
+[Field 5]<br />
+Type=Label<br />
+Text=SA Password<br />
+Left=0<br />
+Right=300<br />
+Top=101<br />
+Bottom=115<br />
+<br />
+[Field 6]<br />
+Type=Text<br />
+State=xxxxxxxxxxx<br />
+Left=0<br />
+Right=300<br />
+Top=116<br />
+Bottom=130<br />
+<br />
+For testing purposes I threw a few message boxes in, and these all display with the exception of the one after the SectionGetFlags code in GetDbDetails function.<br />
+<br />
+Can anybody tell me where I am going wrong here</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">21st April 2006, 13:24</div></div><div class="posttext">maybe I miss something here but I think you must place the installDb function as custom page leave function, don't call it from custom page create function. moreover you should try to init the dialog first and then load it (see InstallOptions examples)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">galil</div><div class="date">21st April 2006, 16:11</div></div><div class="posttext">Originally posted by MrEyes <br />
+For testing purposes I threw a few message boxes in, and these all display with the exception of the one after the SectionGetFlags code in GetDbDetails function. <br />
+That message box isn't going to be displayed ever, since it is in deadzone between Abort command and label &quot;show&quot;.<br />
+<br />
+As for the problem itself, I don't know, script compiles (with 2.16) and works fine (as far as custom page is concerned) for me :weird:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MrEyes</div><div class="date">21st April 2006, 16:25</div></div><div class="posttext">The mystery deepens...<br />
+<br />
+I was using the logging special build of NSIS 2.15 and this wasnt working.  I have just downloaded NSIS 2.16 and the logging version of makensis.exe and this doesnt work either.<br />
+<br />
+However, if I use the default no logging version of makensis.exe it works fine (after removing the logger calls).<br />
+<br />
+It seems that the logging special build is doing something it shouldnt, although it could just be me :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">{_trueparuex^}</div><div class="date">22nd April 2006, 23:32</div></div><div class="posttext">You are using wrong Stubs! Only using the log version of makensis.exe isn't enough. When you are using special makensis build you have to use the Stubs files what comes with the build.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Change DropDown listitems, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Change DropDown listitems NSIS Discussion" />
+	
+	<title> Change DropDown listitems [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Change DropDown listitems</div>
+<hr />
+<div class="pda"><a href="t-193312.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=193312">Change DropDown listitems</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">DiLDoG</div><div class="date">12th September 2004, 14:25</div></div><div class="posttext">I would like to change the content of a dropdown list when a user presses a refresh button or opens the list. I checked the WinMessages.nsh but I couldnt find anything that could change them.<br />
+<br />
+So how do I change it?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">12th September 2004, 20:22</div></div><div class="posttext">This is possible (I think) but I'm unfamiliar on the way to do it.<br />
+It's a new method which I've never used.<br />
+<br />
+Sorry that I can't help you, but I'm sure somebody else can help you.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">12th September 2004, 23:28</div></div><div class="posttext">You can read the InstallOptions or InstallOptionsEx documentations for the &quot;NOTIFY&quot; flag (InstallOptions) or &quot;Notify&quot; INI value name (InstallOptionsEx).<br />
+<br />
+opens the listOnly IOEx has a notification for this.<br />
+<br />
+Could you explain what do you want to change on a DropList control? Maybe I can give you some codes based on what you say...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DiLDoG</div><div class="date">12th September 2004, 23:34</div></div><div class="posttext">Well the dropdown shows the available cdrom drives and the label of the disk that's currently in it, and it would be nice to be able to refresh the labels if a user puts in a new cd.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">12th September 2004, 23:47</div></div><div class="posttext">1) (INI File) You need to use the flag &quot;NOTIFY&quot; for the Button control (InstallOptions) or use &quot;Notify&quot; INI value name with value &quot;ONCLICK&quot; for the Button control and &quot;ONLISTOPEN&quot; for the DropList control (InstallOptionsEx).<br />
+<br />
+2) You need a Leave Function for your custom page so the notifications can work correctly.<br />
+<br />
+3) Instead of showing the page normally, reserve it first, pop the result of the reservation (page handle) and then show the page.<br />
+<br />
+4) To get a control handle by knowing the ID, use the following code:!define IOGetDlgItem '!insertmacro IOGetDlgItem'<br />
+<br />
+!macro IOGetDlgItem Var PageHWND FieldNumber<br />
+  StrCpy '${Var}' '${FieldNumber}'<br />
+  IntOp '${Var}' '${Var}' + 1199<br />
+  GetDlgItem '${Var}' '${PageHWND}' '${Var}'<br />
+!macroend[/quote]To use it:[code]${IOGetDlgItem} $Var $PageHandleVar FieldNumberExample:${IOGetDlgItem} $0 $PH 2; &quot;Field 2&quot;<br />
+<br />
+5) After, you can use SendMessage with NSIS or System plugin to the control so you can do wharever you want to the control at run-time.<br />
+<br />
+6)... I'm working on the code right now.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">13th September 2004, 00:23</div></div><div class="posttext">6) Done! You need Detect Drives (http://nsis.sourceforge.net/archive/nsisweb.php?page=331&amp;instances=0,11,211) function in order to use the code below:<br />
+<br />
+(Needs adaption to your code - Not totally tested)!define MAX_PATH 260<br />
+!define CB_ERR -1<br />
+!define CB_ADDSTRING 0x0143<br />
+!define CB_RESETCONTENT 0x014B<br />
+!define CB_SETCURSEL 0x014E<br />
+<br />
+Function YourCustomPageLeave<br />
+<br />
+  ;...Some code...<br />
+<br />
+  ;TODO: Detect if the control you want was notified, then execute code below<br />
+<br />
+  # $0 = Control handle (use GetDlgItem to get this)<br />
+<br />
+  Push $1<br />
+<br />
+  System::Call `user32::SendMessageA(i r0,i ${CB_GETCURSEL},,)i .r1`<br />
+  StrCmp $1 ${CB_ERR} 0 +2<br />
+    StrCpy $1 0<br />
+<br />
+  System::Call `user32::SendMessageA(i r0,i ${CB_RESETCONTENT},,)i`<br />
+<br />
+  Push &quot;CDROM Drives&quot;<br />
+  Push $0<br />
+  GetFunctionAddress $0 &quot;DetectCDROMDrives&quot;<br />
+  Exch $0<br />
+  Call DetectDrives<br />
+<br />
+  System::Call `user32::SendMessageA(i r0,i ${CB_SETCURSEL},i r1,)i`<br />
+<br />
+  Pop $1<br />
+<br />
+  ;...Some other code...<br />
+<br />
+FunctionEnd<br />
+<br />
+Function DetectCDROMDrives<br />
+<br />
+  Push $R1<br />
+  System::Call `Kernel32::GetVolumeInformation(t R0,t .R1,i ${MAX_PATH},,,,,)i`<br />
+  StrCpy $R0 $R0 2<br />
+  System::Call `user32::SendMessageA(i r0,i ${CB_ADDSTRING},,t &quot;$R1 ($R0)&quot;)i`<br />
+  Pop $R1<br />
+<br />
+  Push &quot;Go&quot;<br />
+<br />
+FunctionEndEDIT #1: Fixed no selection when refreshing list<br />
+EDIT #2: Fixed no default selection when no items are selected</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DiLDoG</div><div class="date">13th September 2004, 06:49</div></div><div class="posttext">hm thanx a lot for your code, but I had the drive detection already working, just the dropdown updating at runtime was the problem. School now :( I'll try this tonight.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

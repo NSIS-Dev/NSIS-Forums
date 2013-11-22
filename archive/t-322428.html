@@ -1,0 +1,201 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" makensis / logiclib crash, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  makensis / logiclib crash NSIS Discussion" />
+	
+	<title> makensis / logiclib crash [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  makensis / logiclib crash</div>
+<hr />
+<div class="pda"><a href="t-322428.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=322428">makensis / logiclib crash</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Marshall7a</div><div class="date">15th September 2010, 13:59</div></div><div class="posttext">The compiler (standard build) is crashing for me when it reaches a For loop:<br />
+<br />
+${Explode} $R0 &quot;,&quot; `$R4`<br />
+${For} $R1 1 $R0<br />
+	Pop $R5<br />
+<br />
+I set LOGICLIB_VERBOSITY to 4 and the compiler output is:<br />
+!insertmacro: end of Explode<br />
+!insertmacro: _For<br />
+!insertmacro: _ForEach<br />
+StrCpy $R1 &quot;1&quot; () ()<br />
+Goto: +2<br />
+!define: &quot;_DoLoopExpression&quot;=&quot;IntOp &quot;$R1&quot; &quot;$R1&quot; &quot;+&quot; &quot;1&quot;&quot;<br />
+!define: &quot;_o=+&quot;=&quot;&quot;<br />
+!define: &quot;__o&quot;=&quot;&gt;&quot;<br />
+!undef: &quot;_o=+&quot;<br />
+!insertmacro: _Do<br />
+!insertmacro: _PushLogic<br />
+!insertmacro: _PushScope<br />
+    at this point MAKENSIS.EXE stops responding and gives the standard Windows dialog.<br />
+<br />
+I tried adding an echo to _PushScope and found that we don't even compile the first line of that macro.<br />
+The values passed from _PushLogic to _PushScope are:<br />
+Logic<br />
+_LogicLib_Label_311<br />
+<br />
+The for loop I've added is the same as many others that I already had in my script that are working fine.<br />
+I cannot see any reason for the compiler to crash...<br />
+<br />
+Does anyone have any insight? My first thought is why doesn't the compiler report an error if there is one, so looks like compiler can't handle something, but the values passed to the macro look just fine...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Marshall7a</div><div class="date">16th September 2010, 10:35</div></div><div class="posttext">It appears to have something to do with the amount of code / number of defines / number of includes I am using. I have 1 section included three times and that gives me the problem, but if I only include the section twice then the problem goes away.<br />
+<br />
+I have searched for NSIS limits but found nothing...<br />
+<br />
+Found that removing all the runtime code from the section caused the problem to move to an If statement in another macro. So there is definitely something up with a limit somewhere - maximum number of macro arg defines possibly? Can anyone shed any light on this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Marshall7a</div><div class="date">16th September 2010, 13:07</div></div><div class="posttext">Is there perhaps a debug version of makensis that I can use to find out what is causing the error?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Marshall7a</div><div class="date">16th September 2010, 14:19</div></div><div class="posttext">I've tried attaching a debugger to this but can't really see what's going on.<br />
+<br />
+Call stack of main thread<br />
+Address    Stack      Procedure / arguments                                                   Called from                   Frame<br />
+000409FC   00423B83   ? makensis.0044F8C0                                                     makensis.00423B7E<br />
+00040A14   00422CE9   ? makensis.00423B60                                                     makensis.00422CE4<br />
+00040A88   004239E0   ? makensis.00422650                                                     makensis.004239DB<br />
+00040A8C   017B4501     Arg1 = 017B4501<br />
+00040AEC   00424236   ? makensis.004238D0                                                     makensis.00424231<br />
+00040AF0   01675DD9     Arg1 = 01675DD9 ASCII &quot;      !define _${Type} ${label}<br />
+00040AF4   00000000     Arg2 = 00000000<br />
+00040AF8   00000000     Arg3 = 00000000<br />
+<br />
+!define _${Type} ${label} looks suspicious, as that line is inside the macro but we haven't compiled the first line of the macro yet - otherwise my !echo should have been displayed. So I'm guessing the script is buffered (?)<br />
+<br />
+My colleague tells me the failing instruction is<br />
+0044F8D7  |. 8501           |TEST DWORD PTR DS:[ECX],EAX<br />
+because ECX is not pointing to accessible memory (ECX=00032A00, EAX=00001630). So definitely something going wrong in makensis.<br />
+<br />
+If I add an ${If} immediately before the ${For} , the error still occurs in the ${For}, but if I add a ${For} then the error occurs in that ${For} instead.<br />
+<br />
+I am at a loss as to how to proceed with this, please someone help!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">16th September 2010, 14:40</div></div><div class="posttext">I've been trying to get a hold of kichik for you, but he hasn't been online yet. Please stand by, one of the devs will reply soon enough.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Marshall7a</div><div class="date">16th September 2010, 15:03</div></div><div class="posttext">Thanks MSG, in the meantime.... I have replicated the problem using a tiny script!<br />
+<br />
+====MAIN SCRIPT====<br />
+!include LogicLib.nsh<br />
+OutFile &quot;NESTTEST.EXE&quot;<br />
+InstallDir $DESKTOP\Example1<br />
+RequestExecutionLevel user<br />
+ShowInstDetails show<br />
+Page components<br />
+Page instfiles<br />
+Section &quot;nested includes test&quot; NESTTEST<br />
+	!define FILENUM &quot;0&quot;<br />
+	!include &quot;file1.nsh&quot;<br />
+SectionEnd<br />
+<br />
+====FILE1.NSH====<br />
+!ifdef _FILENUM<br />
+	!undef _FILENUM<br />
+!endif<br />
+!define /math _FILENUM ${FILENUM} + 1<br />
+!echo `I am include number ${_FILENUM}`<br />
+!undef FILENUM<br />
+!define FILENUM ${_FILENUM}<br />
+${For} $R0 1 5<br />
+${Next}<br />
+!include &quot;file1.nsh&quot;<br />
+<br />
+<br />
+Last 4 lines of compiler output (before the crash) are:<br />
+I am include number 8 (file1.nsh:5)<br />
+!undef: &quot;FILENUM&quot;<br />
+!define: &quot;FILENUM&quot;=&quot;8&quot;<br />
+!insertmacro: _For<br />
+<br />
+So there appears to be a problem with the number of nested includes combined with LogicLib!<br />
+Now, !include doesn't appear to have a problem going beyond 8 nested levels normally, so I suspect something in the LogicLib magic is causing trouble...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th September 2010, 17:04</div></div><div class="posttext">You've got infinite recursion going on here. How can you expect it not to crash? You haven't put in a condition to stop it infinitely including file1.nsh...<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Marshall7a</div><div class="date">16th September 2010, 17:19</div></div><div class="posttext">That was just to show the example. Using this instead:<br />
+<br />
+====FILE1.NSH====<br />
+!ifdef _FILENUM<br />
+!undef _FILENUM<br />
+!endif<br />
+!define /math _FILENUM ${FILENUM} + 1<br />
+!echo `I am include number ${_FILENUM}`<br />
+!undef FILENUM<br />
+!define FILENUM ${_FILENUM}<br />
+${For} $R0 1 5<br />
+${Next}<br />
+<br />
+!if ${FILENUM} &lt; 16<br />
+    !include &quot;file1.nsh&quot;<br />
+!endif<br />
+<br />
+...still crashes when filenum is 8.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">16th September 2010, 17:28</div></div><div class="posttext">I guess NSIS is limited to that many recursive includes. Have you tried using a recursive insertmacro rather than a recursive file include?<br />
+<br />
+Edit: Actually I doubt that will work.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Marshall7a</div><div class="date">16th September 2010, 17:41</div></div><div class="posttext">If I comment out the ${For} and ${Next} lines, the compiler tells me this:<br />
+<br />
+I am include number 10 (file1.nsh:5)<br />
+!undef: &quot;FILENUM&quot;<br />
+!define: &quot;FILENUM&quot;=&quot;10&quot;<br />
+!include: &quot;file1.nsh&quot;<br />
+parseScript: too many levels of includes (10 max).<br />
+<br />
+So even though the limit is 10 there is a bug with LogicLib at 8 levels.<br />
+<br />
+Recursive insertmacro doesn't work either:<br />
+!insertmacro: macro &quot;recurse&quot; already being inserted!<br />
+<br />
+This means there is no way to do any kind of compile-time looping which is very restrictive.<br />
+<br />
+1. Bug with include/LogicLib definitely needs fixing because that could be down to something more serious.<br />
+2. Pretty pretty please remove the 10-level nested include limit. Unlimited if possible, increased to at least 32 if there has to be a limit... That or allow recursive macro-inserts.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DrO</div><div class="date">16th September 2010, 18:15</div></div><div class="posttext">the main issue with increasing the recursion limit is that makensis is more likely to run out of stack space and crash (is probably why the limit was introduced in the first place) unless you take the source code and modify it as a custom version for your own usage.<br />
+<br />
+-daz</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">16th September 2010, 18:40</div></div><div class="posttext">LogicLib crashing the installer before the recursion limit is reached should definitely be fixed, though. Has someone filed a bug report yet?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DrO</div><div class="date">16th September 2010, 18:51</div></div><div class="posttext">i don't disagree that it shouldn't be crashing, just any high level of recursion needs to be considered for stack overflows / heap exhaustion. i doubt anyone has logged it so well volunteered :)<br />
+<br />
+-daz</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">16th September 2010, 20:59</div></div><div class="posttext">question is whether it's actually LogicLib crashing things, though.  I peeked at this earlier and added Echos for every step in the _For macro.  It got all the way up to `!echo &quot;!verbose LOGICLIB_VERBOSITY&quot;`, but crashed at that point.  Commenting out that !verbose line just shifted the crash to the next command line, the ${ForEach}.<br />
+<br />
+LogicLib doesn't do anything funny there as far as I can tell - just looks like the given example exposes the underlying issue.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Marshall7a</div><div class="date">16th September 2010, 21:59</div></div><div class="posttext">I have logged a bug report for the crash and a feature request for extending the recursive options.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

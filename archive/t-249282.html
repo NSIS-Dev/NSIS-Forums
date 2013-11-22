@@ -1,0 +1,181 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" InstallOptions verses: Modern UI (Round 1, Fight!), media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  InstallOptions verses: Modern UI (Round 1, Fight!) NSIS Discussion" />
+	
+	<title> InstallOptions verses: Modern UI (Round 1, Fight!) [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  InstallOptions verses: Modern UI (Round 1, Fight!)</div>
+<hr />
+<div class="pda"><a href="t-249282.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=249282">InstallOptions verses: Modern UI (Round 1, Fight!)</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">21st June 2006, 18:30</div></div><div class="posttext">I have had major issues with NSIS over the past few weeks, and many of them arise when I try to use either Modern UI and/or InstallOptions. Many of them are solved by simply moving functions to another place in the file, or moving this include before that include... and other not-so-obvious things.<br />
+<br />
+Anyways, my presentation today is one of ambiguous functions that do not function identically. <br />
+<br />
+Version one simply has a custom page that has a text box field on it (among other things), and displays the user-entered text in a messagebox upon leaving that page.<br />
+Version 1: (FUNCTIONS PROPERLY)<br />
+...(includes, INCLUDES MODERN UI stuff)<br />
+...(attributes, modern ui stuff)<br />
+...(.onInit)<br />
+...(Pages, modern ui pages):<br />
+Page custom Pre Post<br />
+...<br />
+... (Sections)<br />
+... (Functions):<br />
+Function Pre<br />
+	Push $0<br />
+	InstallOptions::dialog &quot;.\master_slaveconfig.ini&quot;<br />
+	Pop $0<br />
+FunctionEnd<br />
+<br />
+Function Post<br />
+	Push $R0<br />
+	ReadINIStr $R0 &quot;.\master_slaveconfig.ini&quot; &quot;Field 6&quot; &quot;State&quot; ; Field 6 is a text box<br />
+	MessageBox MB_OK $R0<br />
+	Pop $R0<br />
+FunctionEnd<br />
+<br />
+Problems in Version 1: No problems.<br />
+<br />
+<br />
+<br />
+Version 2 uses Modern UI calls to show the custom dialog. Modern UI asks you to INITDIALOG and also DISPLAY it, not just call InstallOptions::dialog. DISPLAY alone doesn't work.<br />
+Version 2: <br />
+... (other parts of file are the same as #1)<br />
+... (Functions):<br />
+Function Pre<br />
+	Push $0<br />
+	!insertmacro MUI_INSTALLOPTIONS_INITDIALOG &quot;/NOUNLOAD .\master_slaveconfig.ini&quot;<br />
+	Pop $0<br />
+	Push $0<br />
+	!insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;.\master_slaveconfig.ini&quot;	<br />
+	Pop $0<br />
+FunctionEnd<br />
+<br />
+Function Post <br />
+... exactly the same as #1<br />
+FunctionEnd<br />
+<br />
+Problems in Version 2: Even if data is entered in to Field 6's text box, MessageBox shows $R0 as completely blank. If you edit the INI file and set &quot;State&quot; to something, MessageBox shows this instead of what the user wrote.<br />
+<br />
+<br />
+<br />
+Now then, can anybody tell me why this happens? Is this a bug?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">21st June 2006, 19:24</div></div><div class="posttext">Why are you using INITDIALOG and DISPLAY?<br />
+You only use INITDIALOG if you need to modify controls on the dialog before it is shown, and even after that you use MUI_INSTALLOPTIONS_SHOW and not DISPLAY. I'm suprised it's even working at all!<br />
+<br />
+You also have your Pop's wrong. InstallOptions pushes a value onto the stack, so you need two Pop's rather than just one.<br />
+<br />
+Function Pre<br />
+Push $0<br />
+!insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;master_slaveconfig.ini&quot;<br />
+Pop $0<br />
+Pop $0<br />
+FunctionEnd<br />
+<br />
+Finally, with Modern UI you use MUI_INSTALLOPTIONS_READ to read values from the INI file. This is because with the MUI INSTALLOPPIONS macros, the INI file is always stored in $PLUGINSDIR.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">21st June 2006, 19:28</div></div><div class="posttext">Ah! I knew it! The MUI documentation is out of date!<br />
+<br />
+... well, I am not surprised, I hate spending all that time documenting stuff too.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">21st June 2006, 19:31</div></div><div class="posttext">What do I use if I want to simulate <br />
+InstallOptions::dialog &quot;...&quot;  <br />
+in MUI? (is it SHOW, DISPLAY...?)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">21st June 2006, 19:34</div></div><div class="posttext">Oh, I see. MUI_INSTALLOPTIONS_DISPLAY does that.<br />
+<br />
+Now what about MUI_INSTALLOPTIONS_READ? <br />
+<br />
+This is all it does:<br />
+!macro MUI_INSTALLOPTIONS_READ VAR FILE SECTION KEY<br />
+<br />
+  !verbose push<br />
+  !verbose ${MUI_VERBOSE}<br />
+<br />
+  ReadIniStr ${VAR} &quot;$PLUGINSDIR\${FILE}&quot; &quot;${SECTION}&quot; &quot;${KEY}&quot;<br />
+<br />
+  !verbose pop<br />
+<br />
+!macroend<br />
+<br />
+Which would be the same as calling <br />
+ReadINIStr $R0 &quot;myfile.ini&quot; &quot;Field 1&quot; &quot;State&quot;<br />
+<br />
+Right?<br />
+<br />
+Except that ....<br />
+<br />
+!macro MUI_INSTALLOPTIONS_EXTRACT FILE<br />
+<br />
+  !verbose push<br />
+  !verbose ${MUI_VERBOSE}<br />
+<br />
+  InitPluginsDir<br />
+<br />
+  File &quot;/oname=$PLUGINSDIR\${FILE}&quot; &quot;${FILE}&quot;<br />
+<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;${FILE}&quot; &quot;Settings&quot; &quot;RTL&quot; &quot;$(^RTL)&quot;<br />
+<br />
+  !verbose pop<br />
+<br />
+!macroend<br />
+<br />
+And I'm afriad I did use that...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">21st June 2006, 21:38</div></div><div class="posttext">!insertmacro MUI_INSTALLOPTIONS_READ &quot;master_slaveconfig.ini&quot; &quot;Field 6&quot; &quot;State&quot;<br />
+<br />
+You only need to specify the INI file name. No full path.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">onad</div><div class="date">22nd June 2006, 10:33</div></div><div class="posttext">Afrow UK rules! ... you give al lot of support to NSIS programmers, great!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">22nd June 2006, 14:20</div></div><div class="posttext">Can anybody tell me when they'll fix the parsing problem in NSIS? I notice that alot of things don't work if you don't follow the unwritten code of the &quot;mystical parsing order&quot; (I mean that functions and sections have to be in specific places in the file for anything to work).<br />
+I'd do this myself, but I'm on company time right now, and honestly, I'm not getting paid to rewrite NSIS, I'm getting paid to use it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">22nd June 2006, 20:57</div></div><div class="posttext">It isn't a parsing problem at all. It is by design.<br />
+And it would be silly not to check the warnings that the compiler throws at you (literally).<br />
+<br />
+The problems that you have had are most likely trying to use constants before they are created with the !define instruction (or perhaps Section index constants that are created with the Section or SectionGroup instructions).<br />
+Naturally, you can't use a constant value before you create it. Much like you can't use a variable before you create it!<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">22nd June 2006, 21:02</div></div><div class="posttext">Well that may be right, but I was hoping you could actually find these things quickly (not having to spend 2-10 minutes reading the compile log).<br />
+<br />
+I was wonding if you could suggest a good syntax-checking NSIS Dev environment...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Shorin</div><div class="date">22nd June 2006, 21:04</div></div><div class="posttext">And what about the documentation.. .is that really up to date or is there a version I don't have yet...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">22nd June 2006, 22:27</div></div><div class="posttext">You can try Eclipse NSIS, which uses Sun's Eclipse Java development platform. There's a page on the Wiki. The manual distributed with the latest version of NSIS is the latest version.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

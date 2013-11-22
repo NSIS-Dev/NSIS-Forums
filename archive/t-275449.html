@@ -1,0 +1,481 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Setting/Removing/Viewing Environment Variables, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Setting/Removing/Viewing Environment Variables NSIS Discussion" />
+	
+	<title> Setting/Removing/Viewing Environment Variables [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Setting/Removing/Viewing Environment Variables</div>
+<hr />
+<div class="pda"><a href="t-275449.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=275449">Setting/Removing/Viewing Environment Variables</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">6th August 2007, 12:58</div></div><div class="posttext">Hi<br />
+<br />
+I have read quite a lot of the forum relating setting/reading/removing environment variables. In particular I am using code from the following thread:<br />
+<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=100735&amp;highlight=writeenvstr<br />
+<br />
+The file is called writeenvstr.nsh.txt and itâ€™s quite popular as itâ€™s been downloaded 176 times.<br />
+<br />
+I have a few questions.<br />
+<br />
+(1)The code writes the environment variable ok but writes it to â€œUser variablesâ€, how do I write to â€œSystem variablesâ€? <br />
+<br />
+For example I want to add something to the end of â€œPATHâ€ which is in â€œSystem variablesâ€ How would this be done? Would it be a matter of getting the current path (e.g. ReadEnvStr $0 PATH) and then concatenating ;some\path\ to the end of it.<br />
+<br />
+(2) How do you remove an environment variable?<br />
+I mean do you pop the variable on the stack and then call â€œun.DeleteEnvStrâ€ for each environment variable that you have set? What would the code look like?<br />
+<br />
+Pop SOMEVARIABLE1<br />
+Call un.DeleteEnvStr<br />
+<br />
+Pop SOMEVARIABLE2<br />
+Call un.DeleteEnvStr<br />
+â€¦<br />
+<br />
+Pop SOMEVARIABLEn<br />
+Call un.DeleteEnvStr<br />
+<br />
+(3) Once an environment variable has been written is cannot be read until you reboot.<br />
+For example:<br />
+<br />
+Push &quot;SOMEDIR&quot;<br />
+Push &quot;C:\Some\Directory&quot;<br />
+Call WriteEnvStr<br />
+<br />
+After writing an environment variable, this read<br />
+only works after a reboot.<br />
+ReadEnvStr $0 &quot;Path&quot;<br />
+MessageBox MB_OK $0<br />
+<br />
+Obviously this is no good.<br />
+<br />
+Am I doing something wrong?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">6th August 2007, 13:02</div></div><div class="posttext">Sorry, typo in previous post.<br />
+<br />
+ReadEnvStr $0 &quot;Path&quot;<br />
+should be<br />
+ReadEnvStr $0 &quot;SOMEDIR&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">6th August 2007, 14:19</div></div><div class="posttext">Here is a concrete example.<br />
+<br />
+outFile &quot;installer.exe&quot;<br />
+installDir $DESKTOP<br />
+<br />
+section<br />
+<br />
+   setOutPath $INSTDIR<br />
+   writeUninstaller $INSTDIR\uninstaller.exe<br />
+  <br />
+   ; Write an environment variable.<br />
+   Push &quot;SOMEDIRE&quot;<br />
+   Push &quot;C:\Some\Directory&quot;<br />
+   Call WriteEnvStr<br />
+<br />
+   ; Read after being set, displays nothing unless you reboot.<br />
+   ; However if you open a shell in Windows and type echo %SOMEDIRE%<br />
+   ; You get &quot;C:\Some\Directory&quot;<br />
+   ReadEnvStr $0 &quot;SOMEDIRE&quot;<br />
+   MessageBox MB_OK $0<br />
+   <br />
+sectionEnd<br />
+<br />
+section &quot;Uninstall&quot;<br />
+<br />
+   delete $INSTDIR\uninstaller.exe<br />
+<br />
+   ; Remove environment variable.<br />
+   Push   &quot;SOMEDIRE&quot;<br />
+   Call   un.DeleteEnvStr<br />
+   <br />
+sectionEnd<br />
+<br />
+;====================================================<br />
+; IsNT - Returns 1 if the current system is NT, 0<br />
+;		otherwise.<br />
+;	 Output: head of the stack<br />
+;====================================================<br />
+Function IsNT<br />
+	Push $0<br />
+	ReadRegStr $0 HKLM &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion&quot; CurrentVersion<br />
+	StrCmp $0 &quot;&quot; 0 IsNT_yes<br />
+	; we are not NT.<br />
+	Pop $0<br />
+	Push 0<br />
+	Return<br />
+<br />
+	IsNT_yes:<br />
+		; NT!!!<br />
+		Pop $0<br />
+		Push 1<br />
+FunctionEnd<br />
+<br />
+;====================================================<br />
+; WriteEnvStr - Writes a value to an environment variable<br />
+;		Input - First push - name. Second - value<br />
+;		Note - Win9x systems requires reboot<br />
+;<br />
+;	Push &quot;HOMEDIR&quot;<br />
+;	Push &quot;C:\New Home Dir\&quot;<br />
+;	Call WriteEnvStr<br />
+;====================================================<br />
+Function WriteEnvStr<br />
+	Exch $1 ; $1 has environment variable value<br />
+	Exch<br />
+	Exch $0 ; $0 has environment variable name<br />
+	Push $2<br />
+<br />
+	Call IsNT<br />
+	Pop $2<br />
+	StrCmp $2 1 WriteEnvStr_NT<br />
+		; Not on NT<br />
+		StrCpy $2 $WINDIR 2 ; Copy drive of windows (c:)<br />
+		FileOpen $2 &quot;$2\autoexec.bat&quot; a<br />
+		FileSeek $2 0 END<br />
+		FileWrite $2 &quot;$\r$\nSET $0=$1$\r$\n&quot;<br />
+		FileClose $2<br />
+		SetRebootFlag true<br />
+		Goto WriteEnvStr_done<br />
+<br />
+	WriteEnvStr_NT:<br />
+		WriteEnvStr_NTdoIt:<br />
+			WriteRegStr HKCU &quot;Environment&quot; $0 $1<br />
+			GetTempFileName $2<br />
+			File /oname=$2 &quot;RefreshEnv.exe&quot;<br />
+			ExecWait $2<br />
+			Delete $2<br />
+<br />
+	WriteEnvStr_done:<br />
+		Pop $2<br />
+		Pop $1<br />
+		Pop $0<br />
+FunctionEnd<br />
+<br />
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;<br />
+; Uninstall sutff<br />
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;<br />
+<br />
+;====================================================<br />
+; un.IsNT - Returns 1 if the current system is NT, 0<br />
+;		otherwise.<br />
+;	 Output: head of the stack<br />
+;====================================================<br />
+Function un.IsNT<br />
+	Push $0<br />
+	ReadRegStr $0 HKLM &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion&quot; CurrentVersion<br />
+	StrCmp $0 &quot;&quot; 0 unIsNT_yes<br />
+	; we are not NT.<br />
+	Pop $0<br />
+	Push 0<br />
+	Return<br />
+<br />
+	unIsNT_yes:<br />
+		; NT!!!<br />
+		Pop $0<br />
+		Push 1<br />
+FunctionEnd<br />
+<br />
+;====================================================<br />
+; un.DeleteEnvStr - Removes an environment variable<br />
+;	 Input: head of the stack<br />
+;====================================================<br />
+Function un.DeleteEnvStr<br />
+	Exch $0 ; $0 now has the name of the variable<br />
+	Push $1<br />
+	Push $2<br />
+	Push $3<br />
+	Push $4<br />
+	Push $5<br />
+<br />
+	Call un.IsNT<br />
+	Pop $1<br />
+	StrCmp $1 1 DeleteEnvStr_NT<br />
+		; Not on NT<br />
+		StrCpy $1 $WINDIR 2<br />
+		FileOpen $1 &quot;$1\autoexec.bat&quot; r<br />
+		GetTempFileName $4<br />
+		FileOpen $2 $4 w<br />
+		StrCpy $0 &quot;SET $0=&quot;<br />
+		SetRebootFlag true<br />
+<br />
+		DeleteEnvStr_dosLoop:<br />
+			FileRead $1 $3<br />
+			StrLen $5 $0<br />
+			StrCpy $5 $3 $5<br />
+			StrCmp $5 $0 DeleteEnvStr_dosLoop<br />
+			StrCmp $5 &quot;&quot; DeleteEnvStr_dosLoopEnd<br />
+			FileWrite $2 $3<br />
+			Goto DeleteEnvStr_dosLoop<br />
+<br />
+		DeleteEnvStr_dosLoopEnd:<br />
+			FileClose $2<br />
+			FileClose $1<br />
+			StrCpy $1 $WINDIR 2<br />
+			Delete &quot;$1\autoexec.bat&quot;<br />
+			CopyFiles /SILENT $4 &quot;$1\autoexec.bat&quot;<br />
+			Delete $4<br />
+			Goto DeleteEnvStr_done<br />
+<br />
+	DeleteEnvStr_NT:<br />
+		DeleteRegValue HKCU &quot;Environment&quot; $0<br />
+		GetTempFileName $0<br />
+		File /oname=$0 &quot;RefreshEnv.exe&quot;<br />
+		ExecWait $0<br />
+		Delete $0<br />
+<br />
+	DeleteEnvStr_done:<br />
+		Pop $5<br />
+		Pop $4<br />
+		Pop $3<br />
+		Pop $2<br />
+		Pop $1<br />
+		Pop $0<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DrDan</div><div class="date">6th August 2007, 14:29</div></div><div class="posttext">... to write both system and user environment variables.<br />
+<br />
+Section &quot;4.9.2 Registry, INI, File Instructions&quot; of the NSIS User Manual is your friend :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">6th August 2007, 15:40</div></div><div class="posttext">Thanks for your help, <br />
+<br />
+After reading so much stuff I'm somewhat confused. I'm a bit disappointed with the docs and the forum on this issue.<br />
+<br />
+For example some of the threads lack examples, or you start reading something of interest and the user provides a link that points no where. <br />
+<br />
+In some cases it is clear but the code provided only does half the job, for example writing environment variables to User Variables and not System variables. Why isnâ€™t there a script that does both? Maybe there is and I havenâ€™t found it yet.<br />
+<br />
+There needs to be a section dedicated to writing/reading/removing environment variables as this is fundamental to installing software. What there is (Section &quot;4.9.2 Registry, INI, File Instructions&quot;) is sub standard.<br />
+<br />
+Sorry to moan but this needs to be addressed.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">6th August 2007, 23:59</div></div><div class="posttext">I wrote my own function to add and remove elements to/from the System PATH variable. It uses the WordAdd macro, and System dll and LogicLib. Since I call it during install and uninstall, the function is wrapped in a macro to define it with and without the 'un.' prefix. WordAdd is perfect for this use because it splits the paths at the semicolon (';') and doesn't duplicate an existing path:<br />
+!include &quot;WordFunc.nsh&quot;<br />
+!macro DualUseFunctions_ un_<br />
+function ${un_}SetPathVar<br />
+	# stack top: &lt;'string to add'&gt; / &lt;AppendFlag&gt;<br />
+	Exch $0		; new string<br />
+	Exch<br />
+	Exch $1		; append = 2, prefix = 1, remove = 0<br />
+	Push $R0	; saved working registers<br />
+	<br />
+	ReadRegStr $R0 HKLM &quot;${REG_ENVIRONMENT}&quot; &quot;Path&quot;<br />
+	<br />
+	${Select} $1<br />
+	${Case} 0<br />
+		${${un_}WordAdd} &quot;$R0&quot; &quot;;&quot; &quot;-$0&quot; $R0<br />
+	${Case} 1<br />
+		${${un_}WordAdd} &quot;$0&quot; &quot;;&quot; &quot;+$R0&quot; $R0<br />
+	${Case} 2<br />
+		${${un_}WordAdd} &quot;$R0&quot; &quot;;&quot; &quot;+$0&quot; $R0<br />
+	${EndSelect}<br />
+	<br />
+	WriteRegExpandStr HKLM &quot;${REG_ENVIRONMENT}&quot; &quot;Path&quot; &quot;$R0&quot;<br />
+	System::Call 'Kernel32::SetEnvironmentVariableA(t, t) i(&quot;PATH&quot;, R0).r2'<br />
+	<br />
+	Pop $R0				; restore registers<br />
+	Pop $1<br />
+	Pop $0<br />
+functionEnd<br />
+!macroend<br />
+!insertmacro DualUseFunctions_ &quot;&quot;<br />
+!insertmacro DualUseFunctions_ &quot;un.&quot;<br />
+<br />
+I add several paths to the PATH var with these two calls<br />
+	# Environment Path variable<br />
+	Push 1		; prefix<br />
+	Push &quot;C:\Ipls\dlls&quot;<br />
+	Call SetPathVar<br />
+	<br />
+	Push 2		; append<br />
+	Push &quot;C:\Ipls\utilities;C:\ipls\utilities\pkzip;C:\ipls\utilities\dumpel;C:\ipls\utilities\WriteToCD;${BuildFolder}\UiClient\Release&quot;<br />
+	Call SetPathVar<br />
+<br />
+I remove them in the uninstaller like this<br />
+	# cleanup the Environment Path variable<br />
+	Push 0		; 0 = remove<br />
+	Push &quot;${BuildFolder}\UiClient\Release;C:\Ipls\dlls;C:\Ipls\utilities;C:\ipls\utilities\pkzip;C:\ipls\utilities\dumpel;C:\ipls\utilities\WriteToCD&quot;<br />
+	Call Un.SetPathVar<br />
+<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">7th August 2007, 15:25</div></div><div class="posttext">Thanks a lot for the post, it has helped me a lot. I have used the code above in the following script to test it before I put it into my main script for my installer.<br />
+<br />
+***********************************************************<br />
+<br />
+!include &quot;LogicLib.nsh&quot;<br />
+!include &quot;WordFunc.nsh&quot;<br />
+<br />
+!insertmacro WordAdd<br />
+!insertmacro un.WordAdd<br />
+<br />
+!define REG_ENVIRONMENT &quot;SYSTEM\CurrentControlSet\Control\Session Manager\Environment&quot;<br />
+<br />
+outFile &quot;installer.exe&quot;<br />
+installDir $DESKTOP<br />
+<br />
+!macro DualUseFunctions_ un_<br />
+   function ${un_}SetPathVar<br />
+      # stack top: &lt;'string to add'&gt; / &lt;AppendFlag&gt;<br />
+      Exch $0		; new string<br />
+      Exch<br />
+      Exch $1		; append = 2, prefix = 1, remove = 0<br />
+      Push $R0	; saved working registers<br />
+<br />
+      ReadRegStr $R0 HKLM &quot;${REG_ENVIRONMENT}&quot; &quot;Path&quot;<br />
+<br />
+      ${Select} $1<br />
+         ${Case} 0<br />
+         	${${un_}WordAdd} &quot;$R0&quot; &quot;;&quot; &quot;-$0&quot; $R0<br />
+         ${Case} 1<br />
+    		${${un_}WordAdd} &quot;$0&quot; &quot;;&quot; &quot;+$R0&quot; $R0<br />
+         ${Case} 2<br />
+    		${${un_}WordAdd} &quot;$R0&quot; &quot;;&quot; &quot;+$0&quot; $R0<br />
+       ${EndSelect}<br />
+<br />
+       WriteRegExpandStr HKLM &quot;${REG_ENVIRONMENT}&quot; &quot;Path&quot; &quot;$R0&quot;<br />
+       System::Call 'Kernel32::SetEnvironmentVariableA(t, t) i(&quot;PATH&quot;, R0).r2'<br />
+<br />
+       Pop $R0				; restore registers<br />
+       Pop $1<br />
+       Pop $0<br />
+    functionEnd<br />
+    !macroend<br />
+    !insertmacro DualUseFunctions_ &quot;&quot;<br />
+    !insertmacro DualUseFunctions_ &quot;un.&quot;<br />
+<br />
+Function displayPath<br />
+  ReadRegStr $R0 HKLM &quot;${REG_ENVIRONMENT}&quot; &quot;Path&quot;<br />
+  MessageBox MB_OK $R0<br />
+FunctionEnd<br />
+<br />
+section<br />
+  setOutPath $INSTDIR<br />
+  writeUninstaller $INSTDIR\uninstaller.exe<br />
+  Push 1 ; 1 = append.<br />
+  Push &quot;C:\some\directory&quot;<br />
+  call displayPath<br />
+  Call SetPathVar<br />
+  call displayPath<br />
+sectionEnd<br />
+<br />
+section &quot;Uninstall&quot;<br />
+  delete $INSTDIR\uninstaller.exe<br />
+  Push 0 ; 0 = remove<br />
+  Push &quot;C:\some\directory&quot;<br />
+  Call Un.SetPathVar<br />
+sectionEnd<br />
+<br />
+***********************************************************<br />
+<br />
+I have one question.<br />
+<br />
+The code works well so thank you for that once again. However, once I hace run the code and then open a shell in Windows and type..<br />
+<br />
+echo %PATH%<br />
+<br />
+Why doesn't it show up in the path?<br />
+<br />
+Cheers <br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">7th August 2007, 15:37</div></div><div class="posttext">One other thing, how do I get my code to show up nice and formatted like yours.<br />
+<br />
+Once again thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">7th August 2007, 16:07</div></div><div class="posttext">The NSIS wiki has several pages which explain how to set and remove environment variables and how to change the PATH variable. <br />
+<br />
+PATH manipulation is discussed here:<br />
+<br />
+http://nsis.sourceforge.net/Path_Manipulation<br />
+<br />
+http://nsis.sourceforge.net/Path_manipulation_with_all_users/current_user_selection_in_run-time<br />
+<br />
+The wiki also explains how to make WriteEnvStr.nsh modify variables for all users and shows how to make changes available without requiring a reboot.<br />
+<br />
+http://nsis.sourceforge.net/Setting_Environment_Variables</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">7th August 2007, 16:58</div></div><div class="posttext">Thanks for the links, even though I have solved my problem with the help of &quot;demiller9&quot;. The links you have provided do not help with the setting of the System Path (they all relate to the users path) which was my first question when the thread originally opened. But thanks anyway.<br />
+<br />
+My last question still stands though which is:<br />
+<br />
+After I run the above script why is it when I open a shell and type:<br />
+<br />
+echo %PATH%<br />
+<br />
+the path I have just added &quot;C:\some\directory&quot; doesn't show?<br />
+<br />
+I think I may have to make a System::Call of some type, therefore after this call the path I have just added will be visible from the command line.<br />
+<br />
+Thanks<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">7th August 2007, 17:57</div></div><div class="posttext">After I run the above script why is it when I open a shell and type:<br />
+<br />
+echo %PATH%<br />
+<br />
+the path I have just added &quot;C:\some\directory&quot; doesn't show? Did you open the command window after the script ran, or was the window already open and you typed 'echo ...' after the script ran? If the window was already open, the new path was not visible because the command window does not reload its environment block. Environment variables are passed to new processes by their caller, the command window should get the variables in use by Explorer. Explorer will load the new environment block if you send it the message  SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 &quot;STR:Environment&quot; /TIMEOUT=5000<br />
+<br />
+I did not have that it my code because my installer will always reboot the system.<br />
+<br />
+how do I get my code to show up nice and formatted like yours.<br />
+Use the 'code' tag to format your posts on this message board. The tags are [ code ] and [ /code ] without the extra spaces. The PHP tag also works but watch out if you use it because it removes backslash '\\' chars.<br />
+<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">8th August 2007, 10:31</div></div><div class="posttext">Thanks for the reply,<br />
+<br />
+Yes I did open the command window after the script ran. I am aware of the environment block so no worries there.<br />
+<br />
+I've added the &quot;broadcast&quot; line just before the function returns so the window command will be updated when we add to the system path or remove from the system path.<br />
+<br />
+Thanks for your help I'm very grateful.<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">8th August 2007, 10:32</div></div><div class="posttext">I forgot to say that it all works as expected, so once again thank you.<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">starrider78</div><div class="date">22nd August 2007, 21:19</div></div><div class="posttext">Originally posted by pengyou <br />
+The NSIS wiki has several pages which explain how to set and remove environment variables and how to change the PATH variable. <br />
+<br />
+PATH manipulation is discussed here:<br />
+<br />
+http://nsis.sourceforge.net/Path_Manipulation<br />
+<br />
+http://nsis.sourceforge.net/Path_manipulation_with_all_users/current_user_selection_in_run-time<br />
+<br />
+The wiki also explains how to make WriteEnvStr.nsh modify variables for all users and shows how to make changes available without requiring a reboot.<br />
+<br />
+http://nsis.sourceforge.net/Setting_Environment_Variables  <br />
+<br />
+Okay, using that for &quot;adding on to the path&quot; overwrites the current path.  This is not desirable when you are writing to the system path (and is not recoverable via system restore either.)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

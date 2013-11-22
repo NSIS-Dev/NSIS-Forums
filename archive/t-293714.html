@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" System Plugin and SHAppBarMessage help, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  System Plugin and SHAppBarMessage help NSIS Discussion" />
+	
+	<title> System Plugin and SHAppBarMessage help [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  System Plugin and SHAppBarMessage help</div>
+<hr />
+<div class="pda"><a href="t-293714.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=293714">System Plugin and SHAppBarMessage help</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">zeeh3</div><div class="date">28th June 2008, 00:33</div></div><div class="posttext">I need some help with SHAppBarMessage call, the code below:<br />
+<br />
+!define stRECT '(i,i,i,i) i'<br />
+!define APPBARDATA '(i,i,i,i,i,i) i'<br />
+<br />
+!include &quot;WinMessages.nsh&quot;<br />
+<br />
+System::Call '*${stRECT} .r2'<br />
+System::Call '*${APPBARDATA} .r3'<br />
+System::Call 'shell32::SHAppBarMessage(i ${ABM_GETTASKBARPOS}, i r3) i.r0'<br />
+System::Call &quot;*$3${APPBARDATA} (.R9, .R8, .R7, .R6, .r2, .R5)&quot;<br />
+System::Call &quot;*$2${stRECT}(.r5, .r6, .r7, .r8)&quot; ; screen application rect<br />
+System::Free $3<br />
+System::Free $2<br />
+messagebox mb_ok &quot;$R9, $R8, $R7, $R6, $2, $R5$\r$\nleft=$5 - top=$6 - right=$7 - bottom=$8&quot;<br />
+<br />
+<br />
+$R6 contains the relative taskbar position (top, bottom, left, right), but stRECT is empty. But if I use the code below I can get the values, but not the relative position:<br />
+<br />
+System::Call '*${stRECT} .r2'<br />
+FindWindow $TASKBAR 'Shell_TrayWnd' '' ''<br />
+System::Call 'user32::GetWindowRect(i $TASKBAR , i r2)'<br />
+System::Call &quot;*$2${stRECT}(.r5, .r6, .r7, .r8)&quot;<br />
+System::Free $2<br />
+messagebox mb_ok &quot;left=$5 - top=$6 - right=$7 - bottom=$8&quot;<br />
+<br />
+<br />
+Any ideas? Thanks :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">28th June 2008, 10:37</div></div><div class="posttext">Do you define the size of the APPBARDATA structure somewhere? It appears to me that you need to allocate memory first before passing anything to APPBARDATA as its first member is its size in bytes. Is this a 'working' example of your code or are there bits (relating to the call you make) missing?<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zeeh3</div><div class="date">28th June 2008, 10:54</div></div><div class="posttext">Yes, it is a working example but could be smaller.<br />
+<br />
+I don't know if I have defined APPBARDATA correctly:<br />
+!define APPBARDATA '(i,i,i,i,i,i) i'<br />
+<br />
+The first code works partially, with SHAppBarMessage I got only relative taskbar location, but this function gives the taskbar coordinates too, in stRECT structure, and here is my problem because stRECT is empty. If I use it with the second code, stRECT comes with the values I need, but I wanna know why the first stRECT is empty.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zeeh3</div><div class="date">28th June 2008, 12:10</div></div><div class="posttext">Well, the first value must be &amp;l and not i, but the installer crashes. Maybe there is a value to put there too.<br />
+<br />
+!define APPBARDATA '(&amp;l,i,i,i,i,i) i'<br />
+<br />
+if I move taskbar to the right, using (i,i,i,i,i,i), the installer crashes too :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zeeh3</div><div class="date">28th June 2008, 15:01</div></div><div class="posttext">Almost, it's not crashing but no stRECT.<br />
+<br />
+!define stRECT                '(i,i,i,i) i'<br />
+!define APPBARDATA            '(&amp;l4,i,i,i,i,i) i'<br />
+<br />
+!include &quot;WinMessages.nsh&quot;<br />
+<br />
+System::Call '*${stRECT} .r2'<br />
+System::Call '*${APPBARDATA} .r3'<br />
+System::Call 'shell32::SHAppBarMessage(i ${ABM_GETTASKBARPOS}, i r3) i.r0'<br />
+System::Call &quot;*$3${APPBARDATA} (,,, .R6, r2,)&quot;<br />
+System::Call &quot;*$2${stRECT}(.r5, .r6, .r7, .r8)&quot;<br />
+System::Free $3<br />
+System::Free $2<br />
+messagebox mb_ok &quot;relative pos=$R6$\r$\nleft=$5$\r$\ntop=$6$\r$\nright=$7$\r$\nbottom=$8&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zeeh3</div><div class="date">29th June 2008, 11:14</div></div><div class="posttext">Now I am really confused :(<br />
+I think I am using the wrong message and getting the wrong results. I think now ABM_QUERYPOS is the correct way to get what I want (taskbar relative position and coordinates), but it returns nothing. Below are the MSDN reference links:<br />
+<br />
+SHAppBarMessage Function (http://msdn.microsoft.com/en-us/library/bb762108(VS.85).aspx)<br />
+<br />
+ABM_GETTASKBARPOS Message (http://msdn.microsoft.com/en-us/library/bb787949(VS.85).aspx)<br />
+<br />
+ABM_QUERYPOS Message (http://msdn.microsoft.com/en-us/library/bb787953(VS.85).aspx) <br />
+<br />
+APPBARDATA Structure (http://msdn.microsoft.com/en-us/library/bb773184(VS.85).aspx)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">29th June 2008, 11:27</div></div><div class="posttext">!define APPBARDATA            '(&amp;l4,i,i,i,i,i) i', where is the rect struct, you only have a INT there, add 3 more i's?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zeeh3</div><div class="date">29th June 2008, 12:12</div></div><div class="posttext">The APPBARDATA Structure is:<br />
+<br />
+typedef struct _AppBarData {<br />
+    DWORD cbSize;<br />
+    HWND hWnd;<br />
+    UINT uCallbackMessage;<br />
+    UINT uEdge;<br />
+    RECT rc;<br />
+    LPARAM lParam;<br />
+} APPBARDATA, *PAPPBARDATA;<br />
+<br />
+How can I define it correctly with rect struct?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zeeh3</div><div class="date">2nd July 2008, 17:44</div></div><div class="posttext">I give up from using ABM_GETTASKBARPOS Message. The code below does what I need, it gets taskbar coordinates and its relative position, for those interested:<br />
+<br />
+!define stRECT '(i,i,i,i) i'<br />
+!include &quot;LogicLib.nsh&quot;<br />
+<br />
+System::Call '*${stRECT} .r0'<br />
+    FindWindow $1 'Shell_TrayWnd' '' ''<br />
+    System::Call 'user32::GetWindowRect(i r1 , i r0)'<br />
+    System::Call &quot;*$0${stRECT}(.r2, .r3, .r4, .r5)&quot; ;left-top-right-bottom<br />
+    System::Free $0<br />
+<br />
+    ${If} $3 == $2<br />
+      ${AndIf} $5 &gt; $4<br />
+      MessageBox MB_OK &quot;Left&quot;<br />
+    ${ElseIf} $3 == $2<br />
+      ${AndIf} $5 &lt; $4<br />
+      MessageBox MB_OK &quot;Top&quot;<br />
+    ${ElseIf} $3 &gt; $2<br />
+      MessageBox MB_OK &quot;Bottom&quot;<br />
+    ${Else}<br />
+      MessageBox MB_OK &quot;Right&quot;<br />
+    ${EndIf}</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

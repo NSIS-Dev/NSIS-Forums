@@ -1,0 +1,158 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Get SecurityError 1?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Get SecurityError 1? NSIS Discussion" />
+	
+	<title> Get SecurityError 1? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Get SecurityError 1?</div>
+<hr />
+<div class="pda"><a href="t-309038.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=309038">Get SecurityError 1?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ryanpager</div><div class="date">29th July 2009, 14:49</div></div><div class="posttext">Function adminrights<br />
+<br />
+         UserMgr::GetCurrentUserName<br />
+         Pop $1<br />
+         #MessageBox MB_OK &quot;$1&quot; #Uncomment if debugging is necessary<br />
+         UserMgr::SetRegKeyAccess &quot;$1&quot; &quot;HKCU&quot; &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ASIM Bridge\DisplayIcon&quot; &quot;=a&quot;<br />
+         UserMgr::SetRegKeyAccess &quot;$1&quot; &quot;HKCU&quot; &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ASIM Bridge\DisplayName&quot; &quot;=a&quot;<br />
+         UserMgr::SetRegKeyAccess &quot;$1&quot; &quot;HKCU&quot; &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ASIM Bridge\DisplayVersion&quot; &quot;=a&quot;<br />
+         UserMgr::SetRegKeyAccess &quot;$1&quot; &quot;HKCU&quot; &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ASIM Bridge\NSIS:Language&quot; &quot;=a&quot;<br />
+         UserMgr::SetRegKeyAccess &quot;$1&quot; &quot;HKCU&quot; &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ASIM Bridge\Publisher&quot; &quot;=a&quot;<br />
+         UserMgr::SetRegKeyAccess &quot;$1&quot; &quot;HKCU&quot; &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ASIM Bridge\UninstallString&quot; &quot;=a&quot;<br />
+         UserMgr::SetRegKeyAccess &quot;$1&quot; &quot;HKCU&quot; &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ASIM Bridge\URLInfoAbout&quot; &quot;=a&quot;<br />
+         Pop $0<br />
+         MessageBox MB_OK &quot;GrantAccess Result : $0&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+When I call this function, the grant access result is: Get SecurityError 1...<br />
+<br />
+<br />
+What does this mean exactly?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">29th July 2009, 15:18</div></div><div class="posttext">What are you trying to do exactly?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ryanpager</div><div class="date">29th July 2009, 15:19</div></div><div class="posttext">It grabs the current username, and grants rights to write to the registry for those keys only</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">29th July 2009, 15:37</div></div><div class="posttext">current user can already write there. Besides, you can only apply ACL's to keys (folders), not values</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ryanpager</div><div class="date">29th July 2009, 15:41</div></div><div class="posttext">interesting, on the NSIS Help I followed the same format that they had in their example.<br />
+<br />
+So if it comes back as Get Security Error 0 (if this is possible) it means they cant write there?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">29th July 2009, 17:19</div></div><div class="posttext">First of all, you need a Pop $0 after each UserMgr::SetRegKeyAccess.<br />
+Second, as Anders said, you can only apply ACL's to keys.<br />
+So you only needUserMgr::SetRegKeyAccess &quot;$1&quot; &quot;HKCU&quot; &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ASIM Bridge&quot; &quot;=a&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ryanpager</div><div class="date">29th July 2009, 17:50</div></div><div class="posttext">Ok well this is now my total section:<br />
+<br />
+!macro _UserIsAdminNT5 _a _b _t _f<br />
+Push $1<br />
+!insertmacro _LOGICLIB_TEMP<br />
+System::Call '*(&amp;i1 1,&amp;i1 2,&amp;i5,&amp;i1 5,&amp;i4 32,&amp;i4 544)i.r1' ;S-1-5-32-544<br />
+System::Call 'advapi32::CheckTokenMembership(i n,i r1,*i.s)i.s'<br />
+System::Free $1<br />
+Pop $1<br />
+Pop $_LOGICLIB_TEMP<br />
+IntCmpU $1 0 0 +2 +2<br />
+StrCpy $_LOGICLIB_TEMP 0<br />
+Pop $1<br />
+!insertmacro _!= $_LOGICLIB_TEMP 0 `${_t}` `${_f}`<br />
+!macroend<br />
+!define UserIsAdminNT5 `&quot;&quot; UserIsAdminNT5 &quot;&quot;`<br />
+<br />
+<br />
+(Courtesy of you Anders :) )<br />
+<br />
+Function adminrights<br />
+        ${If} ${UserIsAdminNT5}<br />
+	       MessageBox MB_OK &quot;User Type is Admin&quot;<br />
+        ${Else}<br />
+	       MessageBox MB_OK &quot;User Type is not Admin&quot;<br />
+	       UserMgr::GetCurrentUserName #Gets User Account Name<br />
+               Pop $1<br />
+               #MessageBox MB_OK &quot;$1&quot; #Uncomment if debugging is necessary<br />
+<br />
+               UserMgr::SetRegKeyAccess &quot;$1&quot; &quot;HKCU&quot; &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ASIM Bridge\&quot; &quot;=a&quot;<br />
+               Pop $0<br />
+               MessageBox MB_OK &quot;GrantAccess Result : $0&quot;<br />
+        ${EndIf}<br />
+FunctionEnd<br />
+<br />
+<br />
+Its still popping that error....but is it only doing that because the user (myself right now) is an admin?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">29th July 2009, 18:04</div></div><div class="posttext">Not sure why you want to put the current user on the ACL for a registry key under HKEY_CURRENT_USER. As Anders says, the current user will already have full access, and anyway a user needs to already have ownership and write access to put themselves on an ACL (unless you enable the SE_RESTORE_NAME and SE_TAKE_OWNERSHIP_NAME privileges).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">29th July 2009, 18:31</div></div><div class="posttext">I think the error message is &quot;ERROR GetSecurityInfo 1&quot;, right?<br />
+<br />
+Error 1 means ERROR_INVALID_FUNCTION...<br />
+Not sure why this error occures, but I found that granting a non existing registry key causes this error.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ryanpager</div><div class="date">29th July 2009, 18:32</div></div><div class="posttext">Im trying to make it so that if a user isnt able to write the registry keys for the uninstaller that they will be changed so that it allows them to.<br />
+<br />
+It was supposed to be HKLM, i was messing around with it and forgot to change it back.<br />
+<br />
+If the user cant write the uninstaller registry keys there will be a problem no?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">29th July 2009, 18:38</div></div><div class="posttext">you should only write to HKLM if you are installing as admin (If you require admin rights to install, you should use requestexecutionlevel admin in your script and use the userinfo plugin in .onInit and display a messagebox and quit if the user is not admin)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ryanpager</div><div class="date">29th July 2009, 18:42</div></div><div class="posttext">Thats exactly the point...I dont want it to be admin only. I need it to be available to all users.<br />
+<br />
+I figured writing to the HKCU would get around this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">29th July 2009, 18:54</div></div><div class="posttext">Uninstall registry needs to be under HKLM and unless you have administrator privileges you can't write there.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">29th July 2009, 19:25</div></div><div class="posttext">People seem to have a hard time grasping this:<br />
+<br />
+Single user install: (don't have to be admin)<br />
+write to $localappdata and HKCU<br />
+<br />
+All users install: (must be admin)<br />
+write to $programfiles and HKLM</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ryanpager</div><div class="date">29th July 2009, 19:58</div></div><div class="posttext">Right but the install has to go on the root C:\ directory (or whatever local disk is).<br />
+<br />
+Would I still need to do HKLM, or could I do HKCU?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">30th July 2009, 00:24</div></div><div class="posttext">If you want your application available to all users then you don't write anything to HKCU. If your application writes anything to HKCU after install then you use EnumUsersReg to load each user hive to delete your registry keys.<br />
+<br />
+Having said that there's a difference between installing as admin and installing for admins. Maybe you have that confused? Only administrator users (non limited accounts) can install applications for all users.<br />
+<br />
+Your install can only be run by an administrator user anyway. Limited users can't write to the root or any folders on it and can't write to HKLM.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

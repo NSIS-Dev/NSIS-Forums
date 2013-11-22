@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Current Folder Bug?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Current Folder Bug? NSIS Discussion" />
+	
+	<title> Current Folder Bug? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Current Folder Bug?</div>
+<hr />
+<div class="pda"><a href="t-50246.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=50246">Current Folder Bug?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">petersa</div><div class="date">20th May 2001, 10:10</div></div><div class="posttext">Hi guys,<br />
+<br />
+I think I might've uncovered a bug here.<br />
+<br />
+The following code doesn't work:<br />
+<br />
+!PackHdr TEMP.DAT &quot;UPX.EXE --best TEMP.DAT&quot;<br />
+OutFile PD.exe<br />
+SilentInstall Silent<br />
+CRCCheck On<br />
+<br />
+Section &quot;&quot;<br />
+  SetOutPath &quot;$TEMP\SETUP.PD&quot;<br />
+  File AUTOMATE.EXE<br />
+  File PATCH.EXE<br />
+  File SETUP.EXE<br />
+  ExecWait &quot;AUTOMATE.EXE&quot;<br />
+  RMDir /R &quot;$TEMP\SETUP.PD&quot;<br />
+SectionEnd<br />
+<br />
+When I run the compiled setup, it extracts the files to $TEMP\SETUP.PD, and seems to not run AUTOMATE.EXE. However, this works:<br />
+<br />
+!PackHdr TEMP.DAT &quot;UPX.EXE --best TEMP.DAT&quot;<br />
+OutFile PD.exe<br />
+SilentInstall Silent<br />
+CRCCheck On<br />
+<br />
+Section &quot;&quot;<br />
+  SetOutPath &quot;$TEMP\SETUP.PD&quot;<br />
+  File AUTOMATE.EXE<br />
+  File PATCH.EXE<br />
+  File SETUP.EXE<br />
+  ExecWait &quot;$TEMP\SETUP.PD\AUTOMATE.EXE&quot;<br />
+  RMDir /R &quot;$TEMP\SETUP.PD&quot;<br />
+SectionEnd<br />
+<br />
+But the first piece of code should work though, because Exec and ExecWait set the working directory, which is in this case, $TEMP\SETUP.PD.<br />
+<br />
+I'd be happy with the second piece of code, but something's wrong if I have to specify $TEMP\SETUP.PD\ on the ExecWait command, and I need to have the current directory set to that or hell will break loose.<br />
+<br />
+Hope I haven't lost too many people here.<br />
+<br />
+Anyone?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Edgewize</div><div class="date">20th May 2001, 16:35</div></div><div class="posttext">I came across this one, too ... the current working directory is never changed, AFAIK, regardless of how many SetOutPaths you use.<br />
+<br />
+I just rewrote my program to take the directory as an argument :/</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">yazno</div><div class="date">20th May 2001, 18:19</div></div><div class="posttext">hi,<br />
+<br />
+i tested it and came to the same conclusion: a bug in Exec and ExecWait.<br />
+<br />
+the $OUTDIR is not used as working directory as promised in the documentation.<br />
+<br />
+BUT .. i tried it with ExecShell and there it works fine.<br />
+<br />
+cu yzo</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">petersa</div><div class="date">21st May 2001, 08:32</div></div><div class="posttext">Well, I can't use ExecShell, because I need to make sure that AUTOMATE.EXE has finished before removing the folder.<br />
+<br />
+I could change AUTOMATE.EXE, but since I have 7 or 8 of these, it'll take a while to edit their sources and recompile them all...<br />
+<br />
+I think I'll wait for the bug fix. ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">yazno</div><div class="date">21st May 2001, 08:39</div></div><div class="posttext">hi,<br />
+<br />
+you could do it with execshell and popup a messagebox which says: 'click ok when automate.exe finished' or use sleep.<br />
+<br />
+i know both are just dirty workarounds and for sure, the best is to wait for a bugfix :)<br />
+<br />
+cu yzo</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">petersa</div><div class="date">21st May 2001, 08:54</div></div><div class="posttext">I'd like to but AUTOMATE.EXE, for the most part, is silent so you can't pinpoint when it's finished, or at least the user wouldn't be able to...and since there are also waits for user input, that wouldn't work either...<br />
+<br />
+Thanks anyway, yzo!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">yazno</div><div class="date">21st May 2001, 09:06</div></div><div class="posttext">hi,<br />
+<br />
+LOL - i don't wanna bother you, but i have a run now and one last solution until the new version comes out .. hehe.<br />
+<br />
+use execshell, then create a loop and check with findwindow(bytitle) if automate.exe is running ;)<br />
+<br />
+cu yzo</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">petersa</div><div class="date">21st May 2001, 09:10</div></div><div class="posttext">Not a bad idea! :cool:</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

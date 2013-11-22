@@ -1,0 +1,77 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Bug in &quot;Allow only one installer instance&quot; sample?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Bug in &quot;Allow only one installer instance&quot; sample? NSIS Discussion" />
+	
+	<title> Bug in &quot;Allow only one installer instance&quot; sample? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Bug in &quot;Allow only one installer instance&quot; sample?</div>
+<hr />
+<div class="pda"><a href="t-242255.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=242255">Bug in &quot;Allow only one installer instance&quot; sample?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">lybra</div><div class="date">31st March 2006, 13:30</div></div><div class="posttext">One of the examples on the NSIS home page is Allow only one installer instance (http://nsis.sourceforge.net/Allow_only_one_installer_instance). This contains the following code snippet:<br />
+<br />
+System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;myMutex&quot;) i .r1 ?e'<br />
+ <br />
+  Pop $R0 <br />
+ <br />
+  StrCmp $R0 0 +3 <br />
+    MessageBox MB_OK &quot;The installer is already running.&quot; <br />
+    Abort<br />
+Seems to me like this code contains errors. The output of the system call is saved in $1, not in $R0 (which is later used for Pop and StrCmp). Am I right, or am I missing something?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">31st March 2006, 13:40</div></div><div class="posttext">The code is correct. The &quot;?e&quot; flag makes System push the error code returned by GetLastError on the stack. If GetLastError returns ERROR_ALREADY_EXISTS, $R0 won't be 0 and the message box will pop-up. $1 contains the handle to the mutex which is of no interest to the script.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lybra</div><div class="date">31st March 2006, 14:25</div></div><div class="posttext">Thanks for the quick response. This definitely explains why the second sample snippet uses $1 instead of $R0 (as that example does need the handle). <br />
+<br />
+However, having only one installer running, when I use snippet 1 in my code, my installer claims there is another installer running, while when I use snippet 2, it doesn't. This would mean that GetLastError does return an error code. I'll search some more for the cause of that.<br />
+<br />
+edit:<br />
+After some more study, I've realised that the first and second sample are identical, at least to the point where I'm using them: both put the output of the CreateMutex call in some variable (but this does not get used, so my observation above, now italic, is incorrect), both push the GetLastError value on the stack, pop it in a variable and test if it is 0. So, now I'm even more puzzled as to why snippet 1 does not and snippet 2 does produce the correct outcome. My search continues...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">1st April 2006, 15:16</div></div><div class="posttext">This works<br />
+  ;create mutex<br />
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;myMutex&quot;) i .r1 ?e'<br />
+  Pop $R0<br />
+  StrCmp $R0 0 +3<br />
+    MessageBox MB_OK|MB_ICONEXCLAMATION &quot;The installer is already running.&quot;<br />
+    Abort</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lybra</div><div class="date">3rd April 2006, 09:04</div></div><div class="posttext">Thanks, indeed that works.<br />
+<br />
+I've got a non-reproducable error here. Code that have worked before resulted in an error, but only one machine. On other machines, it worked fine. Doesn't seem to be a NSIS-issue.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">4th April 2006, 00:23</div></div><div class="posttext">specs?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">lybra</div><div class="date">4th April 2006, 16:01</div></div><div class="posttext">We have re-tested it today on the same computer, but it didn't reproduce the error. We consider it a non-issue. Thanks for your help anyway.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">John P.</div><div class="date">7th April 2006, 17:26</div></div><div class="posttext">-I attempted to use this code (last example in this thread) in my rather large installer (approx. 80MB) script, but it made the installer spend a whole lot of time extracting all the files on initialisation (I use solid lzma compression), which with all my files took a lot of time(it counted from 0 to 100%).<br />
+<br />
+As soon as I removed this code, the resulting installer opened immediately, no files extracted.<br />
+<br />
+-What file would I have to include/Reserve in order to avoid the lengthy file extraction on startup? Kernel32.dll?<br />
+<br />
+I have .onInit on top of my list of Functions, btw.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th April 2006, 17:30</div></div><div class="posttext">The code only needs to extract the System plug-in, so you need to reserve just that. You can also move .onInit to the top of the script.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

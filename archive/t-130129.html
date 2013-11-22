@@ -1,0 +1,100 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" MUI installer error on NT4, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  MUI installer error on NT4 NSIS Discussion" />
+	
+	<title> MUI installer error on NT4 [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  MUI installer error on NT4</div>
+<hr />
+<div class="pda"><a href="t-130129.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=130129">MUI installer error on NT4</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">RDaneel</div><div class="date">29th March 2003, 03:31</div></div><div class="posttext">[Probably for Joost]<br />
+<br />
+My question is really a two-parter:<br />
+<br />
+1) only on NT4 (SP6), my MUI NSIS-built installer ALWAYS gives the following error when installing back-to-back (note that with my in-use DLL, the installer is always doing a &quot;/REBOOTOK&quot; rename operation, and the user (me) always accepts the &quot;reboot now?&quot; invitation):<br />
+<br />
+Error opening file for writing: &quot;\\ioSpecial.ini&quot;<br />
+<br />
+followed by an &quot;Abort-Retry-Ignore&quot; dialog... this is BEFORE anything of the installer is displayed.  Anyway, if I do an &quot;Ignore&quot;, the installer limps along (probably with messed-up pages displayed), whereas if I do ONE &quot;Abort&quot;, and then run the installer again, it ALWAYS is happy and runs without error.<br />
+<br />
+This particular behavior ONLY happens on NT4 - not 95, 98, 2000, or XP.<br />
+<br />
+2) Possibly related to the above, under 95, 98, or NT4 each of the above-described back-to-back installs always leaves a &quot;nstN.tmp&quot; folder in the system temp directory, containing the following files:<br />
+<br />
+InstallOptions.dll<br />
+Startmenu.dll<br />
+System.dll<br />
+modern-wizard.bmp<br />
+ioSpecial.ini<br />
+<br />
+Note that while this same folder of files is left for 95, 98, and NT4, there is only the associated run-time error mentioned above under NT4.<br />
+<br />
+OTOH, these installer-generated folders are NOT left behind under 2000 or XP when doing the same sequence of operations.<br />
+<br />
+Is this possibly going to be handled when the new remove-directory-on-reboot functionality is implemented, or is this something else entirely?  And, can I provide any more info to help figure this out? :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th March 2003, 11:52</div></div><div class="posttext">You have probably forgot to unload System.dll. If you fon't unload it NSIS can't delete it ;)<br />
+Remove /NOUNLOAD from the last call to System.dll.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RDaneel</div><div class="date">29th March 2003, 18:07</div></div><div class="posttext">Originally posted by kichik <br />
+You have probably forgot to unload System.dll. If you fon't unload it NSIS can't delete it ;)<br />
+Remove /NOUNLOAD from the last call to System.dll. <br />
+<br />
+Thanks for the reminder, but I don't think that is the issue... and did you notice the part about the same installer works properly under 2000 and XP, and only leaves these temp folders on 95, 98, and NT4? :)<br />
+<br />
+Here is the end of the installer (the section started with &quot;SetPluginUnload alwaysoff&quot;):<br />
+<br />
+	# [attempt to] rename and register our Shell extension<br />
+	Rename /REBOOTOK &quot;$INSTDIR\RFtpSX.tmp&quot; &quot;$INSTDIR\RFtpSX.dll&quot;<br />
+	IfRebootFlag delayedRegistration<br />
+	RegDLL &quot;$INSTDIR\RFtpSX.dll&quot;<br />
+	System::Call 'Shell32::SHChangeNotify(i, i, i, i) v (${SHCNE_ASSOCCHANGED}, ${SHCNF_IDLIST}, 0, 0)'<br />
+	System::Call 'Ole32::CoFreeUnusedLibraries() v'<br />
+	Goto doneWithDLL<br />
+delayedRegistration:<br />
+	WriteRegStr HKLM &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce&quot; \<br />
+     &quot;Register $INSTDIR\RFtpSX.dll&quot; '&quot;$SYSDIR\rundll32.exe&quot; &quot;$INSTDIR\RFtpSX.dll,DllRegisterServer&quot;'<br />
+doneWithDLL:<br />
+<br />
+	# write our Uninstall info<br />
+	WriteRegStr HKLM &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\RFtpPRO&quot; \<br />
+		&quot;DisplayName&quot; &quot;RFtp Professional&quot;<br />
+	WriteRegStr HKLM &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\RFtpPRO&quot; \<br />
+		&quot;UninstallString&quot; &quot;$R9&quot;<br />
+<br />
+	SetPluginUnload manual<br />
+	System::Free 0	; (make plugin go alway)<br />
+<br />
+	# create uninstaller<br />
+	WriteUninstaller &quot;Uninstall.exe&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+Comments?  Anyone?  BTW, I tried to adapt the reg-dll-at-reboot code from the UpgradeDLL macro... did I &quot;borrow&quot; the code correctly? ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th March 2003, 18:19</div></div><div class="posttext">You can never know with Microsoft... :p<br />
+<br />
+If all of the files are still there it seems $PLUGINSDIR was destroyed in some bizzare way... Probably has something to do with brainsucker's bug that I haven't reached to yet. He had about the same thing where $PLUGINGSDIR is empty somehow. I'll check it tomorrow or in two days (kinda busy next two days) and let you both know.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">RDaneel</div><div class="date">29th March 2003, 22:18</div></div><div class="posttext">Just to let you know - I am using the released BETA 3... :)<br />
+<br />
+I have been waiting for the dust to settle with the newer System.dll.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

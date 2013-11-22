@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" AppData/LocalLow Temp Directory and Uninstall, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  AppData/LocalLow Temp Directory and Uninstall NSIS Discussion" />
+	
+	<title> AppData/LocalLow Temp Directory and Uninstall [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  AppData/LocalLow Temp Directory and Uninstall</div>
+<hr />
+<div class="pda"><a href="t-319693.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=319693">AppData/LocalLow Temp Directory and Uninstall</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Gnometech</div><div class="date">4th June 2010, 22:03</div></div><div class="posttext">Greetings!<br />
+<br />
+I'm using NSIS to install an IE8 browser plug-in into AppData/LocalLow under Vista -- a Protected Mode plug-in.  That works as expected and all is well.  However, I run into trouble with the automatically generated uninstaller.<br />
+<br />
+I understand that the NSIS uninstaller automatically copies itself into the system's TEMP directory to allow for complete removal of the original directory.  Under Vista this points to AppData/Local/Temp, which is fine for a normal application.  Unfortunately, this is incorrect for a Protected Mode application, where the TEMP directory should be AppData/LocalLow/Temp.  NSIS responds with the following dialog when attempting to launch the uninstaller:<br />
+<br />
+Error writing temporary file.  Make sure your temp folder is valid.<br />
+<br />
+It doesn't look like NSIS is taking the Protected Mode into account and switching to the correct directory.<br />
+<br />
+Under the current version of NSIS, is there anything I can do to work around this?  Can I force the directory the uninstaller will be copied to?  I would even settle for not copying the uninstaller at all and just leave the directory around on the system.<br />
+<br />
+If there is no current work around, are there any plans on supporting these types of Protected Mode applications?<br />
+<br />
+Thanks!<br />
+<br />
+- Dave</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">coliveira</div><div class="date">4th June 2010, 23:16</div></div><div class="posttext">If you can pass command-line options to the installer, _?= should solve your problem. See http://nsis.sourceforge.net/Docs/Chapter3.html#3.2</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">5th June 2010, 07:40</div></div><div class="posttext">Blame windows for this, NSIS just asks for the temp dir with the official API and we get &quot;the wrong one&quot; (You would expect Protected Mode to handle this, but it does not) If you can point me to a API we could use without hardcoding the path, we should be able to fix it...<br />
+<br />
+As a workaround, generate the uninstaller at compile time like we do with signing, include this uninstaller in a small nsis &quot;application&quot; (not uninstaller) that just extracts the real uninstaller to $appdata\locallow\temp and runs the uninstaller (don't forget to run it with ?= and the path)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Gnometech</div><div class="date">16th June 2010, 16:44</div></div><div class="posttext">Greetings!<br />
+<br />
+I've now come back to this and tried out your suggestions.  Thanks coliveira and Anders!<br />
+<br />
+I've gone ahead and did what Anders suggested.  I've created a simple installer that wraps around the actual uninstaller.  This &quot;uninstaller installer&quot; puts the uninstaller into LocalLow/Temp and does an Exec while including the _?= parameter.  Unfortunately, I still end up with the following dialog:<br />
+<br />
+Error writing temporary file. Make sure your temp folder is valid.<br />
+<br />
+Interestingly, this error dialog appears with the &quot;uninstaller installer&quot; even before it gets to copying the true uninstaller.  Do NSIS installers also make use of the system's TEMP directory?  Or would not being able to access the TEMP directory while creating the %TEMP% constant also cause this error?  I suspect Protected Mode is causing even more issues with NSIS.<br />
+<br />
+To test this out, I copied my working NSIS installer -- the one that installs my program I'm trying to uninstall -- into the LocalLow directory.  When I try to run it, I get that same error dialog about the temporary file.  The installer of course works if it is run from a user's documents directory.<br />
+<br />
+As another test, I manually copied my uninstaller (created using the procedure suggested by Anders) into LocalLow/Temp.  I then run it from the command line and include the _?= parameter pointing to the correct directory.  And once again, I still get that temporary file dialog.<br />
+<br />
+Finally, I manually copied my uninstaller into the Local/Temp directory and ran it from the command line using the correct _?= parameter.  From there it runs just fine.<br />
+<br />
+It would be great if you guys could try this out too.  Under a non-privileged account, copy any NSIS installer into a LocalLow directory (could use LocalLow/Temp if you'd like).  Then try to run the installer and see what happens.  You could also take any NSIS uninstaller executable and run it from the LocalLow/Temp directory with the _?= parameter and see what happens.<br />
+<br />
+At this point, I'm stuck.  It doesn't look like NSIS installers or uninstallers may be run from the Protected Mode LocalLow directory (TEMP or not).  Hopefully given that this may be tested from any Vista (and Win7?) machine with a non-privileged account, and any NSIS installer or uninstaller, the NSIS code base could be changed in the future to better support Protected Mode.  This would include not erroring out when there are issues with the temporary directory (maybe through a command line switch).<br />
+<br />
+Vista sucks in that it doesn't provide the correct APIs to deal with Protected Mode.  Nor, from my own experience, does it modify the output of its existing APIs when working in Protected Mode.  Unfortunately we need to use Protected Mode to allow for non-privileged plug-ins to run under IE8.<br />
+<br />
+Thanks!<br />
+<br />
+- Dave</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">16th June 2010, 20:44</div></div><div class="posttext">I'm guessing we will need to hardcode the temp path to %localappdatalow%\temp if the normal temp path fails</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Gnometech</div><div class="date">16th June 2010, 22:34</div></div><div class="posttext">Thanks for replying, Anders.<br />
+<br />
+If someone does go down the path of modifying NSIS to support protected mode, this may help: Getting the Integrity Level for an Access Token (http://msdn.microsoft.com/en-us/library/bb625966.aspx)<br />
+<br />
+I've not tried it out myself just yet, but it looks like if the process comes back as Low Integrity, assume the localappdatalow Temp directory.  Once that change goes in, I'd be willing to test it out. :D<br />
+<br />
+Thanks!<br />
+<br />
+- Dave</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">16th June 2010, 22:39</div></div><div class="posttext">I don't really see the need to check the token, if we don't have write access to %temp% or %windir%\temp, we should just try the low temp dir</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">PoRtAbLe_StEaLtH</div><div class="date">6th January 2013, 07:43</div></div><div class="posttext">I'm guessing we will need to hardcode the temp path to %localappdatalow%\temp if the normal temp path fails<br />
+<br />
+<br />
+<br />
+is $LOCALAPPDATALOW an official variable?<br />
+i can't seem to find any documentation on it.<br />
+i've been using it for quite a while.. and works well except in XP.. it leaves behind:<br />
+Application DataLOW<br />
+<br />
+not that big a deal..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">6th January 2013, 08:04</div></div><div class="posttext">$LOCALAPPDATALOW is not a variable. $LOCALAPPDATA is, so if you enter $LOCALAPPDATALOW it will append 'LOW' to the contents of $LOCALAPPDATA. I'm assuming that the exact name of the locallow folder can be changed by the user, so appending LOW to localappdata will not always work. You'll probably have to call SHGetKnownFolderPath to get the actual path.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Brummelchen</div><div class="date">6th January 2013, 15:01</div></div><div class="posttext">LocalLow is not for user business, its strict OS business - keep your fingers off.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">7th January 2013, 03:13</div></div><div class="posttext">LocalLow is not for user business, its strict OS business - keep your fingers off.<br />
+<br />
+Apps that run @ Low IL (IE Protected mode) are allowed to use the Low folder, that's what it's there for...</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

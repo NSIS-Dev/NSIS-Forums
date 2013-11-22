@@ -1,0 +1,127 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How do you do a DNS lookup, like nslookup?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How do you do a DNS lookup, like nslookup? NSIS Discussion" />
+	
+	<title> How do you do a DNS lookup, like nslookup? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How do you do a DNS lookup, like nslookup?</div>
+<hr />
+<div class="pda"><a href="t-245330.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=245330">How do you do a DNS lookup, like nslookup?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">pisymbol</div><div class="date">3rd May 2006, 20:40</div></div><div class="posttext">Is there a way to do this easily?  I can't seem to get this to work.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pisymbol</div><div class="date">3rd May 2006, 23:02</div></div><div class="posttext">Anyone have any clue on how to do this?  I have an IP address and I want to get back the domain piece...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pisymbol</div><div class="date">4th May 2006, 00:13</div></div><div class="posttext">It seems I want gethostbyaddress() from the ws32_32 API but I don't quite grasp the syntax of the System pluging.<br />
+<br />
+It uses parameters lists to pass pack and forth between NSIS and System32 DLL variables.  I appologize, I am new to the Windows world (I'm aUNIX guy).<br />
+<br />
+Alright, the gethostbyaddress() from what I gather can take a string for an IP and return the DNS name (what I want).  I realize it has been deprecated by gethostentry() but anyway...<br />
+<br />
+Can someone give me a quick example and EXPLAIN the syntax?  <br />
+<br />
+Based on the doc:<br />
+<br />
+System::Call 'CondMgr::CmGetHotSyncExecPath(t, *i) i(.r0, r1r1).r2'<br />
+<br />
+This says CmGetHostSyncExecPath takes a pointer to a string, pointer to an int returns an int.  The t is address of r0 with no input/output passing, the *i comes from r1 and whatever is returned in r1 after the call completes and the return value should be placed in r2.  Right?<br />
+<br />
+So by that logic for gethostbyaddress() I should have<br />
+<br />
+System::Call 'ws32_32::gethostbyaddress(t) t($IPADDRESS).r5'<br />
+<br />
+Pass a string which is my variable IPADDRESS and the return value (the string I presume) place it in r5.  This barfs miserably.  Obviously its pilot error but can I get a quick explanation?  Maybe I'm looking at the wrong API doc on MSDN...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pisymbol</div><div class="date">4th May 2006, 00:16</div></div><div class="posttext">Whooops...looks like I am looking at the wrong API doc...arrghhh..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pisymbol</div><div class="date">4th May 2006, 01:02</div></div><div class="posttext">System::Call 'ws2_32::WSAStartup(i 514, i r2) i .r3'<br />
+# Convert IP to proper format<br />
+System::Call 'ws2_32::inet_addr(t &quot;$IPADDRESS&quot;) l .r5'<br />
+System::Call 'ws2_32::gethostbyaddr(t r5, i 4, i 2) *i .r6'<br />
+<br />
+The above crashes on the gethostbyaddr call.  What am I doing wrong?  I would think the pointer to the hostent structure would be returned in R6, right?<br />
+<br />
+Again, any help would be much appreciated (I'm starting to get the SystemDLL plugin).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">4th May 2006, 09:57</div></div><div class="posttext">Where is $IPADDRESS coming from, or have you not posted all your code?<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">4th May 2006, 10:12</div></div><div class="posttext">The first command should be <br />
+System::Call 'ws2_32::WSAStartup(i 514, *i .r2) i .r3'(note the * and the . before r2). It is a pointer (hence the *) and you are getting it out of the function (hence the .).<br />
+Your code will give an error since the first call fails to initiallize the WS2_32 process.<br />
+<br />
+I think that the 3rd call is also wrong. Maybe try to allocate the hostent (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/winsock/winsock/hostent_2.asp) structure instead of pointing $6 to it:System::Call '*(t,t,i,i,t)i.s'<br />
+Pop $6<br />
+System::Call 'ws2_32::gethostbyaddr(t r5, i 4, i ${AF_INET}) i r6'I am not also sure about the 't r5' on the third call. You get an unsigned long from the second call to $5 and then you place this as a 't' on the third call?<br />
+<br />
+I'll try to look at this as soon as I get to work.<br />
+<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">4th May 2006, 12:34</div></div><div class="posttext">This code works:<br />
+!define AF_INET 2<br />
+!define strhostent '(t,t,i,i,t)i'<br />
+StrCpy $IPADDRESS &quot;aaa.xxx.yyy.zzz&quot; ; put your address here<br />
+System::Call 'Ws2_32::WSAStartup(i 514, *i .r2) i .r3'<br />
+System::Call 'Ws2_32::inet_addr(t &quot;$IPADRESS&quot;) l .r5'<br />
+System::Call 'Ws2_32::gethostbyaddr(*l r5, i 4, i ${AF_INET}) i .r6'<br />
+System::Call '*$6${strhostent}(.R1,,,,)'<br />
+DetailPrint 'The full DNS name of &quot;$IPADDRESS&quot; is &quot;$R1&quot;'<br />
+System::Call 'Ws2_32::WSACleanup()i.R9'<br />
+System::Free $6<br />
+This gives you the full domain name. For example if $IPADDRESS is '205.188.229.57' $R1 will be 'waforumweb-dtc1l-0.stream.aol.com'<br />
+<br />
+:)<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pisymbol</div><div class="date">8th May 2006, 16:33</div></div><div class="posttext">Originally posted by CancerFace <br />
+This code works:<br />
+!define AF_INET 2<br />
+!define strhostent '(t,t,i,i,t)i'<br />
+StrCpy $IPADDRESS &quot;aaa.xxx.yyy.zzz&quot; ; put your address here<br />
+System::Call 'Ws2_32::WSAStartup(i 514, *i .r2) i .r3'<br />
+System::Call 'Ws2_32::inet_addr(t &quot;$IPADRESS&quot;) l .r5'<br />
+System::Call 'Ws2_32::gethostbyaddr(*l r5, i 4, i ${AF_INET}) i .r6'<br />
+System::Call '*$6${strhostent}(.R1,,,,)'<br />
+DetailPrint 'The full DNS name of &quot;$IPADDRESS&quot; is &quot;$R1&quot;'<br />
+System::Call 'Ws2_32::WSACleanup()i.R9'<br />
+System::Free $6<br />
+This gives you the full domain name. For example if $IPADDRESS is '205.188.229.57' $R1 will be 'waforumweb-dtc1l-0.stream.aol.com'<br />
+<br />
+:)<br />
+CF  <br />
+<br />
+Thanks dude.  I'm sorry for not getting back to you, I'm on vacation!<br />
+<br />
+This works for me though I had to make some changes.  I was still confused about the *l r5 over the t r5 and the gethostname thread I believe is wrong since its not allocating a buffer to store the name (I had to combine the two).<br />
+<br />
+Anyway, I'm starting to get a hand of the System syntax - its still awkward though!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">8th May 2006, 20:47</div></div><div class="posttext">and the gethostname thread I believe is wrong since its not allocating a buffer to store the name (I had to combine the two).:igor:<br />
+You lost me there ... The above code works for me for a given IP in $IPADDRESS. There is no reason to allocate space for the name as it will be allocated by the system (in $6)...<br />
+<br />
+CF</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

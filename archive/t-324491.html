@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" UAC_AsUser_ExecShell and %INSTDIR, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  UAC_AsUser_ExecShell and %INSTDIR NSIS Discussion" />
+	
+	<title> UAC_AsUser_ExecShell and %INSTDIR [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  UAC_AsUser_ExecShell and %INSTDIR</div>
+<hr />
+<div class="pda"><a href="t-324491.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=324491">UAC_AsUser_ExecShell and %INSTDIR</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">1st December 2010, 22:27</div></div><div class="posttext">Hello.<br />
+<br />
+I'm using the UAC plugin v0.2.2c in my installer and so far everything seems to work fine. However there is a problem with the UAC_AsUser_ExecShell macro, which I'd like to use to launch the app after install. Unfortunately it doesn't work as expected, because obviously the &quot;outer&quot; installer still has the default install path in its $INSTDIR rather than the install path chosen by the user (I found out that the execution fails because a wrong path is used via ProcessMonitor, by the way).<br />
+<br />
+My current workaround is as follows:<br />
+Function .onInstSuccess<br />
+	!insertmacro UAC_AsUser_Call Function LaunchApplication ${UAC_SYNCINSTDIR}<br />
+FunctionEnd<br />
+Function LaunchApplication<br />
+	ExecShell &quot;explore&quot; &quot;$INSTDIR&quot;<br />
+	Exec '&quot;$INSTDIR\Program.exe&quot;'<br />
+FunctionEnd<br />
+<br />
+Is there a more simple way to do this, e.g. by using UAC_AsUser_ExecShell macro ???<br />
+<br />
+Thanks in advance!<br />
+<br />
+(BTW: Is there a docu on UAC v0.2.2 anywhere? The Wiki page seems to be outdated)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">1st December 2010, 23:44</div></div><div class="posttext">I'm guessing the UAC_AsUser_ExecShell macro is missing the ${UAC_SYNCINSTDIR} flag. And not there is no real documentation for 0.2 (I did not write most of the current page on the wiki either, but hey, it's a wiki, anyone can edit)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">2nd December 2010, 15:00</div></div><div class="posttext">Before I can (or should) edit the Wiki, I need to understand first ;)<br />
+<br />
+Could you please tell me how to apply the ${UAC_SYNCINSTDIR} flag to the &quot;UAC_AsUser_ExecShell&quot; macro? To which of its parameters the flag has to go?<br />
+<br />
+Regards,<br />
+MuldeR.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">2nd December 2010, 17:56</div></div><div class="posttext">If you look in UAC.nsh, you'll see that the UAC_AsUser_ExecShell macro calls UAC_AsUser_Call using UAC_SYNCREGISTERS and UAC_SYNCOUTDIR, but not UAC_SYNCINSTDIR. You could try adding it yourself, or you can use a macro such as this:<br />
+<br />
+!macro _SyncVariable _variable<br />
+  !define Lprefix L${__LINE__}<br />
+  push $R0<br />
+  goto _SyncVariableInner${Lprefix}<br />
+  _SyncVariableOuter${Lprefix}:<br />
+    StrCpy $R0 ${_variable}<br />
+    return<br />
+  _SyncVariableInner${Lprefix}:<br />
+  !insertmacro UAC_AsUser_Call Label _SyncVariableOuter${Lprefix} ${UAC_SYNCREGISTERS}<br />
+  StrCpy ${_variable} $R0<br />
+  !undef Lprefix<br />
+  pop $R0<br />
+!macroend<br />
+!define SyncVariable `!insertmacro _SyncVariable`<br />
+<br />
+And then:<br />
+    ${SyncVariable} $INSTDIR<br />
+<br />
+(But of course this macro synchronizes from outer to inner, you'll probably want the reverse. Modifying the code is left as an exercise to the reader.)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">2nd December 2010, 20:20</div></div><div class="posttext">If you look in UAC.nsh, you'll see that the UAC_AsUser_ExecShell macro calls UAC_AsUser_Call using UAC_SYNCREGISTERS and UAC_SYNCOUTDIR, but not UAC_SYNCINSTDIR.<br />
+<br />
+May I suggest to add it then?<br />
+<br />
+I think it's quite common to call UAC_AsUser_ExecShell for launching the installed application from the actual install directory. And in this situation the programmer would expect $INSTDIR to be synced. I can hardly think of a situation where you don't want it synced...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">2nd December 2010, 20:31</div></div><div class="posttext">it's on my todo list</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">2nd December 2010, 20:38</div></div><div class="posttext">it's on my todo list<br />
+<br />
+Great :)<br />
+<br />
+What do you think about adding UAC_AsUser_Exec and UAC_AsUser_ExecWait macros?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">2nd December 2010, 20:48</div></div><div class="posttext">There is nothing stopping you from creating any kind of *Exec* helper macro yourself. But, my take on this is; CreateProcess is almost useless since windows could decide for any reason that your app requires elevation (Compat shim, installer detection etc) so you should stick with ShellExecute</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

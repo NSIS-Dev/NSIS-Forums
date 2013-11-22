@@ -1,0 +1,92 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" [delete user account] remaining home directory, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  [delete user account] remaining home directory NSIS Discussion" />
+	
+	<title> [delete user account] remaining home directory [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  [delete user account] remaining home directory</div>
+<hr />
+<div class="pda"><a href="t-311336.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=311336">[delete user account] remaining home directory</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ginglese</div><div class="date">2nd September 2009, 10:45</div></div><div class="posttext">Hi all,<br />
+<br />
+During my install I'm creating a user account (postgres). Then When uninstalling I'm using the UserMgr plugin to delete a user account.<br />
+User account is correctly deleted but the user home directory remain and the next time i install the software i have a new home directoy named postgres.%computer name%.001 ...<br />
+<br />
+I made a lot of search on the web to find a way do delete this remaining directory and ended with the only solution that is to retrieve the user home directory thanks to the ProfileImagePath registry keys.<br />
+<br />
+But to do so I need to retreive first the user profil SID, then go to the registry and look to ProfileImagePath keys.<br />
+<br />
+here is an exemple made with win32 c# (i guess)<br />
+<br />
+require 'win32/security'<br />
+require 'win32/registry'<br />
+<br />
+key = &quot;SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\&quot;<br />
+usr = 'some_user'<br />
+<br />
+sec = Win32::Security::SID.open(usr)<br />
+key += sec.to_s<br />
+<br />
+Win32::Registry::HKEY_LOCAL_MACHINE.open(key) do |reg|<br />
+  puts reg['ProfileImagePath']<br />
+end<br />
+<br />
+<br />
+to do the same with C++ win32 code i need to use LookupAccountName then convert SID to string ...<br />
+<br />
+do you have better solution ? or is nsis providing something for that ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">2nd September 2009, 13:16</div></div><div class="posttext">Well, can't you just get the home directory with the UserMgr plugin (UserMgr::GetUserInfo) before deleting the account, then delete the account, and then delete the Home directory you just got before?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ginglese</div><div class="date">2nd September 2009, 13:30</div></div><div class="posttext">Hi,<br />
+Thanks for the tip but the Home directory from UserMgr plugin is always empty (you can look at a user account with the administrator tools, you have access to the home directory field).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ginglese</div><div class="date">2nd September 2009, 13:57</div></div><div class="posttext">Hello everybody,<br />
+<br />
+I think I found a way (replace &quot;pilgrim&quot; and &quot;postgres&quot; by your server name and user account name):<br />
+<br />
+-LookupAccountNameW retrieves SID from user name<br />
+-ConvertSidToStringSid converts SID to something like &quot;S-1-5-21-1801674531-*********-**********-***&quot;<br />
+-Then retrieve &quot;ProfileImagePath&quot; from HKLM &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList + string SID<br />
+-End by expending registry values.<br />
+<br />
+<br />
+ System::Call '*(&amp;w${NSIS_MAX_STRLEN})i.R8'<br />
+ System::Call 'advapi32::LookupAccountNameW(w &quot;pilgrim&quot;,w &quot;postgres&quot;,i R8,*i ${NSIS_MAX_STRLEN}, w .R1, *i ${NSIS_MAX_STRLEN}, *i .r0)i .r1'<br />
+ System::Call 'advapi32::ConvertSidToStringSid(i R8,*t .R1)i .r0'<br />
+<br />
+ ReadRegStr $0 HKLM &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$R1&quot; &quot;ProfileImagePath&quot;<br />
+ ExpandEnvStrings $0 $0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">2nd September 2009, 15:25</div></div><div class="posttext">When the Home directory from UserMgr is empty, it means that it's location has never been modified, and thus it is the default location.<br />
+But I'm not sure right now how to get this default location...<br />
+<br />
+I can add a GetUserSID function to UserMgr to simplify your solution, but I guess it's not really needed right now.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ginglese</div><div class="date">2nd September 2009, 15:39</div></div><div class="posttext">It would be great to have it in UserMgr plugin.<br />
+You may also want to add GetUserStringSID.<br />
+<br />
+Someone may also need the reverse function GetUserNameFromSID...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">2nd September 2009, 19:31</div></div><div class="posttext">OK, done.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

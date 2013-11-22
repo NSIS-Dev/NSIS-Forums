@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" error with zipdll, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  error with zipdll NSIS Discussion" />
+	
+	<title> error with zipdll [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  error with zipdll</div>
+<hr />
+<div class="pda"><a href="t-237165.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=237165">error with zipdll</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">rod78</div><div class="date">4th February 2006, 17:46</div></div><div class="posttext">I'm a newbie starting to use zipdll plugin.<br />
+I can't understand what's wrong with this script.<br />
+The setup terminates but with only example1.nsi in the destination directory, the content of the zipfile is not extracted. Details windows reports a strange error:<br />
+<br />
+Output folder: C:\666666<br />
+Extract: example1.nsi... 100%<br />
+Extracting contents of test.zip to C:\666666<br />
+  Error: <br />
+Completed<br />
+<br />
+I include the source, please help.<br />
+<br />
+!include &quot;zipdll.nsh&quot;<br />
+; The name of the installer<br />
+Name &quot;Name&quot;<br />
+<br />
+; The file to write<br />
+OutFile &quot;setup.exe&quot;<br />
+<br />
+; The default installation directory<br />
+InstallDir $PROGRAMFILES\example<br />
+<br />
+;Page license<br />
+Page directory<br />
+Page instfiles<br />
+<br />
+Function .onInit<br />
+  MessageBox MB_YESNO &quot;This will install my program. Do you wish to continue?&quot; IDYES gogogo<br />
+    Abort<br />
+  gogogo:<br />
+IfFileExists &quot;test.zip&quot; +9 0<br />
+MessageBox MB_RETRYCANCEL &quot;zipfile not found&quot; IDRETRY true IDCANCEL false<br />
+true:<br />
+Goto gogogo<br />
+false:<br />
+MessageBox MB_ICONSTOP &quot;Installation aborted.&quot;<br />
+Abort<br />
+FunctionEnd<br />
+<br />
+; The stuff to install<br />
+Section &quot;&quot; ;No components page, name is not important<br />
+<br />
+  ; Set output path to the installation directory.<br />
+  SetOutPath $INSTDIR<br />
+  ; Put file there<br />
+  File example1.nsi<br />
+!insertmacro ZIPDLL_EXTRACT &quot;test.zip&quot; &quot;$OUTDIR&quot; &quot;&lt;ALL&gt;&quot;<br />
+SectionEnd ; end the section<br />
+<br />
+Thanks for your support :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th February 2006, 17:53</div></div><div class="posttext">This code is wrong:IfFileExists &quot;test.zip&quot; +9 0You're jumping over the function's end. Labels are not instructions. That should probably be +5, but you should use a label anyway, it's simpler. You can also use the LogicLib (http://nsis.sourceforge.net/Docs/Chapter2.html#2.3.5.1), it's even simpler than that.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rod78</div><div class="date">4th February 2006, 18:02</div></div><div class="posttext">kichik, thanks for your response but i tried to remove the entire .onInit function and the error is still the same. :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">4th February 2006, 18:03</div></div><div class="posttext">This is one example where it may be better to avoid relative jumps.  <br />
+<br />
+If you use relative jumps, you'll have to remember to change them any time you add or remove lines of code. <br />
+<br />
+But, if you do as kichik suggests, you can make your code a bit more forgiving.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">4th February 2006, 18:09</div></div><div class="posttext">It looks like you are checking for the zip file in $PROGRAMFILES\example, but then you let the user pick another directory for the installation.  So, by the time you get to the section, you have switched to the $INSTDIR and are trying to unzip the file (which, of course, does not exist there.)<br />
+<br />
+If you expect the zip file to exist in the target folder, then you need to do you check AFTER the user picks the directory.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rod78</div><div class="date">4th February 2006, 18:34</div></div><div class="posttext">Thanks again for your help people but i think the main problem is not caused by wrong checking directory. Even this simple code doesn't work:<br />
+!include &quot;zipdll.nsh&quot;<br />
+OutFile &quot;setup.exe&quot;<br />
+InstallDir $PROGRAMFILES\example<br />
+<br />
+Section<br />
+ SetOutPath $INSTDIR<br />
+!insertmacro ZIPDLL_EXTRACT &quot;test.zip&quot; &quot;$OUTDIR&quot; &quot;&lt;ALL&gt;&quot;<br />
+ SetOutPath $INSTDIR<br />
+File example1.nsi<br />
+SectionEnd<br />
+<br />
+If i change &quot;$OUTDIR&quot; to a specified path (i.e &quot;c:\test&quot;) it works as expected. But i need to extract a zipfile (located in the same dir of the installer) into the destination dir.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">4th February 2006, 19:08</div></div><div class="posttext">OK, I downloaded ziplib just so I could see what was going on.<br />
+<br />
+I think I may have found the problem:<br />
+the insertmacro command (ZIPLIB_EXTRACT) is a compile-time command.  $OUTDIR is a runtime variable.  Therefore, $OUTDIR won't be defined when the insertmacro command is called, which is likely why your script is failing. <br />
+<br />
+I found that if I changed the statement to call the plugin directly, it works perfectly:<br />
+<br />
+ZipDLL::extractall &quot;test.zip&quot; &quot;$OUTDIR&quot;<br />
+<br />
+The other alternative would be to wrap the extract commands into a function that you can call during runtime, but using the pluging directly is probably just as easy unless you need additional language support.  (You may even want to talk to the author about any addtional change requests.)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rod78</div><div class="date">4th February 2006, 19:16</div></div><div class="posttext">Thanks Comperio, it make sense.<br />
+But your code still output an error (see details) and the content of the zipfile is not extracted.<br />
+Can you confirm please ?<br />
+I'm using this code:<br />
+<br />
+!include &quot;zipdll.nsh&quot;<br />
+OutFile &quot;setup.exe&quot;<br />
+InstallDir $PROGRAMFILES\example<br />
+<br />
+Section<br />
+SetOutPath $INSTDIR<br />
+ZipDLL::extractall &quot;test.zip&quot; &quot;$OUTDIR&quot;<br />
+File example1.nsi<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rod78</div><div class="date">4th February 2006, 19:46</div></div><div class="posttext">I resolved the problem.<br />
+I need to use &quot;$EXEDIR\test.zip&quot; to locate the zipfile correctly. Please forgive me for spamming the forum :)<br />
+Thanks for your help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">4th February 2006, 20:09</div></div><div class="posttext">Open mouth, insert foot...<br />
+<br />
+I found out that I had setup my testing wrong before.  Turns out that $OUTDIR really DOES work in your example above.  <br />
+<br />
+(I forgot that I used a different ZIP file in my 2 tests, but I failed to change the name in my script.  This is why I inorrectly assumed it was a compile-time/runtime problem.)  <br />
+<br />
+At least it good to know that someone was awake!  <br />
+:tinfoil:</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

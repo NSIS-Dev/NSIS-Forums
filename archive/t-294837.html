@@ -1,0 +1,107 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Service Fail/Recovery Actions, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Service Fail/Recovery Actions NSIS Discussion" />
+	
+	<title> Service Fail/Recovery Actions [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Service Fail/Recovery Actions</div>
+<hr />
+<div class="pda"><a href="t-294837.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=294837">Service Fail/Recovery Actions</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">QMastor</div><div class="date">21st July 2008, 03:32</div></div><div class="posttext">I am attempting to install and register a Windows service with some additional configuration. The ServiceLib library is useful for the initial registration, and I've worked out how to set the service's description (As seen in the console), but I am having trouble configuring recovery options.<br />
+<br />
+I've established that the &quot;ChangeServiceConfig2&quot; function (Defined in the &quot;advapi32&quot; library) can be used to set these options, but I'm not sure how to call it and pass the correct values.<br />
+<br />
+When using it to set the description, I called it like this (For all examples, assume that $0 contains the service's handle):<br />
+<br />
+!define _SERVICE_CONFIG_DESCRIPTION 1<br />
+<br />
+System::Call '*(t &quot;Description&quot;) i.r1'<br />
+System::Call 'advapi32::ChangeServiceConfig2(i r0, i ${_SERVICE_CONFIG_DESCRIPTION}, i r1) i.r2'<br />
+<br />
+<br />
+However, configuring fail actions requires a much more complicated parameter structure, and I don't really know what I'm doing (I'm ordinarily a C# developer, so the extent of my Windows API knowledge is what I've scrounged from pinvoke (http://www.pinvoke.net), and I have very little understanding of the System plugin).<br />
+<br />
+The call should look something like this:<br />
+<br />
+!define _SERVICE_CONFIG_FAILURE_ACTIONS 0x02<br />
+<br />
+System::Call 'advapi32::ChangeServiceConfig2(i r0, i ${_SERVICE_CONFIG_FAILURE_ACTIONS}, i r3) i.r4'<br />
+<br />
+<br />
+Where $3 contains a structure matching the following:<br />
+<br />
+typedef struct _SERVICE_FAILURE_ACTIONS {<br />
+  DWORD dwResetPeriod;<br />
+  LPTSTR lpRebootMsg;<br />
+  LPTSTR lpCommand;<br />
+  DWORD cActions;<br />
+  SC_ACTION *lpsaActions;<br />
+} SERVICE_FAILURE_ACTIONS, <br />
+ *LPSERVICE_FAILURE_ACTIONS;<br />
+<br />
+typedef struct _SC_ACTION {<br />
+  SC_ACTION_TYPE Type;<br />
+  DWORD Delay;<br />
+} SC_ACTION, <br />
+ *LPSC_ACTION;<br />
+<br />
+SC_ACTION_TYPEs<br />
+0 - No action<br />
+1 - Restart the service<br />
+2 - Reboot the computer<br />
+3 - Run a command<br />
+<br />
+<br />
+I've tried a few variations on the following:<br />
+<br />
+; An array of one SC_ACTION with &quot;restart&quot; action<br />
+System::Call '*(i 1, i 0) i.r5'<br />
+System::Call '*(i r5) i.r6'<br />
+<br />
+; SERVICE_FAILURE_ACTIONS<br />
+System::Call '*(i 0, t, t, i 1, i r6) i.r3'<br />
+<br />
+<br />
+But to no avail...<br />
+<br />
+If anyone can help me with this, it would be greatly appreciated. I've done extensive Googling on the subject, but it doesn't look like anyone's tried to do this via NSIS before.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">21st July 2008, 16:16</div></div><div class="posttext">Someone else may have better info about the DLL calls, but I thought I'd offer this as an alternate solution:<br />
+<br />
+You might have a look at a MS tool called sc.exe (http://support.microsoft.com/kb/251192).<br />
+<br />
+It's basically a command line service control manager, which you can run with nsExec.<br />
+<br />
+It seems like it *should* work in your situation and might be easier than DLL calls.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">QMastor</div><div class="date">22nd July 2008, 00:14</div></div><div class="posttext">Funnily enough I was actually trying to use the API calls so that I wouldn't need to be reliant on an external program (Namely &quot;sc.exe&quot;).<br />
+<br />
+I know that it has to be possible for the API calls to work, since that's how Windows (And probably &quot;sc.exe&quot;) does it, but I don't really have much experience with the &quot;System&quot; plugin. I'm very likely passing garbage parameters to the function call, and thus doing nothing.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">22nd July 2008, 01:05</div></div><div class="posttext">I think &quot;sc.exe&quot; is available for all Windows versions that support services (Windows NT, 2000, XP and later). So depending on that program shouldn't be a problem. You can simply include it into your installer and extract it to $PLUGINSDIR at runtime...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hobbes487</div><div class="date">28th December 2012, 22:13</div></div><div class="posttext">I know this is an old thread, but I am trying to solve the same problem.  I want to be able to set the recovery options when installing a service, but I don't want to rely on a separate program like sc.exe.  Anyone know if this is possible?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">30th December 2012, 13:00</div></div><div class="posttext">http://nsis.sourceforge.net/NSIS_Simple_Service_Plugin<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

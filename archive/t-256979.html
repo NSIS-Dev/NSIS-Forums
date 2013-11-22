@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" User Management using API calls, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  User Management using API calls NSIS Discussion" />
+	
+	<title> User Management using API calls [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  User Management using API calls</div>
+<hr />
+<div class="pda"><a href="t-256979.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=256979">User Management using API calls</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ICONICS2000</div><div class="date">6th October 2006, 13:41</div></div><div class="posttext">Hello<br />
+<br />
+Using this fantastic article,  when eumerating users is it possible to determine which group they are associated to?<br />
+<br />
+regards<br />
+<br />
+Carl</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">6th October 2006, 14:49</div></div><div class="posttext">The macro posted on the Wiki (http://nsis.sourceforge.net/User_Management_using_API_calls) uses a USER_INFO_0 (http://msdn.microsoft.com/library/en-us/netmgmt/netmgmt/user_info_0_str.asp) structure to pick the usernames. You can use a USER_INFO_3 (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/netmgmt/netmgmt/user_info_3_str.asp) structure which also contains the user's RID as well as his/her group's RID. Alternatively you can use NetUserGetInfo (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/netmgmt/netmgmt/netusergetinfo.asp) using the username to get the group information.<br />
+<br />
+Another option would be to use NetUserGetLocalGroups (http://msdn.microsoft.com/library/en-us/netmgmt/netmgmt/netusergetlocalgroups.asp) using the usernames from the NetUserEnum call in order to get the group names associated with that particular user.<br />
+<br />
+Note however that a single user may be associated with multiple groups.<br />
+<br />
+Hope this helps<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ICONICS2000</div><div class="date">6th October 2006, 14:59</div></div><div class="posttext">Thanks Cancer face,  would it be possible for an example?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">7th October 2006, 20:09</div></div><div class="posttext">Here is an example using the NetUserGetLocalGroups (http://msdn.microsoft.com/library/en-us/netmgmt/netmgmt/netusergetlocalgroups.asp) API function:<br />
+!macro GetUserGroups SERVER_NAME USERNAME GROUP_ARRAY_NAME<br />
+  # Get user's group(s)<br />
+  !define Index &quot;Line${__LINE__}&quot;<br />
+  # $R0 buffer with an array of LOCALGROUP_USERS_INFO_0 structures<br />
+  # $R1 holds the number of entries processed<br />
+  # $R2 holds the total number of entries<br />
+  System::Call 'netapi32::NetUserGetLocalGroups(w &quot;${SERVER_NAME}&quot;,w &quot;${USERNAME}&quot;,i 0,i 0,*i.R0,i ${NSIS_MAX_STRLEN},*i.R1,*i.R2)i.r2'<br />
+  StrCpy $R8 $R0<br />
+  StrCpy $9 0<br />
+  NSISArray::New /NOUNLOAD ${GROUP_ARRAY_NAME}<br />
+  ${Index}-loop:<br />
+    StrCmp $9 $R2 ${Index}-stop +1<br />
+    System::Call &quot;*$R0(w.R9)&quot;<br />
+    NSISArray::Write /NOUNLOAD ${GROUP_ARRAY_NAME} $9 &quot;$R9&quot;<br />
+    IntOp $R0 $R0 + 4<br />
+    IntOp $9 $9 + 1<br />
+    Goto ${Index}-loop<br />
+  ${Index}-stop:<br />
+  NSISArray::SizeOf /NOUNLOAD ${GROUP_ARRAY_NAME}<br />
+  Pop $0<br />
+  StrCmp $0 $R2 +2 +1<br />
+    MessageBox MB_OK|MB_ICONEXCLAMATION &quot;Could not place all the user's groups into an array!&quot;<br />
+  System::Call 'netapi32.dll::NetApiBufferFree(i R8)i .r2'<br />
+  !undef Index<br />
+!macroend<br />
+and call the macro using for example:!insertmacro GetUserGroups &quot;$ServerName&quot; &quot;$UserName&quot; &quot;UserGroupsArray&quot;Note that leaving $ServerName blank is the same as using the name of the local machine.<br />
+<br />
+So you could use the NetUserEnum function to enumerate all the users and place them in an array, then call the above macro for each user that you pop out of the array to see where he/she belongs. Don't forget to delete the array object(s) once you are done and to unload the array plugin.<br />
+<br />
+Note that I am using version 1 of the Array plugin<br />
+<br />
+Hope this helps<br />
+CF<br />
+<br />
+(updated also the wiki (http://nsis.sourceforge.net/User_Management_using_API_calls) ,adding the above macro)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">roni20888</div><div class="date">21st May 2008, 14:25</div></div><div class="posttext">i trying to use this function and i got the &quot;Could not place all the user's groups into an array!&quot;<br />
+ msg, and i don't know what to do.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">21st May 2008, 15:25</div></div><div class="posttext">What are the values of R1 and R2 that you get after calling NetUserGetLocalGroups? Try to pop them out.<br />
+Also, what does the array contain at the end of the call? Try the /Debug option (check Afro's plugin documentation)<br />
+If you are *not* using version 1 of the array plugin then you have to define the array in a different way - check Afro's plugin documentation ...<br />
+<br />
+I assume that you are calling the macro for an existing user that belongs to at least one group ...<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">roni20888</div><div class="date">22nd May 2008, 07:28</div></div><div class="posttext">i using Version: 1.7...<br />
+what does the array contain at the end of the call? he contain 2 vars.<br />
+<br />
+after calling NetUserGetLocalGroups<br />
+R1 = 2<br />
+R2 = 2<br />
+<br />
+but the user belogs to at lest 3 groups.<br />
+and in the end of the func i get the &quot;Could not place all the user's groups into an array!&quot;<br />
+msg. <br />
+<br />
+what can i do?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">roni20888</div><div class="date">22nd May 2008, 07:38</div></div><div class="posttext">also i defined the array like this:  ${Array} &quot;ArrayName&quot; 10 10</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">22nd May 2008, 09:29</div></div><div class="posttext">If *right* after the NetUserGetLocalGroups call R2 equals 2 it means that your user belongs only to 2 local groups, ie the call does not fail. Is it possible that the rest of the groups are, say, domain groups? Check also $2 after the NetApi call to see if there is an error and refer to the NetUserGetLocalGroups MSDN page for a description of the error.<br />
+<br />
+MSDN (http://msdn.microsoft.com/) seems to be shifting their pages a lot, you can find more info about NetUserGetLocalGroups here (http://msdn.microsoft.com/en-us/library/aa370655(VS.85).aspx)<br />
+According to that page you should be using NetUserGetGroups  (http://msdn.microsoft.com/en-us/library/aa370653(VS.85).aspx) to get the Global groups.<br />
+<br />
+The posted macro works in my hands and correctly enumerates 10 local groups for a user, using Array plugin v.1.0<br />
+<br />
+It would appear that the problem you have is related to the array plugin. In v.1.0 the following gives you the size of the array (ie the number of elements stored in the array)NSISArray::SizeOf /NOUNLOAD ${GROUP_ARRAY_NAME}<br />
+Pop $0However, at some point Stu added more options to that call, so you would have to pop a couple of times in order to get the number of elements out in v.1.7 of the plugin.<br />
+The following code which is Array v.1.7 compatible works for me and correctly enumerates 10 local groups for a user:<br />
+  # Get user's group(s)<br />
+  !define Index &quot;Line${__LINE__}&quot;<br />
+  # $R0 buffer with an array of LOCALGROUP_USERS_INFO_0 structures<br />
+  # $R1 holds the number of entries processed<br />
+  # $R2 holds the total number of entries<br />
+  System::Call 'netapi32::NetUserGetLocalGroups(w &quot;${SERVER_NAME}&quot;,w &quot;${USERNAME}&quot;,i 0,i 0,*i.R0,i ${NSIS_MAX_STRLEN},*i.R1,*i.R2)i.r2'<br />
+  StrCpy $R8 $R0<br />
+  StrCpy $9 0<br />
+  NSISArray::New /NOUNLOAD ${GROUP_ARRAY_NAME} 2 2<br />
+  ${Index}-loop:<br />
+    StrCmp $9 $R2 ${Index}-stop +1<br />
+    System::Call &quot;*$R0(w.R9)&quot;<br />
+    NSISArray::Write /NOUNLOAD ${GROUP_ARRAY_NAME} $9 &quot;$R9&quot;<br />
+    IntOp $R0 $R0 + 4<br />
+    IntOp $9 $9 + 1<br />
+    Goto ${Index}-loop<br />
+  ${Index}-stop:<br />
+  NSISArray::SizeOf /NOUNLOAD ${GROUP_ARRAY_NAME}<br />
+  Pop $0<br />
+  Pop $0<br />
+  Pop $0<br />
+  StrCmp $0 $R2 +2 +1<br />
+    MessageBox MB_OK|MB_ICONEXCLAMATION &quot;Could not place all the user's groups into an array!&quot;<br />
+  System::Call 'netapi32.dll::NetApiBufferFree(i R8)i .r2'<br />
+  !undef Index<br />
+<br />
+CF</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

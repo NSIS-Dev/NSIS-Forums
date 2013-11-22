@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" install all files after reboot, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  install all files after reboot NSIS Discussion" />
+	
+	<title> install all files after reboot [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  install all files after reboot</div>
+<hr />
+<div class="pda"><a href="t-292259.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=292259">install all files after reboot</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">vijaym</div><div class="date">25th May 2008, 03:30</div></div><div class="posttext">Hi All,<br />
+   I've looked through the various nsis help resources and haven't found a possible way to do the following:<br />
+<br />
+I would like to install all the files for our application (jars, jpgs, etc) after reboot if we determine such is necessary. This is somewhat similar to what installlib does but its' not only for dlls in use. We have some logic that determines if we need to reboot or not, and we want to set it up so that the files are automatically copied after the reboot. <br />
+<br />
+And we don't want to force the user to reboot. <br />
+<br />
+So if a reboot is necessary, the files will not be copied over. When the system is rebooted, potentially at a later time, then the files should be copied upon reboot.<br />
+<br />
+Is this possible using NSIS?<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">25th May 2008, 03:57</div></div><div class="posttext">You could create a temporary copy of your installer at some place on the user's HDD and then create an entry for your installer in the Registry at the following key:<br />
+<br />
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce<br />
+<br />
+The installer will be launched next time the user boots up his system. You can also pass some commandline args to your installer, so the installer knows that it's time to complete the install now (instead of restarting from the beginning) ...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BuilderBob</div><div class="date">25th May 2008, 09:26</div></div><div class="posttext">It's probably better to copy the files to a temp folder and use<br />
+HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager -&gt; PendingFileRenameOperations<br />
+<br />
+Running an installer on reboot in Vista with UAC on, will pop-up a message asking the user for permission. If user cancels, installation isn't complete...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">25th May 2008, 15:03</div></div><div class="posttext">Vista does a good job to make the lives of both, developers and users, harder ;)<br />
+I'll stick with XP x64 and Ubuntu ... <br />
+<br />
+Then maybe register the installer at:<br />
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run<br />
+<br />
+This will run the installer every time the system boots up, unless it's removed form that key again. So the installer could remove itself from the key if (and only if) setup was completed successfully. If the user aborts the setup, next reboot will offer a new attempt to complete the installation...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BuilderBob</div><div class="date">25th May 2008, 21:21</div></div><div class="posttext">Originally posted by LoRd_MuldeR <br />
+<br />
+Then maybe register the installer at:<br />
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run<br />
+<br />
+That's even worse if the installer must run as admin, since Windows Defender which is installed by default blocks applications that appear in this reg key ;)<br />
+<br />
+Maybe the best way is to put in Run or RunOnce an installer with user permissions that won't be blocked by Defender and won't pop-up UAC. It will show it's own friendly dialog informing the user of the resume, and only then run an admin process to copy the files (using UAC_plug-in maybe).<br />
+<br />
+I'm trying to do the same thing myself now.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">{_trueparuex^}</div><div class="date">25th May 2008, 22:25</div></div><div class="posttext">As BuilderBob suggest let the PendingFileRenameOperations do the job. You can do so by using the Rename instruction with /REBOOTOK flag in NSIS.<br />
+<br />
+E.g.<br />
+; Extract your file in temp directory<br />
+File &quot;/oname=$TEMP\file.tmp&quot; somefile.ext<br />
+<br />
+; Rename (move) your file to the destination. If the destination file already exist <br />
+; the file will be moved when the system reboots via PendingFileRenameOperations<br />
+Rename /REBOOTOK $TEMP\file.tmp $INSTDIR\somefile.ext<br />
+<br />
+You can also use PendingFileRenameOperations by invoking MoveFileEx() (http://msdn.microsoft.com/en-us/library/aa365240(VS.85).aspx) api with the system plug-in, but I think the Rename method is better cause it also works in Windows 9x / ME.<br />
+<br />
+PaR</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">vijaym</div><div class="date">25th May 2008, 23:21</div></div><div class="posttext">I don't think the Rename /REBOOTOK works for me because it delays the rename only if the file handle is in use. In my scenario it could be the case that just 1 file might be in use and i want to to delay the rename operations for all the other files as well.<br />
+<br />
+Looks like the movefileex api allows you to specify a flag to delay renames until reboot so that might work.<br />
+<br />
+Thanks for the help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">25th May 2008, 23:34</div></div><div class="posttext">Originally posted by BuilderBob <br />
+That's even worse if the installer must run as admin, since Windows Defender which is installed by default blocks applications that appear in this reg key ;)<br />
+<br />
+:eek: <br />
+<br />
+How can they do that? Most programs that need to run at system startup, such as &quot;agents&quot; and background processes, register themselves there. Blindly blocking all those processes will break the functionality of MANY applications, that's for sure...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BuilderBob</div><div class="date">26th May 2008, 08:59</div></div><div class="posttext">Originally posted by LoRd_MuldeR <br />
+:eek: <br />
+Most programs that need to run at system startup, such as &quot;agents&quot; and background processes, register themselves there. <br />
+I forgot to write that only those that require admin premissions (in it's Vista manifest, or have no manifest), will be blocked. Also, services are different. You can google &quot;defender&quot; + the Run reg key and find workarounds.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">{_trueparuex^}</div><div class="date">26th May 2008, 10:00</div></div><div class="posttext">Originally posted by vijaym <br />
+I don't think the Rename /REBOOTOK works for me because it delays the rename only if the file handle is in use.<br />
+Actually NSIS manual clearly states that the rename is delayed when the file already exist and it doesn't need to be in use. :) <br />
+<br />
+&quot;The destination file must not exist or the move will fail (unless you are using /REBOOTOK). If /REBOOTOK is specified, and the file cannot be moved (if, for example, the destination exists), then the file is moved when the system reboots.&quot;<br />
+PaR</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">26th May 2008, 10:32</div></div><div class="posttext">I think vijaym means that &quot;Rename /REBOOTOK&quot; works on single files. If you rename 10 files and 5 of them are currently locked, then 5 files are renamed and 5 files will be renamed on next reboot. What he wants: Either rename all files or (if only one of them is locked) delay all 10 files until next reboot...</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

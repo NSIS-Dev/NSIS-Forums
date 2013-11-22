@@ -1,0 +1,247 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" In need of help creating a custom page., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  In need of help creating a custom page. NSIS Discussion" />
+	
+	<title> In need of help creating a custom page. [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  In need of help creating a custom page.</div>
+<hr />
+<div class="pda"><a href="t-291952.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=291952">In need of help creating a custom page.</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">JayGunter</div><div class="date">18th May 2008, 03:36</div></div><div class="posttext">I have written a program specifically for Windows XP. This program requires the Hibernate function in XP to be enabled. After some research on how to check if the Hibernate function is enabled there will be a &quot;hiberfil.sys&quot; file marked as system, hidden on the root drive.<br />
+<br />
+In the installer I want to make a page where if &quot;hiberfil.sys&quot; does not exist it will display a page with a checkbox ensuring the user knows they are enabling Hibernate. The &quot;Next &gt;&quot; button can not be clickable unless the checkbox is checked. Once &quot;Next &gt;&quot; is clicked it will tell the installer to execute &quot;powercfg.exe /hibernate on&quot; during the install portion. But, if &quot;hiberfil.sys&quot; DOES exist, it will not display the page and will not run the command.<br />
+<br />
+Here are my questions: Is this possible to create and preform the way I would like it to?<br />
+<br />
+And if so, how would my script look and what would the checkbox field look like in my custom page file?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">18th May 2008, 10:49</div></div><div class="posttext">!include nsDialogs.nsh<br />
+!include LogicLib.nsh<br />
+<br />
+Name nsDialogs<br />
+OutFile nsDialogs.exe<br />
+ShowInstDetails show<br />
+<br />
+XPStyle on<br />
+<br />
+Var CreateDialog<br />
+Var Dialog<br />
+Var checkbox<br />
+Var Checkbox_State<br />
+<br />
+<br />
+Page custom nsDialogsPage nsDialogsPageLeave<br />
+page license<br />
+Page instfiles<br />
+<br />
+<br />
+<br />
+Function nsDialogsPage<br />
+<br />
+    ${If} $CreateDialog = 1<br />
+<br />
+        GetDlgItem $0 $HWNDPARENT 1<br />
+        EnableWindow $0 $Checkbox_State<br />
+<br />
+	nsDialogs::Create /NOUNLOAD 1018<br />
+	Pop $Dialog<br />
+<br />
+	${IfThen} $Dialog == error ${|} Abort ${|}<br />
+<br />
+	${NSD_CreateCheckbox} 60 60u 100% 10u &quot;Enable Hibernate&quot;<br />
+	Pop $Checkbox<br />
+<br />
+        ${If} $Checkbox_State == ${BST_CHECKED}<br />
+	      ${NSD_SetState} $Checkbox $Checkbox_State<br />
+	${EndIf}<br />
+<br />
+	${NSD_OnClick} $Checkbox nsDialogsPageCheckboxChange<br />
+<br />
+	nsDialogs::Show<br />
+	<br />
+    ${Else}<br />
+     <br />
+        Abort<br />
+       <br />
+    ${EndIf}<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+Function nsDialogsPageLeave<br />
+<br />
+	${NSD_GetState} $Checkbox $Checkbox_State<br />
+	MessageBox MB_OK &quot;CheckBox State:$\n$\n[$Checkbox_State]&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+Function nsDialogsPageCheckboxChange<br />
+<br />
+	Pop $0<br />
+<br />
+	${NSD_GetState} $Checkbox $Checkbox_State<br />
+<br />
+	GetDlgItem $0 $HWNDPARENT 1<br />
+        EnableWindow $0 $Checkbox_State<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+Function .onInit<br />
+<br />
+       ReadEnvStr $0 SYSTEMDRIVE<br />
+<br />
+       ${Unless} ${FileExists} &quot;$0\hiberfil.sys&quot;<br />
+<br />
+             StrCpy $CreateDialog 1<br />
+<br />
+       ${EndUnless}<br />
+<br />
+       StrCpy $Checkbox_State 0<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+<br />
+Section -<br />
+<br />
+        ${If} $Checkbox_State = 1<br />
+<br />
+	     DetailPrint &quot;Condition is true to execute powercfg.exe /hibernate&quot;<br />
+	<br />
+	${EndIf}<br />
+<br />
+       DetailPrint &quot;hello world&quot;<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JayGunter</div><div class="date">18th May 2008, 16:43</div></div><div class="posttext">I forgot to state I am using the Modern UI and I wanting to use a custom page. Assuming you can do this with the standard UI, I believe you would be able to do this in the Modern UI, correct?<br />
+<br />
+However, the script works great with the standard UI.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">19th May 2008, 00:01</div></div><div class="posttext">Sorry, my fault...<br />
+!include nsDialogs.nsh<br />
+!include LogicLib.nsh<br />
+<br />
+!include MUI2.nsh<br />
+<br />
+Name nsDialogs<br />
+OutFile nsDialogs.exe<br />
+ShowInstDetails show<br />
+<br />
+XPStyle on<br />
+<br />
+Var CreateDialog<br />
+Var Dialog<br />
+Var checkbox<br />
+Var Checkbox_State<br />
+<br />
+<br />
+Page custom nsDialogsPage nsDialogsPageLeave<br />
+!insertmacro MUI_PAGE_LICENSE &quot;${NSISDIR}\COPYING&quot;<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+Function nsDialogsPage<br />
+<br />
+  !insertmacro MUI_HEADER_TEXT &quot;nsDialogs custom page&quot; &quot;Enable Hibernate to continue&quot;<br />
+<br />
+    ${If} $CreateDialog = 1<br />
+<br />
+        GetDlgItem $0 $HWNDPARENT 1<br />
+        EnableWindow $0 $Checkbox_State<br />
+<br />
+	nsDialogs::Create /NOUNLOAD 1018<br />
+	Pop $Dialog<br />
+<br />
+	${IfThen} $Dialog == error ${|} Abort ${|}<br />
+<br />
+	${NSD_CreateCheckbox} 60 60u 100% 10u &quot;Enable Hibernate&quot;<br />
+	Pop $Checkbox<br />
+<br />
+        ${If} $Checkbox_State == ${BST_CHECKED}<br />
+	      ${NSD_SetState} $Checkbox $Checkbox_State<br />
+	${EndIf}<br />
+<br />
+	${NSD_OnClick} $Checkbox nsDialogsPageCheckboxChange<br />
+<br />
+	nsDialogs::Show<br />
+	<br />
+    ${Else}<br />
+     <br />
+        Abort<br />
+       <br />
+    ${EndIf}<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+Function nsDialogsPageLeave<br />
+<br />
+	${NSD_GetState} $Checkbox $Checkbox_State<br />
+	MessageBox MB_OK &quot;CheckBox State:$\n$\n[$Checkbox_State]&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+Function nsDialogsPageCheckboxChange<br />
+<br />
+	Pop $0<br />
+<br />
+	${NSD_GetState} $Checkbox $Checkbox_State<br />
+<br />
+	GetDlgItem $0 $HWNDPARENT 1<br />
+        EnableWindow $0 $Checkbox_State<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+Function .onInit<br />
+<br />
+       ReadEnvStr $0 SYSTEMDRIVE<br />
+<br />
+       ${Unless} ${FileExists} &quot;$0\hiberfil.sys&quot;<br />
+<br />
+             StrCpy $CreateDialog 1<br />
+<br />
+       ${EndUnless}<br />
+<br />
+       StrCpy $Checkbox_State 0<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+<br />
+Section -<br />
+<br />
+        ${If} $Checkbox_State = 1<br />
+<br />
+	     DetailPrint &quot;Condition is true to execute powercfg.exe /hibernate&quot;<br />
+	<br />
+	${EndIf}<br />
+<br />
+       DetailPrint &quot;hello world&quot;<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

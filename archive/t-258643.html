@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" InetLoad, GetSectionNames Problem, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  InetLoad, GetSectionNames Problem NSIS Discussion" />
+	
+	<title> InetLoad, GetSectionNames Problem [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  InetLoad, GetSectionNames Problem</div>
+<hr />
+<div class="pda"><a href="t-258643.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=258643">InetLoad, GetSectionNames Problem</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Chieftec</div><div class="date">31st October 2006, 02:58</div></div><div class="posttext">Hi,<br />
+<br />
+I have the following Problem:<br />
+I am using inetLoad to get stuff from the web. For this I am using the GetSectionNames (http://nsis.sourceforge.net/Get_all_section_names_of_INI_file) Function to loop over the INI-File:<br />
+<br />
+<br />
+Function .onInit<br />
+  #Loading updatefile<br />
+    InetLoad::load &quot;http://example.com/update.ini&quot; &quot;$TEMP\update.ini&quot;<br />
+FunctionEnd<br />
+<br />
+Function GetUpdates<br />
+    ReadINIStr $Path &quot;$TEMP\update.ini&quot; &quot;$9&quot; &quot;path&quot;<br />
+    InetLoad::load &quot;http://example.com/$Path&quot; &quot;$DESKTOP\$Path&quot;<br />
+    Push $0<br />
+FunctionEnd<br />
+<br />
+Section GetSections<br />
+    ${GetSectionNames} &quot;$DESKTOP\update.ini&quot; &quot;GetUpdates&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+When I use a simple MessageBox instead of the InetLoad:load it shows me all the sections in the INI-File... So why doesn't it work with InetLoad?<br />
+<br />
+Thank you in anticipation!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">31st October 2006, 03:30</div></div><div class="posttext">The most suitable answer to the event is that you didn't put the &quot;/NOUNLOAD&quot; optional parameter before the first parameter of all the &quot;InetLoad::load&quot; calls. Without it, the plug-in always unloads after the call is completed, except in some plug-ins. I have no information if this is true for this plug-in, specifically, so please check this information.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Chieftec</div><div class="date">31st October 2006, 13:26</div></div><div class="posttext">Thx deguix<br />
+I added the &quot;/NOUNLOAD&quot;-Parameter but it still doesn't work. Any other ideas how I can manage this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">31st October 2006, 13:36</div></div><div class="posttext">make sure the ini files are downloaded correctly, first.  The GetSectionNames call should be fine -if- the ini files are present and correct.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Chieftec</div><div class="date">31st October 2006, 14:31</div></div><div class="posttext">The INI-File is downloaded correctly...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">31st October 2006, 15:11</div></div><div class="posttext">Try just a ReadINIStr in your GetSections section.. see if that reads okay.. e.g.<br />
+ReadIniStr $0 &quot;$DESKTOP\update.ini&quot; &quot;GetUpdates&quot; &quot;somekey&quot;<br />
+where somekey should be an existing key name -_-</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">31st October 2006, 15:55</div></div><div class="posttext">InetLoad puts download result as string to stack. There are 2 reasons to pop this string in .onInit and later, first is to check download status (&quot;OK&quot;), the second - next InetLoad call tries to get more url/file pairs from stack and fails this case. You can use /end at the end of InetLoad command line to stop stack reading.<br />
+It was kichik who asked about few files download in the single plug-in call ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Chieftec</div><div class="date">31st October 2006, 17:41</div></div><div class="posttext">@Animaether: Yes, it works.<br />
+<br />
+@Takhir: Can you give me an example, please?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">31st October 2006, 18:35</div></div><div class="posttext">Example.nsi included to InetLoad package.InetLoad::load &quot;http://example.com/update.ini&quot; &quot;$TEMP\update.ini&quot; /END<br />
+Pop $0<br />
+StrCmp $0 &quot;OK&quot; +2<br />
+MessageBox MB_OK &quot;Download Failed: $0&quot;<br />
+...<br />
+Function GetUpdates<br />
+    ReadINIStr $Path &quot;$TEMP\update.ini&quot; &quot;$9&quot; &quot;path&quot;<br />
+    InetLoad::load &quot;http://example.com/$Path&quot; &quot;$DESKTOP\$Path&quot;<br />
+    Pop $0<br />
+FunctionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

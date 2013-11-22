@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" RunAs error: The stub received bad data., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  RunAs error: The stub received bad data. NSIS Discussion" />
+	
+	<title> RunAs error: The stub received bad data. [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  RunAs error: The stub received bad data.</div>
+<hr />
+<div class="pda"><a href="t-326709.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=326709">RunAs error: The stub received bad data.</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">happyhippo</div><div class="date">31st January 2011, 15:45</div></div><div class="posttext">Hi there,<br />
+<br />
+I am using the following expression to start an update program that requires admin rights:<br />
+<br />
+SetOutPath &quot;$EXEDIR&quot;<br />
+File &quot;RunAsDll\RunAs.dll&quot;<br />
+StrCpy $1 &quot;$ADMIN_LOGON&quot;<br />
+StrCpy $2 &quot;$ADMIN_PASSWD&quot;<br />
+StrCpy $3 &quot;$INST_TEMP\${UPDATE_FILE}&quot;<br />
+StrCpy $4 0<br />
+System::Call 'RunAs::RunAsW(w r1,w r2,w r3,*w .r4) i .r0 ? u'<br />
+DetailPrint &quot;RunAs Message: $4 ($0)&quot;<br />
+<br />
+If I run this script I receive the following error through the $4 variable: “The stub received bad data.” and the $0 variable shows the value 0.<br />
+<br />
+The script runs on RequestExecutionLevel user (if this makes any difference).<br />
+<br />
+I have double checked all of the variables $1-$3 but they are all correct. I also have searched the internet for this error but did not find anything that helped further.<br />
+<br />
+So does anybody know what this error means and how to resolve it?<br />
+<br />
+Many Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">31st January 2011, 18:53</div></div><div class="posttext">RPC_NT_BAD_STUB_DATA=The stub received bad data<br />
+<br />
+I can't tell you why it is failing, but I can tell you that this plugin has some bugs (leaks two kernel handles or the error string each time you call it) but that is not the reason why it fails.<br />
+<br />
+On my XP box, it fails with &quot;Access Denied&quot; if the secondary logon service is not running, so the only suggestion I have is to make sure that service is running. If I start that service this code works for me:<br />
+outfile test.exe<br />
+requestexecutionlevel user<br />
+page instfiles<br />
+section<br />
+initpluginsdir<br />
+SetOutPath $pluginsdir<br />
+File &quot;RunAs.dll&quot;<br />
+StrCpy $1 &quot;xxxxxx&quot;<br />
+StrCpy $2 &quot;xxxxxx&quot;<br />
+StrCpy $3 &quot;$sysdir\calc.exe&quot;<br />
+System::Call 'RunAs::RunAsW(w r1,w r2,w r3,*w .r4) i .r0 ? u'<br />
+SetOutPath $temp<br />
+messagebox mb_ok &quot;RunAs Message: $4 ($0)&quot;<br />
+sectionend<br />
+<br />
+My other suggestion would be to run Process Monitor and see if it gives you any hints (Bad path, access denied etc)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">happyhippo</div><div class="date">1st February 2011, 12:34</div></div><div class="posttext">The secondary logon service is running.  <br />
+<br />
+I have also tested your test script and faced the same problem.<br />
+<br />
+Then I have used the Process Monitor to watch the process but did not find any obstacles (but this may be due to my limited knowledge in that area). I have attached the Process Monitor recording, may be one of you can recognise any problem.<br />
+<br />
+My test script looks like the following:<br />
+<br />
+outfile test.exe <br />
+requestexecutionlevel user <br />
+page instfiles <br />
+Section <br />
+initpluginsdir <br />
+SetOutPath $pluginsdir <br />
+File &quot;RunAsDll\RunAs.dll&quot; <br />
+StrCpy $1 &quot;xxx&quot; <br />
+StrCpy $2 &quot;yyy&quot; <br />
+StrCpy $3 &quot;C:\WINDOWS\NOTEPAD.EXE&quot; <br />
+MessageBox MB_OK &quot;1:$1 2:$2 3:$3 4:$4&quot;<br />
+System::Call 'RunAs::RunAsW(w r1,w r2,w r3,*w .r4) i .r0 ? u' <br />
+MessageBox MB_OK &quot;RunAs Message: $4 ($0)&quot; <br />
+SetOutPath $temp <br />
+SectionEnd  <br />
+<br />
+The Process Monitor recording was done between the first and the second message box.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">happyhippo</div><div class="date">18th February 2011, 08:05</div></div><div class="posttext">I have tested it with another machine and recognised that it worked before some patches have been applied, but after the wsus installed some XP and Office updates the error occured. Unfortunatly I was not able to identify the patch, which causes the problem.<br />
+<br />
+Anyhow, part of the RunAs plugin does anybody know another method with NSIS to call a process with another user? Is there maybe a system call that I could use?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th February 2011, 12:48</div></div><div class="posttext">You could call CreateProcessAsUser/CreateProcessWithLogon etc with the system plugin...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">18th February 2011, 14:50</div></div><div class="posttext">I wrote this plug-in quite a while ago: http://nsis.sourceforge.net/File:RunAs.zip<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">happyhippo</div><div class="date">18th February 2011, 15:40</div></div><div class="posttext">Thanks for the quick answer.<br />
+@ Afrow UK, I have used your plug-in under XP before, but unfortunatly it did not run under Windows 7.<br />
+<br />
+@ Anders, I have looked at them as well, but as I am not a very good programmer I had some problems to find the right syntax.<br />
+<br />
+However, I think I have found another solution. I am using a freeware tool called runasspc and starting it with an ExecWait command. <br />
+<br />
+This is my new test script:<br />
+<br />
+outfile test_runasspc.exe <br />
+requestexecutionlevel user <br />
+ShowInstDetails show<br />
+Page instfiles<br />
+<br />
+Section <br />
+SetShellVarContext all<br />
+SetOutPath $APPDATA\NSIS_Temp<br />
+File &quot;runasspc\runasspc.exe&quot;<br />
+File &quot;7_admin.exe&quot; ;the file performs the elevation for Windows 7 and some system changes<br />
+<br />
+StrCpy $1 &quot;AdminUser&quot;<br />
+StrCpy $2 &quot;Password&quot;<br />
+StrCpy $3 &quot;Domain&quot; <br />
+StrCpy $4 '&quot;$APPDATA\NSIS_Temp\7_admin.exe&quot;'<br />
+SetDetailsPrint none ; in order to hide the password<br />
+ExecWait '&quot;$APPDATA\NSIS_Temp\runasspc.exe&quot; /user:$1 /password:$2 /domain:$3 /program:$4 /quiet' $0<br />
+SetDetailsPrint both<br />
+<br />
+DetailPrint &quot;Exec Message: $0&quot; <br />
+messagebox mb_ok &quot;Exec Message: $0&quot; <br />
+<br />
+SetOutPath $APPDATA<br />
+RMDir /r /REBOOTOK &quot;$APPDATA\NSIS_Temp&quot;<br />
+<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

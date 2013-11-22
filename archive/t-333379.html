@@ -1,0 +1,67 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" SysLink control, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  SysLink control NSIS Discussion" />
+	
+	<title> SysLink control [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  SysLink control</div>
+<hr />
+<div class="pda"><a href="t-333379.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=333379">SysLink control</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th August 2011, 15:35</div></div><div class="posttext">I'm trying to get SysLink to work on Windows XP. The control itself works fine, but when closing the installer (if the control is on the main UI) or when moving from a custom page (if the control is on a custom page) the installer will crash (mod name is comctl32.dll).<br />
+<br />
+Code to add the link to the outer (main) UI:System::Call `user32::CreateWindowExW(i 0, w 'SysLink', w 'Blah blah &lt;A&gt;blah blah&lt;/A&gt;.', i ${WS_CHILD}|${WS_VISIBLE}|${WS_TABSTOP}, i 0, i 0, i 100, i 100, i $HWNDPARENT, i 0, i 0, i 0)`Code to add the link to a nsDialogs page:nsDialogs::CreateControl SysLink ${WS_CHILD}|${WS_VISIBLE}|${WS_TABSTOP} 0 10u 10u -20u 10u `Blah blah &lt;A&gt;blah blah&lt;/A&gt;.`<br />
+Pop $R0You can handle the nsDialogs page link clicks by adding a nsDialogs OnNotify callback:Function BlahLink_Notify<br />
+  Pop $R0<br />
+  Pop $R1<br />
+  Pop $R2<br />
+  ${If} $R1 = ${NM_CLICK}<br />
+  ${OrIf} $R1 = ${NM_RETURN}<br />
+    System::Call `*$R2(i, i, i, i, i .R3)`<br />
+    ${If} $R3 == 0 ; link index<br />
+      ExecShell open `http://www.google.com`<br />
+    ${EndIf}<br />
+  ${EndIf}<br />
+FunctionEndI'm not sure what to try next really to fix this crash. Any suggestions?<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">9th August 2011, 16:38</div></div><div class="posttext">It dies in CLink::~CLink, my guess is a bad pointer or something. IIRC NSIS uses GWL_USERDATA, if the link control does the same there will be trouble...<br />
+<br />
+This sort of works (as long as you don't click cancel):<br />
+var SysLink<br />
+xpstyle on<br />
+Function custleave<br />
+System::Call 'user32::SetParent(i $SysLink,i 0)'<br />
+ShowWindow $SysLink 0<br />
+FunctionEnd<br />
+Function custcreate<br />
+nsDialogs::Create 1018<br />
+nsDialogs::CreateControl SysLink ${WS_CHILD}|${WS_VISIBLE}|${WS_TABSTOP} 0 10u 10u -20u 10u `Blah blah &lt;A&gt;blah blah&lt;/A&gt;.`<br />
+pop $SysLink<br />
+nsDialogs::Show<br />
+FunctionEnd<br />
+page custom custcreate custleave</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th August 2011, 17:06</div></div><div class="posttext">Ah right that must be it then. From the MSDN page:Why does calling SetWindowLong(Handle, GWL_USERDATA, (long)5) where Handle is a SysLink control, makes the application non-responsive and crash on an XP system? It seems the syslink control is using itself the GWL_USERDATA when it should definitely not, since it is supposed to be reserved for the application.<br />
+--<br />
+The GWL_USERDATA value belongs to the window class. You are misinterpreting the word &quot;application&quot;; in this context it means &quot;for use by somebody other than the operating system.&quot; it doesn't mean &quot;the thing that ends in .EXE&quot;.Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">9th August 2011, 17:38</div></div><div class="posttext">I did not verify that the problem is GWL_USERDATA, but if it is; you could create a plugin that adds HWNDs to a safe list and exclude them from the color handling by subclassing their parent</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Un-installing a previous installation while installing a new version., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Un-installing a previous installation while installing a new version. NSIS Discussion" />
+	
+	<title> Un-installing a previous installation while installing a new version. [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Un-installing a previous installation while installing a new version.</div>
+<hr />
+<div class="pda"><a href="t-79180.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=79180">Un-installing a previous installation while installing a new version.</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">bdoherty</div><div class="date">13th March 2002, 20:26</div></div><div class="posttext">If I have an installation already installed, and I know therefore that I have a un-install file. When I check to make sure my files are there can I give the user the option of uninstalling the original installation without aborting the new installation? <br />
+<br />
+I have the following code:<br />
+	; Check if we're about to try to install over an existing installation.<br />
+	IfFileExists &quot;$INSTDIR\MyAppReadme.htm&quot; warn install<br />
+	warn:<br />
+		MessageBox MB_OK|MB_ICONSTOP &quot;You are trying to install over an existing installation of MyAppReadme.$\nPlease uninstall the existing version and run the installer again.&quot;<br />
+		Abort<br />
+	<br />
+	install:<br />
+<br />
+I assume I can use ExecWait to trigger the uninstMyApp.exe but I am unsure as to how to write this code or where this code will go in the NSI file. <br />
+<br />
+<br />
+:confused:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DuaneJeffers</div><div class="date">14th March 2002, 02:30</div></div><div class="posttext">Yes, you can run the Uninstall App by using the ExecWait command, but you can do much more. Like Silently Uninstalling the application by using the UnInstallSilent tag. That way, when you run the new install, you can uninstall the previous app before using the new one.<br />
+<br />
+-Duane</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">14th March 2002, 05:28</div></div><div class="posttext">If you use ExecWait on the uninstaller it won't work, since the uninstaller will duplicate itself and exit immediately.<br />
+<br />
+Instead, use this:<br />
+<br />
+ExecWait '&quot;$INSTDIR\uninstall.exe&quot; /S _=$INSTDIR'<br />
+<br />
+The /S will tell it to be silent, and the _=$INSTDIR tells it to immediately uninstall from $INSTDIR.<br />
+<br />
+Note that if you do this, the uninstaller won't be able to remove itself, which should be OK, but any logic to detect whether the uninstall was complete in the uninstaller could cause popups (i.e. &quot;could not remove program directory&quot; if you put that in).<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DuaneJeffers</div><div class="date">14th March 2002, 08:36</div></div><div class="posttext">Well Gee, you learn something new everyday.<br />
+<br />
+Thanks J.<br />
+-Duane</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bdoherty</div><div class="date">14th March 2002, 23:41</div></div><div class="posttext">Ok, I think I get it. Now, how do I deal with it along with the MessageBox code I have above? I would like to give the users the option to un-install the previous installation, abort the current installation, or chose another directory and continue. I have no idea how to set up the conditional branching; any sample would be of great help. <br />
+<br />
+Also, I assume once I uninstall the original app, if it is unable to remove itself, I can overwrite the original un-installer with a new one?<br />
+:hang:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">15th March 2002, 07:11</div></div><div class="posttext">Giving users the ability to select another dir at error (eg alread installed in this dir) is possible using .onNextPage after the initial dir selection has taken place. You can then check whether this is the dir that is already installed to (using registry or IfFileExists) and abort the function (so not continueing) if the user wants to select another dir. You could also use .onVerifyInstDir but the problem with this function is that it is triggered onKeyPress so when typing something in the dirselectionbox, after every letter, the message might appear...<br />
+<br />
+For an example how to do this see this thread:<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=70530&amp;highlight=regcode<br />
+<br />
+Good luck,<br />
+greetz, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Pomflain</div><div class="date">18th March 2002, 14:32</div></div><div class="posttext">Originally posted by bdoherty <br />
+Ok, I think I get it. Now, how do I deal with it along with the MessageBox code I have above? I would like to give the users the option to un-install the previous installation, abort the current installation, or chose another directory and continue. I have no idea how to set up the conditional branching; any sample would be of great help. <br />
+<br />
+Also, I assume once I uninstall the original app, if it is unable to remove itself, I can overwrite the original un-installer with a new one?<br />
+:hang: <br />
+<br />
+I might have you covered.  This is almost exactly what I've done with a suite of installers and I think I've got it working pretty well now. What I do is detect the old installation and ask them if they want to uninstall or just continue with the new installation.  Sometimes you just can't uninstall because something is messed up,  so they have the option to just continue if something like that happens.  If they chose to uninstal then the uninstaller is spawned off and the installer closes,  but writes out its location from $CMDLINE.  The uninstaller runs and once it completes,  relaunches the installer and everything is good.<br />
+<br />
+Sound like what you are looking for?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bdoherty</div><div class="date">18th March 2002, 19:57</div></div><div class="posttext">Sound's great!<br />
+I am looking for just that, can you post the code and/or email me the code?<br />
+:up:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Pomflain</div><div class="date">18th March 2002, 20:35</div></div><div class="posttext">Originally posted by bdoherty <br />
+Sound's great!<br />
+I am looking for just that, can you post the code and/or email me the code?<br />
+:up: <br />
+<br />
+Sure,  what's your e-mail?  Don't want to embarrass by posting my work on here...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Pomflain</div><div class="date">18th March 2002, 20:42</div></div><div class="posttext">Originally posted by bdoherty <br />
+Ok, I think I get it. Now, how do I deal with it along with the MessageBox code I have above? I would like to give the users the option to un-install the previous installation, abort the current installation, or chose another directory and continue. I have no idea how to set up the conditional branching; any sample would be of great help. <br />
+<br />
+Also, I assume once I uninstall the original app, if it is unable to remove itself, I can overwrite the original un-installer with a new one?<br />
+:hang: <br />
+<br />
+I might have you covered.  This is almost exactly what I've done with a suite of installers and I think I've got it working pretty well now. What I do is detect the old installation and ask them if they want to uninstall or just continue with the new installation.  Sometimes you just can't uninstall because something is messed up,  so they have the option to just continue if something like that happens.  If they chose to uninstal then the uninstaller is spawned off and the installer closes,  but writes out its location from $CMDLINE.  The uninstaller runs and once it completes,  relaunches the installer and everything is good.<br />
+<br />
+Sound like what you are looking for?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bdoherty</div><div class="date">18th March 2002, 22:08</div></div><div class="posttext">I hear ya! <br />
+Thanks, this will really help me out! <br />
+<br />
+My email is btdoherty@att.net<br />
+<br />
+ <br />
+ :hang:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jcagle</div><div class="date">25th July 2003, 20:09</div></div><div class="posttext">Pomflain, could you send me this code as well? Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpodtbc</div><div class="date">23rd February 2007, 17:38</div></div><div class="posttext">Originally posted by justin <br />
+ExecWait '&quot;$INSTDIR\uninstall.exe&quot; /S _=$INSTDIR'<br />
+<br />
+i couldn't get this to work until i looked at the nsis documentation which showed <br />
+<br />
+_?=$INSTDIR<br />
+<br />
+<br />
+use that argument if you want to ExecWait your uninstaller.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

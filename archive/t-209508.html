@@ -1,0 +1,171 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Check a UserID and PW within a SQL DB, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Check a UserID and PW within a SQL DB NSIS Discussion" />
+	
+	<title> Check a UserID and PW within a SQL DB [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Check a UserID and PW within a SQL DB</div>
+<hr />
+<div class="pda"><a href="t-209508.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=209508">Check a UserID and PW within a SQL DB</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Jnuw</div><div class="date">4th March 2005, 17:16</div></div><div class="posttext">Hey guys.<br />
+<br />
+I would like to prompt a user to enter a username and password, then pass those to a mysql db, and find out if that is a valid name or not.  I checked the Archive, and don't see any functions/plugins that can do that.<br />
+<br />
+Any help would be much appreciated, thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Jnuw</div><div class="date">4th March 2005, 18:54</div></div><div class="posttext">Here is some more information.  During the installation, if the user is missing some files, I want to download them for the user, automatically.  However before downloading the files, I want to check that the user is a current customer, hence I’ll ask them for their username and password.  I then want to pass those credentials to the mysql db that is on the back end of our website.  So the sql db is not local to the user, but I want to connect to it over the internet, make sense?  Thanks for your help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th March 2005, 21:03</div></div><div class="posttext">It'd be much simpler to make a HTTP interface and access it using NSISdl or InetLoad. Writing a PHP page to do this kind of a test should be simpler than accessing a remote SQL server.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Jnuw</div><div class="date">4th March 2005, 23:29</div></div><div class="posttext">I'll check into that, thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Jnuw</div><div class="date">20th May 2005, 22:15</div></div><div class="posttext">From a PM from dimator<br />
+Hi,<br />
+I'm just curious if you ever found a way to prompt the user for a username and password dialog, you were looking for?<br />
+<br />
+Thanks,<br />
+DImi<br />
+<br />
+<br />
+First I created a php page called vChecker.php that takes a username and password from the url, and returns a page with only 'LoggedIn' on it if the credential are good.  I used the following code for that &lt;Stuff between these you must fill in for yourself&gt;:<br />
+<br />
+<br />
+&lt;?php<br />
+<br />
+$name = $_GET['name'];<br />
+$pwd = $_GET['pwd'];<br />
+<br />
+{<br />
+<br />
+  mysql_connect('mysql.&lt;yourserver&gt;.com', '&lt;username&gt;', '&lt;password&gt;') or<br />
+    die ('Could not connect to database');<br />
+<br />
+  mysql_select_db('&lt;yourdatabase&gt;') or<br />
+    die (&quot;Could not select database&quot;);<br />
+<br />
+$result=mysql_query(&quot;SELECT &lt;table1&gt;, &lt;table2&gt;, &lt;table3&gt;, &lt;table4&gt; FROM &lt;AnotherTable&gt; WHERE username='$name' AND password='$pwd' AND accepted&gt;0&quot;) or<br />
+    die ('cant do it');<br />
+<br />
+while ($row=mysql_fetch_array($result))<br />
+ {<br />
+ if ($row[&quot;password&quot;]==$password )<br />
+    {<br />
+    print 'LoggedIn';<br />
+    }else{<br />
+    print 'Denied';<br />
+    }<br />
+ }<br />
+ <br />
+}<br />
+?&gt;<br />
+<br />
+<br />
+Then in NSIS, I made a custom page that asked the user for a username and password that they would use on our website.  Here is that code:<br />
+<br />
+<br />
+Function LeaveCredentials<br />
+  StrCmp $NumTries 0 0 +3<br />
+    MessageBox MB_OK|MB_ICONSTOP &quot;You have exceeded your logon attempts, please press Exit below.&quot;<br />
+    Abort<br />
+  StrCmp $NumTries 1 +3<br />
+  StrCmp $NumTries 2 +2<br />
+  StrCpy $NumTries 3<br />
+<br />
+  Delete &quot;$INSTDIR\Tools\Bin\vChecker.txt&quot;<br />
+  Delete &quot;$INSTDIR\Tools\Bin\vChecker.php&quot;<br />
+  ReadINIStr $Username &quot;$PLUGINSDIR\Credentials.ini&quot; &quot;Field 4&quot; &quot;State&quot;<br />
+  ReadINIStr $Password &quot;$PLUGINSDIR\Credentials.ini&quot; &quot;Field 6&quot; &quot;State&quot;<br />
+<br />
+  InetLoad::load /Silent &quot;http://www.&lt;yourwebsite&gt;.com/vChecker.php?name=$Username&amp;pwd=$Password&quot; &quot;$INSTDIR\Tools\Bin\vChecker.php&quot;<br />
+    Pop $0<br />
+    StrCmp $0 &quot;OK&quot; GotFile<br />
+      MessageBox MB_OK|MB_ICONSTOP &quot;Connection Error!  Unable to verify Username and Passowrd.$\r$\nPlease try again or call us.&quot;<br />
+      Abort<br />
+<br />
+  GotFile:<br />
+  Rename &quot;$INSTDIR\Tools\Bin\vChecker.php&quot; &quot;$INSTDIR\Tools\Bin\vChecker.txt&quot;<br />
+  FileOpen $0 &quot;$INSTDIR\Tools\Bin\vChecker.txt&quot; r<br />
+  FileRead $0 $1<br />
+  FileClose $0<br />
+  Push $1<br />
+  Call Trim<br />
+  Pop $1<br />
+  StrCmp $1 &quot;LoggedIn&quot; +4<br />
+    Intop $NumTries $NumTries - 1<br />
+    MessageBox MB_OK|MB_ICONEXCLAMATION &quot;The Username and Password you entered is not correct, please try again.$\r$\n$\r$\nAttempts remaining: $NumTries&quot;<br />
+    Abort<br />
+<br />
+  ;here is where you put the code that runs if user gets authenticated...<br />
+  <br />
+FunctionEnd<br />
+<br />
+<br />
+I'll be the first to say that I’m a total noob when it comes to php, and all that code I got from another forum.  And as for NSIS, I’m at best an amateur, and I’m sure there is a better way to program all this...however my code seems to work well, and is solid.  Wait about 10 minutes, and I’m sure someone will correct some of my crappy inefficient code.  Hope this helps.<br />
+<br />
+Jnuw</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">20th May 2005, 23:12</div></div><div class="posttext">Well I'm suprised that works actually. Perhaps InetLoad isn't the same, but usually you have to pass it the content-length of the script output.<br />
+<br />
+e.g.<br />
+ header(&quot;Content-Length: 8&quot;);<br />
+ echo 'LoggedIn';<br />
+<br />
+I recommend using echo rather than print as it's a tiny bit faster (print returns true or false when it is successful or not whereas echo does not return anything).<br />
+<br />
+Also rather than have &quot;$INSTDIR\Tools\Bin\vChecker.php&quot; on your InetLoad call, just use &quot;$INSTDIR\Tools\Bin\vChecker.txt&quot; and then you don't have to rename it afterwards. Don't forget InetLoad is downloading the output of the PHP script not the script itself therefore the downloaded output is no longer of PHP file type.<br />
+<br />
+Finally you shouldn't have to use the Trim function because you aren't putting any new line characters in the PHP script output.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Jnuw</div><div class="date">21st May 2005, 06:01</div></div><div class="posttext">Originally posted by Afrow UK <br />
+...I recommend using echo rather than print...<br />
+<br />
+...Also rather than have &quot;$INSTDIR\Tools\Bin\vChecker.php&quot; on your InetLoad call, just use &quot;$INSTDIR\Tools\Bin\vChecker.txt&quot;...<br />
+<br />
+...Finally you shouldn't have to use the Trim function...<br />
+-Stu <br />
+<br />
+Thanks Stu for your help.<br />
+<br />
+I will try the echo instead of the print on monday when i get back to work.  That might help the fact that i could never get 'Denied' to come up.  I only get 'LoggedIn' or nothing.  Doesn't really matter, all I need are differing pages.<br />
+<br />
+Also, good point on the .php vs. .txt.  That will save a couple lines of code.<br />
+<br />
+As for the trim function, I found the strcmp did not work without it.  Seems there was a carrage return, or some other character in there.  Maybe the echo instead of the print will fix that too.  <br />
+<br />
+Thanks again.<br />
+<br />
+Jnuw</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">21st May 2005, 06:43</div></div><div class="posttext">InetLoad supports http 1.1 chunked reply (i.e. without Content-Length header). The only difference is that progress bar will not appear because file length not comes from server. But for 8 bytes reply you will not see progress bar any case :)<br />
+If NSIS stack may be not empty you can add /end parameter at the end of InetLoad call string - this limits plug-in's parameters 'Pop' from the stack (requested by Afrow UK :D ).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">21st May 2005, 09:45</div></div><div class="posttext">Ok, another error I think... In the PHP script you're using $password in the selection statement when the variable is called $pwd? That should explain why you are only getting one of the two output strings.<br />
+<br />
+And also you aren't using a mysql_close(); call at the end.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

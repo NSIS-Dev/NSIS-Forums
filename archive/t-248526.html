@@ -1,0 +1,198 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" NSIS Service Plugin, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  NSIS Service Plugin NSIS Discussion" />
+	
+	<title> NSIS Service Plugin [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  NSIS Service Plugin</div>
+<hr />
+<div class="pda"><a href="t-248526.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=248526">NSIS Service Plugin</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">BashLogic</div><div class="date">12th June 2006, 13:48</div></div><div class="posttext">Greetings, <br />
+<br />
+I have the need to check on a service status and startit up in case it is not running (windows installer) now the funny thing is that as i have been trying to use the SERVICE plugin, i have been able to get it to work with the services that have a single word as a service name but not with services that have spaces in between the words, for example..<br />
+<br />
+----8&lt;----<br />
+OutFile findservices.exe<br />
+section<br />
+        services::IsServiceRunning 'Windows Installer'<br />
+Pop $0<br />
+StrCmp $0 'Ok' success 0<br />
+  MessageBox MB_OK|MB_ICONSTOP 'command: $0' 0 0<br />
+  Abort<br />
+success:<br />
+<br />
+SectionEnd<br />
+----8&lt;----<br />
+<br />
+any ideas on what is going wrong and how that could be corrected?<br />
+<br />
+<br />
+regards<br />
+BL</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">12th June 2006, 15:02</div></div><div class="posttext">Try it as MSIServer instead. services::IsServiceRunning &quot;MSIServer&quot;<br />
+Check the registry under HKLM\System\CurrentControlSet\Services for the exact service name. Windows Installer is the name of the service as it appears on any GUI, the true service name is MSIServer.<br />
+You can start/stop/query the service with either name ...<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BashLogic</div><div class="date">12th June 2006, 16:34</div></div><div class="posttext">thanks a lot!<br />
+that resolved my problem. now i only have to figure out<br />
+how to enable the service to start it up in case it is disabled ...any ideas?<br />
+<br />
+regards<br />
+BL</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">12th June 2006, 16:43</div></div><div class="posttext">You can use the NsSCM plugin (http://nsis.sourceforge.net/NsSCM_plug-in) to query/start/stop the service ...<br />
+<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BashLogic</div><div class="date">12th June 2006, 16:46</div></div><div class="posttext">but can that other plugin enable a disabled service?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BashLogic</div><div class="date">12th June 2006, 19:26</div></div><div class="posttext">ok guys <br />
+<br />
+just to answer my own question, <br />
+<br />
+appearently the service plugin is not able to enable a disabled service. even if you would enable a service from the registry, the net start (which equate to the service plugin) wont be able to start the service because in the service manager db the service is still registered to be in the previous state.<br />
+<br />
+for each service there are two places (if im not mistaken) where information is stored regarding its state, its own registry path/key and the service manager db.<br />
+<br />
+enabling the service from the registry path/key(start|dword) alone would not suffice, you would either have to do it thru the service mmc gui or... you can you the sc.exe to do it!<br />
+<br />
+so if you have a disabled service, enable it first with the sc tool (if not found on your system, you can find it in the reskit) with the command &quot;sc config msiserver start= demand&quot; and after that use the service plugin to startup the service!<br />
+<br />
+here is a sample script that does that, dirty but does the job :)<br />
+<br />
+regards<br />
+BL<br />
+---8&lt;------8&lt;------8&lt;------8&lt;---<br />
+OutFile findservices.exe<br />
+section<br />
+       ;enable service from console<br />
+        execwait &quot;sc config msiserver start= demand&quot;<br />
+<br />
+        ;check if service is running<br />
+        services::IsServiceRunning 'MSIServer'<br />
+        Pop $0<br />
+        StrCmp $0 'Ok' success 0<br />
+        MessageBox MB_OK|MB_ICONSTOP 'Service running status: $0 (3= enabled!)' 0 0<br />
+        success:<br />
+<br />
+        ;read service registry status value<br />
+        ReadRegDWORD $0 HKEY_LOCAL_MACHINE &quot;SYSTEM\CurrentControlSet\Services\MSIServer&quot; &quot;Start&quot;<br />
+        Pop $0<br />
+        MessageBox MB_OK|MB_ICONSTOP 'value: $0' 0 0<br />
+<br />
+        ;startup service<br />
+        services::SendServiceCommand 'start' 'MSIServer'<br />
+        Pop $0<br />
+        StrCmp $0 'Ok' success1 0<br />
+        MessageBox MB_OK|MB_ICONSTOP 'Service start command status: $0' 0 0<br />
+        success1:<br />
+<br />
+        ; check that service started<br />
+        services::IsServiceRunning 'MSIServer'<br />
+        Pop $0<br />
+        StrCmp $0 'Ok' success2 0<br />
+        MessageBox MB_OK|MB_ICONSTOP 'Service running status: $0 (3= enabled!)' 0 0<br />
+        success2:<br />
+<br />
+<br />
+SectionEnd<br />
+---8&lt;------8&lt;------8&lt;------8&lt;---</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">12th June 2006, 22:45</div></div><div class="posttext">You could do the same using direct API calls, thus avoiding the use of a command line tool.<br />
+The following code will atempt to start the MSIServer and if it fails it will alter the service's configuration then retry:<br />
+!define SC_MANAGER_ALL_ACCESS	0x3F<br />
+!define SERVICE_ALL_ACCESS	0xF01FF<br />
+!define SERVICE_DEMAND_START	0x00000003<br />
+!define SERVICE_NO_CHANGE	0xffffffff<br />
+<br />
+# Get a handle to the SCM<br />
+  System::Call 'advapi32::OpenSCManagerA(,,i ${SC_MANAGER_ALL_ACCESS})i.R9'<br />
+<br />
+# Get a handle to the service<br />
+  System::Call 'advapi32::OpenServiceA(i R9,t &quot;MSIServer&quot;,i ${SERVICE_ALL_ACCESS})i.R8'<br />
+<br />
+# Start the service<br />
+  System::Call 'advapi32::StartServiceA(i R8,i 0,i 0)i.r0'<br />
+  StrCmp $0 0 0 +3<br />
+  # Change the service startup options<br />
+    System::Call 'advapi32::ChangeServiceConfigA(i R8,i ${SERVICE_NO_CHANGE},i ${SERVICE_DEMAND_START},i ${SERVICE_NO_CHANGE},,,,,,,)i.r0'<br />
+  # Start the service<br />
+    System::Call 'advapi32::StartServiceA(i R8,i 0,i 0)i.r0'<br />
+<br />
+# Close the service handle<br />
+  System::Call 'advapi32::CloseServiceHandle(i R8)i.r0'<br />
+<br />
+# Close the SCM handle<br />
+  System::Call 'advapi32::CloseServiceHandle(i R9)i.r0'<br />
+<br />
+:)<br />
+<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BashLogic</div><div class="date">13th June 2006, 06:47</div></div><div class="posttext">wow, <br />
+that went right over my head, i didnt know that api calls can be done straight off! regardless of that its a totally different thing on whether i would know how to program to interface with the api :)<br />
+<br />
+so i guess my next question is .. due to security tightening policy, i need to keep the service as disabled after having installed the required applications (after a new install). now you presented how it could be enabled and started, I would greatly appreciate it if you could point on how to disable the service when done :)<br />
+<br />
+that is why i was running checks in between to verify the state prior to applying changes :)<br />
+<br />
+regards<br />
+BL</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">13th June 2006, 08:08</div></div><div class="posttext">The Windows Installer Service should be left on manual, otherwise the self-healing option that is provided as default with all msi packs will not work, if I am not mistaken.<br />
+<br />
+You can use part of the previous code that I posted to stop the service and set its configuration to disabled:<br />
+!define SC_MANAGER_ALL_ACCESS	0x3F<br />
+!define SERVICE_ALL_ACCESS	0xF01FF<br />
+!define SERVICE_DEMAND_START	0x00000003<br />
+!define SERVICE_DISABLED	0x00000004<br />
+!define SERVICE_NO_CHANGE	0xffffffff<br />
+!define SERVICE_CONTROL_STOP	1<br />
+<br />
+# Get a handle to the SCM<br />
+  System::Call 'advapi32::OpenSCManagerA(,,i ${SC_MANAGER_ALL_ACCESS})i.R9'<br />
+<br />
+# Get a handle to the service<br />
+  System::Call 'advapi32::OpenServiceA(i R9,t &quot;MSIServer&quot;,i ${SERVICE_ALL_ACCESS})i.R8'<br />
+<br />
+# Stop the service<br />
+  System::Call '*(i,i,i,i,i,i,i)i.R0'<br />
+  System::Call 'advapi32::ControlService(i R8,i ${SERVICE_CONTROL_STOP},i R0)i.r0'<br />
+  System::Call '*$R0(,i.r1,,,,,)'  ; $1 contains the service status code<br />
+  System::Free $R0<br />
+<br />
+# Change the service startup options<br />
+  System::Call 'advapi32::ChangeServiceConfigA(i R8,i ${SERVICE_NO_CHANGE},i ${SERVICE_DISABLED},i ${SERVICE_NO_CHANGE},,,,,,,)i.r0'<br />
+<br />
+# Close the service handle<br />
+  System::Call 'advapi32::CloseServiceHandle(i R8)i.r0'<br />
+<br />
+# Close the SCM handle<br />
+  System::Call 'advapi32::CloseServiceHandle(i R9)i.r0'You can find more information about starting/stopping/pausing/quering etc a service at this (http://msdn.microsoft.com/library/en-us/dllproc/base/service_functions.asp) MSDN page.<br />
+;)<br />
+CF</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

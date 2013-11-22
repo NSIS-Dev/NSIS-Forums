@@ -1,0 +1,128 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" NetUserEnum problem, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  NetUserEnum problem NSIS Discussion" />
+	
+	<title> NetUserEnum problem [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  NetUserEnum problem</div>
+<hr />
+<div class="pda"><a href="t-251821.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=251821">NetUserEnum problem</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">24th July 2006, 09:34</div></div><div class="posttext">After a lot of trial and error I managed to isolate a rather strange error in one of my scripts. I am trying to enumerate the local users in my computer using the NetUserEnum (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/netmgmt/netmgmt/netuserenum.asp) API call from netapi32.dll. The call is successful and it allocates an array of USER_INFO_0 (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/netmgmt/netmgmt/user_info_0_str.asp) structures and each one contains a username from the local system. In my code I try to compare this username to an already existing value, but as I pull data out from the above structures, my script fails randomly. Here is the relevant code shaped into a script of its own:SetCompressor /SOLID lzma<br />
+!include &quot;LogicLib.nsh&quot;<br />
+<br />
+OutFile &quot;EnumTest.exe&quot;<br />
+InstallDir &quot;$PLUGINSDIR&quot;<br />
+<br />
+Var &quot;UserName&quot;<br />
+Var &quot;APIErrorFlag&quot;<br />
+Var &quot;Counter&quot;<br />
+Var &quot;UserExists&quot;<br />
+<br />
+!define NERR_Success 0<br />
+!define FILTER_NORMAL_ACCOUNT 0x0002<br />
+<br />
+Section -Boo<br />
+SectionEnd<br />
+<br />
+Function .onInit<br />
+StrCpy $UserName &quot;Administrator&quot;<br />
+StrCpy $APIErrorFlag 0<br />
+System::Call /NOUNLOAD 'netapi32::NetUserEnum(,i 0,i ${FILTER_NORMAL_ACCOUNT},*i .R0,i ${NSIS_MAX_STRLEN},*i .R1,*i .R2,*i 0 r4)i.r5'<br />
+${If} $5 = ${NERR_Success}<br />
+  StrCpy $Counter 0<br />
+ Feed:<br />
+  StrCmp $Counter $R2 Stop<br />
+  System::Call /NOUNLOAD '*$R0(w.R9)'<br />
+  ${If} $R9 == &quot;$UserName&quot;<br />
+   StrCpy $UserExists 1<br />
+	 MessageBox MB_OK|MB_ICONSTOP|MB_TOPMOST &quot;User Exists!&quot;<br />
+  ${EndIf}<br />
+  IntOp $R0 $R0 + 4<br />
+  IntOp $Counter $Counter + 1<br />
+  Goto Feed<br />
+ Stop:<br />
+  System::Call /NOUNLOAD 'netapi32::NetApiBufferFree(i R0)i .R1'<br />
+${Else}<br />
+ StrCpy $APIErrorFlag 1<br />
+${EndIf}<br />
+FunctionEndThe above fails at the System::Call /NOUNLOAD '*$R0(w.R9)' call. The wierd thing is that DrWatson reports an error at GetModuleHandleW (?).<br />
+<br />
+The funny thing is that the program works sometimes but then if I move it to another directory it generates an error. But this behavior is not path-based, so for example sometimes it will work, say in C:\, sometimes it wont! AntiVirus software does not affect the above and even if moved to a clean, fresh virtual PC, the script fails randomly.<br />
+<br />
+Note that changing the NetUserEnum call toSystem::Call /NOUNLOAD 'netapi32::NetUserEnum(w &quot;&quot;,i 0,i ${FILTER_NORMAL_ACCOUNT},*i .R0,i ${NSIS_MAX_STRLEN},*i .R1,*i .R2,*i 0 r4)i.r5'has the same results<br />
+<br />
+Any ideas? I am baffled to say the least ...<br />
+<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">24th July 2006, 15:49</div></div><div class="posttext">Although I did not manage to figure out the error, I managed to implement a different approach by calling NetQueryDisplayInformation (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/netmgmt/netmgmt/netquerydisplayinformation.asp) instead. This doesn't break anything so far ...SetCompressor /SOLID lzma<br />
+!include &quot;LogicLib.nsh&quot;<br />
+<br />
+OutFile &quot;EnumTest.exe&quot;<br />
+InstallDir &quot;$PLUGINSDIR&quot;<br />
+<br />
+Var &quot;UserName&quot;<br />
+Var &quot;APIErrorFlag&quot;<br />
+Var &quot;Counter&quot;<br />
+Var &quot;UserExists&quot;<br />
+<br />
+!define NERR_Success 0<br />
+!define FILTER_NORMAL_ACCOUNT 0x0002<br />
+!define strNET_DISPLAY_USER '(w,w,i,w,i,i)i'<br />
+<br />
+Section -Boo<br />
+SectionEnd<br />
+<br />
+Function .onInit<br />
+StrCpy $UserName &quot;Administrator&quot;<br />
+StrCpy $APIErrorFlag 0<br />
+System::Call /NOUNLOAD 'netapi32::NetQueryDisplayInformation(w &quot;&quot;,i 1,i 0,i 100, i ${NSIS_MAX_STRLEN},*i .R2,*i .R0)i.r5'<br />
+${If} $5 = ${NERR_Success}<br />
+  StrCpy $Counter 0<br />
+ Feed:<br />
+  StrCmp $Counter $R2 Stop<br />
+  System::Call '*$R0${strNET_DISPLAY_USER}(.R9,,,,,)'<br />
+  ${If} $R9 == &quot;$UserName&quot;<br />
+   StrCpy $UserExists 1<br />
+	 MessageBox MB_OK|MB_ICONSTOP|MB_TOPMOST &quot;User Exists!&quot;<br />
+  ${EndIf}<br />
+  IntOp $R0 $R0 + 24<br />
+  IntOp $Counter $Counter + 1<br />
+  Goto Feed<br />
+ Stop:<br />
+  System::Call /NOUNLOAD 'netapi32::NetApiBufferFree(i R0)i .R1'<br />
+${Else}<br />
+ StrCpy $APIErrorFlag 1<br />
+${EndIf}<br />
+FunctionEnd<br />
+<br />
+If anybody can help with the NetUserEnum problem I am still interested to see why it doesn't work ...<br />
+<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">24th July 2006, 19:42</div></div><div class="posttext">Try printing the value of $R0, see if it contains a normal value. It might be getting over the 2^31 limit and turning negative. In this case, you can use IntFmt with %u to create an unsigned number.<br />
+<br />
+BTW, you're using NetApiBufferFree on the wrong address. $R0 has long changed since NetUserEnum was called. You should keep a copy of the original address and free that instead.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">24th July 2006, 20:32</div></div><div class="posttext">Strange ...<br />
+If I add this right after the NetUserEnum callMessageBox MB_OK|MB_ICONSTOP|MB_TOPMOST &quot;$R0&quot;then the call doesn't fail. If I comment it out, it fails ... I always get something like 1567424 (or similar values) for $R0 and it is never negative ...<br />
+<br />
+Good point on the NetApiBufferFree ... I completely missed that :(</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

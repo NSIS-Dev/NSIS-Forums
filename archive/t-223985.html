@@ -1,0 +1,202 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" adding 3rd checkbox, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  adding 3rd checkbox NSIS Discussion" />
+	
+	<title> adding 3rd checkbox [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  adding 3rd checkbox</div>
+<hr />
+<div class="pda"><a href="t-223985.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=223985">adding 3rd checkbox</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Ahmad123</div><div class="date">15th August 2005, 00:51</div></div><div class="posttext">how do i add a 3rd checkbox to the finish page?<br />
+<br />
+so far i have this<br />
+<br />
+!define MUI_FINISHPAGE_RUN<br />
+!define MUI_FINISHPAGE_RUN_NOTCHECKED<br />
+!define MUI_FINISHPAGE_RUN_TEXT &quot;Run Age of Empires Expansion&quot;<br />
+!define MUI_FINISHPAGE_RUN_FUNCTION &quot;runfile&quot;<br />
+!define MUI_FINISHPAGE_SHOWREADME<br />
+!define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED<br />
+!define MUI_FINISHPAGE_SHOWREADME_TEXT &quot;Create Desktop Shortcut&quot;<br />
+!define MUI_FINISHPAGE_SHOWREADME_FUNCTION &quot;scdesktop&quot;<br />
+<br />
+Function &quot;runfile&quot;<br />
+  Exec &quot;$INSTDIR\EMPIRESX.EXE&quot;<br />
+FunctionEnd<br />
+<br />
+Function &quot;scdesktop&quot;<br />
+  CreateShortCut &quot;$DESKTOP\Age of Empires Expansion.lnk&quot; &quot;$INSTDIR\EMPIRESX.EXE&quot;<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">15th August 2005, 03:36</div></div><div class="posttext">You have to change some functions related to the finish page. Put the code below before inserting the macro MUI_PAGE_FINISH:<br />
+<br />
+<br />
+  !define MUI_WELCOMEFINISHPAGE_CUSTOMFUNCTION_INIT InitFinishPage<br />
+  !define MUI_PAGE_CUSTOMFUNCTION_SHOW ShowFinishPage<br />
+  !define MUI_PAGE_CUSTOMFUNCTION_LEAVE LeaveFinishPageThe first define is the secret behind the checkbox insertion. &quot;InitFinishPage&quot; is the function to be called when the InstallOptions INI file for the page is written.<br />
+<br />
+Just one more piece of information: The INI file for the page is called &quot;iospecial.ini&quot; and it's located in the $PLUGINSDIR. Also, this page contains 5 controls (with all the options you specified), so all you need to do in this function is:<br />
+<br />
+<br />
+Function InitFinishPage<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;ioSpecial.ini&quot; &quot;Settings&quot; &quot;NumFields&quot; &quot;6&quot;<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;ioSpecial.ini&quot; &quot;Field 6&quot; &quot;Type&quot; &quot;CheckBox&quot;<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;ioSpecial.ini&quot; &quot;Field 6&quot; &quot;Left&quot; &quot;120&quot;<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;ioSpecial.ini&quot; &quot;Field 6&quot; &quot;Right&quot; &quot;315&quot;<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;ioSpecial.ini&quot; &quot;Field 6&quot; &quot;Top&quot; &quot;160&quot;<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;ioSpecial.ini&quot; &quot;Field 6&quot; &quot;Right&quot; &quot;170&quot;<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;ioSpecial.ini&quot; &quot;Field 6&quot; &quot;State&quot; &quot;0&quot;<br />
+  ;line above: Initial state of the control: 0=Unchecked, 1=Checked<br />
+FunctionEndThere are still things missing. There is still no repainting of the background of the control to the color white. This you'll do in the &quot;ShowFinishPage&quot; of the page:<br />
+<br />
+<br />
+Function ShowFinishPage<br />
+  GetDlgItem $MUI_TEMP1 $MUI_HWND 1205 ;ID for the 6th InstallOptions control<br />
+  SetCtlColors $MUI_TEMP1 &quot;&quot; &quot;${MUI_BGCOLOR}&quot;<br />
+FunctionEndThe &quot;${MUI_BGCOLOR}&quot; define is the background color of the page, which will be set to white by default. The $MUI_TEMP1 variable is a Modern UI temporary variable, which can be changed if you want to. Also, the $MUI_HWND variable holds the dialog handle for the InstallOptions page, needed for the GetDlgItem to detect the item and paint the background.<br />
+<br />
+One last thing: You need to verify the state of the CheckBox before going out of the page. To do that, use the &quot;LeaveFinishPage&quot; function:<br />
+<br />
+<br />
+Function LeaveFinishPage<br />
+  !insertmacro MUI_INSTALLOPTIONS_READ $MUI_TEMP1 &quot;ioSpecial.ini&quot; &quot;Field 6&quot; &quot;State&quot;<br />
+  StrCmp $MUI_TEMP1 1 Checked Unchecked<br />
+  Checked:<br />
+    ;Put your code for when the checkbox is checked here<br />
+  Goto end<br />
+  Unchecked:<br />
+    ;Put your code for when the checkbox is unchecked here<br />
+  end:<br />
+FunctionEndPut the codes to execute when the checkbox is unchecked or checked and all done!<br />
+<br />
+You may have noted the use of !insertmacro MUI_INSTALLOPTIONS_WRITE and !insertmacro MUI_INSTALLOPTIONS_READ. Those are replacements for WriteINIFile and ReadINIFile respectively. The difference is that the file &quot;iospecial.ini&quot; is in $PLUGINSDIR, and these macros write/read only to/from files inside $PLUGINSDIR, so they are made for this occasion.<br />
+<br />
+I didn't test those codes. If they don't work, at least I showed my point...<br />
+<br />
+(EDIT: Just for curiosity, what did you create for Age of Empires? Or are you trying to put back old utilities for it? Hmmm...)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ahmad123</div><div class="date">15th August 2005, 06:05</div></div><div class="posttext">Hi, thanks for the detailed answer, although I'm quite new at this (i've only had nsis for a couple of days). I received the following error<br />
+<br />
+  unknown variable/constant &quot;MUI_HWND&quot; detected, ignoring (D:\My Documents\aoex.nsi:79)<br />
+<br />
+Also, where would I place the text for checkbox? Do I changed &quot;Field 6&quot;?<br />
+<br />
+Many thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ahmad123</div><div class="date">15th August 2005, 10:15</div></div><div class="posttext">I do believe that his piece of code is the only bit not working:<br />
+<br />
+Function ShowFinishPage<br />
+  GetDlgItem $MUI_TEMP1 $MUI_HWND 1205 ;ID for the 6th InstallOptions control<br />
+  SetCtlColors $MUI_TEMP1 &quot;&quot; &quot;${MUI_BGCOLOR}&quot;<br />
+FunctionEnd<br />
+<br />
+If i set the state manually in the script to 1 it will perform the function I request once I've clicked Finish. It just doesn't seem to be drawing the checkbox onto the page.<br />
+<br />
+Error<br />
+<br />
+ unknown variable/constant &quot;MUI_HWND&quot; detected, ignoring (D:\My Documents\aoex.nsi:79)<br />
+<br />
+(EDIT: Just for curiosity, what did you create for Age of Empires? Or are you trying to put back old utilities for it? Hmmm...)<br />
+3rd party apps like CTY Editor, AI Editor, extra campaigns etc</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">15th August 2005, 12:27</div></div><div class="posttext">Also, where would I place the text for checkbox? Do I changed &quot;Field 6&quot;?Whoops, just add this line below to the &quot;InitFinishPage&quot;:<br />
+!insertmacro MUI_INSTALLOPTIONS_WRITE &quot;ioSpecial.ini&quot; &quot;Field 6&quot; &quot;Text&quot; &quot;Checkbox Text&quot; ;Change this for the text desired<br />
+Now for the second error, that wasn't supposed to happen. It is mentioned in the Modern UI documentation that this variable is available in the Show function for this page. Try updating your NSIS to 2.08 if you have an older version.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ahmad123</div><div class="date">15th August 2005, 13:07</div></div><div class="posttext">Originally posted by deguix <br />
+Whoops, just add this line below to the &quot;InitFinishPage&quot;:<br />
+!insertmacro MUI_INSTALLOPTIONS_WRITE &quot;ioSpecial.ini&quot; &quot;Field 6&quot; &quot;Text&quot; &quot;Checkbox Text&quot; ;Change this for the text desired<br />
+<br />
+Yep, I figured that one out :P<br />
+<br />
+Now for the second error, that wasn't supposed to happen. It is mentioned in the Modern UI documentation that this variable is available in the Show function for this page. Try updating your NSIS to 2.08 if you have an older version. <br />
+<br />
+Yes, I have version 2.08 but the error still exists :( <br />
+<br />
+Also, when checking the ioSpecial.ini in the temp folder at runtime, the NumFields value under [Settings] is still set to 5 and not 6</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">15th August 2005, 15:44</div></div><div class="posttext">Did you put the functions below the Modern UI settings? Please attach a script that reproduces the problem.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">15th August 2005, 16:31</div></div><div class="posttext">Looks like it is above the page macros.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ahmad1234</div><div class="date">15th August 2005, 16:31</div></div><div class="posttext">Ok I solved the error, I didn't have a WELCOME page, so I had to insert one !insertmacro MUI_PAGE_WELCOME is there any way around that?<br />
+<br />
+Even now that there are no errors, the 3rd checkbox is still not showing up.. I have attached a sample script<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">15th August 2005, 16:35</div></div><div class="posttext">Move:<br />
+<br />
+!insertmacro MUI_PAGE_FINISH<br />
+<br />
+; Uninstaller pages<br />
+!insertmacro MUI_UNPAGE_INSTFILES<br />
+<br />
+Above all the functions and just below:<br />
+<br />
+!define MUI_FINISHPAGE_SHOWREADME_FUNCTION &quot;runfile2&quot;<br />
+<br />
+Edit: and you want this before it too:<br />
+!define MUI_WELCOMEFINISHPAGE_CUSTOMFUNCTION_INIT InitFinishPage<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW ShowFinishPage<br />
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE LeaveFinishPage<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">15th August 2005, 21:17</div></div><div class="posttext">The functions have to be after the !insertmacro MUI_PAGE_FINISH because the $MUI_HWND variable is not yet defined before it.<br />
+<br />
+To fix the checkbox not showing correctly, remove the line:<br />
+<br />
+<br />
+!define MUI_WELCOMEFINISHPAGE_CUSTOMFUNCTION_INIT InitFinishPage<br />
+<br />
+<br />
+Add this line in its place:<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE PreFinishPage<br />
+<br />
+And rename the function &quot;InitFinishPage&quot; to &quot;PreFinishPage&quot;.<br />
+<br />
+The difference between those 2 defines is that the MUI_WELCOMEFINISHPAGE_CUSTOMFUNCTION_INIT specifies the function which is executed before everything, so future !insertmacro MUI_INSTALLOPTIONS_WRITE macros will overwrite the settings you put, and the MUI_PAGE_CUSTOMFUNCTION_PRE is after the page created the INI file structure.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ahmad1234</div><div class="date">15th August 2005, 23:12</div></div><div class="posttext">I'm sure that I've done everything you said above, but the checkbox still is not appearing.<br />
+<br />
+Could you please attach a working, modified version of my testapp.nsi<br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">16th August 2005, 00:00</div></div><div class="posttext">Ah, it isn't working now because you put a bigger value in the &quot;Top&quot; INI value of the control than the &quot;Bottom&quot; value. The point (0,0) of a dialog is in the top-left corner of it. My first code about the dimensions would make it appear. To make the checkbox placement more natural with the other checkboxes, put the top value as &quot;130&quot; and bottom value as &quot;140&quot;.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Ahmad1234</div><div class="date">16th August 2005, 00:40</div></div><div class="posttext">Thank you! It is now working..<br />
+<br />
+Sorry for being so n00bish :P, thanks for the great support, much appreciated! especially deguix :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Getting Hostname, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Getting Hostname NSIS Discussion" />
+	
+	<title> Getting Hostname [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Getting Hostname</div>
+<hr />
+<div class="pda"><a href="t-305381.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=305381">Getting Hostname</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">southcot</div><div class="date">15th April 2009, 17:00</div></div><div class="posttext">VERY much a newbie to this and it's proving a steep learning curve.<br />
+<br />
+I want to configure an installer that will read the current hostname of a Windows XP or Vista machine, store it for un-install purposes and then change the hostname. The searches I have made have told me little.<br />
+<br />
+So far I have come across examples of code such as:-<br />
+<br />
+System::Call &quot;kernel32.dll::GetComputerNameW(t .r0,*i ${NSIS_MAX_STRLEN} r1)i.r2&quot;<br />
+<br />
+but I can't find anything I understand that tells me how to use this in a script and also what the various parameters are.<br />
+<br />
+I would be grateful if someone could point me in the right direction.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">15th April 2009, 17:42</div></div><div class="posttext">that's not really typical NSIS scripting, as it invokes the System plugin that calls DLL functions (in this case, the function 'GetComputerNameW' in 'kernel32.dll'.<br />
+<br />
+Example code with usage examples is provided in:<br />
+http://nsis.sourceforge.net/Your_Computer_Name (uses the registry rather than the GetComputerName functions)<br />
+<br />
+http://nsis.sourceforge.net/User_Management_using_API_calls#Get_Server_Name</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">southcot</div><div class="date">15th April 2009, 17:59</div></div><div class="posttext">Thanks for the speedy response. I had come across the latter but couldn't see how to use the macro - part of this steep incline I'm following!! Is the ability to set the name just a mirror of GetComputerNameW using SetComputerNameW</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">15th April 2009, 18:25</div></div><div class="posttext">naw, you'd have to look into:<br />
+http://msdn.microsoft.com/en-us/library/ms724931(VS.85).aspx<br />
+The System plugin documentation should tell you how/what, but that thing still confuses me half the time :\<br />
+Thankfully, this was covered on these Forums before, so:<br />
+http://forums.winamp.com/showthread.php?postid=2005624<br />
+<br />
+<br />
+I'm not sure if you could also write it out to the registry and use WM_WININICHANGE to notify the system of that change; so best to go with the above URL</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">southcot</div><div class="date">16th April 2009, 15:41</div></div><div class="posttext">This excellent the second link does the trick beautifully, many thanks. I'm not sure how I missed it when trawling for solutions, I try not to be a helpless newbie when I start something new. I am still very confused as to what the parameters mean etc. The MSDN link does not seem to offer much enlightenment on this point. I guess it will become apparent as I carry on.<br />
+<br />
+Thanks again.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">16th April 2009, 18:27</div></div><div class="posttext">Well, the System plugin is a whole different world from NSIS scripting, it does some pretty raw handling of passing data into DLL functions, getting data back, etc.<br />
+<br />
+System::Call 'kernel32.dll::SetComputerNameExA(i 5,t &quot;$ComputerName&quot;)i.r1'<br />
+<br />
+That, for example, can be broken up into:<br />
+<br />
+System:: ; invoke something in the System plugin<br />
+::Call ; specifically, the Call function.<br />
+<br />
+That's NSIS's standard syntax for calling a plugin function.<br />
+<br />
+The parameters for that function follow within the ' single quotes:<br />
+<br />
+kernel32.dll:: ; Invoke something within the kernel32 DLL file<br />
+::SetComputerNameExA ; Specifically, the SetComputerNameEx function.  It ends here in A so that the ANSI version is called, specifically.<br />
+<br />
+<br />
+SetComputerNameEx is, again, 'documented' over at:<br />
+http://msdn.microsoft.com/en-us/library/ms724931(VS.85).aspx<br />
+<br />
+The parameters for that function follow within the ( ) parentheses:<br />
+<br />
+i 5 ; The first parameter is an integer number, the number 5<br />
+t &quot;$ComputerName&quot; ; The second parameter i text, the string that follows ($ComputerName is an NSIS variable declared earlier).<br />
+<br />
+<br />
+Those two parameters follow from that function's description page at MSDN.  It takes two parameters:<br />
+<br />
+the COMPUTER_NAME_FORMAT to set, which is detailed further on the link given on that MSDN page to: http://msdn.microsoft.com/en-us/library/ms724224(VS.85).aspx (the one you'd be interested in, !define ComputerNamePhysicalDnsHostname, is the 6th item in that list - but they start counting at 0 (zero), so the number to use is 5)<br />
+<br />
+And the actual name to set.  The MSDN page shows that it actually wants a pointer to a buffer in the memory that holds the string, but the System plugin is smart enough to do that work for you and just lets you specify the text directly.<br />
+<br />
+Finally, you may want to check if it worked or not, so you need the output from that function.  That's define behind the parentheses:<br />
+i.r1<br />
+That means that the expected result should be of an integer type (the MSDN page shows that the result should be a BOOL, which basically means it will return an integer value of either 0 (zero, false) or 1 (one, true), and that you want to store that result in $1.  Note that dot in front of 'r1', that would normally be the input value as far as the System plugin goes.. but obviously there's no input to give for the -result- of a function, so you can tell System that there is no input value by using that dot.<br />
+<br />
+I'm probably not the best at explaining the finer details of the System plugin (still grappling with it a bit myself).. I'd say have a peek at the System plugin documentation, the various examples for it, and search the forums for other uses.  It's *very* powerful, but whenever I can, I stay very far away from it :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">southcot</div><div class="date">16th April 2009, 19:06</div></div><div class="posttext">Brilliant thanks again for all the help. This has opened up much more for me. The help you gave me before has meant I have already been able to start to develop the installer I need and this is icing on the cake.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Global Variable Init, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Global Variable Init NSIS Discussion" />
+	
+	<title> Global Variable Init [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Global Variable Init</div>
+<hr />
+<div class="pda"><a href="t-212973.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=212973">Global Variable Init</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">karenk</div><div class="date">12th April 2005, 10:28</div></div><div class="posttext">Hi! I'm a real newbie (been pouring over NSIS for about 12 hours). And I've finally stumped myself. :)<br />
+<br />
+I understand all variables are global. Var statements are fine outside Sections.<br />
+<br />
+Now I'd like to specify variable's value once, then use it in several sections.  What's the best way to go about this?<br />
+<br />
+Adding code like StrCpy $VarName &quot;Value&quot; doesn't work outside a section. Can I create a section that always executes? Is there another way?<br />
+<br />
+Thanks!<br />
+<br />
+P.S.  !define seems to do the job, if the value is static.  But sometimes the value must be determined at runtime.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">12th April 2005, 11:43</div></div><div class="posttext">.onInit function may be a good place to set variable value. After this you can use it in any section.<br />
+NSIS Documentation, 4.7.2.1.2 .onInit</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">karenk</div><div class="date">13th April 2005, 11:54</div></div><div class="posttext">Originally posted by Takhir <br />
+.onInit function may be a good place to set variable value. After this you can use it in any section.<br />
+NSIS Documentation, 4.7.2.1.2 .onInit <br />
+<br />
+Thanks for the reply and suggestion!  But it looks like .onInit is only called when the installer is performing an installation.  During an uninstall, un.onInit is called instead.  Is that right?<br />
+<br />
+If so, I'd have to duplicate my code in the .onInit and un.OnInit functions, something I'd like to avoid.  <br />
+<br />
+What I'm hoping to find is a way to set my values in one &quot;easy to maintain&quot; location, so I don't have to rely on my old brain to tell me to reproduce each change in another location.  :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">glory_man</div><div class="date">13th April 2005, 12:16</div></div><div class="posttext">You can remove your code into !macro. And include !insertmacro &quot;yourmacro&quot; in .onInit and un.onInit functions.<br />
+<br />
+EDIT: or somewhere else.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">flizebogen</div><div class="date">13th April 2005, 12:20</div></div><div class="posttext">Create a function where you store every instruction you want to &quot;re-use&quot;. Than call this function in the OnInit and un.OnInit Function.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">glory_man</div><div class="date">13th April 2005, 12:24</div></div><div class="posttext">Originally posted by flizebogen <br />
+Create a function where you store every instruction you want to &quot;re-use&quot;. Than call this function in the OnInit and un.OnInit Function.  <br />
+In this case two functions must be created. Because uninstaller functions must contain un.-prefix.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">flizebogen</div><div class="date">13th April 2005, 12:38</div></div><div class="posttext">you're right - sorry for the wrong posting.<br />
+<br />
+The docs says that it is not possible for the installer to call an uninstaller function vice-versa</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">karenk</div><div class="date">13th April 2005, 13:11</div></div><div class="posttext">Originally posted by flizebogen <br />
+The docs says that it is not possible for the installer to call an uninstaller function vice-versa  <br />
+<br />
+And I can confirm the docs are correct.  :)<br />
+<br />
+For now, I have two functions, AppInit and un.AppInit.  They contain identical contents.  So far, I haven't found any way to breach the wall between the Install and Uninstall sides, except via !defines.<br />
+<br />
+(BTW, just curious -- what's the significance of the ! in front of define and insertmacro?)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">flizebogen</div><div class="date">13th April 2005, 13:30</div></div><div class="posttext">i guess to differ compile-time and run-time commands</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">13th April 2005, 13:48</div></div><div class="posttext">! declares that it is a compile-time command (just a way of breaking up the code and making it more user-friendly).<br />
+<br />
+Just use a !macro (as glory_man has already suggested)...<br />
+<br />
+!macro setVars<br />
+ StrCpy $Var1 &quot;blah&quot;<br />
+ StrCpy $Var2 &quot;blah&quot;<br />
+!macroend<br />
+<br />
+Function .onInit<br />
+ !insertmacro setVars<br />
+FunctionEnd<br />
+<br />
+Function un.onInit<br />
+ !insertmacro setVars<br />
+FunctionEnd<br />
+<br />
+If you are worried about it taking up more memory, then don't because it really doesn't take up a more noticeable amount.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">karenk</div><div class="date">13th April 2005, 14:10</div></div><div class="posttext">Originally posted by glory_man <br />
+You can remove your code into !macro. And include !insertmacro &quot;yourmacro&quot; in .onInit and un.onInit functions. <br />
+Thanks!  (and thanks to Afro UK for pointing out I'd somehow missed this gem!)<br />
+<br />
+That seems like the best solution.  Off to implement it ...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pawcio</div><div class="date">18th October 2005, 16:11</div></div><div class="posttext">Hi<br />
+What if I would like use my global vars not in the section?<br />
+And How can I use it in File?<br />
+Do I have to put my funcion and call to function in the section or just !insertmacro &quot;setVars&quot; and how can I do it not in the section?<br />
+<br />
+for example<br />
+&lt;code&gt;<br />
+Var &quot;pkgname&quot;<br />
+<br />
+!macro setVars<br />
+StrCpy $pkgname &quot;mojapaczka&quot;<br />
+!macroend<br />
+<br />
+Name &quot;$pkgname&quot;<br />
+InstallDir &quot;c:\$pkgname\$pkgname&quot;<br />
+<br />
+Section &quot;install&quot;<br />
+ !insertmacro setVars<br />
+ SetOutPath $INSTDIR<br />
+ File /a /r c:\packages\$pkgname\*<br />
+SectionEnd<br />
+&lt;/code&gt;<br />
+=cut<br />
+<br />
+Any advice would be appreciated.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th October 2005, 16:20</div></div><div class="posttext">File needs the path at compile time, use a !define</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pawcio</div><div class="date">19th October 2005, 00:21</div></div><div class="posttext">THX for advice :)<br />
+<br />
+but I still can't find the way to write it properly.<br />
+&lt;code&gt;<br />
+!define $pkgname &quot;mysoft234&quot;<br />
+!define $soft &quot;monday&quot;<br />
+<br />
+Name $pkgname<br />
+OutFile d:\nsis\$pkgname-bedzie.exe<br />
+Section &quot;ins&quot;<br />
+ SetOutPath $INSTDIR<br />
+ File /r &quot;D:\nsis\${soft}\${pkgname}\*&quot;<br />
+SectionEnd<br />
+<br />
+I assume that this is wrong, is't it?<br />
+maybe:<br />
+my $var=&quot;value&quot;;<br />
+;)<br />
+Can I ask for anather prompt please.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">19th October 2005, 04:13</div></div><div class="posttext">everything that uses pkgname must use ${} (Name,OutFile etc)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pawcio</div><div class="date">20th October 2005, 00:15</div></div><div class="posttext">thx for reply<br />
+but still it seems to be a problem.<br />
+Compiler just ignore my vars, said that File is missing<br />
+and my OutFile have ${var} in name instead of myname-name.exe<br />
+<br />
+&lt;code&gt;<br />
+;			eh kurwa...<br />
+Var pkgname<br />
+;<br />
+!system $pkgname &quot;dup&quot;<br />
+<br />
+Name ${pkgname}<br />
+OutFile d:\nsis\${pkgname}bedzie.exe<br />
+<br />
+InstallDir &quot;d:\kupa&quot;<br />
+<br />
+Section &quot;install&quot;<br />
+<br />
+ SetOutPath $INSTDIR<br />
+ ;StrCpy ${pkgname} &quot;dup&quot; '' ''<br />
+  File /r &quot;D:\nsis\${pkgname&quot;<br />
+  <br />
+SectionEnd<br />
+<br />
+&lt;/code&gt;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">20th October 2005, 01:32</div></div><div class="posttext">Var is runtime. !system is compiletime.<br />
+How do you expect them to work together?<br />
+What do expect to accomplish with:<br />
+<br />
+!system $pkgname &quot;dup&quot;<br />
+<br />
+<br />
+Instead try this:<br />
+<br />
+Name ${pkgname}<br />
+OutFile d:\nsis\${pkgname}\bedzie.exe<br />
+<br />
+InstallDir &quot;d:\kupa&quot;<br />
+<br />
+Section &quot;install&quot;<br />
+<br />
+SetOutPath $INSTDIR<br />
+File /r &quot;D:\nsis\${pkgname}&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+Then call MakeNSIS.exe with /Dpkgname=dup option.<br />
+Incidentally, if your outfile is going to d:\nsis\${pkgname}\bedzie.exe, then everytime you build the installer, File /r &quot;D:\nsis\${pkgname}&quot; is going to pick up the previous build.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pawcio</div><div class="date">21st October 2005, 13:16</div></div><div class="posttext">Thank You :)<br />
+Now see my misteke.<br />
+<br />
+Regards</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

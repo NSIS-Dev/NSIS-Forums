@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problem with UAC.U.Elevate.AdminOnly, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problem with UAC.U.Elevate.AdminOnly NSIS Discussion" />
+	
+	<title> Problem with UAC.U.Elevate.AdminOnly [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problem with UAC.U.Elevate.AdminOnly</div>
+<hr />
+<div class="pda"><a href="t-297525.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=297525">Problem with UAC.U.Elevate.AdminOnly</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Spilly</div><div class="date">17th September 2008, 19:04</div></div><div class="posttext">I am having a problem with the UAC plug-in on the uninstaller side only. <br />
+<br />
+For the installer it works great, pops-up a UAC prompt, goes through the install, and creates all necessary shortcuts, files, etc.<br />
+<br />
+For the uninstaller it also pops-up a UAC prompt, but when you click uninstall it says completed yet nothing gets removed. Even the details tab on the uninstaller only shows the word Completed.<br />
+<br />
+Unfortunately I do have to use the UAC plug-in for this installer, as the installer is getting launched from a user level process and needs to be elevated.<br />
+<br />
+Obviously if I could easily have different requestExecutionLevels between the installer and uninstaller this problem would be solved.<br />
+<br />
+Thanks guys!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">17th September 2008, 19:27</div></div><div class="posttext">How is this a UAC plugin problem, if it is able to start the uninstaller elevated, what is the problem?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Spilly</div><div class="date">17th September 2008, 19:49</div></div><div class="posttext">The problem is that it isn't uninstalling anything, it's just a dummy uninstaller.<br />
+<br />
+If I build this same installer without using the UAC plug-in, setting the RequestExecutionLevel to admin, both the installer and the uninstaller work properly. <br />
+<br />
+The problem is I need the installer to be set at the user level and then request a higher privilege for a specific purpose (I'm packing it inside and xpi file for firefox).<br />
+<br />
+If I use the xpi with the packaged installer's RequestExecutionLevel set to admin, Vista with UAC turned on does not show a UAC prompt and the installer does not get launched.<br />
+<br />
+If I use the xpi with the packaged installer's RequestExecutionLevel set to user, elevating the process with the UAC plug-in, installation from firefox works great, but the uninstaller no longer works, even though I still receive the UAC prompt.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">17th September 2008, 20:03</div></div><div class="posttext">Can you verify with Process Explorer if the uninstaller after you have elevated with the UAC dialog if the uninstaller is running with High IL (you must add the Integrity level column in process explorer probably) If it does not run @ High IL, create a minimal example and I will take a look at it</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Spilly</div><div class="date">17th September 2008, 20:21</div></div><div class="posttext">It's not running at high, but medium.<br />
+<br />
+I'm not sure how easily I can post an example, but I will try. If there are any programatical implementations you might think I could look at, that might be easier.<br />
+<br />
+Here is the screen shot.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">17th September 2008, 20:34</div></div><div class="posttext">looks like its running @ High IL to me, remember with the UAC plugin you have two instances of the same exe, the child process would be the elevated one, in that screenshot, you are not running process explorer elevated, but you can see that the inner most process does not have a IL since PE can't access the process, so it probably IS running elevated</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Spilly</div><div class="date">17th September 2008, 21:23</div></div><div class="posttext">So were does that leave me?<br />
+<br />
+The installer and uninstaller works if I uncomment all references to the UAC plug-in:<br />
+<br />
+# Top of .onInit<br />
+#${UAC.I.Elevate.AdminOnly}<br />
+<br />
+# Top of un.onInit<br />
+#${UAC.U.Elevate.AdminOnly} &quot;${UNINSTALLER_NAME}&quot;<br />
+<br />
+# inside nsi file<br />
+#${UAC.AutoCodeUnload} 1<br />
+<br />
+and add:<br />
+<br />
+RequestExececutionLevel admin<br />
+<br />
+If I add them and set the requestEcecutionLevel to user, the installer works, but the uninstaller doesn't.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">17th September 2008, 21:32</div></div><div class="posttext">what does not work ? If the problem is deleting registry and/or files, Process Monitor could give you more info</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Spilly</div><div class="date">17th September 2008, 23:03</div></div><div class="posttext">the uninstaller doesn't delete anything that was installed; shortcuts, binaries, reg keys. <br />
+<br />
+I ran process explorer as admin yet it said the process was high. Could it be that the uninstaller isn't signed?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Spilly</div><div class="date">18th September 2008, 01:16</div></div><div class="posttext">The lack of signing must be the problem.<br />
+<br />
+Both processes launch with the same priority, yet the installer is allowed to write and execute, but the uninstaller is not.<br />
+<br />
+I've attached the screenshots below.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Spilly</div><div class="date">18th September 2008, 18:52</div></div><div class="posttext">So I tried the example included with the plug-in, UAC_RealWorldFullyLoadedDualMode. <br />
+<br />
+I installed for all users, it worked, like mine.<br />
+<br />
+I ran the uninstaller, but it only deletes the install directory and registry, no shortcuts or start menu items. <br />
+<br />
+I've attached a screenshot below.<br />
+<br />
+Is this expected?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th September 2008, 19:04</div></div><div class="posttext">Well its running as admin, not sure what else you want me to do. The example code could have problems, I don't have Vista to test on so I don't know. For a quick fix, create a seperate uninstaller with RequestExecutionLevel admin and include that instead of calling WriteUninstaller in your script</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Spilly</div><div class="date">18th September 2008, 21:41</div></div><div class="posttext">Hey, I appreciate all your help on this issue. <br />
+<br />
+Just to clarify I'm not asking you to do anything, just trying to post my experiences on this issue. Your feedback has helped me eliminate possible problems. <br />
+<br />
+If someone else in the future has a similar problem, please reply to this thread so we can find out more about it.<br />
+<br />
+Since, I only need the UAC plug-in for the xpi packaged version of the installer, I'm just going to pop a message up if a user is not admin and has UAC enabled, telling them to run as administrator (the uninstaller works if I remove the UAC.U.Elevate.AdminOnly in un.onInit and call RunAs directly from windows). <br />
+<br />
+Thanks again!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

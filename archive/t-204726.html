@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" ServiceLib appears to have a bug..., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  ServiceLib appears to have a bug... NSIS Discussion" />
+	
+	<title> ServiceLib appears to have a bug... [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  ServiceLib appears to have a bug...</div>
+<hr />
+<div class="pda"><a href="t-204726.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=204726">ServiceLib appears to have a bug...</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">svendelmas</div><div class="date">12th January 2005, 18:56</div></div><div class="posttext">Not sure whether this is the right forum, sorry if it is not. <br />
+<br />
+I have been trying to register a service to run as a particular user, and noticed that the ServiceLib code is not passing a &quot;t&quot; for the last three arguments to CreateServiceA. <br />
+<br />
+I changed the code (see below for an example... I can provide the complete file if needed), and now it works fine. Who would be in charge of updating the code on the web site (if it is deemed correct)? I tried to find a way to contact the original author of that code, but couldn't...<br />
+<br />
+Also... the example page at http://nsis.sourceforge.net/archive/viewpage.php?pageid=345 should probably mention that the arguments passed to the call need to end with a &quot;;&quot; (I ran into that issue as well).<br />
+<br />
+Finally, as far as I can tell, the &quot;machine&quot; argument should be called more something like &quot;dependencies&quot; (at least according to the MS docs).<br />
+<br />
+Well this is reall the last question... I noticed a stalled thread on finding a way to programatically change the &quot;log on as a service&quot; setting for an account... is there any conclusion/solution for that?<br />
+<br />
+The new code (just replace the relevant old code):<br />
+    ; create service<br />
+    lbl_create:<br />
+      Push $R1 ;depend<br />
+      Push $R2 ;user<br />
+      Push $R3 ;password<br />
+      Push $R4 ;interact<br />
+      Push $R5 ;autostart<br />
+      Push $R6 ;path<br />
+<br />
+      !insertmacro CALL_GETPARAM $R1 &quot;depend&quot; &quot;n&quot; &quot;lbl_depend&quot;<br />
+      lbl_depend:<br />
+      StrCmp $R1 &quot;n&quot; lbl_depend_null lbl_depend_not_null<br />
+      lbl_depend_null:<br />
+          StrCpy $R7 &quot;&quot;<br />
+          Goto lbl_depend_done<br />
+      lbl_depend_not_null:<br />
+          StrCpy $R7 &quot;t&quot;<br />
+      lbl_depend_done:<br />
+<br />
+      !insertmacro CALL_GETPARAM $R2 &quot;user&quot; &quot;n&quot; &quot;lbl_user&quot;<br />
+      lbl_user:<br />
+      StrCmp $R2 &quot;n&quot; lbl_user_null lbl_user_not_null<br />
+      lbl_user_null:<br />
+          StrCpy $R8 &quot;&quot;<br />
+          Goto lbl_user_done<br />
+      lbl_user_not_null:<br />
+          StrCpy $R8 &quot;t&quot;<br />
+      lbl_user_done:<br />
+<br />
+      !insertmacro CALL_GETPARAM $R3 &quot;password&quot; &quot;n&quot; &quot;lbl_password&quot;<br />
+      lbl_password:<br />
+      StrCmp $R3 &quot;n&quot; lbl_password_null lbl_password_not_null<br />
+      lbl_password_null:<br />
+          StrCpy $R9 &quot;&quot;<br />
+          Goto lbl_password_done<br />
+      lbl_password_not_null:<br />
+          StrCpy $R9 &quot;t&quot;<br />
+      lbl_password_done:<br />
+<br />
+      !insertmacro CALL_GETPARAM $R4 &quot;interact&quot; &quot;0x10&quot; &quot;lbl_interact&quot;<br />
+        StrCpy $6 0x10<br />
+        IntCmp $R4 0 +2<br />
+        IntOp $R4 $6 | 0x100<br />
+        StrCpy $R4 $6<br />
+      lbl_interact:<br />
+<br />
+      !insertmacro CALL_GETPARAM $R5 &quot;autostart&quot; &quot;0x3&quot; &quot;lbl_autostart&quot;<br />
+        StrCpy $6 0x3<br />
+        IntCmp $R5 0 +2<br />
+        StrCpy $6 0x2<br />
+        StrCpy $R5 $6<br />
+      lbl_autostart:<br />
+<br />
+      !insertmacro CALL_GETPARAM $R6 &quot;path&quot; &quot;n&quot; &quot;lbl_path&quot;<br />
+      lbl_path:<br />
+      StrCmp $R6 &quot;n&quot; lbl_path_null lbl_path_not_null<br />
+      lbl_path_null:<br />
+          StrCpy $R0 &quot;&quot;<br />
+          Goto lbl_path_done<br />
+      lbl_path_not_null:<br />
+          StrCpy $R0 &quot;t&quot;<br />
+      lbl_path_done:<br />
+<br />
+      System::Call 'advapi32::CreateServiceA(i r4, t r2, t r2, i ${SERVICE_ALL_ACCESS}, i R4, i R5, i 0, $R0 R6, n, n, $R7 R1, $R8 R2, $R9 R3) i.r6'<br />
+<br />
+<br />
+Thanks,<br />
+Sven</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">13th January 2005, 18:39</div></div><div class="posttext">dselkirk (http://forums.winamp.com/member.php?s=&amp;action=getinfo&amp;userid=76215) has a user with the same name on the forums too. You can send him a private message (http://forums.winamp.com/private.php?s=&amp;action=newmessage&amp;userid=76215). Let me know if he doesn't respond and I'll see what I can do with the code.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dan211a</div><div class="date">5th May 2006, 05:57</div></div><div class="posttext">Hi,<br />
+for anyone out there still with the problem of registering a service under a particular account... I hope this will save you some time as I spent 2 hours on this. Unfortuntaley the code posted above did not work for me.<br />
+<br />
+There are 2 gotchas to be aware of:<br />
+1. The servicelib.nsh library has a problem in formatting $R1 $R2 $R3 parameters when calling:<br />
+<br />
+System::Call 'advapi32::CreateServiceA(...)<br />
+<br />
+$R1 coresponds to what you define as 'machine' in the macro invocation. it will be 'n' if the machine parameter is omitted.<br />
+<br />
+$R2 corresponds to what you define as 'user' in the macro invocation. it will be 'n' if the user parameter is omitted.<br />
+<br />
+$R3 corresponds to what you define as 'password' in the macro invocation. it will be 'n' if the password parameter is omitted.<br />
+<br />
+all works fine if you omitted those 3. If you specify them, you need to change the macro invocation and prepend to them a 't' to tell to the System::Call method that they are text strings.<br />
+<br />
+So if you want to specify user and password, change the call to:<br />
+System::Call 'advapi32::CreateServiceA(i r4, t r2, t r2, i ${SERVICE_ALL_ACCESS}, i R4, i R5, i 0, t R6, n, n, R1, t R2, t R3) i.r6'<br />
+<br />
+I know there should be a more generic method to allow user and password to be specified or not, and 'n' or 't' be used. This is just the line I use if I know that I will specify user and password.<br />
+<br />
+2. you cannot set user and password if you have the parameter interact=1 . It must be set to 0. This is a windows requirement. interact=1 works if you do not specify user and password (local system account will be used).<br />
+<br />
+As for username, use DOMAIN\username , or simply .\username for a local account.<br />
+<br />
+Hope this helps, and thanks to everyone for contributing to NSIS!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th May 2006, 13:31</div></div><div class="posttext">The CreateService call indeed contains a few problems. It doesn't define the type of the last five parameters. It also tries to pass &quot;n&quot; inside the variable instead of at the variables's place. The later can probably be fixed with a replacement for CALL_GETPARAM that sets a define containing either &quot;n&quot; or &quot;R6&quot; according the input.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Can I get font name Using API ?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Can I get font name Using API ? NSIS Discussion" />
+	
+	<title> Can I get font name Using API ? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Can I get font name Using API ?</div>
+<hr />
+<div class="pda"><a href="t-319648.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=319648">Can I get font name Using API ?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jiake</div><div class="date">3rd June 2010, 09:24</div></div><div class="posttext">Last time I post a thread about the FontName plugin. I said that the plugin can only get the English name of the font. I used to contact the author, but the plugin is built in 2007, I thought it is not easy to contact to him. Later I search in internet, someone said that a win32 API could get the infomation of a font file.<br />
+<br />
+This is an article about the funtion:<br />
+http://www.undocprint.org/winspool/getfontresourceinfo<br />
+<br />
+I tried to use it, but I didn't get the result as my programming is poor. Would you help me to write an example script to show the usage?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">3rd June 2010, 11:53</div></div><div class="posttext">Nice find. I'm not sure if it gets exactly what you need but here you go anyway (see attached script). Tested on Windows 7 (Verdana.ttf -&gt; Verdana).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jiake</div><div class="date">3rd June 2010, 15:33</div></div><div class="posttext">Nice find. I'm not sure if it gets exactly what you need but here you go anyway (see attached script). Tested on Windows 7 (Verdana.ttf -&gt; Verdana).<br />
+<br />
+Stu<br />
+Thanks a lot!<br />
+I test your script like this:<br />
+  Push simsun.ttc<br />
+  Call GetFontName<br />
+  Pop $R0<br />
+  DetailPrint $R0<br />
+  Push simhei.ttf<br />
+  Call GetFontName<br />
+  Pop $R0<br />
+  DetailPrint $R0<br />
+It exactly prints the Chinese font name:<br />
+http://forums.winamp.com/attachment.php?attachmentid=47066<br />
+<br />
+When I have a lot of TTF fonts to install, I must write to registry for every font file before, for the FontName plugin only got the English names. But now, I can easily inst any TTF fonts in custom folder by using a macro. This function is not only useful to me, but also to more users from different contries. Thank you again!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">3rd June 2010, 19:30</div></div><div class="posttext">That's great. I will put it on the Wiki when it's back up (down at the moment).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">3rd June 2010, 19:35</div></div><div class="posttext">I just updated the function with a missing Push/Pop for $R2.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jiake</div><div class="date">4th June 2010, 12:46</div></div><div class="posttext">Thanks, I have downloaded the new one.<br />
+Ok, more users may view it also on Wiki now.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">4th June 2010, 13:02</div></div><div class="posttext">Posted: http://nsis.sourceforge.net/Get_localised_font_name<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jiake</div><div class="date">19th June 2010, 05:18</div></div><div class="posttext">Recently, I found that I get only &quot;error&quot; when using this code. I found that, I tried to &quot;push&quot; a installed font file name, it returned the correct name, but when I &quot;push&quot; a file name that is not yet installed, it always returned &quot;error&quot;. At the beginning I donot know why, later I imagine that the font resource must be added to system first, actually that's it.<br />
+<br />
+So, to install a font, you must insert this line before get its name and write to registry:<br />
+System::Call &quot;gdi32::AddFontResource(t 'FontFileName')&quot;<br />
+<br />
+ReadRegStr $0 HKLM &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion&quot; &quot;CurrentVersion&quot;<br />
+IfErrors Win9x WinNT<br />
+<br />
+Win9x:<br />
+StrCpy $FONTREGKEY &quot;Software\Microsoft\Windows\CurrentVersion\Fonts&quot;<br />
+Goto RegFont<br />
+<br />
+WinNT:<br />
+StrCpy $FONTREGKEY &quot;Software\Microsoft\Windows NT\CurrentVersion\Fonts&quot;<br />
+Goto RegFont<br />
+<br />
+RegFont:<br />
+ClearErrors<br />
+<br />
+!macro InstFont FONTFILE<br />
+        System::Call &quot;gdi32::AddFontResource(t '${FONTFILE}')&quot;<br />
+        Push '${FONTFILE}'<br />
+        Call GetFontName<br />
+        Pop $R0<br />
+        ${If} $R0 != 'error'<br />
+            WriteRegStr HKLM '$FONTREGKEY' '$R0 (TrueType)' '${FONTFILE}'<br />
+        ${Else}<br />
+            System::Call &quot;gdi32::RemoveFontResource(t '${FONTFILE}')&quot;<br />
+        ${EndIf}<br />
+!macroend<br />
+<br />
+FindFirst $0 $1 '$INSTDIR\TrueType\*.ttf'<br />
+loop:<br />
+        StrCmp $1 &quot;&quot; done<br />
+        !insertmacro InstFont '$INSTDIR\TrueType\$1'<br />
+        FindNext $0 $1<br />
+        Goto loop<br />
+done:<br />
+<br />
+SendMessage ${HWND_BROADCAST} ${WM_FONTCHANGE} 0 0</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

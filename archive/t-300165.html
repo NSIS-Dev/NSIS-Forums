@@ -1,0 +1,120 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Passing variables back from an outer process using UAC plugin, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Passing variables back from an outer process using UAC plugin NSIS Discussion" />
+	
+	<title> Passing variables back from an outer process using UAC plugin [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Passing variables back from an outer process using UAC plugin</div>
+<hr />
+<div class="pda"><a href="t-300165.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=300165">Passing variables back from an outer process using UAC plugin</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">NB-Dexter</div><div class="date">21st November 2008, 13:55</div></div><div class="posttext">While you can send data in to a user level process using UAC::ExecCodeSegment, I have a need to get parameters back, for example I needed to know the acccount name of the user level account for some settings that are done from the inner, admin level process.<br />
+<br />
+The solution I came up with is using a temporary .ini file that both processes can see.  I couldn't use $TEMP because the inner and outer processes don't get the same folder.  I couldn't use a registry key because I didn't know the user account for HKCU of the user process.  I ended up using $APPDATA with SetShellVarContext set to &quot;All&quot;.  This gives a consistent path in both user and admin processes on XP and Vista.<br />
+<br />
+Here's an example:<br />
+<br />
+Function UserTest<br />
+<br />
+  MessageBox MB_OK &quot;User Privs process$\n$\nReceived value from Admin process: R1 = $R1&quot;<br />
+<br />
+  SetShellVarContext all<br />
+  strcpy $R1 &quot;From user&quot;<br />
+  WriteINIStr $APPDATA\temp.ini &quot;RegVal&quot; &quot;R1&quot; $R1<br />
+<br />
+FunctionEnd<br />
+<br />
+[Section code after UAC::RunElevated]<br />
+.<br />
+.<br />
+.<br />
+strcpy $R1 &quot;From admin&quot;<br />
+MessageBox MB_OK &quot;Call UserTest with user rights.  Sending R1 = $R1&quot;<br />
+<br />
+GetFunctionAddress $R0 UserTest<br />
+UAC::ExecCodeSegment $R0  <br />
+  <br />
+; Get changed R1 value<br />
+  <br />
+SetShellVarContext all<br />
+ReadINIStr $R1 &quot;$APPDATA\temp.ini&quot; &quot;RegVal&quot; &quot;R1&quot; <br />
+MessageBox MB_OK &quot;After call to UserTest with user rights.  R1 = $R1&quot; <br />
+.<br />
+.<br />
+.<br />
+<br />
+Make sure you remove temp.ini when you're done with it.  Probably be better to create a folder in APPDATA but, you get the idea.<br />
+<br />
+I hope this is of help to someone.  I've struggled with this off and on for awhile now.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ianamason</div><div class="date">2nd January 2009, 21:08</div></div><div class="posttext">Indeed it has helped someone. What worries me with this<br />
+scheme, though, is the following quote from the manual<br />
+entry for SetShellVarContext:<br />
+<br />
+<br />
+Please take into consideration that a &quot;normal user&quot; has no rights to write in the all users area. Only admins have full access rights to the all users area. <br />
+<br />
+<br />
+Has this bitten you ever? Do you worry too?<br />
+<br />
+Cheers, Ian.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">2nd January 2009, 21:30</div></div><div class="posttext">v0.0.11 of the plugin added UAC::GetShellFolderPath so you can get the path to the profile (and the other CSIDL paths) of the &quot;normal&quot; user</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">NB-Dexter</div><div class="date">2nd January 2009, 21:57</div></div><div class="posttext">Originally posted by ianamason <br />
+<br />
+&lt;snip&gt;<br />
+.<br />
+.<br />
+.<br />
+Has this bitten you ever? Do you worry too?<br />
+<br />
+Cheers, Ian.  <br />
+<br />
+I tested this on XP and Vista and did not have any issues.  My standard user account was able to write to the appdata folder with setshellcontext set to all.  Did you try it?<br />
+<br />
+Originally posted by Anders <br />
+v0.0.11 of the plugin added UAC::GetShellFolderPath...<br />
+ <br />
+<br />
+Sweet, I'll have to check that out.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">2nd January 2009, 22:03</div></div><div class="posttext">its not on the wiki yet, grab it from http://stashbox.org/tag/nsis for now</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">NB-Dexter</div><div class="date">2nd January 2009, 22:16</div></div><div class="posttext">Thanks, I noticed the wiki still had the old one and was just about to ask where I could find it.  This will make my solution a little cleaner.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ianamason</div><div class="date">2nd January 2009, 22:25</div></div><div class="posttext">NB-Dexter: Yes I am testing on a vista business box, and it<br />
+works fine. But who know where it would bite?<br />
+<br />
+Anders: Excellent, I'll futz with that asap.<br />
+<br />
+Again, thanks to both of you.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">abarinoff</div><div class="date">7th April 2010, 09:52</div></div><div class="posttext">I've described the solution for original thread's problem in following post: Passing parameters and retrieving results from inner/outer UAC processes in NSIS-based installer (http://abarinoff-dev.blogspot.com/2010/04/passing-parameters-and-retrieving.html)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">7th April 2010, 14:09</div></div><div class="posttext">Errr... Isn't that way out of date? The UAC plugin syncs registers both ways. Using a file to write/readback the result is definitely NOT the way to do it...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">7th April 2010, 14:54</div></div><div class="posttext">only the new version syncs both ways</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

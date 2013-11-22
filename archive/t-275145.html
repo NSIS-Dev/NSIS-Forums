@@ -1,0 +1,165 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" New Checkbox modifying components checkbox state, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  New Checkbox modifying components checkbox state NSIS Discussion" />
+	
+	<title> New Checkbox modifying components checkbox state [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  New Checkbox modifying components checkbox state</div>
+<hr />
+<div class="pda"><a href="t-275145.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=275145">New Checkbox modifying components checkbox state</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">luthar</div><div class="date">30th July 2007, 20:12</div></div><div class="posttext">Hello,<br />
+<br />
+I hope my subject is clear.<br />
+<br />
+Basicly, I want to be able to add a new checkbox to the Modern UI components page. To do this, I will go with the extract/write in ini files.<br />
+<br />
+My main problem is that I want to be able to modify the state of the components checkbox (basicly gray/ungray them).<br />
+<br />
+I saw a couple of threads about similar things but I can't seem to find a way to do it.<br />
+<br />
+Here are the solutions I tought, yet none are imho nicely programmed:<br />
+- Use the checkbox as a *next* button. Use the MUI_PAGE_CUSTOMFUNCTION_LEAVE macro to call a function that will SetSectionFlags. Reload the page (can this be done?!)<br />
+<br />
+- Use the checkbox as a *next* button. Create two components page, one with checkbox grayed and other one not grayed. Use the MUI_PAGE_CUSTOMFUNCTION_LEAVE to switch from one page to another. When the real next button is pressed, jump to Directory page.<br />
+<br />
+Any ideas on this? If so, any references to examples/code/eetc...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">30th July 2007, 21:18</div></div><div class="posttext">The .OnSelChange callback might be useful,<br />
+<br />
+http://nsis.sourceforge.net/Docs/Chapter4.html#4.7.2.1.8</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">luthar</div><div class="date">30th July 2007, 22:28</div></div><div class="posttext">So what have I done so far...Any tips would be welcomed..<br />
+<br />
+Hacked the UI to add a checkbox control...to Dialog 104 (Components)<br />
+<br />
+CONTROL &quot;&quot;, 1044, BUTTON, BS_CHECKBOX | WS_CHILD | WS_VISIBLE, 0, 68, 90, 18 <br />
+<br />
+<br />
+<br />
+I added the following lines to create the Components page...<br />
+<br />
+  !define MUI_PAGE_CUSTOMFUNCTION_PRE Component_pre<br />
+  !define MUI_PAGE_CUSTOMFUNCTION_LEAVE Component_leave<br />
+  !insertmacro MUI_PAGE_COMPONENTS<br />
+<br />
+<br />
+Made the following functions:<br />
+<br />
+Function Component_pre<br />
+	FindWindow $0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+    	GetDlgItem $1 $0 1044<br />
+	SendMessage $1 ${WM_SETTEXT} 0 &quot;TESTING 123&quot;<br />
+<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+Function Component_leave<br />
+     #<br />
+     # Missing code to get the CheckBox Id (I know its reference to 1044 but how to get the event that called this function?<br />
+        ${If} ......<br />
+		${if} $0 == &quot;0&quot;<br />
+			# default disable so no RO<br />
+<br />
+			SectionGetFlags ${SECMatlab} $3<br />
+			IntOp $3 ${SF_SELECTED} | ${SF_RO}<br />
+			SectionSetFlags ${SECMatlab}  $3<br />
+<br />
+			SectionGetFlags ${SECDotNet} $3<br />
+			IntOp $3 $3 | ${SF_RO}<br />
+			SectionSetFlags ${SECDotNet}  $3<br />
+<br />
+		${else}<br />
+			SectionGetFlags ${SECMatlab} $3<br />
+			IntOp $3 $3 | ${SF_RO}<br />
+			SectionSetFlags ${SECMatlab}  $3<br />
+<br />
+			SectionGetFlags ${SECDotNet} $3<br />
+			IntOp $3 $3 | ${SF_RO}<br />
+			SectionSetFlags ${SECDotNet}  $3<br />
+<br />
+		${endif}<br />
+		abort<br />
+	${EndIf}<br />
+FunctionEnd<br />
+<br />
+<br />
+The new checkbox added does not respond to any click events (it doesn't show the checkmark when clicked )</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">30th July 2007, 22:40</div></div><div class="posttext">Do check boxes send the BN_CLICKED notification? If so, you can use the ButtonEvent plug-in.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">luthar</div><div class="date">30th July 2007, 23:47</div></div><div class="posttext">Everything worked perfectly with the ButtonEvent.<br />
+<br />
+I still have a problem tought...<br />
+<br />
+When in a section I put SectionIn RO, the components becomes greyed... <br />
+<br />
+Yet with the code below it doesn't get grayed and the clear doesn't seem to work.<br />
+<br />
+<br />
+Function Component_Modification<br />
+<br />
+  # Swap Values of Checkbox<br />
+  ${If} $DefaultCheckBox == 1 <br />
+  	Strcpy $DefaultCheckBox &quot;0&quot;<br />
+  ${Else} <br />
+  	StrCpy $DefaultCheckBox &quot;1&quot;	<br />
+  ${EndIf}<br />
+<br />
+  # Has user checked the check box ?<br />
+  FindWindow $R0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+  GetDlgItem $R1 $R0 1200<br />
+  <br />
+  SendMessage $R1 ${BM_SETCHECK} $DefaultCheckBox 0 <br />
+<br />
+<br />
+	${If} $DefaultCheckBox != 1 # User has not checked check box.<br />
+   		; default disable so no RO and must turn grey<br />
+<br />
+		SectionGetFlags ${SECMatlab} $3<br />
+		!insertmacro ClearSectionFlag $3 ${SF_RO}<br />
+		SectionSetFlags ${SECMatlab}  $3<br />
+<br />
+		SectionGetFlags ${SECDotNet} $3<br />
+		!insertmacro ClearSectionFlag $3 ${SF_RO}<br />
+		SectionSetFlags ${SECDotNet}  $3<br />
+	${else}<br />
+		SectionGetFlags ${SECMatlab} $3<br />
+		IntOp $3 $3 | ${SF_RO}<br />
+		SectionSetFlags ${SECMatlab}  $3<br />
+<br />
+		SectionGetFlags ${SECDotNet} $3<br />
+		IntOp $3 $3 | ${SF_RO}<br />
+		SectionSetFlags ${SECDotNet}  $3<br />
+<br />
+<br />
+	${EndIf}<br />
+<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">luthar</div><div class="date">30th July 2007, 23:53</div></div><div class="posttext">Is it possible to put the section checkbox to gray, I would need to send the BM_SETSTATE message.<br />
+<br />
+If so, is there anyway to get access to the CheckBox from the section?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

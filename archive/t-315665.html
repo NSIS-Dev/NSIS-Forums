@@ -1,0 +1,113 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" UMUI_PAGE_ALTERNATIVESTARTMENU and its LEAVE function, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  UMUI_PAGE_ALTERNATIVESTARTMENU and its LEAVE function NSIS Discussion" />
+	
+	<title> UMUI_PAGE_ALTERNATIVESTARTMENU and its LEAVE function [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  UMUI_PAGE_ALTERNATIVESTARTMENU and its LEAVE function</div>
+<hr />
+<div class="pda"><a href="t-315665.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=315665">UMUI_PAGE_ALTERNATIVESTARTMENU and its LEAVE function</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">HSorgYves</div><div class="date">24th December 2009, 15:17</div></div><div class="posttext">When should the LEAVE function defined by<br />
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE AlternativeStartMenuLeave<br />
+be called on UMUI_PAGE_ALTERNATIVESTARTMENU? Only when clicking NEXT?<br />
+<br />
+I think it would be good to always call it and give the developer the flexibility to interact with the page using this way... what do you think?<br />
+<br />
+Best Regards,<br />
+Yves</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">HSorgYves</div><div class="date">24th December 2009, 21:01</div></div><div class="posttext">I have made the following changes to achieve my goal.<br />
+<br />
+Lines 7449-7450 and 7497-7498 replaced by:<br />
+Goto customfunction<br />
+<br />
+Lines 7467-7468 replaced by:<br />
+!insertmacro INSTALLOPTIONS_WRITE &quot;AlternativeStartMenu${ID}.ini&quot; &quot;Settings&quot; State &quot;3&quot;<br />
+Goto customfunction<br />
+<br />
+Line 7552 replaced by:<br />
+customfunction:<br />
+!insertmacro MUI_PAGE_FUNCTION_CUSTOM LEAVE<br />
+StrCmp $MUI_TEMP1 &quot;0&quot; +3<br />
+ClearErrors<br />
+Abort<br />
+<br />
+<br />
+Best Regards,<br />
+Yves</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">SuperPat</div><div class="date">25th December 2009, 00:21</div></div><div class="posttext">I have found a bug in the leave function:<br />
+<br />
+A little fix allow the custom leave function to use the abort instruction itself.<br />
+<br />
+The code setting the varcontext and saving the selected path was always called, even then the pas is show the first time (this is why the page is not shown if Abort is used in the custom leave function)...<br />
+<br />
+Your patch is no longer necessary with the futur version.<br />
+<br />
+Thanks for your bug reports.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">HSorgYves</div><div class="date">25th December 2009, 00:27</div></div><div class="posttext">Great that the next release will continue to work as expected by my description. Did you see the fix I needed for state 3 (the SendMessage call relaunches the LEAVE function with state 2).<br />
+<br />
+Best Regards,<br />
+Yves</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">HSorgYves</div><div class="date">25th December 2009, 17:45</div></div><div class="posttext">Unfortunately this has not been adressed in today's release. Let me rephrase:<br />
+<br />
+I want the LEAVE function to be called whatever action the user does on this page to be able to react to it (like check the folder (s)he enteres in the text field or the one (s)he selects in the tree view ...). However the LEAVE function is only called when the Next button is clicked...<br />
+<br />
+Best Regards,<br />
+Yves</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">HSorgYves</div><div class="date">25th December 2009, 18:30</div></div><div class="posttext">The required changes for the release 2009-12-25 are (without the radio buttons which are not set to NOTIFY anyway):<br />
+<br />
+Line 7477 and line 7533:<br />
+Goto customfunction<br />
+<br />
+Line 7495:<br />
+StrCpy $MUI_TEMP1 &quot;3&quot;<br />
+!insertmacro INSTALLOPTIONS_WRITE &quot;AlternativeStartMenu${ID}.ini&quot; &quot;Settings&quot; State &quot;3&quot;<br />
+Goto customfunction<br />
+<br />
+<br />
+Line 7589:<br />
+StrCpy $MUI_TEMP1 0<br />
+customfunction:<br />
+  !insertmacro MUI_PAGE_FUNCTION_CUSTOM LEAVE<br />
+  StrCmp $MUI_TEMP1 &quot;0&quot; end<br />
+  Abort<br />
+<br />
+<br />
+Best Regards,<br />
+Yves</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">SuperPat</div><div class="date">26th December 2009, 12:04</div></div><div class="posttext">I may be add an other custom function than LEAVE to do this.<br />
+<br />
+But I never understood the need to check the directory every time you click on a component rather than when you click next.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">HSorgYves</div><div class="date">26th December 2009, 15:33</div></div><div class="posttext">Just one example:<br />
+You always add ${MUI_STARTMENUPAGE_DEFAULTFOLDER} when a user clicks on a folder. However if $MUI_TEMP2 == ${MUI_STARTMENUPAGE_DEFAULTFOLDER} I do not want it to be added. I could achive this quickly by modifying the UMUI.nsh, but then I would need to redo it on each upgrade which is nasty...<br />
+<br />
+Thanks,<br />
+Yves</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

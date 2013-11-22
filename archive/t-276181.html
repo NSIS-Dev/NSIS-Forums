@@ -1,0 +1,374 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" GetSaveFileName in comdlg32 trouble, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  GetSaveFileName in comdlg32 trouble NSIS Discussion" />
+	
+	<title> GetSaveFileName in comdlg32 trouble [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  GetSaveFileName in comdlg32 trouble</div>
+<hr />
+<div class="pda"><a href="t-276181.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=276181">GetSaveFileName in comdlg32 trouble</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">sag47</div><div class="date">20th August 2007, 09:29</div></div><div class="posttext">I've read the System Docs and I've researched the Wiki and internet as much as I can with no result.<br />
+<br />
+What I want to do: Within a section during instfiles I want to use the System Plugin to call a &quot;Save File As...&quot; Dialog.  After much research I've found that the WinAPI comdlg32.dll function, GetSaveFileName, does just that.  The tricky part is the setup for the call :( .  Here's what I have so far... Any help would be nice :D <br />
+<br />
+SAM<br />
+<br />
+Sources:<br />
+http://msdn2.microsoft.com/en-us/library/ms646839.aspx<br />
+http://www.swfkit.com/swfkit/doc/manual/node37.html<br />
+http://nsis.sourceforge.net/Calling_an_external_DLL_using_the_System.dll_plugin<br />
+http://nsis.sourceforge.net/System_plug-in_readme#newstruct<br />
+http://source.winehq.org/source/programs/cmdlgtst/cmdlgtst.c#L212<br />
+<br />
+  SetPluginUnload alwaysoff<br />
+  ; Setup a structure for allowed file types<br />
+  ; Build Struc #1<br />
+  System::Call '*(t &quot;Text Files (*.txt), *.txt;&quot;, t &quot;All Files (*.*), *.*;&quot;) *i .r0'<br />
+  <br />
+  ; Setup the OPENFILENAME structure and store it into $2 (returns path and filename into structure $1)<br />
+  ; Build Struc #2<br />
+  System::Call '*(i 23, t $HWNDPARENT, v, *i r0, i 0, i 0, i 0, *i r1, i 260, v, v, i 0, t &quot;Open File&quot;, i 0x80000, 0, 0, &quot;*&quot;, v, v, v, v, v, v, v) *i .r2'<br />
+  ; Open Save file dialog and return a bool into $3<br />
+  System::Call 'comdlg32::GetSaveFileName(*i r2)'<br />
+  Pop $3<br />
+  <br />
+  ; Now get the path and file name and put them together<br />
+  System::Call '*$1( t r4, t r5)'<br />
+  IntOp $6 $4 &amp; $5<br />
+  ; MessageBox to the user the path/file that they chose<br />
+  MessageBox MB_OK &quot;Save File As Info...$\n\<br />
+                   Path: $4$\n\<br />
+                   FileName: $5$\n\<br />
+                   Whole String: $6&quot;<br />
+<br />
+  ; Unload the plugin from memory<br />
+  SetPluginUnload manual<br />
+  System::Free $0<br />
+  System::Free $1<br />
+  System::Free $2<br />
+  System::Free 0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sag47</div><div class="date">20th August 2007, 14:23</div></div><div class="posttext">I am still having progress but all of my values aren't quite accounted for because it is still not working.  However I found this nice article that shows structures being made with nsis script.<br />
+<br />
+http://publicsvn.songbirdnest.com/browser/trunk/tools/win32/nsis/examples/System/System.nsh?rev=5425#L143<br />
+<br />
+SAM<br />
+<br />
+<br />
+;typedef struct tagOFN {<br />
+;        DWORD         lStructSize;<br />
+;        HWND          hwndOwner;<br />
+;        HINSTANCE     hInstance;<br />
+;        LPCTSTR       lpstrFilter;<br />
+;        LPTSTR        lpstrCustomFilter;<br />
+;        DWORD         nMaxCustFilter;<br />
+;        DWORD         nFilterIndex;<br />
+;        LPTSTR        lpstrFile;<br />
+;        DWORD         nMaxFile;<br />
+;        LPTSTR        lpstrFileTitle;<br />
+;        DWORD         nMaxFileTitle;<br />
+;        LPCTSTR       lpstrInitialDir;<br />
+;        LPCTSTR       lpstrTitle;<br />
+;        DWORD         Flags;<br />
+;        WORD          nFileOffset;<br />
+;        WORD          nFileExtension;<br />
+;        LPCTSTR       lpstrDefExt;<br />
+;        LPARAM        lCustData;<br />
+;        LPOFNHOOKPROC lpfnHook;<br />
+;        LPCTSTR       lpTemplateName;<br />
+;#if (_WIN32_WINNT &gt;= 0x0500)<br />
+;        void *        pvReserved;<br />
+;        DWORD         dwReserved;<br />
+;        DWORD         FlagsEx;<br />
+;#endif // (_WIN32_WINNT &gt;= 0x0500)<br />
+;} OPENFILENAME, *LPOPENFILENAME;<br />
+  SetPluginUnload alwaysoff<br />
+  ;System::Call '*(i 23, i, *i, *i &quot;All Files (*.*), *.*&quot;, *i, i, i 0, *i &quot;returned path/name&quot;, &amp;t260, i, i, i, i, i 0x80000, i, i, i, i, i, i, i, i, i, i) i .r0'<br />
+  ; Setup a structure for allowed file types<br />
+  ; Build Struc #1<br />
+  !define FILE_FILTER '(t &quot;Text Files (*.txt), *.txt&quot;, t &quot;All Files (*.*), *.*&quot;) i'<br />
+  ; Setup the OPENFILENAME structure and store it into $2 (returns path and filename into structure $1)<br />
+  ; Build Struc #2<br />
+  System::Call '*(&amp;l, i $HWNDPARENT, i, i $FILE_FILTER, i, i, i, i r1, &amp;t260, i, i, i, t &quot;Open File&quot;, i 0x80000, i, i, i, i, i, i, i, i, i, i) i .r2'<br />
+  ; Open Save file dialog and return a bool into $3<br />
+  System::Call 'comdlg32::GetSaveFileName(*i r2)'<br />
+  Pop $3<br />
+  MessageBox MB_OK $3<br />
+  ; Now get the path and file name and put them together<br />
+  System::Call '*$1( t r4, t r5)'<br />
+  IntOp $6 $4 &amp; $5<br />
+  ; MessageBox to the user the path/file that they chose<br />
+  MessageBox MB_OK &quot;Save File As Info...$\n\<br />
+                   Path: $4$\n\<br />
+                   FileName: $5$\n\<br />
+                   Whole String: $6&quot;<br />
+<br />
+  ; Unload the plugin from memory<br />
+  SetPluginUnload manual<br />
+  ;System::Free $0<br />
+  ;System::Free $1<br />
+  ;System::Free $2<br />
+  System::Free 0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">20th August 2007, 14:32</div></div><div class="posttext">The easy way: http://nsis.sourceforge.net/Dialogs_plug-in<br />
+<br />
+---<br />
+<br />
+HINSTANCE should be just i<br />
+strings should be t and not *i<br />
+for a define, you use ${define} and not $define</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sag47</div><div class="date">20th August 2007, 15:33</div></div><div class="posttext">what exactly are pointers?<br />
+<br />
+I want to do it this way because the parameters for creating this save file dialog are much in depth.<br />
+SAM</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sag47</div><div class="date">20th August 2007, 16:11</div></div><div class="posttext">Okay,<br />
+Now I think I'm making good progress.  I have all of my parameters set (i think) but an essential one.  I don't know what wParams should be when I do the SendMessage command to initiate the dialog.<br />
+SAM<br />
+<br />
+  SetPluginUnload alwaysoff<br />
+; Allowed file types<br />
+  !define FILE_FILTER &quot;HTML Files (*.htm*)|*.htm*|Images (*.gif;*.jp*;*.png)|*.gif;*.jp*;*.png|All Files (*.*)|*.*|&quot;<br />
+  IntOp $0 &quot;OFN_ENABLEHOOK&quot; || 1<br />
+  MessageBox MB_OK $0<br />
+<br />
+; Setup the OPENFILENAME structure and store it into LPARAM (returns path and filename into structure $1)<br />
+  !define LPARAM '*(&amp;l, i $HWNDPARENT, i, t ${FILE_FILTER}, i, i, i, i r1, &amp;t260, i, i, i, t &quot;Open File&quot;, i r0, &amp;t260, &amp;t14, t &quot;exe&quot;, t , i, i, i, i, i, i) i'<br />
+<br />
+; Open Save file dialog and return a bool into $3<br />
+  SendMessage $HWNDPARENT ${WM_INITDIALOG} wParam=IDontKnow ${LPARAM} $3<br />
+  MessageBox MB_OK $3<br />
+; Now get the path and file name and put them together<br />
+  System::Call '*$1( t r4, t r5)'<br />
+  IntOp $6 $4 &amp; $5<br />
+; MessageBox to the user the path/file that they chose<br />
+  MessageBox MB_OK &quot;Save File As Info...$\n\<br />
+                   Path: $4$\n\<br />
+                   FileName: $5$\n\<br />
+                   Whole String: $6&quot;<br />
+<br />
+; Unload the plugin from memory<br />
+  SetPluginUnload manual<br />
+  System::Free 0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">20th August 2007, 16:47</div></div><div class="posttext">there should not be a sendmessage, you need to call the GetSaveFileName function with the address of your struct.<br />
+<br />
+Why not just use the plugin I linked to?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Backland</div><div class="date">20th August 2007, 17:16</div></div><div class="posttext">Yes... the plugin would be easier, check the samples.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sag47</div><div class="date">20th August 2007, 18:00</div></div><div class="posttext">Link: http://msdn2.microsoft.com/en-us/library/ms646839.aspx<br />
+Look at the Flags section of the OPENFILENAME structure.  I want to access several of those properties that the plugin you linked to doesn't access as far as I can tell.  Thanks for the link though.  When I'm working on a simpler project that would be perfect!  Although your reference to that plugin helped me resolve a couple of my issues :)<br />
+<br />
+I just haven't found the right combination yet to get this thing going.  Anders you're right.  I found SendMessage doesn't work just after posting it.  It only handles 4-6 args and I was passing it 43 with that combination.  I went back to my old method but a little tweaked.<br />
+<br />
+  SetPluginUnload alwaysoff<br />
+; Setup a structure for allowed file types<br />
+  ; Build Struc #1<br />
+  !define FILE_FILTER &quot;HTML Files (*.htm*)|*.htm*|Images (*.gif;*.jp*;*.png)|*.gif;*.jp*;*.png|All Files (*.*)|*.*|&quot;<br />
+  IntOp $0 &quot;OFN_EXPLORER&quot; || 1<br />
+  ;IntOp $0 $0 &amp;&amp; &quot;OFN_OVERWRITEPROMPT&quot;<br />
+  ;IntOp $0 $0 || 1<br />
+  MessageBox MB_OK $0<br />
+<br />
+; Setup the OPENFILENAME structure and store it into $2 (returns path and filename into string $1)<br />
+  ; Build Struc #2<br />
+  !define LPARAM '*(&amp;l, i $HWNDPARENT, i, t ${FILE_FILTER}, i, i, i, t .r1, &amp;t260, i, i, i, t &quot;Open File&quot;, i r0, &amp;t260, &amp;t14, t &quot;exe&quot;, i, i, i, i, i 0, i 0) i' ;x23<br />
+  ; Open Save file dialog and return a bool into $3<br />
+  System::Call 'comdlg32::GetSaveFileName(i ${LPARAM}) b .r3'<br />
+  MessageBox MB_OK &quot;$1$\n$3&quot;<br />
+<br />
+  ; Unload the plugin from memory<br />
+  SetPluginUnload manual<br />
+  System::Free 0<br />
+<br />
+With GetSaveFileName(i ${LPARAM}), what data type is the structure LPARAM?  Because it holds several different data types but I guess I'm going to keep it i unless anyone says otherwise.  I simply don't see what I'm missing.  I've got 23 slots in the OPENFILENAME.  I must be labeling data types wrong.<br />
+Any suggestions other than saying to move on?<br />
+SAM</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sag47</div><div class="date">20th August 2007, 20:32</div></div><div class="posttext">Here is a new version of the code...still doesn't work but I believe I continue to get closer to a solution.<br />
+<br />
+  SetPluginUnload alwaysoff<br />
+; Setup a structure for allowed file types<br />
+  ; Build Struc #1<br />
+  !define FILE_FILTER &quot;HTML Files (*.htm*)|*.htm*|Images (*.gif;*.jp*;*.png)|*.gif;*.jp*;*.png|All Files (*.*)|*.*|&quot;<br />
+<br />
+; define and set the flags I want to use<br />
+  Var /GLOBAL FLAG<br />
+  IntOp $FLAG &quot;OFN_EXPLORER&quot; || 1<br />
+  !define _OFN_EXPLORER $FLAG<br />
+  IntOp $FLAG &quot;OFN_OVERWRITEPROMPT&quot; || 1<br />
+  !define _OFN_OVERWRITEPROMPT $FLAG<br />
+  IntOp $FLAG &quot;OFN_DONTADDTORECENT&quot; || 1<br />
+  !define _OFN_DONTADDTORECENT $FLAG<br />
+  IntOp $FLAG &quot;OFN_NONETWORKBUTTON&quot; || 1<br />
+  !define _OFN_NONETWORKBUTTON $FLAG<br />
+  !define SET_FLAGS '${_OFN_EXPLORER}|${_OFN_OVERWRITEPROMPT}|${_OFN_DONTADDTORECENT}|${_OFN_NONETWORKBUTTON}'<br />
+  MessageBox MB_OK ${SET_FLAGS} ; debugging purposes<br />
+<br />
+; Setup the OPENFILENAME structure and store it into $2 (returns path and filename into string $1)<br />
+  ; Build Struc #2<br />
+  !define LPARAM '*(&amp;l, i $HWNDPARENT, i, t ${FILE_FILTER}, i, i, i, t .r1, &amp;t260, i, i, i, t &quot;Open File&quot;, i ${SET_FLAGS}, &amp;t3, &amp;t14, t &quot;exe&quot;, i, i, i, v, i 0, i 0) i' ;x23<br />
+  ; Open Save file dialog and return a bool into $3<br />
+  System::Call 'comdlg32::GetSaveFileName(i ${LPARAM}) b .r3'<br />
+  MessageBox MB_OK &quot;$1$\n$3&quot; ; debugging purposes<br />
+<br />
+  ; Unload the plugin from memory<br />
+  SetPluginUnload manual<br />
+  System::Free 0<br />
+<br />
+And here is a list of all the datatypes that I believe are in the define LPARAM.<br />
+<br />
+;typedef struct tagOFN {<br />
+;   &amp;l    DWORD         lStructSize;<br />
+;   i     HWND          hwndOwner;<br />
+;   i     HINSTANCE     hInstance;<br />
+;   t     LPCTSTR       lpstrFilter;<br />
+;   t     LPTSTR        lpstrCustomFilter;<br />
+;   i     DWORD         nMaxCustFilter;<br />
+;   i     DWORD         nFilterIndex;<br />
+;   t     LPTSTR        lpstrFile;<br />
+;   i     DWORD         nMaxFile;<br />
+;   t     LPTSTR        lpstrFileTitle;<br />
+;   i     DWORD         nMaxFileTitle;<br />
+;   t     LPCTSTR       lpstrInitialDir;<br />
+;   t     LPCTSTR       lpstrTitle;<br />
+;   i     DWORD         Flags;<br />
+;   &amp;t    WORD          nFileOffset;<br />
+;   &amp;t    WORD          nFileExtension;<br />
+;   t     LPCTSTR       lpstrDefExt;<br />
+;   ?     LPARAM        lCustData;<br />
+;   ?     LPOFNHOOKPROC lpfnHook;<br />
+;   t     LPCTSTR       lpTemplateName;<br />
+;#if (_WIN32_WINNT &gt;= 0x0500)<br />
+;   v     void *        pvReserved;<br />
+;   i     DWORD         dwReserved;<br />
+;   i     DWORD         FlagsEx;<br />
+;#endif // (_WIN32_WINNT &gt;= 0x0500)<br />
+;} OPENFILENAME, *LPOPENFILENAME;<br />
+<br />
+System.dll data types are listed first, then general data types, and then parameter names.  The only two parameters that I don't know what type of data is lCustData and lpfnHook.<br />
+<br />
+I'm going to keep updating my progress on here every once in a while in case anyone has ideas to contribute or even just interested.<br />
+<br />
+SAM</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">20th August 2007, 20:40</div></div><div class="posttext">they are probaby i or *i, still not sure why you keep calling the struct LPARAM, its called OPENFILENAME, and I'm not even sure if you can pass a struct this way to a function with just a define.<br />
+<br />
+and your flags code is way off, try googling for &quot;define OFN_EXPLORER&quot; and use the actual number (or install the platform sdk)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sag47</div><div class="date">20th August 2007, 22:37</div></div><div class="posttext">I'm calling the struct because thats what it says on MSDN.<br />
+http://msdn2.microsoft.com/en-us/library/ms646928.aspx<br />
+<br />
+Or maybe I'm just not quite sure how to use the pointer i* correctly to refer it to OPENFILENAME.  I did a small code change, maybe now it makes more sense (didn't fix the flags though.)  I only did the flags that way with the IntOp because it worked on this other system call for setting &quot;SND_ASYNC&quot;:<br />
+http://nsis.sourceforge.net/WinAPI:winmm:PlaySound<br />
+<br />
+So I figured that it automatically converted it to that integer for me rather than having to look it up.<br />
+<br />
+  SetPluginUnload alwaysoff<br />
+; Setup a structure for allowed file types<br />
+  ; Build Struc #1<br />
+  !define FILE_FILTER &quot;HTML Files (*.htm*)|*.htm*|Images (*.gif;*.jp*;*.png)|*.gif;*.jp*;*.png|All Files (*.*)|*.*|&quot;<br />
+<br />
+; define and set the flags I want to use<br />
+  Var /GLOBAL FLAG<br />
+  IntOp $FLAG &quot;OFN_EXPLORER&quot; || 1<br />
+  !define _OFN_EXPLORER $FLAG<br />
+  IntOp $FLAG &quot;OFN_OVERWRITEPROMPT&quot; || 1<br />
+  !define _OFN_OVERWRITEPROMPT $FLAG<br />
+  IntOp $FLAG &quot;OFN_DONTADDTORECENT&quot; || 1<br />
+  !define _OFN_DONTADDTORECENT $FLAG<br />
+  IntOp $FLAG &quot;OFN_NONETWORKBUTTON&quot; || 1<br />
+  !define _OFN_NONETWORKBUTTON $FLAG<br />
+  !define SET_FLAGS  '${_OFN_EXPLORER}|${_OFN_OVERWRITEPROMPT}|${_OFN_DONTADDTORECENT}|${_OFN_NONETWO<br />
+RKBUTTON}'<br />
+  MessageBox MB_OK ${SET_FLAGS} ; debugging purposes<br />
+<br />
+; Setup the OPENFILENAME structure and store it into $2 (returns path and filename into string $1)<br />
+  ; Build Struc #2<br />
+  !define OPENFILENAME '*(&amp;l, i $HWNDPARENT, i, t ${FILE_FILTER}, i, i, i, t .r1, &amp;t260, i, i, i, t &quot;Open File&quot;, i ${SET_FLAGS}, &amp;t3, &amp;t14, t &quot;exe&quot;, i, i, i, v, i 0, i 0) i' ;x23<br />
+  ; Open Save file dialog and return a bool into $3<br />
+  System::Call 'comdlg32::GetSaveFileName(i* ${OPENFILENAME}) b .r3'<br />
+  MessageBox MB_OK &quot;$1$\n$3&quot; ; debugging purposes<br />
+<br />
+  ; Unload the plugin from memory<br />
+  SetPluginUnload manual<br />
+  System::Free 0 I basically was calling OPENFILENAME I simply called it LPARAM instead.  <br />
+<br />
+SAM</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sag47</div><div class="date">20th August 2007, 22:48</div></div><div class="posttext">I changed what you told me to and I also switched the OPENFILENAME define back to a System.dll call.  Do you think it more logical for it to be a system call, define, or it doesn't matter?<br />
+<br />
+SAM<br />
+<br />
+<br />
+  SetPluginUnload alwaysoff<br />
+; Setup a structure for allowed file types<br />
+  ; Build Struc #1<br />
+  !define FILE_FILTER &quot;HTML Files (*.htm*)|*.htm*|Images (*.gif;*.jp*;*.png)|*.gif;*.jp*;*.png|All Files (*.*)|*.*|&quot;<br />
+<br />
+; define and set the flags I want to use<br />
+  Var /GLOBAL FLAG<br />
+  !define OFN_EXPLORER 0x00080000<br />
+  !define OFN_OVERWRITEPROMPT 0x00000002<br />
+  !define OFN_DONTADDTORECENT 0x02000000<br />
+  !define OFN_NONETWORKBUTTON 0x00020000<br />
+  !define SET_FLAGS '${OFN_EXPLORER}|${OFN_OVERWRITEPROMPT}|${OFN_DONTADDTORECENT}|${OFN_NONETWORKBUTTON}'<br />
+  MessageBox MB_OK ${SET_FLAGS} ; debugging purposes<br />
+<br />
+; Setup the OPENFILENAME structure and store it into $2 (returns path and filename into string $1)<br />
+  ; Build Struc #2<br />
+  System::Call '*(&amp;l, i $HWNDPARENT, i, t ${FILE_FILTER}, i, i, i, t .r1, &amp;t260, i, i, i, t &quot;Open File&quot;, i ${SET_FLAGS}, &amp;t3, &amp;t14, t &quot;exe&quot;, i, i, i, v, i 0, i 0) i r2' ;x23<br />
+  ; Open Save file dialog and return a bool into $3<br />
+  System::Call 'comdlg32::GetSaveFileName(i* r2) b .r3'<br />
+  MessageBox MB_OK &quot;$1$\n$3&quot; ; debugging purposes<br />
+<br />
+  ; Unload the plugin from memory<br />
+  SetPluginUnload manual<br />
+  System::Free 0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">eccles</div><div class="date">21st August 2007, 22:37</div></div><div class="posttext">You might be able to use this function: http://nsis.sourceforge.net/FileRequest_through_section_or_function</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sag47</div><div class="date">21st August 2007, 23:14</div></div><div class="posttext">eccles THANK YOU SOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO MUCH!!!!!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">sag47</div><div class="date">22nd August 2007, 13:35</div></div><div class="posttext">Thanks again eccles,<br />
+I have modified that, another function, and did a little magic of my own.  I was able to achieve unlimited File Filters instead of just two.<br />
+<br />
+TODO:  Somehow read the output after multiple files are selected.  It doesn't work but I'm not sure how to retrieve the returned stack for that.<br />
+<br />
+P.S. I know how to break apart a return stack *$0(t .r1, i .r2, .......) and so on.<br />
+<br />
+See attachment for the source of how I'm using it now.<br />
+<br />
+Now files can be filtered like:<br />
+&quot;file1|ext,file2|ext,...&quot; with no spaces.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

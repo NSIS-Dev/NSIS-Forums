@@ -1,0 +1,124 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Bad characters(&lt;&gt;?:) in $INSTDIR variable, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Bad characters(&lt;&gt;?:) in $INSTDIR variable NSIS Discussion" />
+	
+	<title> Bad characters(&lt;&gt;?:) in $INSTDIR variable [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Bad characters(&lt;&gt;?:) in $INSTDIR variable</div>
+<hr />
+<div class="pda"><a href="t-320770.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=320770">Bad characters(&lt;&gt;?:) in $INSTDIR variable</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">bensmatt</div><div class="date">13th July 2010, 16:58</div></div><div class="posttext">Hi,<br />
+<br />
+I noticed that if I entered bad characters(&lt;&gt;?:) in the installation directory MUI page, the $INSTDIR variable skips those bad characters. I want to warn user that they have entered an invalid path name, so is there a way to get the raw string from  installation directory page? Thanks in advance.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bensmatt</div><div class="date">13th July 2010, 17:18</div></div><div class="posttext">Figured it out, just do not use $INSTDIR to catch directory from MUI<br />
+<br />
+I assigned $R1 instead<br />
+<br />
+<br />
+!define MUI_DIRECTORYPAGE_VARIABLE $R1</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jiake</div><div class="date">15th July 2010, 06:45</div></div><div class="posttext">Use StringFilter to filter these symbols: '/:*?&quot;&lt;&gt;|'<br />
+; Stores the first two symbols to $R1<br />
+StrCpy $R1 $INSTDIR 2<br />
+; Others to $INSTDIR<br />
+StrCpy $INSTDIR $INSTDIR &quot;&quot; 2<br />
+<br />
+; {StrFilter} &quot;[string]&quot; &quot;[options]&quot; &quot;[symbols1]&quot; &quot;[symbols2]&quot; $var<br />
+; You can create your own rule by modifying the list of symbols include or exclude<br />
+<br />
+; Delete illegal symbols from $INSTDIR<br />
+; Note there is a space after ')', for a blank space is valid in path<br />
+${StrFilter} $INSTDIR 12 '.\{}[]() ' '/:*?&quot;&lt;&gt;|' $INSTDIR<br />
+<br />
+; Replace continuous spaces with one space <br />
+${WordReplace} $INSTDIR '  ' ' ' '+*' $INSTDIR<br />
+${WordReplace} $INSTDIR '  ' ' ' '+' $INSTDIR<br />
+<br />
+; Replace continuous dots with one dot<br />
+${WordReplace} $INSTDIR '..' '.' '+*' $INSTDIR<br />
+${WordReplace} $INSTDIR '..' '.' '+' $INSTDIR<br />
+<br />
+; A dot at the end of a folder name is invalid<br />
+${WordReplace} $INSTDIR '.\' '\' '+*' $INSTDIR<br />
+${WordReplace} $INSTDIR '.\' '\' '+' $INSTDIR<br />
+<br />
+; Replace continuous backsplashes with one backsplash<br />
+${WordReplace} $INSTDIR '\\' '\' '+*' $INSTDIR<br />
+${WordReplace} $INSTDIR '\\' '\' '+' $INSTDIR<br />
+<br />
+; A space at the begening of a folder name is invalid<br />
+${WordReplace} $INSTDIR ' \' '\' '+*' $INSTDIR<br />
+${WordReplace} $INSTDIR ' \' '\' '+' $INSTDIR<br />
+<br />
+; A space at the end of a folder name is invalid<br />
+${WordReplace} $INSTDIR '\ ' '\' '+*' $INSTDIR<br />
+${WordReplace} $INSTDIR '\ ' '\' '+' $INSTDIR<br />
+<br />
+; Join to full path<br />
+StrCpy $INSTDIR $R1$INSTDIR<br />
+Before: D:\AB   CD [{] / |\  ...\.E  !@  / } &lt;] \ / F \  \\\  \df .}.1.  ///fff\ff  ?f&gt;\ 1 2d  ff]  \<br />
+After: D:\AB CD [{]\.E } ]\F\df .}.1. fff\ff f\1 2d ff]<br />
+<br />
+This is the snapshot of an example using the code:<br />
+http://forums.winamp.com/attachment.php?attachmentid=47287</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">15th July 2010, 15:12</div></div><div class="posttext">I think bensmatt was referring to $INSTDIR being one of the special internal variables that NSIS treats as a file path, which automatically strips illegal characters.  The same way one might use...<br />
+<br />
+Push $PathToClean<br />
+Exch $EXEDIR<br />
+Exch $EXEDIR<br />
+Pop $PathToClean<br />
+<br />
+This presents the developer with a problem if they want to warn the user about illegal characters, as they are already filtered before you can detect them.<br />
+<br />
+I.e. execute the following, and try to enter the illegal path: c:\*.*<br />
+<br />
+OutFile &quot;test.exe&quot;<br />
+<br />
+Page Directory <br />
+<br />
+Function .onVerifyInstDir<br />
+	MessageBox MB_OK &quot;$$INSTDIR = $INSTDIR&quot;<br />
+FunctionEnd<br />
+<br />
+Section<br />
+SectionEnd<br />
+<br />
+The MessageBox will state that &quot;$INSTDIR = c:\.&quot;.  Thus you can't detect the asterisks having been entered.  Note that these asterisks -are- still present in the actual directory text field, of course.  So to the end-user, there doesn't seem to be anything amiss.<br />
+<br />
+If instead you use:<br />
+<br />
+OutFile &quot;test.exe&quot;<br />
+<br />
+Var varInstDir<br />
+PageEx Directory<br />
+	DirVar $varInstDir<br />
+PageExEnd<br />
+<br />
+Function .onVerifyInstDir<br />
+	MessageBox MB_OK &quot;$$varInstDir = $varInstDir&quot;<br />
+FunctionEnd<br />
+<br />
+Section<br />
+SectionEnd<br />
+<br />
+Then the behavior is more like what you might expect.  You could then use that to adjust the path and warn the user; though more easily done from a custom page, the basic principles are the same.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

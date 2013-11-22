@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to Selectively Disable Page Directory Screen, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to Selectively Disable Page Directory Screen NSIS Discussion" />
+	
+	<title> How to Selectively Disable Page Directory Screen [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to Selectively Disable Page Directory Screen</div>
+<hr />
+<div class="pda"><a href="t-227066.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=227066">How to Selectively Disable Page Directory Screen</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">fperez</div><div class="date">27th September 2005, 16:21</div></div><div class="posttext">Hi,<br />
+<br />
+I'm using the &quot;!insertmacro MUI_PAGE_DIRECTORY&quot; macro as part of the MUI.nsh GUI package. I would like to find a way to selectively show or not show the Page Directory screen.<br />
+<br />
+I want to show it when I initially run the Installer program and the Application has not been installed at all initially. But then I want to run the Installer again to allow the user to install OTHER aspects of the program, but in that case I do not want to allow the user the ability to change the Install Directory; in this case, I want to not show the Directory Page screen shown by the &quot;!insertmacro MUI_PAGE_DIRECTORY&quot; macro and simply skip this Page Directory screen.<br />
+<br />
+How do I do this? Please provide me with specific. <br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th September 2005, 17:25</div></div><div class="posttext">Take a look at:<br />
+<br />
+http://nsis.sourceforge.net/wiki/Skipping_Pages</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">glory_man</div><div class="date">27th September 2005, 17:26</div></div><div class="posttext">Use Abort instruction in pre-function.<br />
+For example, when your programm was installed some regestry keys were created.<br />
+Code like this:<br />
+<br />
+!include LogicLib.nsh<br />
+...<br />
+var AbortPage<br />
+...<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE &quot;PageAbort&quot; ; if product installed break this page<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+...<br />
+Function PageAbort<br />
+${If} AbortPage == &quot;yes&quot;<br />
+	Abort<br />
+${EndIf}<br />
+FunctionEnd<br />
+...<br />
+Function .onInit<br />
+...<br />
+ReadRegStr $R0 HKLM &quot;Software\My Soft&quot; &quot;Version&quot;<br />
+${Unless} ${Errors}<br />
+	StrCpy $AbortPage &quot;yes&quot;<br />
+${Else}<br />
+	StrCpy $AbortPage &quot;no&quot;<br />
+${EndUnless}<br />
+...<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fperez</div><div class="date">27th September 2005, 17:30</div></div><div class="posttext">Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Jamyn</div><div class="date">28th September 2005, 20:06</div></div><div class="posttext">That is a good example! But you don't need the .onInit stuff or the extra &quot;Var AbortPage&quot;.<br />
+You can do most of the checks/work inside the pre function.<br />
+<br />
+!include LogicLib.nsh<br />
+...<br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE &quot;PageSkipDir&quot; ; skip if installed<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE &quot;PageSkipStartMenu&quot; ; skip if installed<br />
+!insertmacro MUI_PAGE_STARTMENU Application $StartMenuGroup<br />
+<br />
+...<br />
+Function PageSkipDir<br />
+	; ClearErrors<br />
+	ReadRegStr $R0 HKLM &quot;Software\My Soft&quot; &quot;Version&quot;<br />
+	; If the key exists (no errors), we've installed the software before.<br />
+	; Use the old install location and skip asking them.<br />
+	${Unless} ${Errors}<br />
+	Abort ; skip the next page (Choose install dir)<br />
+	${Else}<br />
+	; Do nothing; show the next page.<br />
+	${EndUnless}<br />
+FunctionEnd<br />
+<br />
+; Also works if you're using the StartMenu code (search the forum).<br />
+Function PageSkipStartMenu<br />
+	; ClearErrors<br />
+	ReadRegStr $StartMenuGroup HKLM &quot;${REGKEY}&quot; StartMenuGroup<br />
+	${Unless} ${Errors}<br />
+	; If the key exists (no errors), we've installed the software before.<br />
+	; Use the old start menu location and skip asking them.<br />
+	Abort<br />
+	${Else}<br />
+	; Do nothing; let them see the &quot;choose start menu&quot; page<br />
+	${EndUnless}<br />
+FunctionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

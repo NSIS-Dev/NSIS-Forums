@@ -1,0 +1,213 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Getting to know if a process is running or not using the application name, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Getting to know if a process is running or not using the application name NSIS Discussion" />
+	
+	<title> Getting to know if a process is running or not using the application name [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Getting to know if a process is running or not using the application name</div>
+<hr />
+<div class="pda"><a href="t-338517.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=338517">Getting to know if a process is running or not using the application name</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">prakashjv</div><div class="date">30th November 2011, 14:18</div></div><div class="posttext">Hello,<br />
+<br />
+I have a case where I am running some exe in silent mode so basically I do not have a UI but it will show up under Applications tab in Task manager. Is there a way to know if that process is running or is it completed using this Application name. <br />
+<br />
+I found so many answers reagrding using Process name to check if it is still running or not. But in my case the process name is not unique and I may end up checking any other process with the same name, which is not correct.<br />
+<br />
+I know the application what I will be running, hence wanted to use the same to check if it is running.<br />
+<br />
+P.S: Here application name is nothing but the executable exe name.<br />
+<br />
+How this can be accomplished?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">30th November 2011, 15:13</div></div><div class="posttext">Easy solution: Rename your exe to something unique, before you execute it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">30th November 2011, 15:30</div></div><div class="posttext">A unique name is not such an easy thing to create - what if the user runs the setup two times (back to back or simultaneously)?<br />
+<br />
+Maybe prakashjv can get the process id since he says he is running the process. That will be unique, and can be checked later to see if it is still running.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yathosho</div><div class="date">30th November 2011, 15:42</div></div><div class="posttext">A unique name is not such an easy thing to create - what if the user runs the setup two times (back to back or simultaneously)?<br />
+<br />
+what's wrong with GetTempFileName (http://nsis.sf.net/Reference/GetTempFileName) or even CreateGUID (http://nsis.sourceforge.net/Create_a_GUID,_a_Globally_Unique_Identifier)?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">30th November 2011, 16:21</div></div><div class="posttext">Tempfilenames are unique within a particular directory, not necessarily unique on the whole system. Running the installer twice might be done from different directories, and could theoretically result in identical filenames. <br />
+<br />
+GUIDs are system unique, but won't necessarily give a unique process name; on Windows 2000 the process names are 15 characters or shorter. Longer names (like a GUID) are truncated.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Lloigor</div><div class="date">1st December 2011, 03:28</div></div><div class="posttext">I made some functions for that..<br />
+<br />
+If the exe in question is made with nsis, you can use the mutex method to prevent multiple instances, by puting this in it:<br />
+<br />
+;; return: 0=succes, 183=failed to create handle (mutex already exists)<br />
+!define CreateMutex &quot;!insertmacro _CreateMutex&quot; <br />
+!macro _CreateMutex _RetVal_ _MutexName_<br />
+   System::Call /nounload 'kernel32::CreateMutexA(i 0, i 0, t &quot;${_MutexName_}&quot;) ?e'<br />
+   Pop ${_RetVal_}<br />
+!macroend <br />
+Example:<br />
+<br />
+Function .OnInit<br />
+   ${CreateMutex} $0 &quot;SomeUniqueMutexName&quot;<br />
+   IntCmp $0 0 +2<br />
+      Quit<br />
+<br />
+/* some code... */<br />
+<br />
+FunctionEnd <br />
+<br />
+<br />
+...Or, if you execute the exe file from a nsis script, and you need to keep track of it, you can use this:<br />
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;<br />
+;; Gets the parent folder<br />
+;; P1 :out: Folder containing file or dir (parent folder)<br />
+;; P2 :in:  File/Dir<br />
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;<br />
+!define PathPath &quot;!insertmacro _PathPath&quot;<br />
+!macro _PathPath _RetVal_ _Path_<br />
+   Push &quot;${_Path_}&quot;<br />
+   Call PathPath<br />
+   Pop &quot;${_RetVal_}&quot;<br />
+!macroend<br />
+Function PathPath<br />
+   Exch $0  ;; Path<br />
+   Push $1  ;; Strlen / Counter<br />
+   Push $2  ;; Curchar<br />
+<br />
+   StrLen $1 '$0'<br />
+   IntCmp $1 0 +6<br />
+      IntOp $1 $1 - 1<br />
+      StrCpy $2 &quot;$0&quot; 1 $1<br />
+      StrCmp &quot;$2&quot; &quot;\&quot; +3<br />
+      StrCmp &quot;$2&quot; &quot;:&quot; 0 -4<br />
+         IntOp $1 $1 + 1<br />
+<br />
+   StrCpy $0 &quot;$0&quot; $1 0<br />
+<br />
+   Pop $2<br />
+   Pop $1<br />
+   Exch $0<br />
+FunctionEnd<br />
+<br />
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;<br />
+;; Executes files with ShellExecuteEx Api<br />
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;<br />
+;; P1 :out: Return value, depends on the mode (P5)<br />
+;; P2 :in:  Verb. if=&quot;&quot; then open with default associated app <br />
+;; P3 :in:  File<br />
+;; P4 :in:  File parameters<br />
+;; P5 :in:  Working directory. if=&quot;&quot; then its set to the same dir as the file<br />
+;; P6 :in:  Show flag. if=&quot;&quot; then SH_SHOW is used (see http://msdn.microsoft.com/en-us/library/bb762153(v=VS.85).aspx )<br />
+;; P7 :in:  Mode: 1=Nowait, Returns Process Id<br />
+;;                2=Nowait, Returns Process Handle (must close the handle yourself)<br />
+;;                3=Wait, Returns Process Exit Code<br />
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;<br />
+!define ShellExecEx &quot;!insertmacro _ShellExecEx&quot;<br />
+!macro _ShellExecEx _RetVal_ _Verb_ _File_ _Params_ _WorkDir_ _Show_ _Mode_  <br />
+   Push `${_Mode_}`<br />
+   Push `${_Show_}`<br />
+   Push `${_WorkDir_}`<br />
+   Push `${_Params_}`<br />
+   Push `${_File_}`<br />
+   Push `${_Verb_}`<br />
+   Call ShellExecEx<br />
+   Pop ${_RetVal_}<br />
+!macroend<br />
+Function ShellExecEx<br />
+   Exch $0<br />
+   Exch<br />
+   Exch $1<br />
+   Exch 2<br />
+   Exch $2<br />
+   Exch 3<br />
+   Exch $3<br />
+   Exch 4<br />
+   Exch $4<br />
+   Exch 5<br />
+   Exch $5<br />
+   Push &quot;$9&quot;<br />
+   <br />
+   StrCmpS &quot;&quot; &quot;$3&quot; 0 wdok<br />
+      ${PathPath} $3 &quot;$3&quot;<br />
+   wdok:<br />
+   StrCmpS &quot;&quot; &quot;$4&quot; 0 +2  ;; if show mode is undefined, then<br />
+      StrCpy $4 0x05    ; = SH_SHOW<br />
+   System::Call /nounload '*(&amp;i60) i .r9' ;; allocate the structure<br />
+   System::Call /nounload '*$9(i 60, i 0x140, i $HWNDPARENT, t r0, t r1, t r2, t r3, i r4) i .r9'  ;; assign the values to the struct<br />
+   System::Call /nounload 'Shell32::ShellExecuteEx(i r9) i .r1'  ;; execute the file<br />
+   StrCmpS 0 $1 0 +4  ;; if there was errors, then<br />
+      StrCpy $3 0  ; set return value to 0 and set the error flag<br />
+      SetErrors<br />
+      Goto end<br />
+      <br />
+   System::Call /nounload '*$9(i, i, i, i, i, i, i, i, i, i, i, i, i, i, i .r2)'<br />
+<br />
+   IntCmp $5 2 +4 0 +6  ;; 1:nowait-pid, 2:nowait-handle, 3:wait-exitcode<br />
+      System::Call /nounload 'kernel32::GetProcessId(i r2) i .r4'<br />
+      System::Call /nounload 'kernel32::CloseHandle(i r2)'<br />
+      Goto end<br />
+;   hmode:<br />
+      StrCpy $4 &quot;$2&quot;<br />
+      Goto end<br />
+;   wmode:<br />
+      System::Call /nounload 'kernel32::WaitForSingleObject(i r2, i -1)'<br />
+      System::Call /nounload 'kernel32::GetExitCodeProcess(i r2,*i .r4)'<br />
+      System::Call /nounload 'kernel32::CloseHandle(i r2)'<br />
+<br />
+   end:<br />
+   System::Free /nounload $9<br />
+   Pop $9<br />
+   Pop $5<br />
+   Pop $0<br />
+   Pop $1<br />
+   Pop $2<br />
+   Pop $3<br />
+   Exch $4<br />
+FunctionEnd<br />
+<br />
+and use a macro like this to determine if a specific instance of an executable is still running (with ShellExecEx mode 2):<br />
+<br />
+;; Tests if a process, identified by a handle, still exists<br />
+!define IfProcExistsH &quot;!insertmacro _IfProcExistsH&quot;<br />
+!macro _IfProcExistsH _ProcHandle_ _GotoIfTrue_ _GotoIfFalse_<br />
+   Push &quot;$0&quot;<br />
+   ClearErrors<br />
+   System::Call /nounload 'kernel32::WaitForSingleObject(i ${_ProcHandle_}, i 0) i .r0'<br />
+   IntCmp $0 0 +3<br />
+      System::Call /nounload 'kernel32::CloseHandle(i ${_ProcHandle_})'<br />
+      SetErrors<br />
+   Pop $0<br />
+   IfErrors ${_GotoIfTrue_} ${_GotoIfFalse_}<br />
+!macroend<br />
+<br />
+Example:<br />
+<br />
+${ShellExecEx} $0 '' '&quot;$EXEDIR\test2.exe&quot;' '' '' '' 2<br />
+loop:<br />
+/* some code here.. */<br />
+${IfProcExistsH} $0 0 +3<br />
+   MessageBox MB_OK &quot;The process still exists.&quot;<br />
+   Goto loop<br />
+MessageBox MB_OK &quot;The process doesn't exists anymore!&quot;<br />
+<br />
+And ShellExecEx is usefull for so much more than checking the presence of a process..<br />
+<br />
+Have a good day. ;)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" InstFiles window doesn't paint propertly in .onInstFailed, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  InstFiles window doesn't paint propertly in .onInstFailed NSIS Discussion" />
+	
+	<title> InstFiles window doesn't paint propertly in .onInstFailed [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  InstFiles window doesn't paint propertly in .onInstFailed</div>
+<hr />
+<div class="pda"><a href="t-138000.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=138000">InstFiles window doesn't paint propertly in .onInstFailed</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">5th June 2003, 20:49</div></div><div class="posttext">I am writing a fairly large and complicated installer.<br />
+When the installation fails, I roll back installed components in the .onInstFailed callback function.<br />
+The problems I am seeing are:<br />
+a) DetailPrint no longer prints to the Listbox but only to the Status bar.<br />
+b) NSIS seems to stops painting its window, i.e., the NSIS window turns gray, except for the Status bar message, which keeps getting updated.<br />
+<br />
+What have others here done for rolling back incomplete/failed installations? Have you also seen these problems?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th June 2003, 21:02</div></div><div class="posttext">.onInstFailed was not created for this purpose. It's just for showing a simple message box or writing to a log, but it's not for huge operations. It's called within the message loop and therefor the window doesn't redraw and DetailPrint doesn't work as expected.<br />
+<br />
+Aside from using another instfiles page to do the roll-back operation I have no other ideas at the moment. This idea will not work when the user aborts the installation if a file can be overwritten but you can remove the cancel button with the new AllowSkipFiles command.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">5th June 2003, 21:19</div></div><div class="posttext">Oh, so there's nothing preventing me from creating another Instfiles page?<br />
+Cool- I'll try that.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">5th June 2003, 21:35</div></div><div class="posttext">Hmmm... not as easy as I thought.<br />
+Are there any examples out there of multiple InstFiles pages?<br />
+I see it is on the &quot;ToDo&quot; list.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th June 2003, 21:43</div></div><div class="posttext">I think I wrote one once, but I can't find it right now. I'll just give you the basic idea for your task. In case you need to abort set a variable to a certain value. On the pre function of the second instfiles page read the variable and if it's not set skip the page. If you haven't skipped the page loop through all sections and disable all of them and enable just the rollback function:<br />
+<br />
+Section /o &quot;&quot; rollbackSection<br />
+SectionEnd<br />
+<br />
+#...<br />
+<br />
+StrCpy $0 0<br />
+loop:<br />
+  SectionSetFlags $0 0<br />
+  IntOp $0 $0 + 1<br />
+  IfErrors 0 loop<br />
+<br />
+SectionSetFlags ${rollbackSection} ${SF_SELECTED}<br />
+<br />
+This will cause nothing but the rollback section to execute. In case you need the other sections' flags to remain so you can know what to rollback you should convert their SF_SELECTED flag to something that's not used such as 4096 (a safe distance from the last flag).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">5th June 2003, 21:52</div></div><div class="posttext">Yes, that's essentially how I was thinking of implementing it.<br />
+I was just hoping there was an easier way, e.g., maybe have a Section called Rollback the way we have a Section called Uninstaller, which can be automatically invoked by the installer if the installation fails.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">5th June 2003, 21:54</div></div><div class="posttext">Not yet :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">iceman_k</div><div class="date">6th June 2003, 18:36</div></div><div class="posttext">Looks like the second InstFiles page method isn't going to work after all.<br />
+Here are the problems I found:<br />
+On the first InstFiles page, if an error occurs and I call Abort, the &quot;Back&quot; &amp; &quot;Next&quot; buttons get disabled and the &quot;Cancel&quot; button gets enabled. Clicking the Cancel button closes the installer. <br />
+Not good. :( <br />
+<br />
+So, I changed it. Now, if an error occurs, i don't call Abort but set a flag instead. However, now nsis thinks that setup succeeded, so it shows a message saying &quot;Setup Complete&quot; and the Next button label changes to &quot;Install&quot;. When I click &quot;Install&quot;, its label changes to &quot;Next&quot;. When I click &quot;Next&quot;, the second InstFiles page starts. Now the Rollback section gets called OK but the problem is that the progress bar is maxed to 100% and doesn't move any more.<br />
+Even worse. :cry: <br />
+<br />
+I'm still open to ideas on how to implement installation rollback. :confused:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th June 2003, 10:54</div></div><div class="posttext">Aside from the progress bar maxing out very quickly (which is a bug that have already been fixed in the latest CVS version of now :)) the attached file does exactly what you want.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

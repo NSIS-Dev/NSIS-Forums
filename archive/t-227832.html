@@ -1,0 +1,173 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" NSIS.Library.RegTool.v2.exe is queued for delete by previous setup reboot, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  NSIS.Library.RegTool.v2.exe is queued for delete by previous setup reboot NSIS Discussion" />
+	
+	<title> NSIS.Library.RegTool.v2.exe is queued for delete by previous setup reboot [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  NSIS.Library.RegTool.v2.exe is queued for delete by previous setup reboot</div>
+<hr />
+<div class="pda"><a href="t-227832.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=227832">NSIS.Library.RegTool.v2.exe is queued for delete by previous setup reboot</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">bg123</div><div class="date">6th October 2005, 23:37</div></div><div class="posttext">I run my setup and it says reboot is required. In registry there is a RunOnce entry to execute &quot;c:\WINDOWS\System32\NSIS.Library.RegTool.v2.exe /S&quot;. <br />
+There is also a registry entry HKLM\SOFTWARE\NSIS.Library.RegTool.V2\ with entries of dlls to register on boot<br />
+<br />
+After reboot, the RunOnce and associated SOFTWARE\NSIS.Library registry entries go away, and my app is installed and ready to go.<br />
+<br />
+There now is an entry in &quot;HKLM\SYSTEM\CurrentControlSet\Control\Session Manager&quot; called &quot;PendingFileRenameOperations&quot; with value data <br />
+saying to delete C:\WINDOWS\System32\NSIS.Library.RegTool.v2.exe<br />
+<br />
+If I run setup again, the RunOnce entry is added but the PendingFileRenameOperations is still there.<br />
+<br />
+On reboot, windows puts up a message box saying it cannot find C:\WINDOWS\System32\NSNS.Library.RegTool.v2.exe so <br />
+the second install does not complete.<br />
+<br />
+Help!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bg123</div><div class="date">7th October 2005, 16:29</div></div><div class="posttext">Run installer, which requires reboot, then after reboot install something else which requires reboot, then during that reboot windows cannot find NSIS.Library.RegTool.v2.exe, because previous reboot put NSIS.Library.RegTool.v2.exe in the PendingFoleRenameOperations list so it was deleted before the RunOnce tried to complete the second setup.<br />
+<br />
+Am I doing something wrong? Using NSIS 2.10</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th October 2005, 16:32</div></div><div class="posttext">You're not doing anything wrong. There's a problem with files that are queued for deletion and then used again.<br />
+<br />
+I'm tempted to put RegTool in the temporary directory and just leave it there. It's very small, and will be even smaller without the deletion on reboot queueing code. Any comments?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bg123</div><div class="date">7th October 2005, 16:51</div></div><div class="posttext">I have no problem with leaving the file around at all. Is there a script file i can edit to make this happen?<br />
+<br />
+Or, it could be arranged that any time the regtool is added to RunOnce, any PendingFileRenameOperations entry for it could be removed so the RunOnce will get to run. Then you still have the delayed cleanup of regtool on the next boot (unless someone runs another nsis based install)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th October 2005, 17:12</div></div><div class="posttext">The PendingFileRenameOperations entry is not documented properly anywhere at MSDN. I don't think it'd be a good idea to mess with it.<br />
+<br />
+To get RegTool to not delete itself and write to the temporary directory a few source changes needs to be made. In attach ZIP, you'll find a patch for the source code, the complete Library.nsh with the change and a compiled version of RegTool. Please test it and let me know how it goes.<br />
+<br />
+If it does work, we need to consider what to do with older versions. The easiest solution would probably be bumping the version. This way, nothing bad will happen in the rare-chance that some DLL is installed to the temporary directory, which will cause the RegTool to be deployed there.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bg123</div><div class="date">7th October 2005, 19:23</div></div><div class="posttext">The Regtool.bin worked correctly. When I was putting the changes into my nsis installation, I did my usual diff of the changed files. Library.nsh changed the file location of regtool to $TEMP, but did not change the RunOnce entry, it still used $R2. I tried it as is anyway, and of course it could not find regtool on second setup reboot. The $TEMP is in my user directory localsettings. Instead of changing the RunOnce entry in the changed Library.nsh, I reverted to the old 2.10 one. I have no problem with the exe being left in winsys. My own uninstalls do not remove my common dlls from there either. Not an issue for me, though I will follow however you decide (presumably in 2.11)<br />
+<br />
+Everything works fine! Thanks very very much!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th October 2005, 20:25</div></div><div class="posttext">Keeping it in $SYSDIR would be a problem, because the path it's kept in is not always $SYSDIR. It's actually the path of the first installed DLL. This could leave over a lot of copies of the tool.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bg123</div><div class="date">7th October 2005, 22:36</div></div><div class="posttext">Could the Library.nsh use a &quot;random&quot; (GUID) file name, like it does for the entries under the HKLM\Software\NSIS.Library.RegTool.v2, for the name of the exe it deposits in $R2 or $TEMP, and adds to RunOnce ?<br />
+<br />
+If the regtool can figure out its exe file name and do the MoveFileEX to delete on next boot, it can be safely deleted, since another run of setup would extract it with a different filename for RunOnce to find.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">8th October 2005, 01:19</div></div><div class="posttext">Originally posted by kichik <br />
+I'm tempted to put RegTool in the temporary directory and just leave it there. It's very small, and will be even smaller without the deletion on reboot queueing code. Any comments?  <br />
+why cant RegTool just delete itself when its done?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bg123</div><div class="date">8th October 2005, 04:19</div></div><div class="posttext">Originally posted by Anders <br />
+why cant RegTool just delete itself when its done?  <br />
+<br />
+<br />
+Can't delete a running executable. The best solution would be a way for a process to tell windows &quot;wait until I exit, then delete me&quot;.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bg123</div><div class="date">8th October 2005, 04:28</div></div><div class="posttext">This works:<br />
+<br />
+1. Use the original Program Files\NSIS\bin\RegTool.bin, it figures out its filename and tells windows to delete it on next reboot.<br />
+<br />
+2. Change Program Files\NSIS\Include\Library.nsh :<br />
+Change lines<br />
+<br />
+    File /oname=$R2\NSIS.Library.RegTool.v2.exe &quot;${NSISDIR}\Bin\RegTool.bin&quot;<br />
+    WriteRegStr HKLM &quot;Software\Microsoft\Windows\CurrentVersion\RunOnce&quot; \<br />
+      &quot;NSIS.Library.RegTool.v2&quot; '&quot;$R2\NSIS.Library.RegTool.v2.exe&quot; /S'<br />
+<br />
+to<br />
+    File /oname=$R2\NSIS.Library.RegTool.v2.$__INSTALLLLIB_SESSIONGUID.exe &quot;${NSISDIR}\Bin\RegTool.bin&quot;<br />
+    WriteRegStr HKLM &quot;Software\Microsoft\Windows\CurrentVersion\RunOnce&quot; \<br />
+      &quot;NSIS.Library.RegTool.v2&quot; '&quot;$R2\NSIS.Library.RegTool.v2.$__INSTALLLLIB_SESSIONGUID.exe&quot; /S'<br />
+<br />
+Changed version attached.<br />
+<br />
+The RegTool program gets a unique name, and RunOnce key knows to run it. After reboot regtool has run and there will be a pending delete of that file for the next boot. Another setup run before next boot will set up RegTool with a different .exe name and RunOnce entry, and on boot the old RegTool is deleted but the new one is still there and it runs (queuing itself for delete on next boot). I think any number of setups could be run with reboots between or not.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">8th October 2005, 05:31</div></div><div class="posttext">Originally posted by bg123 <br />
+Can't delete a running executable. The best solution would be a way for a process to tell windows &quot;wait until I exit, then delete me&quot;.  <br />
+yes it is possible, its a bit of a hack but it IS possible<br />
+<br />
+http://www.catch22.net/tuts/selfdel.asp<br />
+http://www.nsonic.de/Delphi/txt_WIS00561.htm</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bg123</div><div class="date">8th October 2005, 05:55</div></div><div class="posttext">Originally posted by Anders <br />
+yes it is possible, its a bit of a hack but it IS possible<br />
+<br />
+http://www.catch22.net/tuts/selfdel.asp<br />
+http://www.nsonic.de/Delphi/txt_WIS00561.htm  <br />
+<br />
+I didn't know about those, but never assumed it not possible. But from qa quick look at these links, the ones that truly delete from a running system do not guarantee to work in future version. Which would anser original question as to why regtool does not just delete itself. Really should be O/S support for something like that.<br />
+<br />
+Cool though!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bg123</div><div class="date">8th October 2005, 05:55</div></div><div class="posttext">Oops...<br />
+<br />
+Testing with a few setups in a row did not work. You can only have one key with the same name in registry, it seems. <br />
+Had to add unique id to value name in runonce.<br />
+<br />
+There is a test that tries to see if RunOnce file already exists, but it is ineffective, because RunOnce value has the /S on the end, so the filename will never exist, so we create a new unique named file but can only add one of these to RunOnce (the last one is the one preserved, I think)<br />
+<br />
+In Library.nsh change to:<br />
+  ;Setup RegTool<br />
+<br />
+  ReadRegStr $R3 HKLM &quot;Software\Microsoft\Windows\CurrentVersion\RunOnce&quot; &quot;NSIS.Library.RegTool.v2.$__INSTALLLLIB_SESSIONGUID&quot;<br />
+  IfFileExists $R3 +3<br />
+<br />
+    File /oname=$R2\NSIS.Library.RegTool.v2.$__INSTALLLLIB_SESSIONGUID.exe &quot;${NSISDIR}\Bin\RegTool.bin&quot;<br />
+    WriteRegStr HKLM &quot;Software\Microsoft\Windows\CurrentVersion\RunOnce&quot; \<br />
+      &quot;NSIS.Library.RegTool.v2.$__INSTALLLLIB_SESSIONGUID&quot; '&quot;$R2\NSIS.Library.RegTool.v2.$__INSTALLLLIB_SESSIONGUID.exe&quot; /S'<br />
+<br />
+<br />
+This works for multiple setups betweem reboots. No regtools left after reboot after last install's reboot.<br />
+<br />
+Changed Library.nsh attached.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th October 2005, 14:18</div></div><div class="posttext">There's no need to deploy more RegTools. Each one does the work for them all. The test just needs to be adjusted. This, after ReadRegStr, should do:StrCpy $R3 $R3 -4 1It would be possible to extract the RegTool with a unique name to avoid the original issue. It would also help avoid the temporary directory which users like to mess with.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">11th October 2005, 17:47</div></div><div class="posttext">Here's what I ended up uploading. It uses the original RegTool. Let me know if there are any problems with it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bg123</div><div class="date">12th October 2005, 05:30</div></div><div class="posttext">I diffed with the last one. <br />
+Shouldn't the line<br />
+<br />
+    File /oname=$R2\NSIS.Library.RegTool.v2.exe &quot;${NSISDIR}\Bin\RegTool.bin&quot;<br />
+<br />
+be <br />
+<br />
+    File /oname=$R2\NSIS.Library.RegTool.v2.$__INSTALLLLIB_SESSIONGUID.exe &quot;${NSISDIR}\Bin\RegTool.bin&quot;<br />
+<br />
+to go with the WriteRegStr defining RunOnce ?<br />
+<br />
+The diff shows other changes (get library version) etc. I assume they are for other things.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">12th October 2005, 12:10</div></div><div class="posttext">Thanks, fixed.<br />
+<br />
+The library version changes require the latest LibraryLocal.exe as well. You can revert those changes until 2.11 if you don't want to get the latest CVS version.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

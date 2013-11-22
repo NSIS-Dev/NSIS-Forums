@@ -1,0 +1,187 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Comparing 2 versions, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Comparing 2 versions NSIS Discussion" />
+	
+	<title> Comparing 2 versions [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Comparing 2 versions</div>
+<hr />
+<div class="pda"><a href="t-204151.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=204151">Comparing 2 versions</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">7th January 2005, 06:25</div></div><div class="posttext">I was searching for a function that could compare 2 version numbers.  I liked the example at http://nsis.sourceforge.net/archive/nsisweb.php?page=643, but I did find a small flaw with this example in that it would see &quot;3.1.0&quot; and &quot;3.10.0&quot; as identical versions.<br />
+<br />
+I was having a hard time stepping through the code, so I decided to write my own variation.  I've tested every possible scenerio I could think of and could not make it fail.  It will handle from 1 to up to 4 sections (ex: &quot;1.2.3.4&quot;) as long as the version number string consists of strictly numbers (no letters).  <br />
+<br />
+The code is attached.  It's easy to follow and contains much documentation, so it should be easy enough for anyone to follow the logic.<br />
+<br />
+Any questions?  Just let me know.<br />
+Enjoy!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th January 2005, 11:45</div></div><div class="posttext">Everyone can create Archive pages. You can go ahead and create one for this function too.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bluenet</div><div class="date">7th January 2005, 14:05</div></div><div class="posttext">These is a VerCmp function rip from my NSIS Header File.<br />
+Use it like StrFunc.<br />
+Exsample: ${VerCmp} $0 1.0.10.3 1.0.1.9<br />
+In this case $0 = 1 (1.0.10.3 &gt; 1.0.1.9)<br />
+${VerCmp} $0  1.0.1.15 1.0.2<br />
+This case $0 = -1 (1.0.1.15 &lt; 1.0.2)<br />
+And return 0 if equal.<br />
+A litte difference with StrFunc: Uninstall function is ${un.VerCmp} not ${UnVerCmp}<br />
+<br />
+<br />
+!macro DEFINE_FUNC NAME<br />
+	!define `${NAME}` `!insertmacro INSERT_FUNC_${NAME} &quot;${NAME}&quot; &quot;&quot;`<br />
+	!define `un.${NAME}` `!insertmacro INSERT_FUNC_${NAME} &quot;${NAME}&quot; &quot;un.&quot;`<br />
+!macroend<br />
+<br />
+!macro DEFINE_CALL NAME UNFIX<br />
+	!undef `${UNFIX}${NAME}`<br />
+	!define `${UNFIX}${NAME}` `!insertmacro CALL_FUNC_${NAME} &quot;${NAME}&quot; &quot;${UNFIX}&quot;`<br />
+!macroend<br />
+<br />
+###############################################################<br />
+# º¯Êý: VerCmp<br />
+###############################################################<br />
+!insertmacro DEFINE_FUNC VerCmp<br />
+<br />
+!macro CALL_FUNC_VerCmp NAME UNFIX ResultVar Ver1 Ver2<br />
+	Push `${Ver2}`<br />
+	Push `${Ver1}`<br />
+	Call ${UNFIX}${NAME}<br />
+	Pop ${ResultVar}<br />
+!macroend<br />
+<br />
+!macro INSERT_FUNC_VerCmp NAME UNFIX<br />
+	Function ${UNFIX}${NAME}<br />
+		Exch $R0<br />
+		Exch<br />
+		Exch $R1<br />
+		Push $R2<br />
+		Push $R3<br />
+		<br />
+		${Do}<br />
+			${If} $R0 != &quot;&quot;<br />
+				Push $R0<br />
+				Call ${UNFIX}${NAME}.FindDot<br />
+				Pop $R0 ;µãºóÃæµÄ<br />
+				Pop $R2 ;µãÇ°ÃæµÄ<br />
+			${Else}<br />
+				StrCpy $R2 0<br />
+			${EndIf}<br />
+			${If} $R1 != &quot;&quot;<br />
+				Push $R1<br />
+				Call ${UNFIX}${NAME}.FindDot<br />
+				Pop $R1 ;µãºóÃæµÄ<br />
+				Pop $R3 ;µãÇ°ÃæµÄ<br />
+			${Else}<br />
+				StrCpy $R3 0<br />
+			${EndIf}<br />
+			<br />
+			${If} $R2 &gt; $R3<br />
+				StrCpy $R0 1<br />
+				${ExitDo}<br />
+			${ElseIf} $R2 &lt; $R3<br />
+				StrCpy $R0 -1<br />
+				${ExitDo}<br />
+			${EndIf}<br />
+		<br />
+			${If} $R0 == &quot;&quot;<br />
+			${AndIf} $R1 == &quot;&quot;<br />
+				StrCpy $R0 0<br />
+				${ExitDo}<br />
+			${EndIf}<br />
+		${loop}<br />
+			<br />
+		Pop $R3<br />
+		Pop $R2<br />
+		Pop $R1<br />
+		Exch $R0<br />
+	FunctionEnd<br />
+	<br />
+	Function ${UNFIX}${NAME}.FindDot<br />
+		Exch $R0<br />
+		Push $R1<br />
+		Push $R2<br />
+		Push $R3<br />
+		StrCpy $R2 0<br />
+			${Do}<br />
+				StrCpy $R3 $R0 1 $R2<br />
+				${If} $R3 == &quot;.&quot;<br />
+					StrCpy $R1 $R0 $R2<br />
+					IntOp $R2 $R2 + 1<br />
+					StrCpy $R0 $R0 &quot;&quot; $R2<br />
+					${ExitDo}<br />
+				${EndIf}<br />
+				${If} $R3 == &quot;&quot;<br />
+					StrCpy $R1 $R0<br />
+					StrCpy $R0 &quot;&quot;<br />
+					${ExitDo}<br />
+				${EndIf}<br />
+				IntOp $R2 $R2 + 1<br />
+			${Loop}<br />
+		Pop $R3<br />
+		Pop $R2<br />
+		Exch $R1<br />
+		Exch<br />
+		Exch $R0<br />
+	FunctionEnd<br />
+<br />
+	!insertmacro DEFINE_CALL `${NAME}` `${UNFIX}`<br />
+!macroend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">9th January 2005, 20:07</div></div><div class="posttext">I was not aware that I could post directly to the NSIS archive.  (Very cool!)<br />
+<br />
+I took kichik's advise and the code is now located at http://nsis.sourceforge.net/archive/nsisweb.php?page=673&amp;instances=0,11<br />
+<br />
+I did do a little tweaking to add some POP commands to restore the contents of the stack.<br />
+<br />
+(By the way, I think NSIS kicks butt!)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th January 2005, 09:14</div></div><div class="posttext">I have found the problem with my function. I shall fix it when I get home!<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">10th January 2005, 15:47</div></div><div class="posttext">NSIS Archive contains another one:<br />
+<br />
+http://nsis.sourceforge.net/archive/viewpage.php?pageid=57<br />
+<br />
+Looks good to me.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th January 2005, 20:17</div></div><div class="posttext">That VersionCheck function fails on version numbers like 6 and 6.0 (it says 6 is lower than 6.0 when they are the same!)<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th January 2005, 22:14</div></div><div class="posttext">Ok, I finished the function. I re-wrote it taking a different approach from the old function...The previous function (VersionCheckNew) would strip the dot's, make the two numbers the same length (by adding leading 0's) then making both numbers proper integers by placing 1 in front of them. <br />
+This worked for a while until Comperio found that it would fail on e.g. 3.1.0 and 3.10.0 <br />
+Here, the second version is obviously higher. <br />
+In the old function, 3.1.0 would become 13100 and 3.10.0 would become 13100. As you can see, both integers are exactly the same and thus the function would falsely report that both versions numbers are the same!This function differs in that it compares each number between the dot's one by one, from start to finish.<br />
+<br />
+There's another version string type that I never tried before... something like this:<br />
+1.01<br />
+1.10<br />
+This function doesn't break on that either.<br />
+<br />
+http://nsis.sourceforge.net/archive/nsisweb.php?page=643&amp;instances=0,11,122<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

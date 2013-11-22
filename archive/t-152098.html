@@ -1,0 +1,128 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" InstallDirRegKey and ReadRegStr ?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  InstallDirRegKey and ReadRegStr ? NSIS Discussion" />
+	
+	<title> InstallDirRegKey and ReadRegStr ? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  InstallDirRegKey and ReadRegStr ?</div>
+<hr />
+<div class="pda"><a href="t-152098.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=152098">InstallDirRegKey and ReadRegStr ?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">MrRadicalEd</div><div class="date">9th October 2003, 19:57</div></div><div class="posttext">Im using the basic script example in the MUI folder, and I tried using the InstallDirRegKey so the installer will use that location for the installation, but it still keeps the file.exe<br />
+<br />
+This is what it looks like:<br />
+<br />
+;Folder selection page<br />
+  InstallDir $INSTDIR<br />
+<br />
+  ;Remember install folder<br />
+  InstallDirRegKey HKCU Software\Valve\Steam SteamExe<br />
+<br />
+After being compiled I test the installation and it spits out location/file.exe read from the registry key. I know I read in the manual that using InstallDirRegKey strips quotes, and the file.exe from the path.<br />
+<br />
+Also I'm not sure if I quite understand how this works, but I'm trying to get individual files installed by different detected registry keys. I know it has something to do with ReadRegStr, but I haven't got the installer to do what I want it to do. <br />
+<br />
+The installer would have separate sections, and each section would be installed to a specific path that was read from a registry key<br />
+<br />
+Components:<br />
+[]Core<br />
+[]Developer<br />
+[]Extra<br />
+[]Extra2<br />
+<br />
+Im thinking as a simple beginner and saying that maybe I can do something like this?<br />
+<br />
+Function .onInit<br />
+  ReadRegStr $1 HKCU &quot;Software\Valve\Steam&quot; SteamExe<br />
+  ReadRegStr $2 HKCU &quot;Software\Valve\Steam&quot; ModInstallPath<br />
+FunctionEnd<br />
+<br />
+Except when you get the path for \HKCU\Software\valve\steam SteamExe, it returns a steam.exe at the end. I only need the path itself. <br />
+<br />
+For every file to install it would look like this:<br />
+<br />
+SetOutPath &quot;$1&quot;<br />
+  File &quot;${NSISDIR}\Contrib\UIs\modern.exe&quot;<br />
+<br />
+<br />
+and then all I need the installer to do is make sure the user show that they have an installed component inside say /STEAM, and that the installer would proceed if steam.exe was found.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">9th October 2003, 21:16</div></div><div class="posttext">You can use the GetParent function from the documentation.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MrRadicalEd</div><div class="date">9th October 2003, 21:46</div></div><div class="posttext">$1 produces something like &quot;c:\program files\steam\steam.exe&quot;<br />
+$2 produces something like &quot;c:\program files\steam\steamapps\user@user\half-life&quot;<br />
+<br />
+<br />
+So from what I understand.. it would something like this?<br />
+<br />
+<br />
+Function .onInit<br />
+  ReadRegStr $1 HKCU &quot;Software\Valve\Steam&quot; SteamExe<br />
+  ReadRegStr $2 HKCU &quot;Software\Valve\Steam&quot; ModInstallPath<br />
+FunctionEnd<br />
+<br />
+Function GetParent<br />
+   Exch $R0 ; old $R0 is on top of stack<br />
+   Push $R1<br />
+   Push $R2<br />
+   StrCpy $R1 -1<br />
+   loop:<br />
+     StrCpy $R2 $R0 1 $R1<br />
+     StrCmp $R2 &quot;&quot; exit<br />
+     StrCmp $R2 &quot;\&quot; exit<br />
+     IntOp $R1 $R1 - 1<br />
+   Goto loop<br />
+   exit:<br />
+     StrCpy $R0 $R0 $R1<br />
+     Pop $R2<br />
+     Pop $R1<br />
+     Exch $R0 ; put $R0 on top of stack, restore $R0 to original value<br />
+FunctionEnd<br />
+<br />
+Section &quot;&quot;<br />
+  Push &quot;$1&quot;<br />
+  Call GetParent<br />
+  Pop $R0<br />
+SectionEnd<br />
+<br />
+and to use the new path for a file installation I would use $R0 insteald of $1?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">9th October 2003, 22:39</div></div><div class="posttext">Depend on you. Can push or pop any variable.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MrRadicalEd</div><div class="date">9th October 2003, 22:49</div></div><div class="posttext">I only got that out of the manual, and didn't understand much of it :/</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th October 2003, 23:03</div></div><div class="posttext">InstallDirRegKey should strip the EXE part (unless it's a real directory path) and does in my tests. What's the exact string in that registry value you're passing on to InstallDirRegKey?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MrRadicalEd</div><div class="date">9th October 2003, 23:10</div></div><div class="posttext">c:/program files/steam/steam.exe</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th October 2003, 23:14</div></div><div class="posttext">No wonder then... That's an invalid path. It uses forward slashes instead of backslashes. If you want to use it, you'd have to process it yourself, replacing every slash with a backward slash to avoid problems and trimming the last part on your own. If you don't want to write something of your own, you can use some of the Archive functions, some of them will surely help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MrRadicalEd</div><div class="date">9th October 2003, 23:20</div></div><div class="posttext">Alright.. thanks for the info. This installer is going to simplify a rather tricky install of some files for a game, and luckily there is a different registry key that is valid using back slashes..<br />
+<br />
+unfortunately its path is longer than I desire. I found the GetParent documentation in the manual, but I see that you have to define the function before you use it, and I don't completely understand the use of Pop, Push, Exch, and so on</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th October 2003, 23:23</div></div><div class="posttext">This Archive page should explain it:<br />
+http://nsis.sourceforge.net/archive/viewpage.php?pageid=216</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

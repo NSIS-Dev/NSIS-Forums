@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" ExecWait uninstaller.exe on XP, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  ExecWait uninstaller.exe on XP NSIS Discussion" />
+	
+	<title> ExecWait uninstaller.exe on XP [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  ExecWait uninstaller.exe on XP</div>
+<hr />
+<div class="pda"><a href="t-131231.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=131231">ExecWait uninstaller.exe on XP</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">hermanator</div><div class="date">5th April 2003, 23:28</div></div><div class="posttext">I'm doing what probably many others are doing, which is to try to automatically uninstall previous versions of my app during installation.<br />
+<br />
+First my installer reads the uninstall string into $R2 from the registry then tries to uninstall the previous version as follows (I'm now using v2.0b3, and it only tries to uninstall versions built by v2.0b+):<br />
+<br />
+ExecWait '$R2 /S _?=$INSTDIR'<br />
+<br />
+Note: The FAQ says that $R2 should be put inside quotes (in case of spaces in the path), but as of v2.0b3 doing so causes errors.<br />
+<br />
+On Win2k this will work fine, but on XP everything seems to work as it should except that the uninstaller does not remove the files it is supposed to.  Desktop and Start Menu icons are removed aswell as registry settings, but the directory containing the installed files remains.<br />
+<br />
+Note: The instruction in the uninstaller to remove that dir is:<br />
+RMDir /r &quot;$INSTDIR&quot;<br />
+<br />
+Can anyone shed some light on this? Also I can't find the parameters for the uninstaller documented anywhere.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">6th April 2003, 00:27</div></div><div class="posttext">look at the:<br />
+${NSISDIR}\Examples\makensis.nsi<br />
+You should first detect the installed files or old version<br />
+of your app, than continue with installed<br />
+I don't see why the RMDir /r $INSTDIR  <br />
+doesn't remove the folder.<br />
+Maybe because you put the &quot;&quot;<br />
+:)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">6th April 2003, 06:48</div></div><div class="posttext">You are running a program that are in the folder when you try to remove the folder (or almost to remove the folder)? (except the uninstaller program)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th April 2003, 07:02</div></div><div class="posttext">I don't have a lot of time to really get into to this right now because I have to go out in 5 minutes but deguix have a point. When you call the uninstaller this way it doesn't fork and thus can't delete itself. You should first copy it to $TEMP and call it from there. I don't know how the entire RMDir /r command could fails because of this but it's worth a try.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">virtlink</div><div class="date">6th April 2003, 09:14</div></div><div class="posttext">The Docs say that you have to use quotes around the uninstaller file too, even if that name doesn't contain quotes:<br />
+<br />
+ExecWait '&quot;$R2&quot; /S _?=$INSTDIR'<br />
+<br />
+And maybe you should first copy the uninstaller to the $TEMP directory, call it from there, and then remove it after uninstall. I think that because of the uninstaller's presence in the $INSTDIR, that directory can't be removed. You should check the error flag to catch this error.<br />
+<br />
+Something like this should work:<br />
+Delete $TEMP\uninstaller.exe<br />
+CopyFiles /SILENT $R2 $TEMP<br />
+ExecWait '&quot;$TEMP\uninstaller.exe&quot; /S _?=$INSTDIR'<br />
+Delete $TEMP\uninstaller.exe<br />
+The above code assumes that the uninstaller's filename is 'uninstaller.exe'. If not, or if not certain, you should retrieve it from $R2.<br />
+<br />
+Warning: The forum has deleted the backslashes, but I assume that you know where they should be written. ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">6th April 2003, 16:50</div></div><div class="posttext">Note: The FAQ says that $R2 should be put inside quotes (in case of spaces in the path), but as of v2.0b3 doing so causes errors.<br />
+<br />
+There are two possible reasons I can think of:<br />
+1) There are already quotes in the registry.<br />
+2) You are using b3 from CVS and not final b3.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">vtsaran</div><div class="date">7th April 2003, 17:21</div></div><div class="posttext">I also noticed that the return code for the uninstaller is always 0. How can I check if my uninstaller exited correctly or with errors, say, if the user pressed &quot;cancel&quot; on the uninstall screen.<br />
+I put<br />
+<br />
+ExecWait &quot;$INSTDIR\${UNINSTALLER}&quot; $R9<br />
+MessageBox MB_OK &quot;The value for R9 is $R9$\n&quot;<br />
+<br />
+It would always come back with the value of 0, regardless of whether the &quot;cancel&quot; button was pressed or the &quot;finish&quot; one.<br />
+Anybody can explain please?<br />
+<br />
+Thanks,<br />
+Victor</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th April 2003, 17:26</div></div><div class="posttext">If you executes the uninstaller this way it will return right away with the return value 0. You have to execute it as hermanator said and as the FAQ states, with _?=$INSTDIR. This way the installer will really wait for the uninstaller and you should get the right return value.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hermanator</div><div class="date">7th April 2003, 21:19</div></div><div class="posttext">Thanks for the responses..<br />
+<br />
+There were two problems:<br />
+<br />
+1) I had set the uninstall reg string improperly as follows:<br />
+<br />
+'&quot;$INSTDIR\gaim-uninst.exe&quot;'<br />
+<br />
+This was the reason why I could not do <br />
+ExecWait '&quot;$R2&quot; /S _?=$INSTDIR' <br />
+without an error.<br />
+<br />
+2) Copying the uninstaller to the TEMP dir and running it fixed my problem. I should mention that you need to make sure that you pass the actual install dir of the old installation as the _? param.  Passing $INSTDIR will fail in case the user has choosen a new location.<br />
+<br />
+- Herman</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Yovav</div><div class="date">13th May 2003, 01:47</div></div><div class="posttext">Originally posted by hermanator <br />
+I'm doing what probably many others are doing, which is to try to automatically uninstall previous versions of my app during installation.<br />
+<br />
+First my installer reads the uninstall string into $R2 from the registry then tries to uninstall the previous version as follows (I'm now using v2.0b3, and it only tries to uninstall versions built by v2.0b+):<br />
+<br />
+ExecWait '$R2 /S _?=$INSTDIR'<br />
+<br />
+Note: The FAQ says that $R2 should be put inside quotes (in case of spaces in the path), but as of v2.0b3 doing so causes errors.<br />
+<br />
+On Win2k this will work fine, but on XP everything seems to work as it should except that the uninstaller does not remove the files it is supposed to.  Desktop and Start Menu icons are removed aswell as registry settings, but the directory containing the installed files remains.<br />
+<br />
+Note: The instruction in the uninstaller to remove that dir is:<br />
+RMDir /r &quot;$INSTDIR&quot;<br />
+<br />
+Can anyone shed some light on this? Also I can't find the parameters for the uninstaller documented anywhere.  <br />
+<br />
+<br />
+Hi,<br />
+<br />
+How do U check it old version is installed ?<br />
+<br />
+if possible please post or send me your example code<br />
+<br />
+10X in advanced, Yovav.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Sunjammer</div><div class="date">13th May 2003, 08:34</div></div><div class="posttext">Posting a complete example at the Archive (http://nsis.sourceforge.net/archive) would be better than emailing it to a single person.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

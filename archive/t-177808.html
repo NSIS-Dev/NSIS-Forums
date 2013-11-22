@@ -1,0 +1,199 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Calling a DLL, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Calling a DLL NSIS Discussion" />
+	
+	<title> Calling a DLL [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Calling a DLL</div>
+<hr />
+<div class="pda"><a href="t-177808.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=177808">Calling a DLL</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">b_avery@yahoo.c</div><div class="date">24th April 2004, 11:11</div></div><div class="posttext">Calling a DLL from within NSIS:<br />
+<br />
+Why is this not working?<br />
+<br />
+==============================<br />
+SetPluginUnload  alwaysoff<br />
+<br />
+Function loadDll<br />
+<br />
+  SetOutPath $TEMP<br />
+  File XmlToIni.dll                     ; copy dll<br />
+  StrCpy $0 '$TEMP\file.ini'<br />
+  System::Call 'XmlToIni::SaveIniToFile(t) l(r0) r1'<br />
+<br />
+  SetPluginUnload manual<br />
+  System::Free 0<br />
+<br />
+FunctionEnd<br />
+==============================<br />
+<br />
+The interface within the DLL to call is:<br />
+<br />
+long SaveIniToFile(char* szFileName)<br />
+<br />
+And returns back a long.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">24th April 2004, 15:27</div></div><div class="posttext">Some notes:<br />
+1. SetOutPath $TEMP. Outputing to the users Temp. dir., right?<br />
+2. System::Call 'XmlToIni::SaveIniToFile(t) l(r0) r1'. System, mostly, call the functions from DLLs APIs inside $SYSDIR folder.<br />
+3. System::Free 0. You should use:<br />
+<br />
+System::Free $0<br />
+<br />
+Recommendation:<br />
+Try to call directly your DLL, avoiding the system plugin. See web archive about examples of plugins.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">24th April 2004, 15:44</div></div><div class="posttext">System::Free 0 is right, there is no need to change it. You can however remove SetPluginUnload alwaysoff, SetPluginUnload manual and System::Free 0 because it's not really needed when you can System.dll just one time.<br />
+<br />
+You are missing a dot before r1, the result will never go into $1. To figure out what's wrong, more details are needed. Most importantly, what exactly isn't working.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">b_avery@yahoo.c</div><div class="date">25th April 2004, 09:36</div></div><div class="posttext">OK getting a message back in $1, which is error, which is a good start.<br />
+<br />
+But the DLL is not running as it should create a file called file.ini in the temp area.<br />
+<br />
+  SetOutPath $SYSDIR             ; create temp directory<br />
+  File XmlToIni.dll                  ; copy dll there<br />
+  StrCpy $0 '$TEMP\file.ini'<br />
+  System::Call 'XmlToIni::SaveIniToFile(t) l(r0) .r1'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fredtheman</div><div class="date">25th April 2004, 11:54</div></div><div class="posttext">Lobo &gt;&gt; System, mostly, call the functions from DLLs APIs inside $SYSDIR folder.<br />
+<br />
+What do you mean? Does it mean that we should always append the directory where a given DLL is located?<br />
+<br />
+&gt;&gt; System::Free $0<br />
+<br />
+What is this System::Free used for, really? I'm confused about why I need SetPluginUnload alwaysoff + SetPluginUnload manual + System::Free. Could you tell us why we need those three statements when using the System plug-in?<br />
+<br />
+&gt;&gt; Try to call directly your DLL, avoiding the system plugin. See web archive about examples of plugins.<br />
+<br />
+What do you mean with &quot;call directly&quot;? What other way is there to call a DLL from NSIS besides the System plug-in?<br />
+<br />
+b_avery &gt;&gt; But the DLL is not running as it should create a file called file.ini in the temp area.<br />
+<br />
+Not sure this is the cause, but is there a space between &quot;l&quot; and &quot;(r0)&quot;? I know there's a space missing in the documentation on the System plug-in. Try this instead:<br />
+<br />
+<br />
+System::Call 'XmlToIni::SaveIniToFile(t) l (r0) .r1'<br />
+                                          ^ here, a space<br />
+<br />
+<br />
+Thank you :-)<br />
+Fred.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">b_avery@yahoo.c</div><div class="date">25th April 2004, 12:59</div></div><div class="posttext">Nope, still an error  :-(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">25th April 2004, 14:25</div></div><div class="posttext">I don't know, but generally the error return is an integer (i), unless it's specified.<br />
+<br />
+And about the input, see the documentation if the input is A pointer to buffer or variable where you have to add a pointer, and A pointer to string where you don't.<br />
+<br />
+So I suggest:<br />
+<br />
+System::Call 'XmlToIni::SaveIniToFile(t) i (r0) .r1'<br />
+<br />
+OR<br />
+<br />
+System::Call 'XmlToIni::SaveIniToFile(t) i (*r0) .r1'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">b_avery@yahoo.c</div><div class="date">25th April 2004, 15:10</div></div><div class="posttext">No still the same.<br />
+<br />
+Yes the routine does come back with a Long<br />
+<br />
+Here is the call details:<br />
+<br />
+long SaveIniToFile(char* szFileName)<br />
+<br />
+<br />
+if this will not connect I could try:<br />
+<br />
+long SaveIniToFile(LPCSTR szFileName)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">25th April 2004, 15:12</div></div><div class="posttext">What do you mean? Does it mean that we should always append the directory where a given DLL is located?<br />
+<br />
+That the DLL, called by system plugin, must be in the $SYSDIR for easy location and execution.<br />
+<br />
+What is this System::Free used for, really? <br />
+<br />
+Release or free the resources use by the functon called by the system plugin. We don't want memory leaks...<br />
+<br />
+I'm confused about why I need SetPluginUnload alwaysoff + SetPluginUnload manual + System::Free. Could you tell us why we need those three statements when using the System plug-in?<br />
+<br />
+I don't use them, but in the DOCs you might find the awnser. As my way, I don't really need them.<br />
+<br />
+What do you mean with &quot;call directly&quot;? What other way is there to call a DLL from NSIS besides the System plug-in?<br />
+<br />
+Well... an example of calling directly is the system plugin. Maybe you could find a way to use your plugin without using the system plugin.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">b_avery@yahoo.c</div><div class="date">25th April 2004, 19:20</div></div><div class="posttext">My DLL is still not working from NSIS  :-(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">25th April 2004, 19:23</div></div><div class="posttext">Some corrections:That the DLL, called by system plug-in, must be in the $SYSDIR for easy location and execution.It doesn't have to be in $SYSDIR. On the contrary, it looks in the current directory first.Release or free the resources use by the function called by the system plug-in. We don't want memory leaks...System::Free doesn't free resources used by the System plug-in. It frees resources allocated using the System plug-in using System::Alloc or the special System::Call syntax. If you pass $0 to it, it will try to free the memory pointed to by $0 which is a bad idea unless you've saved an address of some allocated memory in it. If you use System::Free 0 it will simply do nothing. Why this is needed will be clear once you read about SetPluginsUnload.Well... an example of calling directly is the system plug-in. Maybe you could find a way to use your plug-in without using the system plug-in.You can only call specifically designed DLLs directly from the NSIS script using the DLLName::FuncName syntax. See Contrib\ExDLL for a skeleton of such a DLL.<br />
+<br />
+As for the thread starter's problem, some details are still missing... The exact error returned, whether or not the DLL is called (put a message box on the top of the function, don't rely on file creation to find out) and the new line used to call the function.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">b_avery@yahoo.c</div><div class="date">25th April 2004, 19:46</div></div><div class="posttext">I have looked all over for &quot;Contrib\ExDLL for a skeleton of such a DLL&quot; but can't find where you are refering to.  Please can you help me?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">26th April 2004, 15:01</div></div><div class="posttext">How can we help if we don't know the type of error.<br />
+Maybe you can attach your script will be helpfull.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">26th April 2004, 16:49</div></div><div class="posttext">Contrib\ExDLL contains header file that allow to create a NSIS plug-in.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fredtheman</div><div class="date">26th April 2004, 16:55</div></div><div class="posttext">&gt;&gt; I have looked all over for &quot;Contrib\ExDLL for a skeleton of such a DLL&quot; but can't find where you are refering to<br />
+<br />
+It means that you should look in the directory where you installed NSIS. There are a bunch of sub-directories, one of them being Contrib. You'll find a sub-sub-directory called ExDLL... which only contains source code, no documentation, so I doubt it'll help you much in solving your problem :-)<br />
+<br />
+Personally, I'm more concerned about this :<br />
+<br />
+&gt;&gt; You can only call specifically designed DLLs directly from the NSIS script using the DLLName::FuncName syntax<br />
+<br />
+Does it mean that we cannot call any DLL we want using the System plug-in? What is the issue?<br />
+<br />
+And if someone has successfully called a COM control through the System plug-in, I'm still interested in an example :-)<br />
+<br />
+Thx<br />
+Fred.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">26th April 2004, 16:58</div></div><div class="posttext">You can call any DLL using the System DLL. That quote refers to a direct call without the System plug-in.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fredtheman</div><div class="date">26th April 2004, 17:06</div></div><div class="posttext">Ah ok. I didn't know there was another way to call a DLL besides using the System plug-in.<br />
+<br />
+How do I do this, and what are the avantages/disadvantages?<br />
+<br />
+Thx<br />
+Fred.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">26th April 2004, 18:26</div></div><div class="posttext">These DLLs are NSIS plug-ins, which you can find in the Plugins folder.<br />
+<br />
+NSIS plug-ins can access the NSIS stack and registers and will automatically be extraced and removed by NSIS.<br />
+<br />
+Examples of plug-in are InstallOptions, NSISdl, LangDLL etc.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

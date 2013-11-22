@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" InstallOptionsEx and Animation, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  InstallOptionsEx and Animation NSIS Discussion" />
+	
+	<title> InstallOptionsEx and Animation [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  InstallOptionsEx and Animation</div>
+<hr />
+<div class="pda"><a href="t-216790.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=216790">InstallOptionsEx and Animation</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">0x539</div><div class="date">23rd May 2005, 11:16</div></div><div class="posttext">Okay, I've created a test installer that should just show me one page with an avi. The idea behind this is I need something animated while I install the Java Runtime silently. I've created an avi (without sound) from gifs and it plays on a fresh install of windows 98 so the codec is right. <br />
+<br />
+However, when I try to use it, it just doesn't seem to work. I use dumpstats to view the stack and I get the following:<br />
+Before Execution<br />
+0:<br />
+<br />
+After execution<br />
+0: error finding config<br />
+1:<br />
+<br />
+This is my NSI file:<br />
+Page custom JRE<br />
+OutFile &quot;c:\test.exe&quot;<br />
+<br />
+Section &quot;MainSection&quot; SEC01<br />
+SectionEnd<br />
+<br />
+Function JRE<br />
+    Push $R0<br />
+    File /oname=animation.ini animation.ini<br />
+    File /oname=hmm.avi hmm.avi<br />
+	<br />
+    Dumpstate::debug<br />
+    InstallOptionsEx::dialog animation.ini<br />
+    Dumpstate::debug<br />
+    Pop $R0<br />
+FunctionEnd<br />
+<br />
+And this is my animation.ini file:<br />
+[Settings]<br />
+NumFields=1<br />
+<br />
+[Field 1]<br />
+Type=Animation<br />
+Height=321<br />
+Width=321<br />
+Left=2<br />
+Right=84<br />
+Top=20<br />
+Bottom=30<br />
+Text=hmm.avi<br />
+<br />
+All three files (animation.ini, hmm.avi, test.nsi) are in the same directory when I attempt to compile it. Any help would be appreciated.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">23rd May 2005, 11:53</div></div><div class="posttext">&quot;Height&quot; and &quot;Width&quot; cannot be specified along with &quot;Right&quot; and &quot;Bottom&quot;.<br />
+ &quot;NumFields&quot; is not used.<br />
+ You have to specify the path where &quot;animation.ini&quot; is in InstallOptionsEx call. It thinks it is an invalid path.<br />
+<br />
+<br />
+But thanks for the insight. I'll make it work as supposed next version.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">0x539</div><div class="date">23rd May 2005, 12:44</div></div><div class="posttext">Thanks for the quick reply. It's loading the page correctly now cause I'm using the $INSTDIR variable. Unfortunately, it's still not displaying the avi. All it displays is a blank page.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">23rd May 2005, 20:11</div></div><div class="posttext">You also have to do the same with the avi path.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">0x539</div><div class="date">26th May 2005, 09:23</div></div><div class="posttext">I still can't seem to get it working. The following is my code.<br />
+<br />
+[test.nsi]<br />
+Page custom JRE<br />
+OutFile &quot;c:\test.exe&quot;<br />
+<br />
+Section &quot;MainSection&quot; SEC01<br />
+SectionEnd<br />
+<br />
+Function JRE<br />
+    Push $R0<br />
+	File animation.ini<br />
+	File hmm.avi<br />
+    InstallOptionsEx::dialog $INSTDIR\animation.ini<br />
+    Pop $R0<br />
+FunctionEnd<br />
+<br />
+[animation.ini]<br />
+[Field 1]<br />
+Type=Animation<br />
+Text=$INSTDIR\hmm.avi<br />
+<br />
+I've also tried just using 'hmm.avi' in the Text field and that doesn't seem to work either.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">flizebogen</div><div class="date">26th May 2005, 12:20</div></div><div class="posttext">As far as i know the installoptions plugin has no access to nsis interneal variables.<br />
+<br />
+before you call the page you have to change the ini value with WriteIniStr<br />
+<br />
+I used this in a couple of scripts and for me it worked best to extract everthing that i need for the IO Page in PluginsDir, change the pathes of controls within the ini file and than display the page.<br />
+<br />
+After the installer finishs the pluginsdir is deleted automatically by nsis</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">0x539</div><div class="date">27th May 2005, 10:32</div></div><div class="posttext">Okay I've taken your advice and changed it thus:<br />
+<br />
+Page custom JRE<br />
+OutFile &quot;c:\test.exe&quot;<br />
+<br />
+Section &quot;MainSection&quot; SEC01<br />
+SectionEnd<br />
+<br />
+Function JRE<br />
+	StrCpy $INSTDIR &quot;C:&quot;<br />
+	SetOutPath $INSTDIR<br />
+	File hmm.avi<br />
+	WriteINIStr &quot;$INSTDIR\animation.ini&quot; &quot;Field 1&quot; &quot;Type&quot; &quot;Animation&quot;<br />
+	WriteINIStr &quot;$INSTDIR\animation.ini&quot; &quot;Field 1&quot; &quot;Text&quot; &quot;$INSTDIR\hmm.avi&quot;<br />
+    InstallOptionsEx::dialog &quot;$INSTDIR\animation.ini&quot;<br />
+FunctionEnd<br />
+<br />
+Still get the blank page :/. I think the only way I'm going to get this to work is if I can download an example of a working one. Alternatively, some nice person could look at the script I've uploaded and change it accordingly.<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">27th May 2005, 12:03</div></div><div class="posttext">Try:<br />
+<br />
+ InstallOptionsEx::dialog &quot;$INSTDIR\animation.ini&quot;<br />
+ Pop $R0<br />
+  MessageBox MB_OK $R0<br />
+<br />
+What does it say?<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">0x539</div><div class="date">27th May 2005, 13:31</div></div><div class="posttext">I actually hadn't thought of checking what was on the stack :P. When I used Dumpstats to check the result, it has a string value of &quot;success&quot;. I still get the blank screen though :/.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">flizebogen</div><div class="date">27th May 2005, 13:35</div></div><div class="posttext">i made several tests with your zip file (using the latest IOex) and wasn't able display the avi file. Maybe a codec issue?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">0x539</div><div class="date">27th May 2005, 14:31</div></div><div class="posttext">Mmm...I'm pretty sure the codec is alright because it displays on my PC. I'm using Img2Avi to take jpegs/bmps/* to avi and I've tried everyone of the following codecs that are available on my pc.<br />
+<br />
+Codecs:<br />
+Uncompressed RGB24<br />
+Intel Indeo(R) Video R3.2<br />
+Microsoft Video 1<br />
+Indeo (R) video 5.10<br />
+<br />
+I tested everyone of these codecs on a fresh install of windows 98se and each one seems to work fine. Virtual Dub 1.6.5 and Winamp 5.08e was also able to display them.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">27th May 2005, 21:14</div></div><div class="posttext">I have several things to comment:<br />
+<br />
+1) No fields will work if you don't specify the coordinates of the control. Also, delete the INI file after you use it.<br />
+<br />
+2) Your AVI file is of a wrong type. The only supported video compression method is MS-RLE with 8 bits of video sample size. Quote from Platform SDK:<br />
+An animation control can display an AVI clip originating from either an uncompressed AVI file or from an AVI file that was compressed using run-length (BI_RLE8) encoding.3) I made some tests with an AVI file with sound and it displayed correctly, but without reproducing the sound. This contradicts this quote from Platform SDK:<br />
+Animation controls can only display AVI clips that do not contain audio.4) I also discovered some problems with IOEx. First, it doesn't mention anything about using &quot;State&quot; INI value name with Animation controls, and this was required by the plugin to play the animation. Second, there are a couple of &quot;break&quot; instances missing in the code. These will be fixed on the next version. Until then, use &quot;State=-1&quot; for unlimited number of loops or &quot;State=number of loops&quot; to specify the number of loops you want.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,299 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Install one or more Clients, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Install one or more Clients NSIS Discussion" />
+	
+	<title> Install one or more Clients [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Install one or more Clients</div>
+<hr />
+<div class="pda"><a href="t-254487.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=254487">Install one or more Clients</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Amun</div><div class="date">31st August 2006, 09:55</div></div><div class="posttext">Hi!<br />
+<br />
+I'm trying to generate an installation routine which should have the following functionality:<br />
+With a  installation-routine it should be possible to distribute and install a defined software program to one or more computers automatically.<br />
+The selection, which computers should be updated, is realised with a custompage and the result (selection) is stored in a predefined file. The next step is to read this selection-file line by line and to distribute the software accordingly.<br />
+<br />
+As an attachment I send you my version of the installation-routine.<br />
+The question is: How do I have to include the components for their proper installation?<br />
+<br />
+Thx<br />
+<br />
+edit:<br />
+can't upload files so here a link to ZIP:<br />
+multiclients.zip (http://mitglied.lycos.de/amun1973/multiclients.zip)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st September 2006, 10:02</div></div><div class="posttext">Can you upload it somewhere else? I keep getting an error message I can't read when trying to download.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Amun</div><div class="date">1st September 2006, 10:54</div></div><div class="posttext">sorry here the code from NSI<br />
+<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+Page custom select_pc<br />
+<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+; Instfiles page<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+; Finish page<br />
+!insertmacro MUI_PAGE_FINISH<br />
+<br />
+<br />
+; Language files<br />
+!insertmacro MUI_LANGUAGE &quot;German&quot;<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+; MUI end ------<br />
+<br />
+<br />
+	<br />
+Name &quot;${PRODUCT_NAME} ${PRODUCT_VERSION}&quot;<br />
+OutFile &quot;test.exe&quot;<br />
+InstallDir &quot;C:\test&quot;<br />
+ShowInstDetails show<br />
+ShowUnInstDetails show<br />
+AllowRootDirInstall true<br />
+<br />
+<br />
+<br />
+Section -var<br />
+Var /GLOBAL TMP<br />
+var /GLOBAL pc<br />
+var /GLOBAL done<br />
+StrCpy $TMP &quot;c:\temp&quot;<br />
+strcpy $done &quot;N&quot;<br />
+SectionEnd<br />
+<br />
+Function .onInit<br />
+         !insertmacro MUI_INSTALLOPTIONS_EXTRACT &quot;select_pc.ini&quot;<br />
+FunctionEnd<br />
+<br />
+Function select_pc<br />
+         !insertmacro MUI_HEADER_TEXT &quot;Clients&quot; \<br />
+         &quot;Select the Client (multiselect possible)&quot;<br />
+         !insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;select_pc.ini&quot;<br />
+FunctionEnd<br />
+<br />
+Section -get_pcnames<br />
+        Delete &quot;$TMP\pc.txt&quot;<br />
+        StrCpy $0 &quot;3&quot;<br />
+        !insertmacro MUI_INSTALLOPTIONS_READ $R0 &quot;select_pc.ini&quot; &quot;Settings&quot; &quot;NumFields&quot;<br />
+        IntOp $R0 $R0 + 1<br />
+        FileOpen $R1 &quot;$TMP\pc.txt&quot; &quot;a&quot;<br />
+<br />
+        Next_pc:<br />
+<br />
+        IntOp $0 $0 + 1<br />
+        StrCmp $0 &quot;$R0&quot; endloop_pc<br />
+        !insertmacro MUI_INSTALLOPTIONS_READ $R3 &quot;select_pc.ini&quot; &quot;Field $0&quot; &quot;State&quot;<br />
+        StrCmp $R3 &quot;0&quot; Next_pc<br />
+        !insertmacro MUI_INSTALLOPTIONS_READ $R4 &quot;select_pc.ini&quot; &quot;Field $0&quot; &quot;Text&quot;<br />
+<br />
+        FileSeek $R1 0 END<br />
+        FileWrite $R1 &quot;$R4$\r$\n&quot;<br />
+        goto Next_pc<br />
+        Endloop_pc:<br />
+        FileClose $R1<br />
+SectionEnd<br />
+<br />
+Section -Readfile<br />
+        FileOpen $0 &quot;$TMP\pc.txt&quot; r<br />
+        IfErrors done_read<br />
+<br />
+        FileSeek $0 0<br />
+        loop_read:<br />
+<br />
+        FileRead $0 $pc<br />
+        StrCmp $pc &quot;&quot; done_read<br />
+        Call Allgemein<br />
+        goto loop_read<br />
+<br />
+        done_read:<br />
+        FileClose $0<br />
+<br />
+        call end_install<br />
+;        return<br />
+SectionEnd<br />
+<br />
+Function Allgemein<br />
+        MessageBox MB_OK &quot;start install $pc&quot;<br />
+        call :.sectioninstall<br />
+FunctionEnd<br />
+<br />
+<br />
+Section -Install<br />
+<br />
+        .sectioninstall:<br />
+        StrCmp $done &quot;J&quot; end<br />
+        MessageBox MB_OK &quot;Install for $pccomlete&quot;<br />
+        return<br />
+        <br />
+        end:<br />
+SectionEnd<br />
+<br />
+Section 1 SEC01<br />
+MessageBox MB_OK &quot;Section 1&quot;<br />
+SectionEnd<br />
+<br />
+Section 2 SEC02<br />
+MessageBox MB_OK &quot;Section 2&quot;<br />
+SectionEnd<br />
+<br />
+Section 3 SEC03<br />
+MessageBox MB_OK &quot;Section 3&quot;<br />
+SectionEnd<br />
+<br />
+Function end_install<br />
+<br />
+         Messagebox mb_ok &quot;All installs complete&quot;<br />
+         strcpy $done &quot;J&quot;<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Amun</div><div class="date">1st September 2006, 10:56</div></div><div class="posttext">and here is a sampe INI<br />
+<br />
+<br />
+[Settings]<br />
+NumFields=10<br />
+<br />
+[Field 1]<br />
+Type=Label<br />
+Text=SERVER<br />
+Flags=NOTABSTOP<br />
+Left=0<br />
+Right=-1<br />
+Top=0<br />
+Bottom=10<br />
+<br />
+[Field 2]<br />
+Type=Label<br />
+Text=E Clients<br />
+Flags=NOTABSTOP<br />
+Left=0<br />
+Right=-1<br />
+Top=30<br />
+Bottom=40<br />
+<br />
+[Field 3]<br />
+Type=Label<br />
+Text=i Clients<br />
+Flags=NOTABSTOP<br />
+Left=0<br />
+Right=-1<br />
+Top=75<br />
+Bottom=85<br />
+<br />
+;********************<br />
+;       SERVER      *<br />
+;********************<br />
+[Field 4]<br />
+Type=Checkbox<br />
+Text=SERVER1<br />
+State=0<br />
+Left=20<br />
+Right=100<br />
+Top=15<br />
+Bottom=25<br />
+<br />
+[Field 5]<br />
+Type=Checkbox<br />
+Text=SERVER2<br />
+State=0<br />
+Left=100<br />
+Right=180<br />
+Top=15<br />
+Bottom=25<br />
+<br />
+;********************<br />
+;     E Clients     *<br />
+;********************<br />
+[Field 6]<br />
+Type=Checkbox<br />
+Text=E1<br />
+State=0<br />
+Left=20<br />
+Right=100<br />
+Top=45<br />
+Bottom=55<br />
+<br />
+[Field 7]<br />
+Type=Checkbox<br />
+Text=E2<br />
+State=0<br />
+Left=100<br />
+Right=180<br />
+Top=45<br />
+Bottom=55<br />
+<br />
+[Field 8]<br />
+Type=Checkbox<br />
+Text=E3<br />
+State=0<br />
+Left=20<br />
+Right=100<br />
+Top=60<br />
+Bottom=70<br />
+<br />
+[Field 9]<br />
+Type=Checkbox<br />
+Text=E4<br />
+Left=100<br />
+Right=180<br />
+Top=60<br />
+Bottom=70<br />
+;********************<br />
+;     I Clients     *<br />
+;********************<br />
+[Field 10]<br />
+Type=Checkbox<br />
+Text=I1<br />
+Left=20<br />
+Right=100<br />
+Top=90<br />
+Bottom=100</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st September 2006, 11:23</div></div><div class="posttext">I don't understand the question. What are those components you wish to install? What do you mean by including them? Do you want to include files with the installer? If so, use File.<br />
+<br />
+If you're asking about installing files to a remote computer, that depends on the protocol you wish to use and the access method. If you wish to use Windows shares, simply write the files to \\server\share, it works just like any other directory.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Amun</div><div class="date">1st September 2006, 12:26</div></div><div class="posttext">The problem: you select one ore more Clients in Custom Page.<br />
+The Sections (1,2,3), there selectet in Components Page must include in the loop.<br />
+<br />
+Sample:<br />
+Select on Customepage &quot;select_pc&quot; 2 Clients<br />
+This 2 Clients where Written in a temp File pc.txt<br />
+Start MUI_PAGE_COMPONENTS<br />
+Select Section 1 and 3<br />
+start MUI_PAGE_INSTFILES<br />
+Read fist line from pc.txt<br />
+Result = Client1<br />
+Install selected Sections on Clint1<br />
+Read next line from pc.txt <br />
+Result = Client2<br />
+Install selected Sections on Client2<br />
+Read next line from pc.txt<br />
+Result = empty<br />
+Start MUI_PAGE_FINISH<br />
+<br />
+<br />
+The Components in the Sample are only you see the Sections are Starts.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st September 2006, 12:42</div></div><div class="posttext">So you're asking how to select section from the script? For that you have the macros in Sections.nsh named SelectSection and UnselectSection.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

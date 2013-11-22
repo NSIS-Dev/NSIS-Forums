@@ -1,0 +1,114 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Silent install with parameters, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Silent install with parameters NSIS Discussion" />
+	
+	<title> Silent install with parameters [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Silent install with parameters</div>
+<hr />
+<div class="pda"><a href="t-326636.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=326636">Silent install with parameters</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ssamuels_sv</div><div class="date">29th January 2011, 17:42</div></div><div class="posttext">I would like to create an installer that runs silently but allows a network administrator to distribute to users with certain installer parameters pre-defined.  I'm not referring to the install folder, but actually user parameters.  For example, if my installer allows a user to pick Option A, B and/or C during the normal installation process, if I were to run this in silent mode, I would still want to define, perhaps in a command line, whether a user is installing with which option, or perhaps the word &quot;All&quot; for all three.  <br />
+<br />
+I would create the scripts to receive these parameters or arguments and automatically install the program with the proper options, so that the user doesn't have to decide for themselves. <br />
+<br />
+In a network/corporate environment, there may be different types of users that need different options, but I'd want the silent installer to handle each one appropriately. <br />
+<br />
+Can this be done?  How would I pass in these options as part of a silent install process?<br />
+<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">29th January 2011, 17:49</div></div><div class="posttext">GetParameters and GetOptions.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ssamuels_sv</div><div class="date">29th January 2011, 18:46</div></div><div class="posttext">Thanks for the prompt reply.  So, if the compiled install package is &quot;myInstall.exe&quot;, would I run that with the following:<br />
+<br />
+myInstall &quot;OptionA&quot;<br />
+<br />
+or <br />
+<br />
+myInstall &quot;OptionA, OptionC&quot;<br />
+<br />
+or<br />
+<br />
+myInstall &quot;All&quot;<br />
+<br />
+and the GetParameters() or GetOptions() will pass the particular string into my scripts?<br />
+<br />
+That will be perfect if that is what you are meaning.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">29th January 2011, 22:25</div></div><div class="posttext">rtfm...<br />
+http://nsis.sourceforge.net/Docs/AppendixE.html#E.1.11<br />
+http://forums.winamp.com/showthread.php?postid=2211469</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ssamuels_sv</div><div class="date">2nd February 2011, 02:31</div></div><div class="posttext">I think I may not have clearly stated my question.  I've read the manual and I think I understand how GetParameters and GetOptions work. What I am after is a desire to define my own commandline parameters.  Not simply a /S or /D option, but something that is very specific to my application.  It might be a list of room names, users, etc. that are default parameters that I want to assign to the installed app without the user having to go through the UI to select them.  I know that I can create set of custom pages to request this information.  But can I pass in the details through commandline parameters?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">2nd February 2011, 05:50</div></div><div class="posttext">Yes you can, using what Stu AND jpderuiter already pointed you at. Or if you want to pass params to your application, instead of to your installer, you can do that to. Pay attention to the quote usage:<br />
+<br />
+Exec '&quot;$INSTDIR\YourApp.exe&quot; Param1 Param2 ParamEtc'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ssamuels_sv</div><div class="date">2nd February 2011, 20:40</div></div><div class="posttext">When I am part of a forum, I try to give back as much as I get from a forum.  So, here is a bit more detail on how to get this working, if anyone else is trying to do the same thing.  The information that you offered (and that is in the manual) is correct, but there are a few missing pieces that I couldn't find anywhere.  I just happened to guess on a few things and got lucky. <br />
+<br />
+To begin with, at the top of your script, you have to include the following or GetParameters and GetOptions won't even compile:<br />
+<br />
+!include &quot;FileFunc.nsh&quot;  ; this is critical<br />
+<br />
+Next, the parameters themselves are not put into double quotes.  Using the following code <br />
+<br />
+Var roomList<br />
+<br />
+Function .onInit<br />
+  var /GLOBAL cmdLineParams<br />
+  Push $R0<br />
+  ${GetParameters} $cmdLineParams<br />
+  Pop $R0<br />
+FunctionEnd<br />
+<br />
+; Then add the following code goes in the main section<br />
+; where the StartMenu shortcut and other commands<br />
+; get executed.<br />
+<br />
+${GetOptions} $cmdLineParams &quot;/Params=&quot; $R0<br />
+IfErrors +2 0<br />
+StrCpy $paramList &quot;$R0&quot;<br />
+<br />
+Then the installer is executed with the following command line.<br />
+<br />
+myInstall.exe /Params=P1,P2,P3<br />
+<br />
+The end result is that $paramList will contain &quot;P1,P2,P3&quot;.<br />
+<br />
+Hope this helps others.  If anyone wants to comment on other ways to clean up the above code, that will help all of us.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">2nd February 2011, 20:57</div></div><div class="posttext">If you look at where GetParameters and GetOptions are located in the helpfile you will see that they are in the &quot;Appendix E: Useful Headers&quot; section, the first thing the file function header section tells you in &quot;E.1.1 Introduction&quot; is to !include &quot;FileFunc.nsh&quot;<br />
+<br />
+Your ${GetParameters} usage is weird, there is no need to push and pop, just use ${GetParameters} $cmdLineParams (The helpfile documents the syntax as &quot;${GetParameters} $var&quot;, the example just uses $R0)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ssamuels_sv</div><div class="date">2nd February 2011, 21:20</div></div><div class="posttext">I realize that now, but as a newbie, it isn't that obvious.  If someone just points you to GetParameters and GetOptions and doesn't explain how to use any of those functions in general, you would miss that important item.  I saw another post that explained a far more complete description for these functions that also didn't include that line.  <br />
+<br />
+And yes, I suspected that I could take out the push and pop but that was how the usage was explained in another thread and since it is working, I haven't gone back to see what I could remove and what was absolutely required.<br />
+<br />
+Thanks for the clarification.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

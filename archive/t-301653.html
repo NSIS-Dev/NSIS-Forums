@@ -1,0 +1,140 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Check online for version updates, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Check online for version updates NSIS Discussion" />
+	
+	<title> Check online for version updates [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Check online for version updates</div>
+<hr />
+<div class="pda"><a href="t-301653.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=301653">Check online for version updates</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">kando234</div><div class="date">3rd January 2009, 13:54</div></div><div class="posttext">Hi,<br />
+<br />
+i tried to build an update installer<br />
+but got stuck with a small problem.<br />
+<br />
+My update installer has a custom page<br />
+with a checkbox whether the user <br />
+wants to connect to internet and check for updates.<br />
+<br />
+---<br />
+<br />
+Now i want to change the &quot;Close&quot; button<br />
+into a next button if the user selected that checkbox.<br />
+<br />
+If the box is unchecked and the user presses &quot;Close&quot;<br />
+the installer closes (correct behaviour)<br />
+<br />
+If the box is checked and the user presses &quot;Close&quot;<br />
+the next screen appears (correct behaviour)<br />
+<br />
+But i want to show &quot;Next&quot; instead of &quot;Close&quot;.<br />
+<br />
+----<br />
+<br />
+Why i named this topic &quot;Check online for version updates&quot; <br />
+is that i donÂ´t know if i experience other problems which iÂ´m not able to fix after renaming that button :)<br />
+<br />
+btw. i read s.th. about MiscButtonText but donÂ´t know the correct syntax and how to handle it.<br />
+<br />
+----<br />
+<br />
+Even better:<br />
+<br />
+I uploaded an installer example (NSIS) (too sad i only own the binary). I want to rebuild it and need help / ideas<br />
+on how to do that the easiest, fastest and best way.<br />
+<br />
+I just created the custom page. For checking version i wanted to use WordFunc. But i donÂ´t know how to change the button &quot;close&quot; automatically when checkbox is selected and if checkbox selected and user clicks cancel - the updater shouldnÂ´t download and execute the rest (mine now does).<br />
+<br />
+HereÂ´s the link:<br />
+senduit.com/b6c79b<br />
+<br />
+(Hope it works without the app installed)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">3rd January 2009, 19:07</div></div><div class="posttext">get the Next button control and then send a command to change the text...<br />
+<br />
+<br />
+GetDlgItem $0 $HWNDPARENT 1 ; 1 = Next button<br />
+SendMessage $0 ${WM_SETTEXT} 0 &quot;STR:Hello&quot;<br />
+<br />
+<br />
+See also..<br />
+http://nsis.sourceforge.net/Buttons_Header</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kando234</div><div class="date">4th January 2009, 14:45</div></div><div class="posttext">The problem is that the button<br />
+doesnÂ´t get changed instantly.<br />
+<br />
+The button changes only in the next screen<br />
+but it should change (like shown in the &quot;Update&quot; Installer i attached in my first post) directly.<br />
+<br />
+greets<br />
+and thanks for the reply<br />
+<br />
+<br />
+btw. Buttons Header cannot change &quot;Close&quot; Button,<br />
+it just can change &quot;Cancel&quot; button - but i need<br />
+to change label / caption of the close button.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">5th January 2009, 14:03</div></div><div class="posttext">The 'Close' button is the 'Next' button - NSIS (or the UI front-ends) itself just changes the label on it, so you should ignore the Cancel button :)<br />
+<br />
+Here's an example using NSDialogs for the checkbox - if you use InstallOptions(2/Ex), then just check the checkbox state in the page leave function and call Abort where appropriate.<br />
+<br />
+<br />
+!include MUI.nsh<br />
+!include nsDialogs.nsh<br />
+<br />
+OutFile &quot;c:\testsetup.exe&quot;<br />
+<br />
+Page Custom fnCreate<br />
+Page Directory ; dummy page<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+  <br />
+Var CHECKBOX<br />
+<br />
+<br />
+<br />
+Function fnCreate<br />
+	nsDialogs::Create /NOUNLOAD 1018<br />
+	Pop $0<br />
+<br />
+	${NSD_CreateCheckbox} 0 -50 100% 8u &quot;Test&quot;<br />
+	Pop $CHECKBOX<br />
+	GetFunctionAddress $0 OnCheckbox<br />
+	nsDialogs::OnClick /NOUNLOAD $CHECKBOX $0<br />
+<br />
+	nsDialogs::Show<br />
+FunctionEnd<br />
+<br />
+Function OnCheckbox<br />
+	GetDlgItem $R0 $HWNDPARENT 1 ; 1 = Next button<br />
+	Pop $0 # HWND<br />
+	${NSD_GetState} $0 $1<br />
+	IntCmp $1 1 _Close _Next<br />
+		_Close:<br />
+		SendMessage $R0 ${WM_SETTEXT} 0 &quot;STR:Close&quot;<br />
+		goto _done<br />
+		_Next:<br />
+		SendMessage $R0 ${WM_SETTEXT} 0 &quot;STR:Next&quot;<br />
+	_done:<br />
+FunctionEnd<br />
+<br />
+Section<br />
+SectionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Locked Folders, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Locked Folders NSIS Discussion" />
+	
+	<title> Locked Folders [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Locked Folders</div>
+<hr />
+<div class="pda"><a href="t-333658.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=333658">Locked Folders</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">starfighter5</div><div class="date">16th August 2011, 13:17</div></div><div class="posttext">The code below works correctly until the very end when it calls the macro to delete the c:\tempunzip folder that it created to unzip the files to.  <br />
+<br />
+If I try to delete the folder manually whilst the installer is still open it says it is locked so the NSIS installer is obviously holding it.  I know I can set the /reboot flag for rmdir but it is not convenient for this instance.<br />
+<br />
+Can anyone see any reason in the code below why the c:\tempunzip folder would be locked?  Is it the 7zip process?<br />
+<br />
+<br />
+ShowInstDetails show<br />
+!include 'nsdialogs.nsh'<br />
+!include 'nsdialogs_setimageole.nsh'<br />
+!include &quot;FileFunc.nsh&quot;<br />
+!include &quot;Locate.nsh&quot;<br />
+!include &quot;Sections.nsh&quot;<br />
+!include &quot;CharStrip.nsh&quot;<br />
+!insertmacro Locate<br />
+<br />
+             Var Text<br />
+             Var Text2<br />
+             Var Text3<br />
+             Var PathForInstallLabel<br />
+             Var PathForInstallFileRequest<br />
+             Var PathForInstallGroupBox<br />
+             Var PathForInstallFileBrowse<br />
+             Var PathForInstallFileRequestState<br />
+<br />
+        Function .onInit<br />
+             InitPluginsDir<br />
+             SetOutPath $PLUGINSDIR<br />
+             File logo.jpg<br />
+             File 7za.exe<br />
+FunctionEnd<br />
+<br />
+Page Custom CustomPre<br />
+<br />
+Page instfiles<br />
+        Function CustomPre<br />
+	nsDialogs::Create 1018<br />
+	Pop $R0<br />
+<br />
+	${If} $Dialog == error<br />
+		Abort<br />
+	${EndIf}<br />
+<br />
+	${NSD_CreateBitmap} 280 10 100 100 &quot;&quot;<br />
+	Pop $0<br />
+<br />
+	; You should make sure the resource - local or http - is valid!<br />
+	${NSD_SetImageOLE} $0 &quot;$PLUGINSDIR\logo.jpg&quot; $1<br />
+<br />
+        ${NSD_CreateLabel} 10 10 300 100 &quot;Welcome To the program&quot;<br />
+	Pop $Text<br />
+	CreateFont $0 &quot;Arial Bold&quot; 12<br />
+        SendMessage $Text ${WM_SETFONT} $0 1<br />
+<br />
+        ${NSD_CreateLabel} 10 35 300 20 &quot;Select a zip file and press next&quot;<br />
+	Pop $Text2<br />
+        ${NSD_CreateLabel} 10 50 300 20 &quot;It will then be processed&quot;<br />
+        Pop $Text3<br />
+<br />
+        ; Create Controls<br />
+        ${NSD_CreateGroupBox} 0 0 100% 100% &quot;&quot;<br />
+        Pop $PathForInstallGroupBox<br />
+<br />
+        ${NSD_CreateLabel} 16 170 280 24 &quot;Please select the install file, and click next to continue&quot;<br />
+        Pop $PathForInstallLabel<br />
+<br />
+        ${NSD_CreateFileRequest} 10u 86u 245u 12u $PathForInstallFileRequestState<br />
+        Pop $PathForInstallFileRequest<br />
+<br />
+        ${NSD_CreateBrowseButton} 358 166 25 22 &quot;...&quot;<br />
+        Pop $PathForInstallFileBrowse<br />
+        GetFunctionAddress $0 OnBrowseForFile<br />
+        nsDialogs::OnClick /NOUNLOAD $PathForInstallFileBrowse $0<br />
+<br />
+        nsDialogs::Show<br />
+        ${NSD_FreeImageOLE} $1 ; Free the image once we're done with it!<br />
+        FunctionEnd<br />
+<br />
+        Function OnBrowseForFile<br />
+        nsDialogs::SelectFileDialog /NOUNLOAD &quot;open&quot; &quot;&quot; &quot;All files (*.*)|*.*&quot;<br />
+        Pop $0<br />
+        StrCpy $PathForInstallFileRequestState $0<br />
+        ${NSD_SetText} $PathForInstallFileRequest $PathForInstallFileRequestState<br />
+        FunctionEnd<br />
+<br />
+!macro unzip<br />
+CreateDirectory &quot;c:\tempunzip&quot;<br />
+nsexec::exectolog '&quot;$EXEDIR\7za.exe&quot; x &quot;$0&quot; -y -o&quot;c:\tempunzip&quot;'<br />
+	${Locate} &quot;C:\tempunzip&quot; &quot;/M=.DS_Store&quot; &quot;LocateCallback&quot;<br />
+	${locate} &quot;C:\tempunzip&quot; &quot;/L=D /M=__MACOSX&quot; &quot;LocateCallbackFolder&quot;<br />
+!macroend<br />
+<br />
+!macro zip<br />
+${StrStrip} &quot;.zip&quot; &quot;$0&quot; $R0<br />
+nsexec::exectolog '&quot;$EXEDIR\7za.exe&quot; a -r &quot;$R0_CLEAN.zip&quot; &quot;c:\tempunzip\*.*&quot;'<br />
+!macroend<br />
+<br />
+!macro delete<br />
+SetOutpath $TEMP<br />
+RMdir /r &quot;c:\tempunzip&quot;<br />
+!macroend<br />
+<br />
+Function LocateCallback<br />
+	Delete $R9<br />
+	Push $0<br />
+FunctionEnd<br />
+<br />
+Function LocateCallbackFolder<br />
+	RMDir /r $R9<br />
+	Push $0<br />
+FunctionEnd<br />
+<br />
+Section<br />
+  !insertmacro unzip<br />
+  !insertmacro zip<br />
+  !insertmacro delete<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">16th August 2011, 14:12</div></div><div class="posttext">If the 7za process has already quit (verify this by inserting a messagebox or pause), it cannot be holding the folder anymore. I'd guess the nsexec plugin has a hold on it. Try inserting a dummy nsexec command?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">16th August 2011, 14:20</div></div><div class="posttext">I'm surprised that this works. You are extracting 7za.exe to $PlugInsDir, but calling it in $ExeDir (which is the installer's folder, not the same location you extracted it to).<br />
+<br />
+I don't see why the temp folder doesn't get removed, you are correctly changing the current working directory to 'unlock' it (SetOutPath $Temp).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">starfighter5</div><div class="date">16th August 2011, 14:46</div></div><div class="posttext">It works because 7za is in the exe dir as well.  I have changed the code so it runs from the Plugindir instead now :)<br />
+<br />
+Using process explorer I can see that my exe file is hanging onto the c:\tempunzip folder and all of the (Now empty) subfolders inside of it.<br />
+<br />
+Can you give an example of a dummy NSexec command?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">16th August 2011, 15:20</div></div><div class="posttext">No idea... Something that uses a different directory. Like, listing the contents of a zip file that's stored in $instdir for example?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">starfighter5</div><div class="date">16th August 2011, 15:33</div></div><div class="posttext">Ive put this macro in to try and unlock the folder but its still not making any difference<br />
+<br />
+!macro unlock<br />
+nsExec::exectolog '&quot;$PLUGINSDIR\7za.exe&quot; l &quot;$EXEDIR\dummy.zip&quot;'<br />
+!macroend<br />
+<br />
+Looking at what it leaves behind, it seems the rmdir /r command deletes all files from all of the subfolders and does delete some of the subfolders themselves.  For some reason the same four subfolders remain.<br />
+<br />
+Very strange</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">starfighter5</div><div class="date">16th August 2011, 16:07</div></div><div class="posttext">As a quick fix I have included unlocker.exe from http://www.emptyloop.com/unlocker/ and then run a command line to unlock the folder<br />
+<br />
+It then lets me delete it.  I know this isn't fixing the issue but working around it, but at least it works now :)<br />
+<br />
+Thanks for everybodys input</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">17th August 2011, 05:17</div></div><div class="posttext">Either way you should stop using c:\tempunzip as a temp folder. Use $PLUGINSDIR instead.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">starfighter5</div><div class="date">17th August 2011, 11:03</div></div><div class="posttext">Thanks MSG, your suggestion of using the PLUGINSDIR to unzip to has worked for me.  Thanks for all your help!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

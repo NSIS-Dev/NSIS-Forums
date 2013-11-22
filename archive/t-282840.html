@@ -1,0 +1,98 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" AddSize/SectionSetSize, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  AddSize/SectionSetSize NSIS Discussion" />
+	
+	<title> AddSize/SectionSetSize [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  AddSize/SectionSetSize</div>
+<hr />
+<div class="pda"><a href="t-282840.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=282840">AddSize/SectionSetSize</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Merlinovich</div><div class="date">8th December 2007, 00:14</div></div><div class="posttext">I am having some trouble with getting AddSize/SectionSetSize to work. I have seen several posts with people having trouble with these, but none that solved my problem.<br />
+<br />
+Because of the 2 Gb limit of file size in compression, I am trying to first compress the file I want to install with the 7-Zip package, and then uncompress at runtime with 7za.exe as described in several posts. Now I want to set the size of the section correct, because the FILE command to include the zipped file will only show the compressed size. With AddSize I can do this at compile time as I want, but only with a fixed number. Instead I can do this at runtime with SectionSetSize but it will only use the users environment, which doesn't have the file I'm installing. With ${GetSize} I can get the size of the file, but it seems only at runtime, not compile-time.<br />
+<br />
+What I want is not to have to code the size with AddSize with a fixed number, because each time I compile, the file name will be the same, but the size might have changed. So I want the expected size to be calculated from the uncompressed file at compile time, and then the installer to reflect the correct size at runtime. Is that possible with NSIS?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th December 2007, 11:13</div></div><div class="posttext">Calculate it at &quot;runtime&quot; by executing another installer in compile time.<br />
+<br />
+http://nsis.sourceforge.net/Invoking_NSIS_run-time_commands_on_compile-time</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Merlinovich</div><div class="date">10th December 2007, 17:06</div></div><div class="posttext">Thanks for pushing me in the right direction, kichik! This shows once again what a versatile package NSIS is. Too bad that it can't compress bigger files than 2 Gb though. Those who get the #12345 error mmapping, you know who you are! This happens with files smaller than 2 Gb though. Mine was 1.6 Gb. Also note that this way of doing things also has the advantage of making a quicker main compilation, especially when making changes to it, because it doesn't need to make a full compression from scratch of the big file.<br />
+<br />
+For the record if anybody wants the solution I came up with, here is the outline:<br />
+<br />
+First you download both the 7-zip package and then the 7-zip Command line version (they are separate downloads) from <br />
+<br />
+http://www.7-zip.org/download.html<br />
+<br />
+Then you compress the file(s) you want to include, e.g. IWIS3-GMS.mdb to IWIS3-GMS.7z with the Windows interface of 7-zip (well, there are also Linux version I guess). And then you create a script to get the file size at compile time (this program creates an EXE, needs to be compiled only once, and the EXE will be run from the main script). 7za.exe is the command line unzipper.<br />
+<br />
+This is GetDBsize.nsi:<br />
+<br />
+!define FileGMS &quot;C:\ICIS5\Database\IWIS3\Central\IWIS3-DMS.mdb&quot;<br />
+!include &quot;FileFunc.nsh&quot;<br />
+!insertmacro GetSize<br />
+<br />
+OutFile &quot;GetDBsize.exe&quot;<br />
+SilentInstall silent<br />
+<br />
+Section<br />
+   ## Write it to a !define for use in main script<br />
+   FileOpen $R0 &quot;$EXEDIR\GetDBsize.txt&quot; w<br />
+   ; Get Database Size DMS<br />
+   ${GetSize} &quot;C:\ICIS5\Database\IWIS3\Central&quot; &quot;/M=IWIS3-DMS.mdb /S=0K /G=0&quot; $0 $1 $2<br />
+   FileWrite $R0 '!define SizeDMS &quot;$0&quot;$\r$\n'<br />
+   FileClose $R0<br />
+SectionEnd<br />
+<br />
+Compile it to produce GetDBsize.exe<br />
+<br />
+Then the main script:<br />
+<br />
+  SetCompressor lzma<br />
+<br />
+  !system &quot;GetDBsize.exe&quot;<br />
+  !include &quot;GetDBsize.txt&quot;<br />
+  ...<br />
+Function .onInit<br />
+  ; Change the section size here<br />
+  SectionSetSize InstDMS ${SizeDMS}<br />
+  ...<br />
+FunctionEnd<br />
+<br />
+Section &quot;Install IWIS3 DMS database&quot; InstDMS<br />
+  SETOUTPATH $INSTDIR<br />
+  File &quot;C:\Program Files\7-Zip\7za.exe&quot;<br />
+  SETOUTPATH $INSTDIR\Database\IWIS3\Central<br />
+  File C:\ICIS5\Database\IWIS3\Central\IWIS3-DMS.7z<br />
+  nsExec::ExecToLog /OEM '&quot;$INSTDIR\7za.exe&quot; x &quot;$INSTDIR\Database\IWIS3\Central\IWIS3-DMS.7z&quot; -o&quot;$INSTDIR\Database\IWIS3\Central&quot;'<br />
+  Delete $INSTDIR\Database\IWIS3\Central\IWIS3-DMS.7z<br />
+  Delete $INSTDIR\7za.exe<br />
+SectionEnd<br />
+...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Merlinovich</div><div class="date">18th December 2007, 23:40</div></div><div class="posttext">I found a few bugs in the script above. The correct code for changing section size should be <br />
+<br />
+SectionSetSize ${InstDMS} &quot;${SizeDMS}&quot;<br />
+not<br />
+SectionSetSize InstDMS ${SizeDMS}<br />
+<br />
+and also it seems to be important that .onInit section is placed *after* the section(s) it tries to change the size of in the script, in this example section .onInit should be after section InstDMS. Otherwise all the section sizes will be zero.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" &quot;All users&quot;/&quot;Current User Only&quot;, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  &quot;All users&quot;/&quot;Current User Only&quot; NSIS Discussion" />
+	
+	<title> &quot;All users&quot;/&quot;Current User Only&quot; [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  &quot;All users&quot;/&quot;Current User Only&quot;</div>
+<hr />
+<div class="pda"><a href="t-270784.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=270784">&quot;All users&quot;/&quot;Current User Only&quot;</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ocueed</div><div class="date">7th May 2007, 14:10</div></div><div class="posttext">How I can add an option in the installer, which asks me if I want to install it for &quot;All users&quot; or &quot;Current user only&quot;.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Boyito</div><div class="date">7th May 2007, 15:17</div></div><div class="posttext">Hi<br />
+Take a look at SetShellVarContext in help</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ocueed</div><div class="date">7th May 2007, 16:39</div></div><div class="posttext">This is good, but how I can handle if the user clicks on &quot;All users&quot; or &quot;Current User Only&quot;. And then to &quot;transfer&quot; to the lines of the chosen method.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Boyito</div><div class="date">7th May 2007, 16:52</div></div><div class="posttext">With yor own Custom Page I think</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">7th May 2007, 18:55</div></div><div class="posttext">I've done the following, you might use it as a template to achieve what you're looking,<br />
+!define CUST_INI &quot;$PLUGINSDIR\custom.ini&quot;<br />
+!define APP_NAME &quot;My Application&quot;<br />
+!define DrawCustomPage &quot;Call DrawCustomPage&quot;<br />
+<br />
+Name &quot;${APP_NAME}&quot;<br />
+OutFile &quot;Test.exe&quot;<br />
+ShowInstDetails show<br />
+InstallDir &quot;$PROGRAMFILES\${APP_NAME}&quot;<br />
+<br />
+!include &quot;LogicLib.nsh&quot;<br />
+!include &quot;mui.nsh&quot;<br />
+<br />
+var myvar<br />
+<br />
+Function MUI_PageUserDetailsCreate<br />
+  !insertmacro MUI_HEADER_TEXT &quot;Customer Information&quot; \<br />
+  &quot;Please enter your information.&quot;<br />
+ push $1<br />
+  InstallOptions::Dialog '${CUST_INI}'<br />
+ pop $1<br />
+ pop $1<br />
+FunctionEnd<br />
+<br />
+Function MUI_PageUserDetailsLeave<br />
+ Push $1<br />
+  ReadINIStr $1 '${CUST_INI}' &quot;field 7&quot; &quot;state&quot;<br />
+  ${if} $1 == 1<br />
+  StrCpy $myvar &quot;all&quot;<br />
+  ${else}<br />
+  StrCpy $myvar &quot;current&quot;<br />
+  ${endif}<br />
+ Pop $1<br />
+FunctionEnd<br />
+<br />
+!macro MUI_PAGE_USERINFO<br />
+  Page Custom MUI_PageUserDetailsCreate MUI_PageUserDetailsLeave<br />
+!macroend<br />
+<br />
+!insertmacro MUI_PAGE_USERINFO<br />
+!insertmacro MUI_PAGE_LICENSE &quot;${NSISDIR}\Docs\Modern UI\License.txt&quot;<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+Section &quot;boo&quot;<br />
+  SetOutPath &quot;$INSTDIR&quot;<br />
+  ${if} $myvar == &quot;all&quot;<br />
+  SetShellVarContext all<br />
+  ${elseif} $myvar == &quot;current&quot;<br />
+  SetShellVarContext current<br />
+  ${endif}<br />
+  DetailPrint &quot;$APPDATA&quot;<br />
+SectionEnd<br />
+<br />
+Function .onInit<br />
+  ${DrawCustomPage}<br />
+FunctionEnd<br />
+<br />
+Function DrawCustomPage<br />
+push $0<br />
+push $1<br />
+push $2<br />
+<br />
+  StrCmp &quot;$PLUGINSDIR&quot; &quot;&quot; 0 +2<br />
+  InitPluginsDir<br />
+<br />
+  GetTempFileName $0<br />
+  Rename $0 '${CUST_INI}'<br />
+<br />
+  ClearErrors<br />
+  ReadRegStr $0 HKLM &quot;SOFTWARE\Microsoft\Windows\CurrentVersion&quot; &quot;RegisteredOwner&quot;<br />
+  IfErrors is_NT<br />
+  WriteIniStr '${CUST_INI}' 'Settings' 'NumFields' '5'<br />
+  ReadRegStr $1 HKLM &quot;SOFTWARE\Microsoft\Windows\CurrentVersion&quot; &quot;RegisteredOrganization&quot;<br />
+  goto DrawPage<br />
+<br />
+is_NT:<br />
+  ClearErrors<br />
+  ReadRegStr $0 HKLM &quot;Software\Microsoft\Windows NT\CurrentVersion&quot; &quot;RegisteredOwner&quot;<br />
+  ReadRegStr $1 HKLM &quot;Software\Microsoft\Windows NT\CurrentVersion&quot; &quot;RegisteredOrganization&quot;<br />
+  ReadRegStr $2 HKCU &quot;Software\Microsoft\Windows\CurrentVersion\Explorer&quot; &quot;Logon User Name&quot;<br />
+  WriteIniStr '${CUST_INI}' 'Settings' 'NumFields' '8'<br />
+<br />
+DrawPage:<br />
+  WriteIniStr '${CUST_INI}' 'Field 1' 'Type' 'GroupBox'<br />
+  WriteIniStr '${CUST_INI}' 'Field 1' 'Left' '0'<br />
+  WriteIniStr '${CUST_INI}' 'Field 1' 'Top' '0'<br />
+  WriteIniStr '${CUST_INI}' 'Field 1' 'Right' '-1'<br />
+  WriteIniStr '${CUST_INI}' 'Field 1' 'Bottom' '90'<br />
+  WriteIniStr '${CUST_INI}' 'Field 1' 'Text' 'Customer Information'<br />
+<br />
+  WriteIniStr '${CUST_INI}' 'Field 2' 'Type' 'Label'<br />
+  WriteIniStr '${CUST_INI}' 'Field 2' 'Left' '14'<br />
+  WriteIniStr '${CUST_INI}' 'Field 2' 'Top' '16'<br />
+  WriteIniStr '${CUST_INI}' 'Field 2' 'Right' '-14'<br />
+  WriteIniStr '${CUST_INI}' 'Field 2' 'Bottom' '26'<br />
+  WriteIniStr '${CUST_INI}' 'Field 2' 'text' 'User Name:'<br />
+<br />
+  WriteIniStr '${CUST_INI}' 'Field 3' 'Type' 'Text'<br />
+  WriteIniStr '${CUST_INI}' 'Field 3' 'Left' '14'<br />
+  WriteIniStr '${CUST_INI}' 'Field 3' 'Top' '26'<br />
+  WriteIniStr '${CUST_INI}' 'Field 3' 'Right' '-14'<br />
+  WriteIniStr '${CUST_INI}' 'Field 3' 'Bottom' '38'<br />
+  WriteIniStr '${CUST_INI}' 'Field 3' 'State' '$0'<br />
+  WriteIniStr '${CUST_INI}' 'Field 3' 'Minlen' '2'<br />
+  WriteIniStr '${CUST_INI}' 'Field 3' 'ValidateText' 'Error'<br />
+<br />
+  WriteIniStr '${CUST_INI}' 'Field 4' 'Type' 'Label'<br />
+  WriteIniStr '${CUST_INI}' 'Field 4' 'Left' '14'<br />
+  WriteIniStr '${CUST_INI}' 'Field 4' 'Top' '44'<br />
+  WriteIniStr '${CUST_INI}' 'Field 4' 'Right' '-14'<br />
+  WriteIniStr '${CUST_INI}' 'Field 4' 'Bottom' '54'<br />
+  WriteIniStr '${CUST_INI}' 'Field 4' 'Text' 'Organization:'<br />
+<br />
+  WriteIniStr '${CUST_INI}' 'Field 5' 'Type' 'text'<br />
+  WriteIniStr '${CUST_INI}' 'Field 5' 'Left' '14'<br />
+  WriteIniStr '${CUST_INI}' 'Field 5' 'Top' '54'<br />
+  WriteIniStr '${CUST_INI}' 'Field 5' 'Right' '-14'<br />
+  WriteIniStr '${CUST_INI}' 'Field 5' 'Bottom' '66'<br />
+  WriteIniStr '${CUST_INI}' 'Field 5' 'State' '$1'<br />
+  WriteIniStr '${CUST_INI}' 'Field 5' 'MinLen' '2'<br />
+  WriteIniStr '${CUST_INI}' 'Field 5' 'ValidateText' 'Error'<br />
+<br />
+  WriteIniStr '${CUST_INI}' 'Field 6' 'Type' 'label'<br />
+  WriteIniStr '${CUST_INI}' 'Field 6' 'Left' '14'<br />
+  WriteIniStr '${CUST_INI}' 'Field 6' 'Top' '100'<br />
+  WriteIniStr '${CUST_INI}' 'Field 6' 'Right' '-14'<br />
+  WriteIniStr '${CUST_INI}' 'Field 6' 'Bottom' '112'<br />
+  WriteIniStr '${CUST_INI}' 'Field 6' 'Text' 'Install this application for:'<br />
+<br />
+  WriteIniStr '${CUST_INI}' 'Field 7' 'Type' 'RadioButton'<br />
+  WriteIniStr '${CUST_INI}' 'Field 7' 'Left' '60'<br />
+  WriteIniStr '${CUST_INI}' 'Field 7' 'Top' '114'<br />
+  WriteIniStr '${CUST_INI}' 'Field 7' 'Right' '-1'<br />
+  WriteIniStr '${CUST_INI}' 'Field 7' 'Bottom' '126'<br />
+  WriteIniStr '${CUST_INI}' 'Field 7' 'State' '1'<br />
+  WriteIniStr '${CUST_INI}' 'Field 7' 'Flags' 'GROUP'<br />
+  WriteIniStr '${CUST_INI}' 'Field 7' 'Text' 'Anyone who uses this computer (all users)'<br />
+<br />
+  WriteIniStr '${CUST_INI}' 'Field 8' 'Type' 'RadioButton'<br />
+  WriteIniStr '${CUST_INI}' 'Field 8' 'Left' '60'<br />
+  WriteIniStr '${CUST_INI}' 'Field 8' 'Top' '128'<br />
+  WriteIniStr '${CUST_INI}' 'Field 8' 'Right' '-1'<br />
+  WriteIniStr '${CUST_INI}' 'Field 8' 'Bottom' '140'<br />
+  WriteIniStr '${CUST_INI}' 'Field 8' 'State' '0'<br />
+  WriteIniStr '${CUST_INI}' 'Field 8' 'Text' 'Only for me ($2)'<br />
+<br />
+pop $2<br />
+pop $1<br />
+pop $0<br />
+Functionend</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

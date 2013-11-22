@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Crash at end of install, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Crash at end of install NSIS Discussion" />
+	
+	<title> Crash at end of install [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Crash at end of install</div>
+<hr />
+<div class="pda"><a href="t-321318.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=321318">Crash at end of install</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Someone123</div><div class="date">1st August 2010, 17:14</div></div><div class="posttext">Hallo,<br />
+<br />
+i've got an oddly problem. At the end of the install I get everytime an error message that my exe file could not be written, but it is!<br />
+<br />
+Here is my nsi file:<br />
+<br />
+Name &quot;foo&quot;<br />
+OutFile &quot;killme.exe&quot;<br />
+InstallDir &quot;C:\foo&quot;<br />
+<br />
+!include &quot;MUI2.nsh&quot;<br />
+<br />
+!insertmacro MUI_PAGE_LICENSE &quot;license.rtf&quot;<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW SkipOnCond<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW SkipOnCond<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!define MUI_FINISHPAGE_RUN &quot;$INSTDIR\notepad.exe&quot;<br />
+!insertmacro MUI_PAGE_FINISH<br />
+<br />
+; Uninstaller pages<br />
+!insertmacro MUI_UNPAGE_INSTFILES<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+Function SkipOnCond<br />
+  ; some true condition...<br />
+  SendMessage $HWNDPARENT ${WM_COMMAND} 1 0 ; that should emulate a click on the next button<br />
+FunctionEnd<br />
+<br />
+Section &quot;&quot;<br />
+  SetOutPath $INSTDIR<br />
+  File C:\Windows\system32\notepad.exe<br />
+  WriteUninstaller $INSTDIR\uninstall.exe<br />
+SectionEnd<br />
+<br />
+Section &quot;Uninstall&quot;<br />
+  Delete &quot;$INSTDIR\*.*&quot;<br />
+  RMDir  &quot;$INSTDIR&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">1st August 2010, 22:48</div></div><div class="posttext">Your SkipOnCond function should beGetDlgItem $0 $HWNDPARENT 1 <br />
+SendMessage $HWNDPARENT ${WM_COMMAND} 1 $0 <br />
+BTW, using RMDIR &quot;$INSTDIR&quot; is potentially dangerous:<br />
+http://nsis.sourceforge.net/Validating_$INSTDIR_before_uninstall</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Someone123</div><div class="date">2nd August 2010, 00:32</div></div><div class="posttext">Thanks good to know. I'm a nsis newbe :)<br />
+<br />
+But my installer still crashes with the same error... more ideas?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">2nd August 2010, 01:47</div></div><div class="posttext">Sorry for my bad info, made a mistake.<br />
+<br />
+I'm not sure what the problem is, but somehow the UI is not fully initialized after a SHOW callback (try a sleep in the SHOW callback function), and somehow this causes the SkipOnCond function to be called 3 times in a row (try a MessageBox in the function).<br />
+<br />
+To get the functionality you want, use a PRE callback instead, and call Abort:Name &quot;foo&quot;<br />
+OutFile &quot;killme.exe&quot;<br />
+InstallDir &quot;C:\foo&quot;<br />
+<br />
+!include &quot;MUI2.nsh&quot;<br />
+<br />
+!insertmacro MUI_PAGE_LICENSE &quot;license.rtf&quot;<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipOnCond<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipOnCond<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!define MUI_FINISHPAGE_RUN &quot;$INSTDIR\notepad.exe&quot;<br />
+!insertmacro MUI_PAGE_FINISH<br />
+<br />
+; Uninstaller pages<br />
+!insertmacro MUI_UNPAGE_INSTFILES<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+Function SkipOnCond<br />
+; some true condition...<br />
+Abort<br />
+FunctionEnd<br />
+<br />
+Section &quot;&quot;<br />
+SetOutPath $INSTDIR<br />
+File C:\Windows\system32\notepad.exe<br />
+WriteUninstaller $INSTDIR\uninstall.exe<br />
+SectionEnd<br />
+<br />
+Section &quot;Uninstall&quot;<br />
+Delete &quot;$INSTDIR\*.*&quot;<br />
+RMDir &quot;$INSTDIR&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Someone123</div><div class="date">2nd August 2010, 09:35</div></div><div class="posttext">Perfect! That works fine. :D<br />
+<br />
+Thank you very much.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

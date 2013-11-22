@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Conditionally present Quick Launch checkbox, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Conditionally present Quick Launch checkbox NSIS Discussion" />
+	
+	<title> Conditionally present Quick Launch checkbox [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Conditionally present Quick Launch checkbox</div>
+<hr />
+<div class="pda"><a href="t-314856.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=314856">Conditionally present Quick Launch checkbox</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">pauljlucas</div><div class="date">25th November 2009, 19:34</div></div><div class="posttext">Since Quick Launch icons apparently aren't used in Windows 7, I want my installer not to present the user with the Quick Launch checkbox on the Components page if the user is running Windows 7.<br />
+<br />
+First, to determine whether the user is running Windows 7, I have:<br />
+<br />
+<br />
+Function .onInit<br />
+  Var /GLOBAL WindowsVersion<br />
+  ReadRegStr $R0 HKLM &quot;SOFTWARE\Microsoft\Windows\CurrentVersion&quot; VersionNumber<br />
+  StrCpy $R1 $R0 3<br />
+  StrCmp $R1 '6.1' 0 +2<br />
+  StrCpy $WindowsVersion &quot;7&quot;<br />
+FunctionEnd<br />
+<br />
+<br />
+I'm using MUI2 and also have:<br />
+<br />
+<br />
+!define MUI_COMPONENTSPAGE_NODESC<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+<br />
+; ... [snip] ...<br />
+<br />
+LangString LS_QuickLaunchIconSecName ${LANG_ENGLISH} \<br />
+           &quot;Quick Launch icon&quot;<br />
+<br />
+; ... [snip] ...<br />
+<br />
+Section &quot;$(LS_QuickLaunchIconSecName)&quot;<br />
+  CreateShortCut &quot;$QUICKLAUNCH\${APP_NAME}.lnk&quot; &quot;$INSTDIR\${APP_NAME}.exe&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+However, it's not clear how to conditionally disable the Quick Launch checkbox (yet still leave the remaining components intact).<br />
+<br />
+Also, as an aside, I wrote this stuff a while ago.  In looking back, it's no longer clear to me how NSIS &quot;knows&quot; the above section is the section that specifies the Quick Launch checkbox.  So, how does it &quot;know?&quot;<br />
+<br />
+Thanks for any help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th November 2009, 19:49</div></div><div class="posttext">don't read the registry to find the windows version, use winver.nsh<br />
+<br />
+to disable/uncheck a section, the section needs an id, specify the id like so: section &quot;display name&quot; myId<br />
+<br />
+then, somewhere _after_ that section in the script, you need to use a function that is called at runtime (.oninit,.onguiinit or the pre callback for the components page) and disable the section if needed using the helper macros in sections.nsh</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pauljlucas</div><div class="date">25th November 2009, 22:35</div></div><div class="posttext">OK, I now have:<br />
+<br />
+Section &quot;$(LS_QuickLaunchIconSecName)&quot; S_QuickLaunch<br />
+  CreateShortCut &quot;$QUICKLAUNCH\${APP_NAME}.lnk&quot; &quot;$INSTDIR\${APP_NAME}.exe&quot;<br />
+SectionEnd<br />
+<br />
+; ... [snip] ...<br />
+<br />
+Function .onInit<br />
+  ${If} ${IsWin7}<br />
+    UnselectSection S_QuickLaunch<br />
+  ${Endif}<br />
+FunctionEnd<br />
+<br />
+When I run this on a machine running Windows 7, it still shows the Quick Launch checkbox.  (Yes, I'm including the necessary files.)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th November 2009, 22:41</div></div><div class="posttext">section &quot;name&quot; id<br />
+...<br />
+UnselectSection ${id}<br />
+<br />
+also, to _hide_ the item, you need to set its name to an empty string</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pauljlucas</div><div class="date">25th November 2009, 22:50</div></div><div class="posttext">The:<br />
+<br />
+  UnselectSection ${S_QuickLaunch}<br />
+<br />
+by itself made no difference.<br />
+<br />
+How do you set its name to an empty string?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th November 2009, 23:05</div></div><div class="posttext">by reading about sections in the helpfile</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pauljlucas</div><div class="date">25th November 2009, 23:10</div></div><div class="posttext">I now have:<br />
+<br />
+Function .onInit<br />
+  ${If} ${IsWin7}<br />
+    UnselectSection ${S_QuickLaunch}<br />
+    SectionSetText ${S_QuickLaunch} &quot;&quot;<br />
+  ${EndIf}<br />
+FunctionEnd<br />
+<br />
+and there's still no change.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th November 2009, 23:28</div></div><div class="posttext">!include WinVer.nsh<br />
+!include Sections.nsh<br />
+page components<br />
+page instfiles<br />
+Section foo bar<br />
+SectionEnd<br />
+<br />
+Function .onInit<br />
+${If} 1 == 1 ;replace with OS test<br />
+  !insertmacro UnselectSection ${bar}<br />
+  SectionSetText ${bar} &quot;&quot;<br />
+${EndIf}<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pauljlucas</div><div class="date">25th November 2009, 23:48</div></div><div class="posttext">D'oh!  I realized I wasn't editing the copy of the file that was being used to generate the installer, so of course the result was no different. :(<br />
+<br />
+Anyway, it works now that I'm editing the correct file.  Thanks for your patience.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

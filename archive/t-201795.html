@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Uninstaller based on installed components, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Uninstaller based on installed components NSIS Discussion" />
+	
+	<title> Uninstaller based on installed components [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Uninstaller based on installed components</div>
+<hr />
+<div class="pda"><a href="t-201795.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=201795">Uninstaller based on installed components</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Urd</div><div class="date">11th December 2004, 15:48</div></div><div class="posttext">Is it possible to write an uninstaller that will delete only components selected when installing without having to make a components page on the uninstaller and without deleting any default files? This installer will replace files already on the PC with new ones and rename the old ones.  The uninstaller as it is now will delete the new files and rename the old ones back.  The problem is if only one of the new files is installed to replace a default one the uninstaller will delete and rename the first file and delete the second witohut it having a file to rename in its place.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">11th December 2004, 15:54</div></div><div class="posttext">This should help:<br />
+http://forums.winamp.com/showthread.php?s=&amp;threadid=199750<br />
+<br />
+Basically you need to create a list of files being installed, and read from this list on uninstall.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Urd</div><div class="date">12th December 2004, 02:54</div></div><div class="posttext">Ok i used that script at the link and the file path is written into the uninstall.log but when I run the uninstaller it doesn't delete the file.<br />
+<br />
+Function un.Rename<br />
+  Rename $INSTDIR\userconfig.cfg.old $INSTDIR\userconfig.cfg<br />
+FunctionEnd<br />
+<br />
+Section Uninstall<br />
+<br />
+ ; Can't uninstall if uninstall.log is missing!<br />
+ IfFileExists &quot;$INSTDIR\uninstall.log&quot; +3<br />
+  MessageBox MB_OK|MB_ICONSTOP &quot;uninstall.log not found!$\r$\nUninstallation cannot be done!&quot;<br />
+   Abort<br />
+<br />
+ Push $R0<br />
+ FileOpen $UninstLog &quot;$INSTDIR\uninstall.log&quot; r<br />
+<br />
+ LoopRead:<br />
+  ClearErrors<br />
+   FileRead $UninstLog $R0<br />
+   IfErrors LoopDone<br />
+<br />
+   Push $R0<br />
+    Call un.TrimNewLines<br />
+   Pop $R0<br />
+   Delete $R0<br />
+<br />
+  Goto LoopRead<br />
+ LoopDone:<br />
+ FileClose $UninstLog<br />
+ Pop $R0<br />
+ Call un.inst<br />
+SectionEnd<br />
+<br />
+function un.inst<br />
+ Delete &quot;$INSTDIR\Uninstall.exe&quot;<br />
+ Delete &quot;$INSTDIR\Uninstall.log&quot;<br />
+ Call un.rename<br />
+FunctionEnd<br />
+<br />
+ Function un.TrimNewlines<br />
+   Exch $R0<br />
+   Push $R1<br />
+   Push $R2<br />
+   StrCpy $R1 0<br />
+ <br />
+ loop:<br />
+   IntOp $R1 $R1 - 1<br />
+   StrCpy $R2 $R0 1 $R1<br />
+   StrCmp $R2 &quot;$\r&quot; loop<br />
+   StrCmp $R2 &quot;$\n&quot; loop<br />
+   IntOp $R1 $R1 + 1<br />
+   IntCmp $R1 0 no_trim_needed<br />
+   StrCpy $R0 $R0 $R1<br />
+ <br />
+ no_trim_needed:<br />
+   Pop $R2<br />
+   Pop $R1<br />
+   Exch $R0<br />
+ FunctionEnd<br />
+<br />
+<br />
+That is the code im using for the uninstaller and this is what is in the log file:<br />
+c:\steam\steamapps\etc3313@hotmail.com\Counter-Strike\userconfig.cfg<br />
+<br />
+But it doesn't uninstall that file.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">12th December 2004, 14:53</div></div><div class="posttext">Are you sure that's not because you have just renamed it back?<br />
+What you need is:Section Uninstall<br />
+<br />
+ ; Can't uninstall if uninstall.log is missing!<br />
+ IfFileExists &quot;$INSTDIR\uninstall.log&quot; +3<br />
+  MessageBox MB_OK|MB_ICONSTOP &quot;uninstall.log not found!$\r$\nUninstallation cannot be done!&quot;<br />
+   Abort<br />
+<br />
+ Push $R0<br />
+ FileOpen $UninstLog &quot;$INSTDIR\uninstall.log&quot; r<br />
+<br />
+ LoopRead:<br />
+  ClearErrors<br />
+   FileRead $UninstLog $R0<br />
+   IfErrors LoopDone<br />
+<br />
+   Push $R0<br />
+    Call un.TrimNewLines<br />
+   Pop $R0<br />
+   Delete $R0<br />
+   Rename $R0.old $R0<br />
+<br />
+  Goto LoopRead<br />
+ LoopDone:<br />
+ FileClose $UninstLog<br />
+ Pop $R0<br />
+SectionEnd<br />
+<br />
+There's no need for the seperate rename function.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Urd</div><div class="date">12th December 2004, 18:40</div></div><div class="posttext">Adding in Rename $R0.old $R0 didn't work.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Urd</div><div class="date">12th December 2004, 18:45</div></div><div class="posttext">Nm I found the problem, the file path is missing a part.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">12th December 2004, 18:49</div></div><div class="posttext">Make sure $R0.old is there already!<br />
+Obviously $R0.old should have existed before hand (from using Rename in your install Section)<br />
+<br />
+In your install section you'd need something like this:Section &quot;Install new user-config&quot;<br />
+ SetOutPath $INSTDIR<br />
+ IfFileExists &quot;$INSTDIR\userconfig.cfg&quot; 0 +2<br />
+  Rename &quot;$INSTDIR\userconfig.cfg&quot; &quot;$INSTDIR\userconfig.cfg.old&quot;<br />
+ ${File} &quot;userconfig.cfg&quot;<br />
+SectionEnd<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

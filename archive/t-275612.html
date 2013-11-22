@@ -1,0 +1,506 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Calling Functions with arguments, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Calling Functions with arguments NSIS Discussion" />
+	
+	<title> Calling Functions with arguments [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Calling Functions with arguments</div>
+<hr />
+<div class="pda"><a href="t-275612.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=275612">Calling Functions with arguments</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">9th August 2007, 11:01</div></div><div class="posttext">Hi<br />
+<br />
+I need to know how to achieve the following:<br />
+<br />
+Within a section I want to call a function and pass it a string that represents a file.<br />
+<br />
+The Function will then determine if that file exists, if it does then the function simply returns and we do nothing, else we copy the file to the relevant directory.<br />
+<br />
+Here is a first attempt:<br />
+<br />
+<br />
+!include &quot;LogicLib.nsh&quot;<br />
+<br />
+OutFile &quot;installer.exe&quot;<br />
+<br />
+Section<br />
+Call fileExists someFileA.txt<br />
+Call fileExists someFileB.txt<br />
+Call fileExists someFileC.txt<br />
+SectionEnd<br />
+<br />
+Function fileExists file<br />
+  ${if} IfFileExists $SYSDIR\file<br />
+    return<br />
+  ${else}<br />
+    File /oname=$SYSDIR\file file<br />
+  ${EndIf<br />
+FunctionEnd<br />
+<br />
+<br />
+I realise this syntax in not correct but It's what I'm trying to achieve.<br />
+<br />
+Could someone help me out please.<br />
+<br />
+Thanks<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DrDan</div><div class="date">9th August 2007, 11:45</div></div><div class="posttext">Functions don't take argument in NSIS.<br />
+<br />
+You would need to do something like this in your section:<br />
+<br />
+<br />
+Section<br />
+  push someFileA.txt<br />
+  Call myFileExists<br />
+  <br />
+  push someFileB.txt<br />
+  Call myFileExists<br />
+  <br />
+  push someFileC.txt<br />
+  Call myFileExists<br />
+SectionEnd<br />
+<br />
+Function myFileExists<br />
+  exch $R0<br />
+  ${if} ${FileExists} $SYSDIR\$R0<br />
+    goto end<br />
+  ${else}<br />
+    File /oname=$SYSDIR\$R0 $R0<br />
+  ${EndIf}<br />
+  end:<br />
+  pop $R0<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+If you want write code that looks like you are passing arguments, you can use a macro. You can wrap function calls in macros like this:<br />
+<br />
+<br />
+!macro myFileExists file<br />
+  push ${file}<br />
+  call myFileExists<br />
+!macroend<br />
+<br />
+Section<br />
+  !insertmacro myFileExists someFileA.txt<br />
+  !insertmacro myFileExists someFileB.txt<br />
+  !insertmacro myFileExists someFileC.txt<br />
+SectionEnd<br />
+<br />
+Function myFileExists<br />
+  exch $R0<br />
+  ${if} ${FileExists} $SYSDIR\$R0<br />
+    goto end<br />
+  ${else}<br />
+    File /oname=$SYSDIR\$R0 $R0<br />
+  ${EndIf}<br />
+  end:<br />
+  pop $R0<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+Have a read of http://nsis.sourceforge.net/Macro_vs_Function which is very useful for explaining all this.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">9th August 2007, 11:49</div></div><div class="posttext">Thank you very much.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">9th August 2007, 12:01</div></div><div class="posttext">I am having problems with the line<br />
+<br />
+<br />
+${if} ${FileExists} $SYSDIR\$R0<br />
+<br />
+<br />
+The error from the compiler is: Invalid command: ${if}<br />
+<br />
+Any ideas?<br />
+<br />
+Cheers<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th August 2007, 12:12</div></div><div class="posttext">!include LogicLib.nsh<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">9th August 2007, 12:15</div></div><div class="posttext">Oh man, school boy error.<br />
+<br />
+Thanks,<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">9th August 2007, 13:50</div></div><div class="posttext">Me again<br />
+<br />
+Have a look at this demo program taken from a reply above.<br />
+<br />
+<br />
+!include LogicLib.nsh<br />
+OutFile &quot;installer.exe&quot;<br />
+<br />
+InstallDir $DESKTOP\install<br />
+<br />
+!macro myFileExists file<br />
+  push ${file}<br />
+  call myFileExists<br />
+!macroend<br />
+<br />
+Section<br />
+  SetOutPath $INSTDIR<br />
+  File someFileA.txt<br />
+SectionEnd<br />
+<br />
+Section<br />
+  !insertmacro myFileExists &quot;someFileA.txt&quot;<br />
+SectionEnd<br />
+<br />
+Function myFileExists<br />
+  exch $R0<br />
+  ${if} ${FileExists} $SYSDIR\$R0<br />
+    MessageBox MB_OK &quot;$SYSDIR\$R0 exists&quot;<br />
+    goto end<br />
+  ${else}<br />
+     MessageBox MB_OK &quot;$SYSDIR\$R0 does not exists&quot;<br />
+     File /oname=$SYSDIR\$R0 $R0<br />
+  ${EndIf}<br />
+  end:<br />
+  pop $R0<br />
+FunctionEnd<br />
+<br />
+<br />
+Providing the file I am looking for is not in $SYSDIR then I want to copy a file over to that directory. However, the following line:<br />
+<br />
+File /oname=$SYSDIR\$R0 $R0<br />
+<br />
+Gives me an error saying:<br />
+<br />
+File: &quot;$R0&quot; -&gt; no files found.<br />
+Usage: File [/nonfatal] [/a] ([/r] [/x filespec [...]] filespec [...] |<br />
+   /oname=outfile one_file_only)<br />
+<br />
+Any ideas would be appreciated,<br />
+<br />
+Cheers <br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">9th August 2007, 13:57</div></div><div class="posttext">File is compile time instruction, variables on the other hand are empty when compiling, they take action at run time.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">9th August 2007, 14:05</div></div><div class="posttext">OK, thanks for that. Do you have a solution? If not, could you point me in the right direction.<br />
+<br />
+Thanks,<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">9th August 2007, 14:10</div></div><div class="posttext">Yep, use a definition.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">9th August 2007, 14:21</div></div><div class="posttext">Use a definition? Great, what does that mean? Does it mean define something such as: <br />
+<br />
+!define SOMETHING &quot;something&quot;<br />
+<br />
+and then reference ${SOMETHING} later on in the script.<br />
+<br />
+I'm very new to NSIS and some code would be helpful.<br />
+<br />
+Thanks,<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">9th August 2007, 14:28</div></div><div class="posttext">This is simplified example, note that the code you've posted above is kinda improper.<br />
+Also note that you're extracting the file on desktop\install and later you're searching for the file under $SYSDIR which means you'll never find it there.<br />
+!define MY_FILE &quot;someFileA.txt&quot;<br />
+!include LogicLib.nsh<br />
+<br />
+OutFile &quot;installer.exe&quot;<br />
+InstallDir $DESKTOP\install<br />
+<br />
+Section<br />
+  SetOutPath $INSTDIR<br />
+  File &quot;${MY_FILE}&quot;<br />
+  call myFileExists<br />
+SectionEnd<br />
+<br />
+Function myFileExists<br />
+  ${if} ${FileExists} &quot;$SYSDIR\${MY_FILE}&quot;<br />
+    MessageBox MB_OK &quot;$SYSDIR\${MY_FILE} exists&quot;<br />
+   ${else}<br />
+     MessageBox MB_OK &quot;$SYSDIR\${MY_FILE} does not exists&quot;<br />
+     File /oname=$SYSDIR\${MY_FILE} ${MY_FILE}<br />
+  ${EndIf}<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">9th August 2007, 14:37</div></div><div class="posttext">Thanks for that, I appreciate it a lot. <br />
+<br />
+However, it's rather hard coded. I want to be able to call this method 3 times with  a different file on each call.<br />
+<br />
+Any ideas?<br />
+<br />
+Thanks<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">9th August 2007, 14:50</div></div><div class="posttext">As I said it's simplified example.<br />
+If you want to use it several times in your script you'd need to build a macro which calls the function as you did earlier.<br />
+Taking a look at wiki's code examples would give you many ideas on how to do that properly.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">9th August 2007, 15:09</div></div><div class="posttext">OK, thanks for your help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">9th August 2007, 15:18</div></div><div class="posttext">You're welcome.<br />
+<br />
+One more thing, for my opinion a good way to learn about macros in deep, is to examine the included headers e.g. filefunc.nsh.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">9th August 2007, 19:20</div></div><div class="posttext">I think you should be extracting your files to a temporary folder (I use $PLUGINSDIR\something) and then if the file does not exist in $SYSDIR you can use CopyFiles to copy it from the temporary folder to $SYSDIR.<br />
+<br />
+Using $PLUGINSDIR is handy because the extra copies will be deleted when the installer quits.<br />
+<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">9th August 2007, 19:46</div></div><div class="posttext">It seems to me wasting of time and unnecessary code because of unnecessary steps. 1st extract files in $PLUGINSDIR and 2nd use CopyFiles to put them in their correct location. I just can't catch the point.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">18th August 2007, 22:24</div></div><div class="posttext">Hi<br />
+<br />
+I have written a macro that takes a &quot;Path&quot; and a &quot;File&quot;. The macro determines if the file exists within the path, if it does we do nothing, otherwise we put it there.<br />
+<br />
+<br />
+!include LogicLib.nsh<br />
+OutFile &quot;installer.exe&quot;<br />
+<br />
+!macro InstallFileTo Path File<br />
+  ${if} ${FileExists} ${Path}\${File}<br />
+      ; do nothing.<br />
+  ${else}<br />
+      SetOutPath ${Path}<br />
+      File ${File}<br />
+  ${endif}<br />
+!macroend<br />
+<br />
+Section &quot;Install files&quot;<br />
+  !insertmacro InstallFileTo &quot;$SYSDIR&quot; &quot;FileA.txt&quot;<br />
+  !insertmacro InstallFileTo &quot;$SYSDIR&quot; &quot;FileB.txt&quot;<br />
+  !insertmacro InstallFileTo &quot;$SYSDIR&quot; &quot;FileC.txt&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+It works OK but I'm trying to make the macro smaller, I'm sure there is a better way. <br />
+ <br />
+<br />
+Any ideas?<br />
+<br />
+Cheers,<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">18th August 2007, 22:47</div></div><div class="posttext">Use 'SetOverwrite off' and you won't have to check if the file exists.<br />
+<br />
+<br />
+!macro InstallFileTo Path File<br />
+  SetOutPath ${Path}<br />
+  File ${File}<br />
+!macroend<br />
+<br />
+Section &quot;Install files&quot;<br />
+  SetOverwrite off<br />
+  !insertmacro InstallFileTo &quot;$SYSDIR&quot; &quot;FileA.txt&quot;<br />
+  !insertmacro InstallFileTo &quot;$SYSDIR&quot; &quot;FileB.txt&quot;<br />
+  !insertmacro InstallFileTo &quot;$SYSDIR&quot; &quot;FileC.txt&quot;<br />
+SectionEnd<br />
+Your example has the path all alike. In that case the macro doesn't save anything (and costs a little bit of space because it repeats the SetOutPath instruction each time).<br />
+<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">19th August 2007, 17:58</div></div><div class="posttext">Thanks for the reply,<br />
+<br />
+To avoid repeating SetOutPath would the code look like:<br />
+<br />
+<br />
+!include LogicLib.nsh<br />
+OutFile &quot;installer.exe&quot;<br />
+<br />
+!define SYSTEM32 $SYSDIR<br />
+<br />
+!macro InstallFileTo File<br />
+  SetOutPath ${SYSTEM32}<br />
+  File ${File}<br />
+!macroend<br />
+<br />
+Section &quot;Install files&quot;<br />
+  SetOverwrite off<br />
+  !insertmacro InstallFileTo &quot;FileA.txt&quot;<br />
+  !insertmacro InstallFileTo &quot;FileB.txt&quot;<br />
+  !insertmacro InstallFileTo &quot;FileC.txt&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+Also, I would like to keep a record of what files I have put in $SYSDIR, if any.<br />
+<br />
+Would the code look something like:<br />
+<br />
+<br />
+!include LogicLib.nsh<br />
+OutFile &quot;installer.exe&quot;<br />
+<br />
+!define SYSTEM32 $SYSDIR<br />
+<br />
+!macro InstallFileTo File Key<br />
+  SetOutPath ${SYSTEM32}<br />
+  File ${File}<br />
+  WriteRegStr   HKLM &quot;Software\CompanyName\CompanyApp\&quot; ${Key} ${File}<br />
+!macroend<br />
+<br />
+Section &quot;Install files&quot;<br />
+  SetOverwrite off<br />
+  !insertmacro InstallFileTo &quot;FileA.txt&quot; &quot;FileInstalled_1&quot;<br />
+  !insertmacro InstallFileTo &quot;FileB.txt&quot; &quot;FileInstalled_2&quot;<br />
+  !insertmacro InstallFileTo &quot;FileC.txt&quot; &quot;FileInstalled_3&quot;<br />
+SectionEnd<br />
+<br />
+Section &quot;Uninstall&quot;<br />
+<br />
+  ...<br />
+<br />
+  ReadRegStr $0 HKLM &quot;Software\CompanyName\CompanyApp&quot; &quot;FileInstalled_1&quot;<br />
+  StrLen $1 $0<br />
+   ${if} $1 &gt; '0'<br />
+    Delete &quot;${Path}\${File}&quot;<br />
+   ${EndIf}<br />
+   <br />
+   ... FileInstalled_2<br />
+   ... FileInstalled_3<br />
+   <br />
+   ...<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+Is this the best way to save something?<br />
+<br />
+I realise there will be some duplicate code in the Uninstall section which is not<br />
+desirable. I suppose I would put that in a macro as well.<br />
+<br />
+Is the best solution to put both install/uninstall in a function and then wrap that<br />
+with a macro. Therefore, we could call that on install and uninstall.<br />
+<br />
+Cheers,<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">19th August 2007, 18:05</div></div><div class="posttext">No need to have SetOutPath in the macro then if you are always using System32.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">19th August 2007, 18:24</div></div><div class="posttext">Thanks for the reply,<br />
+<br />
+Initially I thought it would be nice to keep the macro generic so any part of my script can use it. Then I got advised that using SetOutPath in the way that I was was not the best option because &quot;the macro doesn't save anything&quot;, fair enough.<br />
+<br />
+So basically it's a trade off between how generic you want your code to be and efficiency.<br />
+<br />
+Cheers,<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">19th August 2007, 18:37</div></div><div class="posttext">I suppose you are saying it should be used like the following:<br />
+<br />
+<br />
+!include LogicLib.nsh<br />
+OutFile &quot;installer.exe&quot;<br />
+<br />
+!macro InstallFileTo File<br />
+  File ${File}<br />
+!macroend<br />
+<br />
+Section &quot;Install files&quot;<br />
+  SetOutPath $SYSDIR<br />
+  SetOverwrite off<br />
+  !insertmacro InstallFileTo &quot;FileA.txt&quot;<br />
+  !insertmacro InstallFileTo &quot;FileB.txt&quot;<br />
+  !insertmacro InstallFileTo &quot;FileC.txt&quot;<br />
+SectionEnd<br />
+<br />
+<br />
+Cheers,<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">19th August 2007, 18:45</div></div><div class="posttext">Yep :)<br />
+But now you don't even need the macro because it only contains one instruction.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">19th August 2007, 19:01</div></div><div class="posttext">Ah man, I've got loads to learn. Thanks, my other earlier questions still stand though.<br />
+<br />
+Cheers,<br />
+<br />
+Paul</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">19th August 2007, 19:54</div></div><div class="posttext">When you insert a macro, you are copying its contents and placing it there - same as !include if you like. Any instruction with a ! in front of it is a compile time instruction and it is non existent in the built installer.  Macros are useful mainly for clearing up repeated code and helps when one needs to modify some code without having to make the changes more than once. Using a macro that contains 10 lines of code 100 times will create 1000 lines of code on compile, whereas 10 lines in a function called 100 times will still be 10 lines of code being executed 100 times. Of course, 1000 lines of code will create a bigger installer overhead.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pgg1</div><div class="date">19th August 2007, 20:47</div></div><div class="posttext">Thanks, <br />
+<br />
+Sorry I didn't make myself very clear. Just to reiterate I want to do the following:<br />
+<br />
+(1) Add 3 files to $SYSDIR providing there not there (Which we have already discussed).<br />
+<br />
+(2) If I write a file to $SYSDIR then I need to record that, so when I uninstall I can remove any files placed there. What is the best way to record stuff? To save, would it be:<br />
+<br />
+<br />
+WriteRegStr   HKLM &quot;Software\CompanyName\CompanyApp\&quot; &quot;some_key1&quot; &quot;FileA.txt&quot;<br />
+WriteRegStr   HKLM &quot;Software\CompanyName\CompanyApp\&quot; &quot;some_key2&quot; &quot;FileB.txt&quot;<br />
+WriteRegStr   HKLM &quot;Software\CompanyName\CompanyApp\&quot; &quot;some_key3&quot; &quot;FileC.txt&quot;<br />
+<br />
+<br />
+To retrieve it on uninstall:<br />
+<br />
+<br />
+ReadRegStr $0 HKLM &quot;Software\CompanyName\CompanyApp&quot; &quot;some_key1&quot;<br />
+StrLen $1 $0<br />
+${if} $1 &gt; '0'<br />
+  Delete &quot;${SYSDIR}\FileA.txt&quot;<br />
+${EndIf}<br />
+<br />
+<br />
+Cheers,<br />
+<br />
+Paul</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

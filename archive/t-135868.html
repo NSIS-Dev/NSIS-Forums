@@ -1,0 +1,120 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" RegDLL issue, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  RegDLL issue NSIS Discussion" />
+	
+	<title> RegDLL issue [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  RegDLL issue</div>
+<hr />
+<div class="pda"><a href="t-135868.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=135868">RegDLL issue</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">nsis_user</div><div class="date">19th May 2003, 11:25</div></div><div class="posttext">Hi all,<br />
+<br />
+I need some clarification here regarding the workings of the function RegDLL. I'm using NSIS 1.98 btw.<br />
+<br />
+My software has 2 dlls, say A and B. A contains a COM object and requires registration whereas B is simply a dll containing a number of export functions. However, A depends on B.<br />
+<br />
+In the install script, I first unpack the files into the target dir (using file) after which I call RegDLL on A. At this point, I get an error msg saying that dll B cannot be found. I believe this is because dll B is not on the search path nor the current working dir.<br />
+<br />
+2 question: <br />
+<br />
+1) How can I change the working directory of the installer?<br />
+2) How does it load and call DllRegisterServer exactly? I'm asking this becuz I've actually written code in DLL A's DLLMain to set the working dir (using SetCurrentDir()) to where dll A is located. However, it appears that RegDLL does not even call DLLMain.<br />
+<br />
+Any help will be appreciated.<br />
+<br />
+Cheers</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th May 2003, 13:28</div></div><div class="posttext">You can't change the working directory in NSIS 1.98. It's possible using SetOutPath in the latest beta version of NSIS 2.<br />
+<br />
+DllMain should be called because NSIS uses LoadLibrary and not LoadLibraryEx with the LOAD_LIBRARY_AS_DATAFILE flag. If dll A depends on dll B statically then Windows itself will look for the DLL before DllMain is called. If Windows can't find dll B it won't call DllMain. Is dll B statically or dynamically linked to dll A?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th May 2003, 13:37</div></div><div class="posttext">Checked a little more and according to this quote from MSDN DllMain might be called before it loads dll B:<br />
+<br />
+It is safe to call other functions in Kernel32.dll, because this DLL is guaranteed to be loaded in the process address space when the entry-point function is called. It is common for the entry-point function to create synchronization objects such as critical sections and mutexes, and use TLS. Do not call the registry functions, because they are located in Advapi32.dll. If you are dynamically linking with the C run-time library, do not call malloc; instead, call HeapAlloc.<br />
+<br />
+I guess it would later call DllMain with DETACH flag if it did call it before all of the DLLs loaded and later failed to load all of the DLLs. I have never seen this happen, but if Microsoft say... :)<br />
+<br />
+Just in case you were wondering, SetCurrentDirectory is in Kernel32.dll.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">nsis_user</div><div class="date">20th May 2003, 02:25</div></div><div class="posttext">Thats weird. Cuz I tried it with RegSvr32 (outside of the dll paths) and it works like a charm. However, RegDll still fails. :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">21st May 2003, 13:28</div></div><div class="posttext">Maybe RegSvr32 changes the working directory.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">nsis_user</div><div class="date">22nd May 2003, 03:58</div></div><div class="posttext">Nope, regsvr32 didn't but I did. I've placed code to change the current working dir in the DLLMain function.<br />
+<br />
+Apparently, regsvr32 calls DLLMain but RegDLL doesn't! Thats what puzzling me.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">22nd May 2003, 17:04</div></div><div class="posttext">Is dll B statically or dynamically linked?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">nsis_user</div><div class="date">23rd May 2003, 08:00</div></div><div class="posttext">correct me if i'm wrong, but i've always thought that statically linked libraries gets compiled into the module hence you will not have to distribute them? i.e. in my case, it will be dynamically linked cuz I have to distribute dll B along with my dll A.<br />
+<br />
+Are u referring to load-time dynamic linking (i.e. linking with the import lib) vs run-time dynamic linking (i.e. using LoadLibrary)? FYI, i am using load-time dynamic linking.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">23rd May 2003, 14:44</div></div><div class="posttext">Sorry, wrong terms, you're right. I did mean to ask if you're loading it at run-time or load-time.<br />
+<br />
+I'll have a deeper look at this, but in the mean time you can use b3 and SetOutPath to set the working directory.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th May 2003, 15:13</div></div><div class="posttext">I have tested this on Windows 98 and XP and nither regsvr32 nor RegDLL have called DllMain when the linked DLL could not be found. I have also checked regsvr32 and according to all of the sources I have found regsvr32 does only one action on top of what RegDLL does and this action has nothing to do with this case.<br />
+<br />
+What version of Windows are you using?<br />
+<br />
+BTW, to make sure that DllMain is not called I have used FatalAppExit in it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">nsis_user</div><div class="date">28th May 2003, 03:06</div></div><div class="posttext">I've tried it on both WinXP and Win95. BTW, I've just tried using regsvr32 again on my dll with the SetCurrentDirectory code taken out and it still works! (??) I'm guessing that regsvr32 internally switches the working directory to that of the dll.<br />
+<br />
+Anyhow, here's the exact step I've tried:<br />
+<br />
+In my dll (assume its called mydll.dll)'s DllMain, I've put in code to prompt a messagebox (duh!)<br />
+<br />
+Next I place the dll and the linked dll into a folder called c:\testing<br />
+<br />
+finally I run regsvr32 as follows (notice that the working dir is outside c:\testing):<br />
+<br />
+c:\regsvr32 .\testing\mydll.dll</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">28th May 2003, 15:14</div></div><div class="posttext">After moving DLL B to the same folder as DLL A RegSvr32 started working, yet RegDLL failed. I have absolutely no idea why this happens. I can't find anything about RegSvr32 doing more... I have also tried adding the one function that RegSvr32 uses and NSIS doesn't, which has nothing to do with LoadLibrary, and it still failed. I have even tried using SearchPath to see if RegSvr32 somehow changes the PATH enviornment variable or the current directory but SearchPath, which has the exact search pattern as LoadLibrary, failed to find the file.<br />
+<br />
+You would have to set the current directory using a simple plug-in or move to NSIS 2 and use SetOutPath. In any case, do not call RegSvr32 to do this because it doesn't exist on Windows 95.<br />
+<br />
+BTW, calling MessageBox from DllMain is not a good idea according to that MSDN quote I have pasted above.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">nsis_user</div><div class="date">28th May 2003, 15:47</div></div><div class="posttext">You would have to set the current directory using a simple plug-in or move to NSIS 2 and use SetOutPath. In any case, do not call RegSvr32 to do this because it doesn't exist on Windows 95.  <br />
+<br />
+RegSvr32 does exist on windows 95 (I've tested it on win95 remember?), just that its not in the System32 folder :)<br />
+<br />
+BTW, calling MessageBox from DllMain is not a good idea according to that MSDN quote I have pasted above. <br />
+<br />
+Yep. I read. I was just doing that for testing purposes.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th May 2003, 09:47</div></div><div class="posttext">I can't find anything official from Microsoft (why am I not surprised?) but according to Joost, some news posts I have found using Google and the fact that other installers don't use RegSvr32 and RegSvr32 being available for download on the Microsoft website RegSvr32 is not included in the first versions of Windows 95.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">nsis_user</div><div class="date">30th May 2003, 06:30</div></div><div class="posttext">ah... you might be right there.. I was testing in Win95 OSR2</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

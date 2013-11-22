@@ -1,0 +1,149 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problem using System to Call COM DLL.., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problem using System to Call COM DLL.. NSIS Discussion" />
+	
+	<title> Problem using System to Call COM DLL.. [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problem using System to Call COM DLL..</div>
+<hr />
+<div class="pda"><a href="t-261274.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=261274">Problem using System to Call COM DLL..</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">joe131</div><div class="date">7th December 2006, 15:10</div></div><div class="posttext">Hi All,<br />
+<br />
+I tried to write a Plugin DLL that used some COM<br />
+functions, but gave-up when it wouldn't work<br />
+for whatever reason.<br />
+<br />
+So I wrote a regular DLL with one exported function,<br />
+to create a user, and to make sure that it &quot;worked&quot;,<br />
+I wrote this test app:<br />
+<br />
+#include &lt;windows.h&gt;<br />
+#include &lt;stdio.h&gt;<br />
+<br />
+<br />
+// Import function..<br />
+extern &quot;C&quot; __declspec(dllimport) int CreateUser();<br />
+<br />
+int main(int argc, char* argv[])<br />
+{<br />
+<br />
+	int iRet;<br />
+	<br />
+	iRet = CreateUser();<br />
+	printf(&quot;iRet: %d\n&quot;, iRet);<br />
+	<br />
+	return 0;<br />
+}<br />
+<br />
+I ran the test app and it created the user<br />
+perfectly.<br />
+<br />
+And when I try to use System to call it, I can't get it<br />
+to work.  Here's what my test installer uses:<br />
+<br />
+    ; Point to DLL location..<br />
+    SetOutPath &quot;C:\apache\Webserver\bin&quot;<br />
+<br />
+    System::Call 'ServerSrv::CreateUser()'<br />
+<br />
+( I know I wasn't doing anything with the return,<br />
+but I figured it wasn't that important )<br />
+<br />
+Does the .lib have to also be in the same directory??<br />
+<br />
+All my exported functions only return an int and<br />
+don't take any parameters.<br />
+<br />
+Also, after I make the &quot;Call&quot;, what is the best way to<br />
+&quot;wait&quot; until the function &quot;finishes&quot;?<br />
+<br />
+If someone could point out what I'm doing wrong<br />
+I'd really appreciate it. :-)<br />
+<br />
+<br />
+Thanks,<br />
+<br />
+Joe S.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th December 2006, 19:07</div></div><div class="posttext">There's no need for the .lib file. It only needs to find the DLL itself. It probably fails to find the DLL, though I see you did use SetOutPath. If that's not the problem, there might be a problem with the DLL itself. You said it uses COM and your other thread said a plug-in of yours fails to initialize COM. Maybe it's the same problem.<br />
+<br />
+System::Call is fully synchronous. It doesn't open a new thread to call your function, so it'd &quot;wait&quot; for it to finish.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">joe131</div><div class="date">7th December 2006, 20:24</div></div><div class="posttext">My DLL has to be working right because my test app<br />
+called the exported DLL function and it created the user<br />
+perfectly. :-\<br />
+<br />
+One other thing, what's the exact syntax I need to use<br />
+for the System::Call, I haven't found a single example<br />
+where there are no input parameters and it returns an int.<br />
+<br />
+Like:<br />
+<br />
+int MyFunction()<br />
+<br />
+<br />
+Thanks,<br />
+<br />
+Joe S.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">joe131</div><div class="date">7th December 2006, 20:56</div></div><div class="posttext">Here's everything, the source to the DLL, the DLL,<br />
+the source to the test app that calls the DLL, and the<br />
+test app's .exe.<br />
+<br />
+It creates a user &quot;MobileSrvUser&quot; and adds it to the<br />
+local Administrators group.<br />
+<br />
+After you see that it works, you can just delete<br />
+that user.<br />
+<br />
+<br />
+Thanks,<br />
+<br />
+Joe S.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th December 2006, 02:36</div></div><div class="posttext">To get the computer name, you can use the UserInfo plug-in.<br />
+<br />
+You can't use printf, because there's no console. Use OutputDebugString and use DebugView to view what you print.<br />
+<br />
+The wiki and the System documents have lots of examples. The readme explains everything you have to know. To call your function and have the result in $0, use:System::Call &quot;plugin::func()i.r0&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">joe131</div><div class="date">8th December 2006, 13:57</div></div><div class="posttext">It works! :-)<br />
+<br />
+After switching from using &quot;if ( hr != S_OK )&quot; to<br />
+&quot;if ( ! SUCCEEDED(hr) )&quot; mostly for the<br />
+<br />
+	hr = CoInitialize(NULL);<br />
+<br />
+Doh! lol :-)<br />
+<br />
+Everything seems to be working now, even with<br />
+my Plugin DLL! :-)<br />
+<br />
+There is one exported function that keeps failing in<br />
+my Plugin DLL, but the regular DLL version,<br />
+where I use System::Call, works fine, so I'll<br />
+probably go with using that. :-)<br />
+<br />
+Thanks for everyones help! :-)<br />
+<br />
+Joe S.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

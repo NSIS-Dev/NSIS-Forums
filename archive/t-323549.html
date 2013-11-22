@@ -1,0 +1,121 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Compression interferes w/ Code Signing, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Compression interferes w/ Code Signing NSIS Discussion" />
+	
+	<title> Compression interferes w/ Code Signing [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Compression interferes w/ Code Signing</div>
+<hr />
+<div class="pda"><a href="t-323549.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=323549">Compression interferes w/ Code Signing</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jamercee</div><div class="date">28th October 2010, 15:19</div></div><div class="posttext">We are new users of NSIS. We resisted switching from the builder included w/ Visual Studio for years – and now are left to wonder what took us so long to switch. NSIS is a fantastic Installation Builder!  It took some time to learn our way around, but this system is proving itself to be a real winner.<br />
+<br />
+We’ve encountered one MINOR issue. It’s could be our lack of familiarity with NSIS – but after studying the FAQ, the Forums &amp; the Docs, we’re left wondering how others might have solved the issue.<br />
+<br />
+Summary: We are unable to effectively Sign a Build &amp; use Compression. <br />
+<br />
+Details: <br />
+We’ve added a call to the Microsoft ‘signtool.exe’ as the very last statement of setup.nsi. <br />
+<br />
+For example:<br />
+<br />
+	!system signtool.exe (parameters omitted) setup.exe<br />
+<br />
+We’ve confirmed that this step executes as expected. But it would appear that the compression (selected with the ‘SelectCompressor’ directive) always runs as the last step of any compile. This makes sense of course as it ensures the highest compression – but by altering the Build AFTER it has been signed, the signature is no longer is valid.<br />
+<br />
+What We Tried:<br />
+<br />
+We checked around the various plug-ins, but none would seem to directly address this issue. We got excited when we saw the PostExec.nsh plugin (http://nsis.sourceforge.net/Run_Command_After_Compilation), but it suffers from the same behavior describe above – that compression still runs as the last step of any compile.<br />
+<br />
+We use the EclipseNSIS environment for generating our builds, so we thought perhaps it might be useful to explore what options the Eclipse IDE offered to address this. When the EclipeNSIS environment does have options for steps-before-compilation, it does not have options for steps-after-compilation.  We thought of trying to alter the EclipseNSIS code to add this option – but realized this was not the best solution. It would mean always having todo the build from within Eclipse – which is not our regular coding environment.<br />
+<br />
+Question:<br />
+<br />
+So our question is simple. Is there a way to control WHEN compression happens in the build cycle? Or, is there a way to run a step AFTER the compression happens?<br />
+<br />
+Of course we could just turn off compression – but we’d loose the benefit of a cool NSIS feature, and that would be sad. :(<br />
+<br />
+Workarounds:<br />
+<br />
+Of course we can just roll up a call to the signing tool in a batch file that 1st performs the compile, then signs the build (which is what we are now doing) – but we wanted to post to the forum to see if others might have a more elegant solution. Feel free to suggest RTFM – but if one could point us to the appropriate ‘M’ we’d appreciate it :D<br />
+<br />
+Considering the tremendous number of problems we’ve now solved with this exceptional tool – we consider this a minor issue.  But just wanted to check in.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">28th October 2010, 16:24</div></div><div class="posttext">We use a batch processor (used to be ANT, now we're using something else), so a batch file should certainly work.<br />
+From digging through the search results, that's also the most typical response: use a batch file.<br />
+<br />
+The main alternative is the same as you've already tried, although this post..<br />
+http://forums.winamp.com/showpost.php?p=2224822&amp;postcount=7<br />
+..uses a VBScript to check whether makensis is running or not instead.  I suspect both -should- work, so I'm not sure why the &quot;Run Command After Compilation&quot; one doesn't appear to work for you.<br />
+<br />
+Another option - but it received no comments, so I have no idea if it works (does it only pack the header.. while the code signing should be for the entire thing?) - was to use !packhdr: http://nsis.sourceforge.net/Docs/Chapter5.html?title=!packhdr#5.1.10<br />
+<br />
+Edit: oh, and off-topic: disable NSIS's CRC check (since the code sign bit already takes care of that)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">29th October 2010, 00:29</div></div><div class="posttext">The next version of nsis adds a new !finalize command that could be used for stuff like this, in the mean time, you are stuck with using either a batchfile or !system tricks.<br />
+<br />
+The system trick goes something like this:<br />
+<br />
+!ifNdef REALBUILD<br />
+outfile &quot;$%temp%\dummy.exe&quot;<br />
+page instfiles<br />
+section<br />
+sectionend<br />
+!system '&quot;${NSISDIR}\makensis&quot; /DREALBUILD &quot;${__FILE__}&quot;' = 0<br />
+<br />
+!else<br />
+<br />
+;your actual code here<br />
+<br />
+!endif<br />
+<br />
+<br />
+To sign the uninstaller, you would have to pull the same kind of trick so you can call WriteUninstaller on your local machine and sign and include that as a normal file in the real installer.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CrushBug</div><div class="date">29th October 2010, 00:43</div></div><div class="posttext">We use a batch file and it works perfectly. I look forward to that !finalize command, though!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tommc</div><div class="date">2nd December 2010, 00:46</div></div><div class="posttext">I tried this in my batchfile<br />
+<br />
+SignTool.exe sign /f cert /p pass /t http://timestamp.comodoca.com/authenticode $1<br />
+<br />
+But it didn't work. <br />
+<br />
+I added the !system &quot;sign.bat setup.exe&quot; before the !endif</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">2nd December 2010, 02:55</div></div><div class="posttext">Maybe I didn't make myself clear, before !endif you put the real installer script, not signing code:<br />
+<br />
+<br />
+!define OUTPUT mysetup.exe<br />
+!ifNdef REALBUILD<br />
+outfile &quot;$%temp%\dummy.exe&quot;<br />
+page instfiles<br />
+section<br />
+sectionend<br />
+!system '&quot;${NSISDIR}\makensis&quot; /DREALBUILD &quot;${__FILE__}&quot;' = 0<br />
+!system '&quot;signtool.exe&quot; &quot;${OUTPUT}&quot; /param etc' = 0<br />
+!else<br />
+outfile &quot;${OUTPUT}&quot;<br />
+;more of your installer script...<br />
+!endif</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">tommc</div><div class="date">2nd December 2010, 21:56</div></div><div class="posttext">Thanks, works great!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

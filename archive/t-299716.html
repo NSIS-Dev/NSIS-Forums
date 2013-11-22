@@ -1,0 +1,188 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" $(^Name) and MUI, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  $(^Name) and MUI NSIS Discussion" />
+	
+	<title> $(^Name) and MUI [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  $(^Name) and MUI</div>
+<hr />
+<div class="pda"><a href="t-299716.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=299716">$(^Name) and MUI</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Asterix86</div><div class="date">9th November 2008, 10:20</div></div><div class="posttext">Hi,<br />
+<br />
+I try to use the code from [1] to not allow 2 installers to run at the same time. The problem is that it uses $(^Name) to the window name. But I also use MUI, so window name changes according to the current page (&quot;Language Installer&quot;, &quot;Installation de XXX&quot;, ...)<br />
+<br />
+So my question is: Is it possible to get all those window names from MUI so I can test them all to detect if installer is already running?<br />
+<br />
+Thanks for your help,<br />
+Asterix<br />
+<br />
+<br />
+[1] http://nsis.sourceforge.net/Games_Explorer_Manager_Install#Only_allow_one_installer_instance_at_a_time.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">9th November 2008, 10:28</div></div><div class="posttext">A much easier solution is to simply define your installer's name yourself as something unique and fixed.<br />
+<br />
+!define myAppName &quot;Asterix86-SomeAppName&quot;<br />
+<br />
+And then replace ${^Name} in the mutex code with ${myAppName}</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Asterix86</div><div class="date">9th November 2008, 10:42</div></div><div class="posttext">Will it really work? I mean user32::GetWindowText will return ${myAppName} ? I thought it returns window name ...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">10th November 2008, 00:30</div></div><div class="posttext">Don't use GetWindowText at all.  You're just using a string (-any- string) and using windows' APIs to create a mutex.  If you try to create a mutex with that same string, windows will return an error.<br />
+<br />
+Thus in its simplest form:<br />
+<br />
+System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;hello&quot;) i .r1 ?e'<br />
+Pop $0<br />
+IntCmp $0 0 +2<br />
+MessageBox MB_OK|MB_ICONEXCLAMATION &quot;The installer is already running.&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Asterix86</div><div class="date">10th November 2008, 05:52</div></div><div class="posttext">ok, this is the first code of the example, but I like the second example that gives focus to the first installer when I run a second one. But for that, I need the window instance. In the example it's done by cycling on all NSIS  windows and looking at its name. There is no problem if there is only one installer running, but if there are others you could give focus to the wrong one.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">10th November 2008, 08:56</div></div><div class="posttext">Well if finding the window (to give it focus) is the main issue, then we can ignore the mutex stuff ;)<br />
+<br />
+You could...<br />
+- just hard code the various page titles, and test for each of the titles (lots of work and requires you to make sure each page title still fits any time you change your installer)<br />
+<br />
+- prefix the page titles with a presumably unique string, in the existing script, this code..<br />
+<br />
+StrCmp $2 &quot;$(^Name)&quot; 0 loop<br />
+<br />
+Will then become something like<br />
+<br />
+StrCpy $2 $2 length-of-prefix<br />
+StrCmp $2 &quot;your-prefix&quot; 0 loop<br />
+<br />
+Very little work, and this is mostly maintenance-free, as long as you keep your prefix the same.<br />
+<br />
+<br />
+- let your installer write to the registry that it is running, and under what title (or maybe hwnd, as an integer), it can be found.  That way you can just read that out directly.<br />
+This is a bit more work than the prefix method, but is somewhat more future-proof; if you don't like your page titles prefixed / or change the prefix in the future, that method will break - while your registry location probably wouldn't change.<br />
+This does mean registry i/o where it's not strictly necessary.<br />
+<br />
+Ideally you'd somehow figure out who owns a mutex you're trying to create and which failed - but I don't think there's a way within the mutex object itself..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Asterix86</div><div class="date">10th November 2008, 15:56</div></div><div class="posttext">I don't know how to access MUI window name (that was my first question) But I don't like the idea to prefix those names.<br />
+<br />
+registery sounds a better solution, but there are several windows, so I have to change the hwnd when a new one open, and once again I don't know how to access it.<br />
+<br />
+But that sounds too hard to achieve. So I'll stick with my simple solution, to focus the first NSIS installer. Most likely there will be only one.<br />
+<br />
+Thanks a lot for your help though.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">11th November 2008, 03:56</div></div><div class="posttext">; findPrefixedWindow<br />
+; usage:<br />
+; Push &quot;prefix&quot;<br />
+; Call findPrefixedWindow<br />
+; Pop result<br />
+; Result will be empty and Error flag will be set if no window found<br />
+Function findPrefixedWindow<br />
+				; Stack: &lt;prefix&gt;<br />
+	Exch $0     ; Stack: $0<br />
+	Push $1     ; Stack: $1 $0<br />
+	Push $2     ; Stack: $2 $1 $0<br />
+	Push $3     ; Stack: $3 $2 $1 $0<br />
+	Push $4     ; Stack: $4 $3 $2 $1 $0<br />
+	Push $5     ; Stack: $5 $4 $3 $2 $1 $0<br />
+	Push $R0    ; Stack: $R0 $5 $4 $3 $2 $1 $0<br />
+	<br />
+	; $0 - prefix<br />
+	; $1 - prefix length<br />
+	; $2 - window hwnd<br />
+	; $3 - window text<br />
+	; $4 - sub-part of window text<br />
+	; $5 - callback identifier<br />
+	; $R0 - callback pointer<br />
+<br />
+	StrLen $1 $0<br />
+<br />
+	SetPluginUnload alwaysoff<br />
+	System::Get &quot;(i.r2, i) iss&quot;<br />
+	Pop $R0<br />
+	System::Call &quot;user32::EnumWindows(k R0, i) i.s&quot;<br />
+	_loop:<br />
+		Pop $5<br />
+		StrCmp $5 &quot;callback1&quot; 0 _notfound<br />
+		System::Call &quot;user32::GetWindowText(ir2,t.r3,i${NSIS_MAX_STRLEN})&quot;<br />
+		StrCpy $4 $3 $1 &quot;&quot;<br />
+		StrCmp $4 $0 _found _next<br />
+		_next:<br />
+			Push 1 # callback's return value<br />
+			System::Call &quot;$R0&quot;<br />
+		goto _loop<br />
+<br />
+	_found:<br />
+	    StrCpy $0 $3<br />
+		goto _done<br />
+<br />
+	_notfound:<br />
+	    StrCpy $0 &quot;&quot;<br />
+	    SetErrors<br />
+<br />
+	_done:<br />
+	SetPluginUnload manual<br />
+	System::Free $R0<br />
+<br />
+				; Stack: $R0 $5 $4 $3 $2 $1 $0<br />
+	Pop $R0     ; Stack: $5 $4 $3 $2 $1 $0<br />
+	Pop $5      ; Stack: $4 $3 $2 $1 $0<br />
+	Pop $4      ; Stack: $3 $2 $1 $0<br />
+	Pop $3      ; Stack: $2 $1 $0<br />
+	Pop $2      ; Stack: $1 $0<br />
+	Pop $1      ; Stack: $0<br />
+	Exch $0     ; Stack: &lt;result&gt;<br />
+FunctionEnd<br />
+<br />
+<br />
+Example use:<br />
+<br />
+Function .onInit<br />
+	StrCpy $R0 &quot;${myPrefix}&quot;<br />
+	Push $R0<br />
+	Call findPrefixedWindow<br />
+	Pop $0<br />
+	IfErrors _boo _yay<br />
+<br />
+	_boo:<br />
+	    MessageBox MB_OK &quot;Could not find any window title beginning with: [$R0]&quot;<br />
+	    goto _end<br />
+	_yay:<br />
+	    MessageBox MB_OK &quot;Found window title beginning with: [$R0]$\nWindow title: [$0]&quot;<br />
+	    Abort<br />
+<br />
+	_end:<br />
+FunctionEnd<br />
+<br />
+<br />
+But you don't want prefixes, so that wouldn't help much.<br />
+<br />
+As for the window handle thingy (hwnd)<br />
+<br />
+$HWNDPARENT<br />
+<br />
+The decimal HWND of the parent window.<br />
+<br />
+Shouldn't change at all - for a single installer.. unless you're launching different installers throughout the installation.. which would be weird.<br />
+<br />
+And there should be only one installer running, given that you wouldn't allow more than 1 installer to run at the same time (what all this code is partly about, no?)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Displaying a created window before installer displays anything?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Displaying a created window before installer displays anything? NSIS Discussion" />
+	
+	<title> Displaying a created window before installer displays anything? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Displaying a created window before installer displays anything?</div>
+<hr />
+<div class="pda"><a href="t-341188.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=341188">Displaying a created window before installer displays anything?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">25th January 2012, 01:00</div></div><div class="posttext">It's a stupid title but I didn't know how to put it. I want to create a window as a child of a window from another process (static using CreateWindowEx, LoadImage etc.) and basically I succeeded but the problem is that it doesn't appear if my installer hasn't displayed any windows of its own yet, although my created window has 'external' parent, e.g. it will appear after I first display a Msgbox. I'm sure that folks here will know why that is and if there's a solution. Sorry if I didn't make my question clear enough.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">T.Slappy</div><div class="date">25th January 2012, 08:44</div></div><div class="posttext">Try .onInit or .onGUIInit functions: they are called before real installer is shown.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">25th January 2012, 10:51</div></div><div class="posttext">I am using .onGUIInit, that's exactly the problem. I'll have to post some code to explain what i mean.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">25th January 2012, 21:14</div></div><div class="posttext">Here. I have also attached this script, together with a test bitmap.<br />
+<br />
+<br />
+# This example uses the screensaver preview window as target.<br />
+<br />
+OutFile &quot;C:\WINDOWS\System32\PreviewTest.scr&quot;<br />
+Name &quot;PreviewTest&quot;<br />
+Caption &quot;PreviewTest&quot;<br />
+RequestExecutionLevel User<br />
+<br />
+!include &quot;FileFunc.nsh&quot;<br />
+!define WS_CHILD        0x40000000<br />
+!define WS_VISIBLE	0x10000000<br />
+!define SS_BITMAP	0x0000000EL<br />
+!define IMAGE_BITMAP    0<br />
+!define LR_LOADFROMFILE 0x0010<br />
+!define STM_SETIMAGE    0x0172<br />
+<br />
+        Function .onGUIInit<br />
+<br />
+# When a screensaver is selected from the dropdown list, windows runs it with /p #### switch, passing it hwnd of the preview window.<br />
+${GetParameters} $R0<br />
+${GetOptions} &quot;$R0&quot; &quot;/P&quot; $R1 # R1=HWND of preview window<br />
+IfErrors 0 Preview<br />
+Exec 'Rundll32.exe shell32.dll,Control_RunDLL Desk.cpl,@0, 1'<br />
+Abort<br />
+<br />
+Preview:<br />
+<br />
+System::Call '*(&amp;i4,&amp;i4,&amp;i4,&amp;i4) i .r0' # RECT structure<br />
+System::Call 'user32::GetWindowRect(i R1, i r0) i.'<br />
+System::Call '*$0(&amp;i4,&amp;i4,&amp;i4,&amp;i4)i(.r1,.r2,.r3,.r4)'<br />
+System::Free $0<br />
+IntOp $1 $3 - $1 # x = right - left<br />
+IntOp $2 $4 - $2 # y = bottom - top<br />
+<br />
+System::Call &quot;user32::CreateWindowEx(i 0, t 'STATIC', t 'Preview', i '${WS_CHILD}|${WS_VISIBLE}|${SS_BITMAP}', i 0, i 0, i r1, i r2, i R1, i 0, i 0, i 0) i. R2&quot;<br />
+IntCmp $R2 0 PreviewEnd<br />
+File /oname=$PLUGINSDIR\Test.bmp &quot;.\Test.bmp&quot;<br />
+System::Call &quot;user32::LoadImage(i 0, t '$PLUGINSDIR\Test.bmp', i ${IMAGE_BITMAP}, i 0, i 0, i ${LR_LOADFROMFILE}) i. R3&quot;<br />
+System::Call &quot;user32::SendMessage(i R2, i ${STM_SETIMAGE}, i ${IMAGE_BITMAP}, i R3) i.&quot;<br />
+<br />
+# Here's the problem: bitmap will not appear in the preview window until the msgbox is displayed.<br />
+# What can I do to change that?<br />
+Sleep 2000<br />
+MessageBox MB_OK|MB_USERICON &quot;Test bitmap should be visible now.&quot;<br />
+<br />
+PreviewEnd:<br />
+Abort<br />
+<br />
+FunctionEnd<br />
+<br />
+Section &quot;Blank&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">25th January 2012, 23:19</div></div><div class="posttext">A window created with CreateWindowEx or CreateDialog (but not DialogBox) needs to process messages for the window to work correctly, so you either have to call GetMessage+DispatchMessage in a loop with the system plugin or create the window and then hide the nsis window in the pre/show callback of your first page so nsis pumps messages for you.<br />
+<br />
+Have you thought about programming this in a &quot;real&quot; language or AutoIt?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">26th January 2012, 00:45</div></div><div class="posttext">Thanks for a traditionally informative reply. I'll see what I can do about message processing. I'm aware nsis wasn't designed for these purposes. I first started using it when I needed to make an installer but then I realized it had possibilities beyond that. I started playing with it and using it to create small programs. I never found the will to move forward and learn a 'real' language, I always managed to find a way to achieve what I needed in nsis but of course I was bound to hit a wall sooner or later.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">26th January 2012, 06:05</div></div><div class="posttext">If you came up with and/or understand the code you posted you are not that far away from coding win32 apps in C (Dealing with RECTs (and structs in general) is actually harder in NSIS)<br />
+<br />
+There are several free options for you: mingw+codeblocks, the free visual studio from MS (The 2003 version can still be found online). Coding in c# can be done on any install of windows with dotnet installed (+notepad) http://www.youtube.com/watch?v=jr1XhCZJoEM</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">26th January 2012, 11:15</div></div><div class="posttext">I would recommend C# as an excellent language to begin to learn real programming. You can download Visual Studio 2010 C# Express for free. You can always then branch to C/C++ if the requirement arises (note that C++ Express does not support 64-bit development which is lame).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">26th January 2012, 12:18</div></div><div class="posttext">I did learn quite a lot about WinAPI fiddling with System plugin. Thanks for advice and encouragement, I really should get into this C# thing but don't be surprised if I turn up with another 'exotic' nsis question. :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">aerDNA</div><div class="date">26th January 2012, 15:02</div></div><div class="posttext">GetMessage+DispatchMessage loop works. :up:</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

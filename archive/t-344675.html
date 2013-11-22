@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Issues on NSIS.pas, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Issues on NSIS.pas NSIS Discussion" />
+	
+	<title> Issues on NSIS.pas [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Issues on NSIS.pas</div>
+<hr />
+<div class="pda"><a href="t-344675.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=344675">Issues on NSIS.pas</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Speed78</div><div class="date">6th May 2012, 21:09</div></div><div class="posttext">Dear all,<br />
+<br />
+my plugins should in the (near) future support unicode. The plugins are developed in Delphi 6 without any unicode support. Now I got Delphi XE2 and I refresh the current NSIS.pas from the 2.46 release to my project.<br />
+<br />
+But with this update I got some strange issues:<br />
+<br />
+1. My plugin crashes in the Init-Method in this line:<br />
+<br />
+extrap := g_extraparameters^;<br />
+<br />
+I think &quot;g_extraparameters&quot; is nil and this is the reason why it crashes. Without this line it works.<br />
+<br />
+2. The method &quot;LogMessage&quot; typecasts to &quot;PAnsiChar&quot; in this line:<br />
+<br />
+item.pszText := PAnsiChar(Msg);<br />
+<br />
+This will not work in Delphi Vesions which supports Unicode by default. It must be:<br />
+<br />
+item.pszText := PChar(Msg);<br />
+<br />
+or<br />
+<br />
+item.pszText := PWideChar(Msg);<br />
+<br />
+3. After fixing the first to points in the NSIS.pas everything looks ok and my plugin works with the NSIS Unicode version without any problems. If I use the same Plugin DLL in the &quot;ANSI&quot;-Version of NSIS but this crashes during the execution of my NSIS-Setup.<br />
+<br />
+The reason why it crashes is the following line in the method &quot;PopString&quot;:<br />
+<br />
+Result := PChar(@th.text);<br />
+<br />
+If I change it to...<br />
+<br />
+Result := String(PAnsiChar(@th.text));<br />
+<br />
+...and it works. At this point I'm helpless because I don't understand why this works (or better why the first line doesn't work). Maybe some user of this board or another NSIS developer can give me a hint about this problem?<br />
+<br />
+Maybe this can be solved in a way that NSIS.pas can be used for &quot;ANSI&quot;-NSIS and &quot;Unicode&quot;-NSIS.<br />
+<br />
+As a temporarily solution I used a condition compilation.<br />
+<br />
+If I want to compile for &quot;ANSI&quot;-NSIS I use:<br />
+<br />
+Result := String(PAnsiChar(@th.text));<br />
+<br />
+If I want to compile fir &quot;Unicode&quot;-NSIS I use:<br />
+<br />
+Result := PChar(@th.text);<br />
+<br />
+Kind regards<br />
+<br />
+Rainer</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">7th May 2012, 00:10</div></div><div class="posttext">I have not used Pascal in years so I don't really remember the details.<br />
+<br />
+Why do you need String(PAnsiChar( and not just PAnsiChar(@?<br />
+<br />
+Is there something in the precompiler we can use to detect if compiling as unicode?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Speed78</div><div class="date">7th May 2012, 16:53</div></div><div class="posttext">Hi,<br />
+<br />
+I use the String typecast to avoid a compiler warning but it is not necessary. But the typecast to &quot;PAnsiString&quot; is the important point. It is necessary to typecast to &quot;PAnsiChar&quot; if the plugin should be executed in the &quot;ANSI&quot; version of NSIS otherwise you will not get correct string values. So this is my code at the moment:<br />
+<br />
+-------<br />
+    {$IFDEF NSIS_UNICODE}<br />
+    Result := PChar(@th.text); // PChar is here PWideChar<br />
+    {$ELSE}<br />
+    Result := String(PAnsiChar(@th.text)); // String TypeCast is only to avoid compiler warning<br />
+    {$ENDIF}<br />
+-------<br />
+<br />
+I thought that &quot;AnsiStrings&quot; are 100% complain to UnicodeString. Therefore I expect that the values in &quot;th.text&quot; should be converted to a UnicodeString in the &quot;ANSI&quot;-NSIS version but this will not work. Does anybody know why?<br />
+<br />
+Kind regards<br />
+<br />
+Rainer</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">7th May 2012, 18:12</div></div><div class="posttext">In ANSI NSIS, Result should be a AnsiString.<br />
+<br />
+Can you redefine types?<br />
+<br />
+{$IFDEF UNICODE}<br />
+type string = UnicodeString<br />
+{$ELSE}<br />
+type string = AnsiString  //or {$H}{$P+}  ?OpenString? or RawByteString?<br />
+{$ENDIF}<br />
+<br />
+PChar would also need fixing, maybe as a helper function? UnicodeString does not exist in older versions, there you would need to use WideString. (Not sure which version from http://docwiki.embarcadero.com/RADStudio/en/Compiler_Versions)<br />
+<br />
+See also:<br />
+http://www.embarcadero.com/images/dm/technical-papers/delphi-unicode-migration.pdf</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Speed78</div><div class="date">7th May 2012, 18:40</div></div><div class="posttext">Hey,<br />
+<br />
+the compiler directives {$H}{$P+} will not work. I just tried it. <br />
+<br />
+The string type cannot be redefined but I can create an own String Type like<br />
+<br />
+{$IFDEF UNICODE}<br />
+TString = UnicodeString;<br />
+PChar = PWideChar;<br />
+{$ELSE}<br />
+TString = AnsiString;<br />
+PChar = PAnsiChar;<br />
+{$ENDIF}<br />
+<br />
+This will work but my current solution will work too. The problem is that I want to know why the typecast of &quot;PChar(@th.text)&quot; will not work in the ANSI version of NSIS.<br />
+<br />
+Kind regards<br />
+<br />
+Rainer</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">7th May 2012, 19:01</div></div><div class="posttext">PChar is PWideChar is Delphi 2009 and PAnsiChar in older versions</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

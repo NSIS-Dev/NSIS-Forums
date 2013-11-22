@@ -1,0 +1,236 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" External console command, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  External console command NSIS Discussion" />
+	
+	<title> External console command [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  External console command</div>
+<hr />
+<div class="pda"><a href="t-295763.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=295763">External console command</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ftctran</div><div class="date">10th August 2008, 08:40</div></div><div class="posttext">I'm new with NSIS.<br />
+<br />
+I want to check the MAC address but this dos exec give me error.  <br />
+<br />
+ExecDos::exec /TIMEOUT=2000 &quot;$SYSDIR\ipconfig.exe /all  | findstr 00-11-A3-03-B7-A1&quot; &quot;&quot; &quot;$EXEDIR\MAC.txt&quot;<br />
+Pop $0 # return value<br />
+DetailPrint &quot;Exit code: $0&quot;<br />
+StrCmp $0 &quot;error&quot; goto End<br />
+<br />
+&quot;Exit code: error&quot;<br />
+<br />
+Please let me know why and how I can work around it.<br />
+<br />
+Thanks very much for your help<br />
+<br />
+FT</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">10th August 2008, 14:38</div></div><div class="posttext">1. It's not a DOS executable, it's a console program ;)<br />
+2. I don't think you can run it this way, try like that:<br />
+<br />
+!include StrFunc.nsh<br />
+<br />
+${StrLoc}<br />
+<br />
+...<br />
+<br />
+Section<br />
+  nsExec::ExecToStack /TIMEOUT=2000 '&quot;$SYSDIR\ipconfig.exe&quot; /all'<br />
+  Pop $0 # return value<br />
+  Pop $1 # console output<br />
+<br />
+  DetailPrint &quot;Exit code: $0&quot;<br />
+  StrCmp $0 &quot;error&quot; goto End<br />
+<br />
+  ${StrLoc} $0 &quot;$1&quot; &quot;00-11-A3-03-B7-A1&quot; &quot;&gt;&quot;<br />
+  StrCmp $0 &quot;&quot; MAC_NotFound MAC_Found<br />
+<br />
+  MacFound:<br />
+  ...<br />
+<br />
+  MAC_NotFound:<br />
+  ...<br />
+<br />
+  End:<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">10th August 2008, 15:03</div></div><div class="posttext">Why would you hardcode something for a specific MAC, you know people can change their MAC right?<br />
+<br />
+for atleast XP and later, there is a program called GetMAC, just use &quot;for&quot; to get the first token of the output of something like: getmac|find &quot;\&quot;. for older systems without getmac, you would need to parse the output of ipconfig /all|find &quot;Physical Address&quot; with a &quot;for&quot; to get the token after &quot;:&quot; (I guess that would only work on english systems)<br />
+<br />
+<br />
+for /F %A in ('getmac^|find &quot;\&quot;')DO @echo %A<br />
+<br />
+and<br />
+<br />
+FOR /F &quot;TOKENS=1-3 DELIMS=.: &quot; %A IN ('IPCONFIG/ALL^|FIND/I &quot;Physical&quot;') DO<br />
+@ECHO %C <br />
+<br />
+(for batch file use, you must use %%A instead of %A)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">10th August 2008, 15:22</div></div><div class="posttext">You could try like this:<br />
+<br />
+!include StrFunc.nsh<br />
+<br />
+${StrTok}<br />
+<br />
+...<br />
+<br />
+Section<br />
+  nsExec::ExecToStack /TIMEOUT=2000 '&quot;$SYSDIR\getmac.exe&quot;'<br />
+  Pop $0 # return value<br />
+  Pop $1 # console output<br />
+<br />
+  DetailPrint &quot;Exit code: $0&quot;<br />
+  StrCmp $0 &quot;error&quot; goto End<br />
+<br />
+  StrCpy $0 &quot;0&quot;<br />
+  <br />
+  Loop:<br />
+    ${StrTok} $2 &quot;$1&quot; &quot;$\n$\r$\t &quot; &quot;$0&quot; &quot;1&quot;<br />
+    StrCmp $2 &quot;&quot; MAC_NotFound<br />
+    StrCmp $2 &quot;00-11-A3-03-B7-A1&quot; MAC_Found<br />
+    IntOp $0 $0 + 1<br />
+    Goto Loop<br />
+	<br />
+  MacFound:<br />
+  ...<br />
+<br />
+  MAC_NotFound:<br />
+  ...<br />
+<br />
+  End:<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">10th August 2008, 15:30</div></div><div class="posttext">Test and seems to work fine:<br />
+<br />
+!include StrFunc.nsh<br />
+<br />
+${StrTok}<br />
+<br />
+Caption &quot;MAC Test&quot;<br />
+OutFile &quot;macTest.exe&quot;<br />
+<br />
+!define MAC_Address &quot;00-11-A3-03-B7-A1&quot;<br />
+<br />
+Section<br />
+  nsExec::ExecToStack /TIMEOUT=5000 '&quot;$SYSDIR\getmac.exe&quot; /FO CSV'<br />
+  Pop $0 # return value<br />
+  Pop $1 # console output<br />
+<br />
+  DetailPrint &quot;Exit code: $0&quot;<br />
+  StrCmp $0 &quot;error&quot; End<br />
+<br />
+  StrCpy $0 &quot;0&quot;<br />
+  <br />
+  Loop:<br />
+    ${StrTok} $2 &quot;$1&quot; '$\n$\r$\t&quot;,' &quot;$0&quot; &quot;1&quot;<br />
+    # MessageBox MB_OK '&quot;$2&quot;'<br />
+    StrCmp $2 &quot;&quot; MAC_NotFound<br />
+    StrCmp $2 &quot;${MAC_Address}&quot; MAC_Found<br />
+    IntOp $0 $0 + 1<br />
+    Goto Loop<br />
+	<br />
+  Mac_Found:<br />
+    MessageBox MB_ICONINFORMATION &quot;MAC was found!&quot;<br />
+    Goto End<br />
+<br />
+  MAC_NotFound:<br />
+    MessageBox MB_ICONSTOP &quot;MAC was not found!&quot;<br />
+    Abort<br />
+<br />
+  End:<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">10th August 2008, 15:49</div></div><div class="posttext">That's odd. My Windows XP doesn't have Getmac.exe. A quick search shows it is part of the Win2000 resource kit, and it seems it also comes with Vista.<br />
+<br />
+Any solution using this exe will have to pack it into the installer.<br />
+<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">10th August 2008, 15:59</div></div><div class="posttext">Originally posted by demiller9 <br />
+That's odd. My Windows XP doesn't have Getmac.exe. A quick search shows it is part of the Win2000 resource kit, and it seems it also comes with Vista.<br />
+ That is weird, is it XP Home? My getmac version is 5.1.2600.0 (xpclient.010817-1148) (XP MCE2k5 SP2)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">10th August 2008, 16:02</div></div><div class="posttext">Yes, it is XP Home. It is currently SP3 (just recently upgraded from SP2).<br />
+<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">10th August 2008, 16:07</div></div><div class="posttext">Version to work with ipconfig.exe is here:<br />
+<br />
+!include StrFunc.nsh<br />
+<br />
+${StrLoc}<br />
+<br />
+Caption &quot;MAC Test&quot;<br />
+OutFile &quot;macTest.exe&quot;<br />
+<br />
+!define MAC_Address &quot;7A-79-05-EB-3D-66&quot;<br />
+<br />
+Section<br />
+  nsExec::ExecToStack /TIMEOUT=5000 '&quot;$SYSDIR\ipconfig.exe&quot; /all'<br />
+  Pop $0 # return value<br />
+  Pop $1 # console output<br />
+<br />
+  DetailPrint &quot;Exit code: $0&quot;<br />
+  StrCmp $0 &quot;error&quot; End<br />
+<br />
+  StrLen $0 $1<br />
+  DetailPrint &quot;Output length: $0 of ${NSIS_MAX_STRLEN}&quot;<br />
+<br />
+  DetailPrint &quot;Checking MAC address...&quot;<br />
+  ${StrLoc} $0 &quot;$1&quot; &quot;Physical Address. . . . . . . . . : ${MAC_Address}&quot; &quot;&gt;&quot;<br />
+  StrCmp $0 &quot;&quot; MAC_NotFound MAC_Found<br />
+	<br />
+  Mac_Found:<br />
+    MessageBox MB_ICONINFORMATION &quot;MAC was found!&quot;<br />
+    Goto End<br />
+<br />
+  MAC_NotFound:<br />
+    MessageBox MB_ICONSTOP &quot;MAC was not found!&quot;<br />
+    Abort<br />
+<br />
+  End:<br />
+SectionEnd<br />
+<br />
+This should be used with the &quot;Large strings&quot; version of NSIS (download (http://prdownloads.sourceforge.net/nsis/nsis-2.38-strlen_8192.zip?download)), because the output of ipconfig.exe can easily exceed the default string length of 1024 chars. On my system (3 network adapters) for example it does...<br />
+<br />
+EDIT: Updated code, previous code was too slow :p</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ftctran</div><div class="date">11th August 2008, 06:40</div></div><div class="posttext">You guys are awsome.  Thanks a lot for your quick help, especially to LoRd_MuldeR.<br />
+<br />
+I still wonder why the pipe '|' don't work.  Is there a way to make it work with nsis?<br />
+<br />
+For example: <br />
+C:\ipconfig.exe /all | findstr &quot;MyPCName&quot;<br />
+<br />
+FT</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">11th August 2008, 08:18</div></div><div class="posttext">the pipe works, you just have to invoke the command line interpreter, search this forum for COMSPEC for examples probably (read COMSPEC env. then execute $COMSPEC /K foo|bar)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">11th August 2008, 13:49</div></div><div class="posttext">Still I wouldn't invoke the commandline interpreter as long as I can do it my NSIS script natively. I'd even prefer writing my own plugin, instead of relying on the commandline interpreter. It just isn't safe over different Windows versions..</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" InstallLib RunOnce fails on reboot if RegTool was deleted, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  InstallLib RunOnce fails on reboot if RegTool was deleted NSIS Discussion" />
+	
+	<title> InstallLib RunOnce fails on reboot if RegTool was deleted [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  InstallLib RunOnce fails on reboot if RegTool was deleted</div>
+<hr />
+<div class="pda"><a href="t-296508.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=296508">InstallLib RunOnce fails on reboot if RegTool was deleted</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">BuilderBob</div><div class="date">26th August 2008, 16:06</div></div><div class="posttext">I'm using InstallLib to register some dlls.<br />
+<br />
+On XP, while upgrading, if the dll is in-use I can't rename it and install a new one (in Vista it works), so InstallLib automatically adds an entry in HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce so RegTool will register the dll on startup.<br />
+<br />
+If user now uninstalls before rebooting, the RegTool application will be deleted since it's in the install folder. On next startup user will see an error message &quot;Windows cannot find blablabla&quot;.<br />
+<br />
+Can I make it silent in a way other than searching the RunOnce key for values with the path i'm deleting and remove it?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BuilderBob</div><div class="date">27th August 2008, 15:39</div></div><div class="posttext">Meanwhile I deleted from registry everything that I found relevant, with this code:<br />
+<br />
+<br />
+;Delete pending dll upgrades which are no longer relevant, so no error message on XP reboot.<br />
+  StrCpy $0 &quot;NSIS.Library.RegTool.v2&quot;<br />
+  ReadRegStr $1 HKLM &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce&quot; $0<br />
+  ${StrContains} $R2 $OutDir $1 ;Check if pending RegTool is in the folder we've just deleted.<br />
+  ${If} $R2 != &quot;&quot;<br />
+    DeleteRegValue HKLM &quot;SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce&quot; $0<br />
+  ${EndIf}<br />
+  ;Delete RegTool values.<br />
+  StrCpy $R0 0<br />
+  ${Do}<br />
+	EnumRegKey $0 HKLM &quot;SOFTWARE\NSIS.Library.RegTool.v2&quot; $R0<br />
+	${If} $0 != &quot;&quot;<br />
+	  ReadRegStr $1 HKLM &quot;SOFTWARE\NSIS.Library.RegTool.v2\$0&quot; &quot;1.file&quot;<br />
+	  ${StrContains} $R1 $OutDir $1 ;Check for anything that's in the folder we've just deleted<br />
+        ${If} $R1 != &quot;&quot;<br />
+		  DeleteRegKey HKLM &quot;SOFTWARE\NSIS.Library.RegTool.v2\$0&quot;<br />
+		  StrCpy $R0 0<br />
+		  ${Continue}<br />
+        ${EndIf}<br />
+	${EndIf}<br />
+	IntOp $R0 $R0 + 1<br />
+  ${LoopUntil} $0 == &quot;&quot;<br />
+  DeleteRegKey /ifempty HKLM &quot;SOFTWARE\NSIS.Library.RegTool.v2&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zanz</div><div class="date">27th August 2008, 16:39</div></div><div class="posttext">your issue seems very similar to mine. Read this thread: http://forums.winamp.com/showthread.php?s=&amp;threadid=296139</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BuilderBob</div><div class="date">28th August 2008, 08:49</div></div><div class="posttext">Yes, I saw it. I don't want everything to go to $TEMP. What happens if destination is in a different drive than $TEMP?<br />
+<br />
+Unfortunately, I think there's only one RegTool entry in RunOnce for all pending registrations, even those not related to your product, so by deleting this reg value I'm ruining other installations.<br />
+<br />
+Maybe I should copy the regtool i'm about to delete into temp and modify the RunOnce value? Anyone?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">28th August 2008, 09:40</div></div><div class="posttext">Do you need support for Win9x?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BuilderBob</div><div class="date">28th August 2008, 12:13</div></div><div class="posttext">- I support XP onwards.<br />
+- I checked, and the different drive issue is only for whole folders, so no problem there.<br />
+- If I let it use $TEMP, wouldn't dlls reappear after reboot even if the product was uninstalled?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

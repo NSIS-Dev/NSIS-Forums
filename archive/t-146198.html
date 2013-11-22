@@ -1,0 +1,270 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Testing for regkey (not value) existence, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Testing for regkey (not value) existence NSIS Discussion" />
+	
+	<title> Testing for regkey (not value) existence [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Testing for regkey (not value) existence</div>
+<hr />
+<div class="pda"><a href="t-146198.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=146198">Testing for regkey (not value) existence</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">banaman8d</div><div class="date">18th August 2003, 19:37</div></div><div class="posttext">How I can script for the existence of a registry key.<br />
+<br />
+It would be better if there is an easier way to find this information. Because this is ridiculously inefficient.<br />
+<br />
+; takes the root, subkey, and keyname name as arguments on the stack.<br />
+; It pushes onto the stack, 'exists' or<br />
+; otherwise depending on outcome of test.<br />
+Function KeyExists<br />
+  Exch $R0 ;keyname<br />
+  Exch     ; swap keyname and subkey<br />
+  Exch $R1 ;subkey<br />
+  Exch 2   ; swap subkey and key root<br />
+  Exch $R2 ;root<br />
+  Push $R3 ;an index<br />
+  Push $R4 ;stores keyname<br />
+<br />
+  StrCpy $R3 &quot;0&quot; ; initialize a counter<br />
+  <br />
+nextkey:<br />
+  EnumRegKey $R4 HKLM &quot;$R1&quot; $R3<br />
+  IfErrors notexists<br />
+  StrCmp $R4 &quot;&quot; notexists<br />
+  StrCmp $R4 $R0 exists<br />
+  IntOp $R3 $R3 + &quot;1&quot;<br />
+  Goto nextkey<br />
+<br />
+notexists:<br />
+  Push &quot;&quot;<br />
+  Exch 5<br />
+  Goto finish<br />
+<br />
+exists:<br />
+  Push &quot;exists&quot;<br />
+  Exch 5<br />
+  Goto finish<br />
+<br />
+finish:<br />
+  Pop $R0<br />
+  Pop $R4<br />
+  Pop $R3<br />
+  Pop $R2<br />
+  Pop $R1<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">19th August 2003, 01:12</div></div><div class="posttext">I have created a similar function/macro check my archive page.  <br />
+<br />
+Hope it helps you.<br />
+<br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">banaman8d</div><div class="date">19th August 2003, 16:17</div></div><div class="posttext">Did you test that macro?<br />
+<br />
+With the 2 beta 4 NSIS, I get a compilation error on line 5 of the macro when I give it the following:<br />
+<br />
+!insertmacro &quot;HKLM&quot; &quot;Software\Microsoft\Updates\Windows Server 2003\SP1&quot; &quot;KB823980&quot;<br />
+<br />
+The error is:<br />
+Invalid command: LoopReg_Software\Microsoft\Updates\Windows<br />
+<br />
+The spaces create an invalid label, but it is a perfectly legal key.<br />
+<br />
+I have attached a fix for the script...<br />
+but in order to workaround I needed to make the jumps relative to avoid naming problems.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">19th August 2003, 16:41</div></div><div class="posttext">Try placing quotes &quot;&quot; around the jump-to's (not the labels) inside the macro script.<br />
+They should be on just in case anyway.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">19th August 2003, 16:43</div></div><div class="posttext">!macro KeyExists ROOT MAIN_KEY KEY<br />
+Push $R0<br />
+Push $R1<br />
+StrCpy $R1 &quot;0&quot;<br />
+<br />
+LoopReg_${MAIN_KEY}${KEY}:<br />
+EnumRegKey $R0 &quot;${ROOT}&quot; &quot;${MAIN_KEY}&quot; $R1<br />
+StrCmp $R0 &quot;&quot; &quot;NotFoundReg_${MAIN_KEY}${KEY}&quot;<br />
+  IntOp $R1 $R1 + 1<br />
+  StrCmp $R0 ${KEY} 0 &quot;LoopReg_${MAIN_KEY}${KEY}&quot;<br />
+<br />
+FoundReg_${MAIN_KEY}${KEY}:<br />
+Push &quot;1&quot;<br />
+Goto &quot;FinishFindReg_${MAIN_KEY}${KEY}&quot;<br />
+<br />
+NotFoundReg_${MAIN_KEY}${KEY}:<br />
+Push &quot;0&quot;<br />
+<br />
+FinishFindReg_${MAIN_KEY}${KEY}:<br />
+Exch 2<br />
+Exch<br />
+Pop $R1<br />
+Pop $R0<br />
+!macroend<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">banaman8d</div><div class="date">19th August 2003, 18:43</div></div><div class="posttext">I realize that you want to use labels because it is more resilient to modifications in the code, but this macro cannot be used in certain situations because of the uniqueness (or lack of) of the keys.<br />
+<br />
+For instance: <br />
+<br />
+!insertmacro KeyExists A_ROOT A_MAINKEY A_KEY<br />
+; Do something like ExecWait that should modify the key<br />
+...<br />
+; And this will have duplicate labels...<br />
+!insertmacro KeyExists A_ROOT A_MAINKEY A_KEY<br />
+<br />
+I agree with using labels in the name of maintainability, but not at the expense of the efficacy of the macro. If I use the above, I have to remember that it won't work if I use it twice in the same function for the same key. For a small macro like this one, doesn't it make more sense to relax the 'rule' for the benefit of the functionality?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">19th August 2003, 19:43</div></div><div class="posttext">You could use ${__LINE__} to generate unique labels in a macro.<br />
+<br />
+Define the macro like this:<br />
+<br />
+!macro myMacro UNIQUE_ID BLAH_1 BLAH_2<br />
+   ...<br />
+   StrCmp ${BLAH_1} ${BLAH_2} Label_A_${UNIQUE_ID}<br />
+   ...<br />
+   ...<br />
+<br />
+Label_A_${UNIQUE_ID}:<br />
+   ...<br />
+   ...<br />
+!macroend<br />
+<br />
+Then use the macro like this:<br />
+<br />
+!insertmacro myMacro ${__LINE__} $0 $1</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">banaman8d</div><div class="date">19th August 2003, 20:12</div></div><div class="posttext">Thank you for that insight... not only does it solve the uniqueness problem, but it also gives the user the line number of the macro if compilation fails.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">19th August 2003, 20:51</div></div><div class="posttext">Thanks pengyou - that will solve problems with a lot of macros (when wanting to be used multiple times)<br />
+<br />
+Edit: Doesn't work. :(<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">19th August 2003, 21:12</div></div><div class="posttext">Originally posted by Afrow UK <br />
+Edit: Doesn't work. :(Could you give some more detail about what does not work? I have used this idea several times and it never fails to work for me.<br />
+<br />
+Are you trying it in single-file scripts or in scripts which use !include. If you are trying to use it in scripts comprising several source files, you may need to extend the idea slightly (eg combine the line number and the source file name?).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">20th August 2003, 03:56</div></div><div class="posttext">pengyou could you attach a working sample of label commands using {__LINE__}, cos I could not get it to work either.<br />
+<br />
+Mean while I have updated by archive macro as suggested by banaman8d and it seems to work OK.<br />
+<br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">20th August 2003, 11:30</div></div><div class="posttext">Vytautas,<br />
+<br />
+Here is a simple example which works on my Win98SE system. I have included an extract from the compiler output which shows the line number being used to generate unique label names when the macro is &quot;inserted&quot;.<br />
+<br />
+Perhaps you are using a different version of makensis.exe ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">banaman8d</div><div class="date">20th August 2003, 13:21</div></div><div class="posttext">pengyou,<br />
+<br />
+Are you using NSIS 2beta4? I compiled and ran the executable generated by your script and everything appears to work OK.<br />
+But I am using 2beta4.<br />
+<br />
+When did ${__LINE__} get introduced?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">20th August 2003, 13:49</div></div><div class="posttext">Yes, I am using NSIS 2.0b4 with the 11 August 2003 (19:44 GMT) CVS snapshot.<br />
+<br />
+According to the NSIS Changelog ${__LINE__} was introduced on 12 June 2003 (15:09)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">20th August 2003, 14:23</div></div><div class="posttext">Pengyou means to put ${__LINE__} in the !insertmacro, not in the actual labels themselves.<br />
+<br />
+Placing it in labels means that e.g.<br />
+<br />
+Goto line${__LINE__}<br />
+line${__LINE__}:<br />
+<br />
+will be<br />
+<br />
+Goto line1<br />
+line2:<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">20th August 2003, 16:09</div></div><div class="posttext">Use ${__LINE__} in a variable:<br />
+<br />
+StrCpy $0 ${__LINE__}<br />
+Goto line$0<br />
+  MessageBox MB_OK &quot;!&quot;<br />
+line$0:<br />
+<br />
+So you can use it in labels, am I right?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">20th August 2003, 16:28</div></div><div class="posttext">Yes, but that would use up a variable which shouldn't be done (where possible)<br />
+<br />
+But indeed, that is the answer.<br />
+I think that NSIS compiler should somehow add numbers autommaticaly to the macro labels before inserting them.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">banaman8d</div><div class="date">21st August 2003, 16:07</div></div><div class="posttext">That would be great if !insertmacro expanded labels to the line of the !insertmacro statement automatically. However, that may break existing scripts if they were to use macros that use external labels. Like the following:<br />
+<br />
+!macro For Init Cmp Inc<br />
+  Push $R0<br />
+  StrCpy $R0 ${Init}<br />
+next:<br />
+  IntCmp $R0 ${Cmp} 0 0 last<br />
+!macroend<br />
+<br />
+<br />
+!macro ForEnd<br />
+  IntOp $R0 $R0 + ${Inc}<br />
+  Goto next<br />
+last:<br />
+  Pop $R0<br />
+!macroend<br />
+<br />
+<br />
+Used like:<br />
+...<br />
+!insertmacro For 1 10 1<br />
+  DetailPrint &quot;$R0&quot;<br />
+!insertmacro ForEnd<br />
+...<br />
+<br />
+This is a bad way to write a macro like a for loop because you are limited to 1 per function, but you get the idea.<br />
+<br />
+A good compromise is that !insertmacro expands all occurances of ${__EXPANDLINE__} to the line of the !insertmacro. This changes the line:<br />
+<br />
+!insertmacro ${__LINE__} arg1 ...<br />
+<br />
+to,<br />
+<br />
+!insertmacro arg1 ...<br />
+<br />
+and you use ${__EXPANDLINE__} explicitly in the macro labels (if you want to).</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

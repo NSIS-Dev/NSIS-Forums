@@ -1,0 +1,101 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Uninstall and Add/Remove Programs, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Uninstall and Add/Remove Programs NSIS Discussion" />
+	
+	<title> Uninstall and Add/Remove Programs [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Uninstall and Add/Remove Programs</div>
+<hr />
+<div class="pda"><a href="t-129899.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=129899">Uninstall and Add/Remove Programs</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">vpoptom</div><div class="date">27th March 2003, 07:34</div></div><div class="posttext">My uninstaller is quite simple and works great if it is called directly.  But if I access it via Add/Remove Programs, it still works but it freezes the Add/Remove Programs window.  I am using ExecWait in the un.onUninstSuccess function to fire up Internet Explorer with a specific URL after the uninstaller completes.  If I remove that portion, all works fine.  And again, it works fine if called directly, even with the ExecWait call.  But that bloody Add/Remove Programs window freezes up on me if I launch IE at the end.<br />
+<br />
+UPDATE:<br />
+Here is the basic uninstall instruction:<br />
+<br />
+Section &quot;Uninstall&quot;  <br />
+call &quot;un.CloseIE&quot; ; Kill all running IE's<br />
+UNRegDLL &quot;$INSTDIR\my.dll&quot;<br />
+DeleteRegKey HKLM Software\Microsoft\Windows\CurrentVersion\Uninstall\MyProg&quot;<br />
+DeleteRegKey HKLM SOFTWARE\MyProg&quot;<br />
+SectionEnd<br />
+<br />
+Function &quot;un.onUninstSuccess&quot;<br />
+ExecWait &quot;$PROGRAMFILES\Internet Eplorer\iexplore.exe http://www.me.com&quot;<br />
+FunctionEnd<br />
+<br />
+<br />
+Uninstall occurring on WinXP and built using NSIS v1.9<br />
+<br />
+Any suggestions?<br />
+Thanks,<br />
+-tom</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th March 2003, 13:02</div></div><div class="posttext">If you are using ExecWait the installer will wait until you close the Internet Explorer window and so will the add/remove control panel as it's waiting for the installer. You should use ExecWait &quot;open&quot; &quot;http://www.me.com&quot;. This command will not make the installer freeze and will call the user's default browser which will be a bit nicer then forcing him to use IE. If you want to force IE use Exec instead of ExecWait, it should work too.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">vpoptom</div><div class="date">27th March 2003, 16:26</div></div><div class="posttext">I couldn't get ExecWait &quot;open&quot; to work and simply using Exec was causing the same problem.  But I did find a solution based on your answer:<br />
+<br />
+ExecShell open &quot;http://www.me.com&quot;<br />
+<br />
+It indeed opens the user's default browser but that is a better way to go.<br />
+<br />
+Thank you very much!<br />
+<br />
+-tom</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th March 2003, 16:36</div></div><div class="posttext">Heh, meant ExecShell :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jdt2oo7</div><div class="date">13th January 2010, 01:04</div></div><div class="posttext">I ran into the same issue. I just created a sample script to verify the solution posted on this thread, but it doesn't allow me to do anything until I close the internet browser (this was on XP). <br />
+<br />
+On Vista, I click on another application under Add/Remove window then select to uninstall. A message &quot;Please wait until the current program is finished...&quot; is displayed.<br />
+<br />
+===<br />
+<br />
+Function un.onUninstSuccess<br />
+  HideWindow<br />
+  ExecShell open &quot;http://www.yahoo.com&quot;<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">13th January 2010, 02:03</div></div><div class="posttext">as usual, blame MS for this, they are using a job object to wait for all child processes started by the main uninstaller<br />
+<br />
+To work around it, try http://nsis.sourceforge.net/Escape_ARP_Job_With_New_Process but I think the name of the job object has changed, so you might have to use Process Explorer to find the name and adapt the code</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jdt2oo7</div><div class="date">13th January 2010, 20:09</div></div><div class="posttext">Hi Anders,<br />
+<br />
+I have no idea &quot;the name of the job object&quot; that you mention. What should I look for using Process Explorer? Thank for your help!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">13th January 2010, 22:34</div></div><div class="posttext">The lower pane, it should be listed as a handle (there is also a job tab in the properties for the process, not sure if the name is listed there)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jdt2oo7</div><div class="date">17th January 2010, 08:22</div></div><div class="posttext">Don't see it with Process Explorer.<br />
+The name of the job object should be &quot;ARP Job&quot;, I see that in the function. Another forum also says that:<br />
+<br />
+http://community.flexerasoftware.com/showthread.php?t=181670 <br />
+<br />
+Anyone has any idea why it's not working?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">17th January 2010, 10:08</div></div><div class="posttext">Well, either the job name is wrong, or the security for the object is locked down (To find the job object, you look for the handle in the lower pane for the add/remove process, not &quot;your&quot; process)<br />
+<br />
+The other option is to use a out of process COM object, that way you don't have to deal with job objects at all (But you would have to register this COM object etc)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

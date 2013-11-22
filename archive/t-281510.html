@@ -1,0 +1,95 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Need suggestions with script flow to handle service updates, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Need suggestions with script flow to handle service updates NSIS Discussion" />
+	
+	<title> Need suggestions with script flow to handle service updates [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Need suggestions with script flow to handle service updates</div>
+<hr />
+<div class="pda"><a href="t-281510.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=281510">Need suggestions with script flow to handle service updates</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">GregL</div><div class="date">15th November 2007, 21:17</div></div><div class="posttext">Hello,<br />
+<br />
+I've written a patch installer that stops a service, updates it (the EXE), and then restarts the service.  The issue I have with it is the way MUI_PAGE_INSTFILES extracts files BEFORE following any of the directives within the main install section.  So I have a function in front of it to stop the service, and it all works fine, but it then lacks output to the install window.  There's no visual indication of what's going on.  So I have it using the Banner plugin, but I didn't like the appearance of the popup window, and it still lacks output to the details window.<br />
+<br />
+Is there a better way to handle the flow of this and make it look as professional as possible?<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">15th November 2007, 22:24</div></div><div class="posttext">Why not use some hidden sections?<br />
+Section `-Stop service`<br />
+DetailPrint `Stopping service...`<br />
+services::SendServiceCommand stop myservice<br />
+SectionEnd<br />
+<br />
+Section `blah blah 1`<br />
+...<br />
+SectionEnd<br />
+<br />
+Section `blah blah 2`<br />
+...<br />
+SectionEnd<br />
+<br />
+Section `-Start service`<br />
+DetailPrint `Starting service...`<br />
+services::SendServiceCommand start myservice<br />
+SectionEndStu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GregL</div><div class="date">19th November 2007, 15:23</div></div><div class="posttext">Thanks for the reply.  I guess I learned something new with the hidden flags but it still exhibited the same behavior.  <br />
+<br />
+It gets to MUI_PAGE_INSTFILES and then runs the hidden sections, regardless of whatever order you put them in.  Naturally, the file is still locked via the service and the update fails.<br />
+<br />
+I also don't have whatever plugin you are referencing for the service controls.  I'm running:<br />
+nsExec::ExecToLog &quot;NET STOP MyService&quot;<br />
+(I just upgraded to 2.33, and the main NSIS site is not working so well at the moment so I couldn't lookup the service plugin.)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">19th November 2007, 19:00</div></div><div class="posttext">Unless you have more than one InstFiles page your sections will be executed in the order that they are presented in your script. By the way, when you stop a service, locked files can still be locked for a number of seconds afterwards. You could just use a Sleep ####, or use this method (http://forums.winamp.com/showthread.php?threadid=278133) (use the a (append) flag rather than w (write) on FileOpen though).<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Lazik</div><div class="date">20th November 2007, 01:39</div></div><div class="posttext">Hi,<br />
+I'm sorry to have this off-topic question, but It would help me If someone would answear..<br />
+<br />
+Is there some plugin like used by Afrow UK in the example, or is it just some nonsense text just for example purpose?<br />
+<br />
+And is there any way to get service status? I use &quot;ExecWait mytest.bat $R0&quot; - the batch file contains code <br />
+NET START | FIND &quot;my service&quot; <br />
+- It's a bit clumsy :/ works fine for Installer part, but doesn't work for Uninstaller part :/ I have no idea why..</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">20th November 2007, 08:48</div></div><div class="posttext">Use the services plugin.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GregL</div><div class="date">20th November 2007, 14:25</div></div><div class="posttext">Thanks for your help, Stu, but some of this still doesn't make sense.  For example, your first idea to use hidden sections.  As far as I can tell, using that approach, the DetailPrint stuff goes off into limbo.  If it's &quot;hidden&quot;, where is that text printed?  I'm using the MUI stuff and I'm not sure where to put the MUI_PAGE_INSTFILES in among your example.  The irritating part of MUI_PAGE_INSTFILES is that it extracts your files as the very first thing it does.  I'm not aware of that being configurable.  I'm doing all of this in the name of good user experience.  I want the little output window of the installer to show me everything that's going on.  I had also tried the Banner plugin, but I didn't like the placement of text and presence of the installer icon (even though I have created my own icon).  Aside from that, I have a fully-functioning installer.<br />
+<br />
+Now for my nitpicks.<br />
+Stu's example makes use of some Service plugin with certain syntax.  (Stu, where's a link to that?)  I found NSIS_Service_Lib (http://nsis.sourceforge.net/NSIS_Service_Lib) but the code in the wiki makes extreme use of span tags to color the code and cutting and paste creates a nightmare.  Fortunately, you can edit the article and pull the code from the edit box.  I found the Simple Service plugin which seemed similar.  Apparently several coders all have a different approach to handling services as I've seen about 5 different ways to handle them now.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">20th November 2007, 17:35</div></div><div class="posttext">Maybe if you posted your code we could see exactly what the problem is. Hidden sections are simply hidden from the components page.<br />
+<br />
+Stu's example makes use of some Service plugin with certain syntax. (Stu, where's a link to that?)<br />
+First link at the top of this page:<br />
+http://nsis.sourceforge.net/How_do_I_start/stop/create/remove/check_a_service<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

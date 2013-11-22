@@ -1,0 +1,130 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Find a directory with a filename, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Find a directory with a filename NSIS Discussion" />
+	
+	<title> Find a directory with a filename [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Find a directory with a filename</div>
+<hr />
+<div class="pda"><a href="t-67601.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=67601">Find a directory with a filename</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jma</div><div class="date">4th December 2001, 09:11</div></div><div class="posttext">I just discovered NSIS last week and I want to deploy it for an upgrade of our application.<br />
+<br />
+The application can be in any directory on the system and it has no entries in the registery. The only thing I know are the names of the files wich are installed. <br />
+Is there a way to find the name of the directory with only the filename.<br />
+<br />
+I tried &quot;GETFULLPATHNAME&quot; but then I need to specify the path with the filename. <br />
+<br />
+Thanks.<br />
+<br />
+Jma.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AndiG</div><div class="date">4th December 2001, 09:43</div></div><div class="posttext">This installer performs a depth-first search: you can use it to find your files...<br />
+<br />
+Name &quot;Find Files&quot;<br />
+OutFile &quot;Find Files.exe&quot;<br />
+Caption &quot;Find Files&quot;<br />
+<br />
+; Use Show to let user see directories that are scanned<br />
+ShowInstDetails Show<br />
+<br />
+ComponentText &quot;Check he drives where you want the installer to scan for files.&quot; &quot;&quot; &quot;Select drives to scan:&quot;<br />
+<br />
+; One section to scan drive C<br />
+Section &quot;Drive C:&quot;<br />
+  ; set search root directory, omit the trainling backslash<br />
+  StrCpy $9 &quot;C:&quot;<br />
+  ; start searching<br />
+  Call FindFiles<br />
+SectionEnd<br />
+<br />
+; One section to scan drive D<br />
+Section &quot;Drive D:&quot;<br />
+  ; set search root directory, omit the trainling backslash<br />
+  StrCpy $9 &quot;D:&quot;<br />
+  ; start searching<br />
+  Call FindFiles<br />
+SectionEnd<br />
+<br />
+Function FindFiles<br />
+<br />
+GoAgain:<br />
+         ; look for any files or directories<br />
+         FindFirst $0 $1 &quot;$9\*.*&quot;<br />
+         IfErrors NotFound<br />
+<br />
+         DoFindNext:<br />
+                 StrCmp $1 &quot;.&quot; SkipFile<br />
+                 StrCmp $1 &quot;..&quot; SkipFile<br />
+<br />
+                 StrCmp $1 &quot;readme.txt&quot; &quot;&quot; CheckDirectory<br />
+                 ; perform some action here, ie. replace the readme.txt file<br />
+<br />
+         CheckDirectory:<br />
+                 ; check if the current file actually is a subdirectory<br />
+                 IfFileExists &quot;$9\$1\*.*&quot; &quot;&quot; SkipFile<br />
+                 ; remember on stack<br />
+                 Push &quot;$9\$1&quot;<br />
+                 DetailPrint &quot;$9\$1&quot;<br />
+<br />
+         SkipFile:<br />
+                 ; continue with next file in current directory<br />
+                 ClearErrors<br />
+                 FindNext $0 $1<br />
+                 IfErrors &quot;&quot; DoFindNext<br />
+<br />
+         ; no more file in current directory<br />
+         FindClose $0<br />
+         NotFound:<br />
+<br />
+         ; check if we found any subdirectories<br />
+         Pop $9<br />
+         IfErrors &quot;&quot; GoAgain<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jma</div><div class="date">6th December 2001, 12:53</div></div><div class="posttext">Thanks!<br />
+<br />
+Just what I needed .<br />
+:cool:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Angry Weasel</div><div class="date">6th December 2001, 14:03</div></div><div class="posttext">If you make a full installer for your product in NSIS, make sure you do the following to avoid this dilemma:<br />
+<br />
+; This will write a registry string with the path to your product.<br />
+; You can use HKEY_LOCAL_MACHINE instead of HKLM if you wanna be<br />
+; difficult.<br />
+<br />
+WriteRegStr HKLM &quot;SOFTWARE\CompanyName\ProductName&quot; &quot;InstPath&quot; &quot;$INSTDIR&quot;<br />
+; Obviously, unless your product is called &quot;ProductName&quot; and your company called &quot;CompanyName&quot; you're gonna need to change it to the name of your product and company. :)<br />
+<br />
+<br />
+<br />
+And when you want to make an upgrade for your product, use this:<br />
+<br />
+; This will read your product's install path to the user variable $5<br />
+; Why $5? Because I like 5.<br />
+<br />
+ReadRegStr $5 HKLM &quot;SOFTWARE\CompanyName\ProductName&quot; &quot;InstPath&quot;<br />
+<br />
+<br />
+You can then use InstallDir in the following way<br />
+<br />
+InstallDir &quot;$5&quot;<br />
+<br />
+in order to install the upgrade to the same directory.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

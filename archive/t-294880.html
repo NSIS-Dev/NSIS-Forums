@@ -1,0 +1,166 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" FileLocked or FileInUse, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  FileLocked or FileInUse NSIS Discussion" />
+	
+	<title> FileLocked or FileInUse [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  FileLocked or FileInUse</div>
+<hr />
+<div class="pda"><a href="t-294880.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=294880">FileLocked or FileInUse</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">zanz</div><div class="date">21st July 2008, 20:25</div></div><div class="posttext">Searching these forums, I've haven't gotten a clear answer to this question:<br />
+<br />
+How or what's the best way to detect a file that's locked by Windows or in use by another process?<br />
+<br />
+Is there anything equivalent to IsFileLocked? or IsFileInUse in NSIS? that would return true or false depending if the file is locked or not? Any plugins (I couldn't find a built in function in the documentation either).<br />
+<br />
+If there are no docs or plug-ins, then any guidance would be really appreciated on how i can get status of a file before uninstalling or upgrading the product.<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">21st July 2008, 20:36</div></div><div class="posttext">I think this code should be enough:<br />
+<br />
+ClearErrors<br />
+FileOpen $0 &quot;$INSTDIR\Filename.foo&quot; a<br />
+IfErrors FileIsLocked<br />
+FileClose $0<br />
+Goto FileIsNotLocked<br />
+<br />
+FileIsLocked:<br />
+...<br />
+<br />
+FileIsNotLocked<br />
+...<br />
+<br />
+You could create a simple macro:<br />
+<br />
+!define IfFileLocked &quot;!insertmacro _IfFileLocked&quot;<br />
+<br />
+!macro _IfFileLocked label<br />
+  ClearErrors<br />
+  FileOpen $0 &quot;$INSTDIR\Filename.foo&quot; a<br />
+  IfErrors ${label}<br />
+  FileClose $0<br />
+!macroend<br />
+<br />
+[...]<br />
+<br />
+Section<br />
+  ${IfFileLocked} &quot;$INSTDIR\Filename.foo&quot; FileLocked<br />
+<br />
+  [...]<br />
+<br />
+  FileLocked:<br />
+  ...<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">21st July 2008, 21:15</div></div><div class="posttext">The LockedList plug-in (http://nsis.sf.net/LockedList_plug-in) may be handy.<br />
+<br />
+Another option also is to replace files on reboot if they cannot be replaced there and then:<br />
+<br />
+  !macro InstallOnReboot Source Destination<br />
+    SetFileAttributes `${Destination}` NORMAL<br />
+    File `/oname=${Destination}.new` `${Source}`<br />
+    Delete /rebootok `${Destination}`<br />
+    Rename /rebootok `${Destination}.new` `${Destination}`<br />
+  !macroend<br />
+<br />
+<br />
+!insertmacro InstallOnReboot file.exe $INSTDIR\file.exe<br />
+<br />
+The MUI finish page will automatically have reboot now/reboot later options if the reboot flag gets set. Notice the SetFileAttributes. This allows files with hidden+system attributes to be overwritten.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zanz</div><div class="date">21st July 2008, 22:41</div></div><div class="posttext">Thanks Stu,<br />
+<br />
+Very useful suggestions. I'm going to test out each one of those options. I might have additional questions, but thanks so much for helping me out.<br />
+Zan</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zanz</div><div class="date">22nd July 2008, 00:17</div></div><div class="posttext">I noticed that Processes::FindProcess &quot;MyProcessName&quot; can also find a process that's running.<br />
+<br />
+How reliable is the 'Process' plug-in, VS writing a function suggested by LoRd_MuldeR, and Stu?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">22nd July 2008, 00:21</div></div><div class="posttext">Well, Processes::FindProcess will find a running processes of a given name, while the functions suggested in this threads will check write-access to a given file. These are two completely different things! If you want to overwrite/replace a specific file, then you should check for write-access to this file. The file might be locked by some process you don't even know about! If you want to check whether a certain process is running or not, then use Processes::FindProcess instead...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zanz</div><div class="date">22nd July 2008, 00:31</div></div><div class="posttext">Oh,okay...In that case I guess what I'm looking for is FindProcess. What I need to implement is to check if one of the executables of our software is running when the user:<br />
+1) Uninstalls<br />
+2) Upgrades/ or a patch install is launched.<br />
+<br />
+In case if the executable/process is running, we'll prompt the user that &quot;MyProcessName&quot; is running. The user will need to quit the executable/process before 'Uninstalling' or Upgrading or press a button (i.e. 'Ignore') and we'll kill the process automatically.<br />
+<br />
+If FindProcess can find a process with the given name, then Iâ€™ll just add the logic in a function to kill the process automatically if the user chooses that option. FindProcess is something I was looking for. I do not need to modify a locked file. <br />
+Thanks so much for the input!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">22nd July 2008, 00:35</div></div><div class="posttext">Yes, it seems that Processes::FindProcess is able to do what you want to achieve. Just keep in mind that the user might have renamed the executable file (.exe) to something else. In that case the process would also have a different name! So you cannot find it with Processes::FindProcess any more. The process might be running and your installer won't notice...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zanz</div><div class="date">22nd July 2008, 00:44</div></div><div class="posttext">Thanks LoRd_MuldeR, you're absolutely correct about renaming part. We'll be at the mercy of user not renaming the executable. But FindProcess is exactly what I was looking for. Life is a lot easier with it. Thanks so much for helping me out.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">22nd July 2008, 00:54</div></div><div class="posttext">You could register a custom message using RegisterWindowMessage (http://msdn.microsoft.com/en-us/library/ms644947(VS.85).aspx). Your application would listen for that message and exit immediately when the message is received. So your installer would simply broadcast that message to all processes and it can be sure your application will exit, if running. This will still work if the executable/process was renamed. Only problem I see is: The application might be busy or in an erroneous state. In that case it can't react to message immediately, maybe it won't exit at all. Maybe you combine both methods to be sure? First broadcast the message, then wait for a certain timeout and finally search/kill the process with the Processes plugin...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">LoRd_MuldeR</div><div class="date">22nd July 2008, 02:12</div></div><div class="posttext">If you just want to check whether an application is running or not, the best way is using a named Mutex by calling CreateMutex (http://msdn.microsoft.com/en-us/library/ms682411(VS.85).aspx). Your application will create the named mutex at startup. It will destroy the mutex implicitly at termination. Your installer can simply try to create the same Mutex and it will get ERROR_ALREADY_EXISTS in case the application is running. I implemented that method several times to make sure only one instance of my application or installer is running at a time...<br />
+<br />
+This macro will prevent multiple instances of your installer:<br />
+<br />
+!define MUTEX &quot;{083f1034-700a-4109-ae41-e36e97d618c2}&quot;<br />
+<br />
+!macro CheckInstances skip<br />
+  !define ID ${__LINE__}<br />
+  Push $0<br />
+  <br />
+  System::Call 'kernel32::CreateMutexA(i 0, i 0, t &quot;${MUTEX}&quot;) i .r1 ?e'<br />
+  Pop $0<br />
+<br />
+  StrCmp $0 0 InstallerNotRunningYet_${ID}<br />
+<br />
+  MessageBox MB_OK|MB_ICONEXCLAMATION|MB_TOPMOST &quot;$(AlreadyRunning)&quot;<br />
+  Quit<br />
+   <br />
+  InstallerNotRunningYet_${ID}:<br />
+  Pop $0<br />
+  !undef ID<br />
+!macroend<br />
+<br />
+Should be easy to adapt to check for a running application...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">22nd July 2008, 12:35</div></div><div class="posttext">Just to let you know none of the processes plug-ins (such as FindProcDll or Processes) work on Vista. I have not tested LockedList on Vista (had better though!)<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zanz</div><div class="date">22nd July 2008, 17:18</div></div><div class="posttext">LoRd_MuldeR, I will be looking into the macro you wrote. Thanks!<br />
+<br />
+Stu,<br />
+I haven't tested the installer on Vista yet either, but Process::FindProcess works well on XP.<br />
+<br />
+So you're 100% that it won't work on Vista? (I will test it sometime today).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">22nd July 2008, 17:48</div></div><div class="posttext">Although I have not tried it myself, you can search the forum and you will find a few topics.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" CoCreateInstanceEx sample, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  CoCreateInstanceEx sample NSIS Discussion" />
+	
+	<title> CoCreateInstanceEx sample [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  CoCreateInstanceEx sample</div>
+<hr />
+<div class="pda"><a href="t-304498.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=304498">CoCreateInstanceEx sample</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ExEyer</div><div class="date">23rd March 2009, 12:08</div></div><div class="posttext">Hi,<br />
+<br />
+Is there any sample of usage  System::Call &quot;ole32::CoCreateInstanceEx&quot; ?<br />
+<br />
+I have some troubles with passing COSERVERINFO and MULTI_QI structures.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">23rd March 2009, 12:41</div></div><div class="posttext">So you want to use a COM object on a remote machine?<br />
+<br />
+You need to allocate those structs with System::Call '*( ........ )i.r0 or something like that (change ..... to the actual members of the struct, use i for DWORD's and pointers)<br />
+<br />
+Post some of the code you already have...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ExEyer</div><div class="date">23rd March 2009, 12:55</div></div><div class="posttext">Yes, I need make a remote call to another DCOM server.<br />
+<br />
+Here is the my sample code:<br />
+<br />
+; COSERVERINFO struct<br />
+    System::Alloc 16<br />
+    pop $3<br />
+<br />
+; MULTI_QI struct<br />
+    System::Alloc 12<br />
+    pop $4<br />
+    <br />
+    System::Call &quot;ole32::CoCreateInstanceEx( \<br />
+        g '${CLSID_PRNWATCH}', *i 0, \<br />
+        i ${CLSCTX_REMOTE_SERVER}, \<br />
+        *(i 0, t 'localhost', *i 0, i 0)i.r3 \<br />
+        i 1, \<br />
+        *(g 'GUID_IPRNWATCHSERVER', *i.r0, i 0)i.r4) \<br />
+        i.r1&quot;<br />
+<br />
+I have got in #1 0x80070057 error - The parameter is incorrect. <br />
+<br />
+CLSID_PRNWATCH and GUID_IPRNWATCHSERVER are correct values. It works fine with System::Call &quot;ole32::CoCreateInstance&quot;.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">23rd March 2009, 13:08</div></div><div class="posttext">you can't init the struct IN the call to the function.<br />
+<br />
+you need to do System::Call '*$3(i 0,.....)' before calling CoCreateInstanceEx<br />
+<br />
+See http://nsis.sourceforge.net/System_plug-in_readme#Setting_Data</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ExEyer</div><div class="date">23rd March 2009, 13:39</div></div><div class="posttext">Thank you for your help.<br />
+Unfortunately, the same error (The parameter is incorrect) with this code:<br />
+<br />
+    System::Alloc 16<br />
+    pop $3<br />
+    System::Alloc 12<br />
+    pop $4<br />
+    <br />
+    System::Call *$3(i 0, t 'localhost', i 0, i 0)<br />
+    System::Call *$4(g '${GUID_IPRNWATCHSERVER}', *i .r0, i 0)<br />
+    <br />
+    System::Call &quot;ole32::CoCreateInstanceEx( \<br />
+        g '${CLSID_PRNWATCH}', *i 0, \<br />
+        i ${CLSCTX_REMOTE_SERVER}, \<br />
+        i .r3, \<br />
+        i 1, \<br />
+        i .r4) \<br />
+        i.r1&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">23rd March 2009, 13:49</div></div><div class="posttext">&quot;i .r3&quot; means output in r3, remove the .<br />
+<br />
+also, in System::Call *$4(g '${GUID_IPRNWATCHSERVER}', *i .r0, i 0), the *i part does not look right to me, i 0 might be enough</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ExEyer</div><div class="date">23rd March 2009, 13:59</div></div><div class="posttext">So how can I take the output IUnknown in MULTI_QI?<br />
+<br />
+If I change - <br />
+<br />
+System::Call *$4(g '${GUID_IPRNWATCHSERVER}', *i .r0, i 0)<br />
+<br />
+to<br />
+<br />
+System::Call *$4(g '${GUID_IPRNWATCHSERVER}', i 0, i 0)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">23rd March 2009, 14:51</div></div><div class="posttext">without looking it up in msdn again, IIRC its a IUnknown*, so its just 4 bytes, after the call to CoCreateInstanceEx returns, those 4 bytes in the struct should now contain the address of the interface<br />
+<br />
+If you can give me the CLSID and IID of something that would exist on a default XP install, I could maybe come up with some working code if you can't make it work. But first, test again without the . in .r3</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ExEyer</div><div class="date">23rd March 2009, 15:01</div></div><div class="posttext">Thank a lot!<br />
+You can use this object - <br />
+<br />
+!define CLSID_ActiveDesktop {75048700-EF1F-11D0-9888-006097DEACF9}<br />
+!define IID_IActiveDesktop {F490EB00-1240-11D1-9888-006097DEACF9}<br />
+<br />
+It presents in default XP system and works fine for CoCreateInstance.<br />
+<br />
+I have changed .r -&gt; r, but without any success.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">23rd March 2009, 16:02</div></div><div class="posttext">I don't think IActiveDesktop supports running as anything other than inprocess</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ExEyer</div><div class="date">23rd March 2009, 16:11</div></div><div class="posttext">You can use CLSCTX_INPROC_SERVER for CoCreateInstanceEx in this case.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">23rd March 2009, 16:18</div></div><div class="posttext">Originally posted by ExEyer <br />
+You can use CLSCTX_INPROC_SERVER for CoCreateInstanceEx in this case.  <br />
+<br />
+and that is pointless, the problem here is getting the structs to work, I was hoping I could test on my machine by just using \\machinename, but I need a COM object I can use first.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ExEyer</div><div class="date">23rd March 2009, 17:29</div></div><div class="posttext">I do not think that it is CLSCTX_INPROC_SERVER/CLSCTX_REMOTE_SERVER problem. So it can be tested with inproc server, i.e. IActiveDesktop.<br />
+<br />
+Anyway, I cannot find any standard DCOM server in default Windows XP. I can create DCOM Test Server and upload it.<br />
+Let me know if you need it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">23rd March 2009, 17:41</div></div><div class="posttext">clearly it could not be tested with inproc, getting inproc to work is easy. <br />
+<br />
+Anyway, I got it working now. It uses a undocumented Windows Messenger interface (probably XP only)<br />
+<br />
+<br />
+Section<br />
+!include LogicLib.nsh<br />
+<br />
+!define CLSCTX_REMOTE_SERVER 0x10<br />
+<br />
+System::Call &quot;kernel32::GetComputerNameA(t .r9,*i ${NSIS_MAX_STRLEN} )i&quot;<br />
+!define REMOTEMACHINE &quot;\\$9&quot; ;&quot;\\MACHINENAME&quot;<br />
+<br />
+System::Call '*(g &quot;{7C95459B-C8E7-4605-B641-45EB06866659}&quot;,i0,i0)i.R0' ;MULTI_QI<br />
+System::Call '*(i0,w &quot;${REMOTEMACHINE}&quot;,i0,i0)i.R1' ;COSERVERINFO<br />
+System::Call 'ole32::CoCreateInstanceEx( \<br />
+	g &quot;{AB1D8565-40E9-4616-984D-98465687E82C}&quot;,i0,i ${CLSCTX_REMOTE_SERVER},i R1,i1,i R0)i.s'<br />
+pop $0<br />
+DetailPrint CoCreateInstanceEx=$0<br />
+System::Free $R1<br />
+${If} $0 = 0<br />
+	System::Call *$R0(i,i.r0,i.r1)<br />
+	DetailPrint &quot;IFace*=$0 hr=$1&quot;<br />
+	${If} $1 = 0<br />
+		;use interface here<br />
+		System::Call &quot;$0-&gt;2()&quot; ;Release<br />
+	${EndIf}<br />
+${EndIf}<br />
+System::Free $R0<br />
+<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ExEyer</div><div class="date">23rd March 2009, 17:51</div></div><div class="posttext">Could you please send the full nsi file?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">23rd March 2009, 17:58</div></div><div class="posttext">why? all the important parts are right there in the sample code</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ExEyer</div><div class="date">23rd March 2009, 18:02</div></div><div class="posttext">I have Access violation in your sample. I think I made some mistake in my code.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ExEyer</div><div class="date">23rd March 2009, 20:43</div></div><div class="posttext">Now it's working.<br />
+My mistake was using <br />
+System::Call 'ole32::CoCreateInstanceEx(g '${CLSID_PRNWATCH}', ...)' <br />
+<br />
+instead <br />
+System::Call 'ole32::CoCreateInstanceEx(g &quot;${CLSID_PRNWATCH}&quot;, ...)' <br />
+<br />
+Thank you Anders!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

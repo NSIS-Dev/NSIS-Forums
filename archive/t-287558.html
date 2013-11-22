@@ -1,0 +1,254 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problems with InstDrv Plugin, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problems with InstDrv Plugin NSIS Discussion" />
+	
+	<title> Problems with InstDrv Plugin [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problems with InstDrv Plugin</div>
+<hr />
+<div class="pda"><a href="t-287558.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=287558">Problems with InstDrv Plugin</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">OrBiTaL</div><div class="date">25th February 2008, 14:17</div></div><div class="posttext">Hello,<br />
+<br />
+I've made an installer using InstDrv plugin, but I had some issues.<br />
+<br />
+First, the driver I'm trying to install is a virtual device, a display mirror driver. I'm not the one who developed it, but I think it may have some bugs (I'll explain later in this post).<br />
+<br />
+I've managed to make it install the driver (InitDriverSetup &gt; CreateDevice &gt; InstallDriver), but the function &quot;CountDevices&quot; don't find the installed device, the function &quot;DeleteOemInfFiles&quot; don't delete the INF files and the function &quot;RemoveAllDevices&quot; don't remove the installed devices.If I call &quot;InstallDriver&quot; with a previous driver installed, it updates the driver.<br />
+<br />
+I don't know if this plugin has a bug, since I saw many people reporting problems with it, but the most problems were with the installation, and this is working here. But the problem might be in the driver. I tryed to edit the INF to find any possible bug, but I'm not familiar with driver development.<br />
+<br />
+Here are the codes from INF and the part of my code that Install the driver:<br />
+<br />
+PS: I made some comments with URLs in the INF to help me debug it.<br />
+<br />
+<br />
+    # Initialization<br />
+    InstDrv::InitDriverSetup /NOUNLOAD &quot;{4D36E968-E325-11CD-BFC1-08002BE10318}&quot; &quot;CxDD_Mirror_Display1&quot;<br />
+    Pop $0<br />
+    DetailPrint &quot;Driver Setup Initiated&quot;<br />
+    <br />
+    # Check if there is any device already installed<br />
+    InstDrv::CountDevices /NOUNLOAD<br />
+    Pop $0<br />
+    DetailPrint &quot;Devices Found: $0&quot;<br />
+    StrCmp $0 &quot;0&quot; Continue Remove<br />
+    <br />
+  Remove:<br />
+    # Remove all instances of the Driver<br />
+    InstDrv::RemoveAllDevices /NOUNLOAD<br />
+    Pop $0<br />
+    StrCmp $0 &quot;00000000&quot; +4 +1<br />
+    <br />
+    DetailPrint &quot;Old Devices: Could not remove [Code: $0]&quot;<br />
+    MessageBox MB_OK &quot;Error removing old devices&quot;<br />
+    Goto Finish<br />
+    <br />
+    DetailPrint &quot;Old Devices: Removed&quot;<br />
+<br />
+  Continue:<br />
+    # Delete previous Driver INF and PNF files (stored by Windows on INF folder)<br />
+    InstDrv::DeleteOemInfFiles /NOUNLOAD<br />
+    Pop $0<br />
+    StrCmp $0 &quot;00000103&quot; +4 +1<br />
+    <br />
+    DetailPrint &quot;Old INF Files: Could not remove [Code: $0]&quot;<br />
+    MessageBox MB_OK &quot;Error removing old INF files&quot;<br />
+    Goto Finish<br />
+    <br />
+    Pop $1<br />
+    Pop $2<br />
+    DetailPrint &quot;Old INF Files: Removed ($1, $2)&quot;<br />
+    <br />
+    # Create the device<br />
+    InstDrv::CreateDevice /NOUNLOAD<br />
+    Pop $0<br />
+    StrCmp $0 &quot;00000000&quot; +4 +1<br />
+    <br />
+    DetailPrint &quot;New Device: Could not create [Code: $0]&quot;<br />
+    MessageBox MB_OK &quot;Error creating Device&quot;<br />
+    Goto Finish<br />
+    <br />
+    DetailPrint &quot;New Device: created&quot;<br />
+    <br />
+    # Install the Driver and check if a reboot is needed<br />
+    DetailPrint &quot;Installing driver from: $INSTDIR\Driver\CxDD.inf&quot;<br />
+    InstDrv::InstallDriver /NOUNLOAD &quot;$INSTDIR\Driver\CxDD.inf&quot;<br />
+    Pop $0<br />
+    StrCmp $0 &quot;00000000&quot; +4 +1<br />
+    <br />
+    DetailPrint &quot;New device driver: Not installed [Code: $0]&quot;<br />
+    MessageBox MB_OK &quot;Error installing driver&quot;<br />
+    Goto Finish<br />
+  <br />
+    DetailPrint &quot;New device driver: Installed&quot;<br />
+    <br />
+    # Check if a reboot is needed<br />
+    Pop $0<br />
+    StrCmp $0 &quot;0&quot; Finish<br />
+    DetailPrint &quot;Reboot Needed&quot;<br />
+    SetRebootFlag true<br />
+  <br />
+  Finish:<br />
+    # Count how many Devices are present now<br />
+    InstDrv::CountDevices /NOUNLOAD<br />
+    Pop $0<br />
+    DetailPrint &quot;Devices Found After Install: $0&quot;<br />
+<br />
+<br />
+<br />
+<br />
+; CxDD.inf<br />
+;<br />
+; Installation inf for the CxDD Mirror graphics adapter.<br />
+;<br />
+; Copyright (c) 2006 VAT Tecnologia da Informacao. All rights reserved<br />
+;<br />
+; http://msdn2.microsoft.com/en-us/library/ms790223.aspx<br />
+;<br />
+<br />
+[Version]<br />
+Signature=&quot;$CHICAGO$&quot;<br />
+Provider=%Company%<br />
+Class=Display<br />
+ClassGUID={4D36E968-E325-11CE-BFC1-08002BE10318}<br />
+DriverVer=01/31/2006,1.0.0.2<br />
+;CatalogFile=CxDD.cat ; Used by WHQL Digital Signatures<br />
+<br />
+[DestinationDirs]<br />
+; Section = DirID<br />
+DefaultDestDir = 11<br />
+cxdd.Display   = 11  ; system32<br />
+cxdd.Miniport  = 12  ; drivers<br />
+<br />
+;<br />
+; Driver information<br />
+;<br />
+<br />
+[Manufacturer]<br />
+; http://msdn2.microsoft.com/en-us/library/ms794359.aspx<br />
+; Manufacturer = Models Section [,TargetOSVersion] [,TargetOSVersion] ...<br />
+; TargetOSVersion = NT[Architecture][.[OSMajorVersion][.[OSMinorVersion][.[ProductType][.SuiteMask]]]] (WinXP and Later)<br />
+%Company%   = CxDD.Mfg<br />
+<br />
+[CxDD.Mfg]<br />
+; http://msdn2.microsoft.com/en-us/library/ms794357.aspx<br />
+; device-description = install-section-name,hw-id[,compatible-id...]<br />
+%CxDD% = CxDD_Inst, CxDD_Mirror_Display1<br />
+<br />
+;<br />
+; General installation section<br />
+;<br />
+<br />
+[CxDD_Inst]<br />
+; http://msdn2.microsoft.com/en-us/library/ms794553.aspx<br />
+CopyFiles = CxDD.Miniport, CxDD.Display<br />
+<br />
+;<br />
+; File List sections<br />
+;<br />
+<br />
+[CxDD.Miniport]<br />
+CxDD.sys<br />
+<br />
+[CxDD.Display]<br />
+CxDD.dll<br />
+<br />
+;<br />
+; Service Installation<br />
+;<br />
+<br />
+[CxDD_Inst.Services]<br />
+; http://msdn2.microsoft.com/en-us/library/ms794347.aspx<br />
+; http://msdn2.microsoft.com/en-us/library/ms794559.aspx<br />
+; AddService = ServiceName,[flags],service-install-section[,event-log-install-section[,[EventLogType][,EventName]]]...<br />
+AddService = cxdd, 0x00000002, CxDD_Service_Inst, CxDD_EventLog_Inst<br />
+<br />
+<br />
+[CxDD_Service_Inst]<br />
+DisplayName    = %CxDD.SvcName%     ; Friendly Name<br />
+Description    = %CxDD.SvcDesc%     ; Longer description<br />
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER<br />
+StartType      = 1                  ; SERVICE_SYSTEM_START<br />
+ErrorControl   = 0                  ; SERVICE_ERROR_IGNORE<br />
+LoadOrderGroup = Video<br />
+ServiceBinary  = %12%\CxDD.sys<br />
+<br />
+[CxDD_EventLog_Inst]<br />
+AddReg = CxDD_EventLog_AddReg<br />
+<br />
+[CxDD_EventLog_AddReg]<br />
+HKR,,EventMessageFile,0x00020000,&quot;%SystemRoot%\System32\IoLogMsg.dll;%SystemRoot%\System32\drivers\CxDD.sys&quot;<br />
+HKR,,TypesSupported,0x00010001,7<br />
+<br />
+;<br />
+; Software Installation<br />
+;<br />
+<br />
+[CxDD_Inst.SoftwareSettings]<br />
+; http://msdn2.microsoft.com/en-us/library/ms801089.aspx<br />
+AddReg = CxDD_SoftwareDeviceSettings<br />
+<br />
+[CxDD_SoftwareDeviceSettings]<br />
+HKR,, MirrorDriver,                %REG_DWORD%,    1<br />
+HKR,, InstalledDisplayDrivers,     %REG_MULTI_SZ%, cxdd<br />
+HKR,, VgaCompatible,               %REG_DWORD%,    0<br />
+HKR,, Attach.ToDesktop,            %REG_DWORD%,    1<br />
+<br />
+[CxDD_Inst.OpenGLSoftwareSettings]<br />
+AddReg = CxDD_OpenGLSoftwareSettings<br />
+<br />
+[CxDD_OpenGLSoftwareSettings]<br />
+; Not currently used:<br />
+<br />
+<br />
+[CxDD_Inst.GeneralConfigData]<br />
+MaximumNumberOfDevices    = 1<br />
+KeepExistingDriverEnabled = 1<br />
+<br />
+;<br />
+; Source file information<br />
+;<br />
+<br />
+[SourceDisksNames.x86]<br />
+1 = %DiskId%,,,&quot;&quot;<br />
+<br />
+[SourceDisksFiles]<br />
+cxdd.sys = 1<br />
+cxdd.dll = 1<br />
+<br />
+[Strings]<br />
+<br />
+;<br />
+; Non-Localizable Strings<br />
+;<br />
+REG_SZ         = 0x00000000<br />
+REG_MULTI_SZ   = 0x00010000<br />
+REG_EXPAND_SZ  = 0x00020000<br />
+REG_BINARY     = 0x00000001<br />
+REG_DWORD      = 0x00010001<br />
+SERVICEROOT    = &quot;System\CurrentControlSet\Services&quot;<br />
+<br />
+;<br />
+; Localizable Strings<br />
+;<br />
+DiskId       = &quot;CxDD Mirror Installation DISK (VIDEO)&quot;<br />
+GraphAdap    = &quot;Graphics Adapter&quot;<br />
+CxDD         = &quot;CxDD Mirror Driver&quot;<br />
+Company      = &quot;IPTV - VAT Tecnologia da Informacao&quot;<br />
+CxDD.SvcName = &quot;IPTV - Mirror Driver Service&quot;<br />
+CxDD.SvcDesc = &quot;Give Application Sharing access to capture screen&quot;</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

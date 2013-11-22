@@ -1,0 +1,206 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" newbie trying to use System plugin to call RAPI to detect Compact Framework, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  newbie trying to use System plugin to call RAPI to detect Compact Framework NSIS Discussion" />
+	
+	<title> newbie trying to use System plugin to call RAPI to detect Compact Framework [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  newbie trying to use System plugin to call RAPI to detect Compact Framework</div>
+<hr />
+<div class="pda"><a href="t-263542.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=263542">newbie trying to use System plugin to call RAPI to detect Compact Framework</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">briforge</div><div class="date">12th January 2007, 20:18</div></div><div class="posttext">I've been reading about this for awhile and finally decided to try it. My script actually compiled and ran, but now I have a couple questions:<br />
+<br />
+Does anyone know if the string I passed is correct, to search for that 'GAC_mscorlib_*' with the '*' wildcard? I don't even know how to try to use the RAPI functions outside of NSIS to test this, I'm really operating outside my expertise here.<br />
+<br />
+How would I look at the last output parameter, the r3/$3 which is supposed to be a pointer to the array of _CE_FIND_DATA structures?<br />
+<br />
+Thanks<br />
+<br />
+Here's my script:<br />
+<br />
+Section &quot;DetectCF&quot;<br />
+<br />
+System::Call &quot;rapi::CeRapiInit() i .r0&quot;<br />
+<br />
+/***************<br />
+ Dll Call Structure<br />
+<br />
+ STDAPI_(BOOL) CeFindAllFiles(<br />
+   LPCWSTR szPath,<br />
+   DWORD dwFlags,<br />
+   LPDWORD lpdwFoundCount,<br />
+   LPLPCE_FIND_DATA ppFindDataArray<br />
+ );<br />
+<br />
+<br />
+  These are flags for CeFindAllFiles<br />
+  <br />
+  #define FAD_NAME            ((WORD) 0x04)<br />
+  <br />
+//<br />
+// The Windows CE WIN32_FIND_DATA structure differs from the<br />
+// Windows WIN32_FIND_DATA stucture so we copy the Windows CE<br />
+// definition to here so that both sides match.<br />
+//<br />
+typedef struct _CE_FIND_DATA {<br />
+    DWORD    dwFileAttributes;<br />
+    FILETIME ftCreationTime;<br />
+    FILETIME ftLastAccessTime;<br />
+    FILETIME ftLastWriteTime;<br />
+    DWORD    nFileSizeHigh;<br />
+    DWORD    nFileSizeLow;<br />
+    DWORD    dwOID;<br />
+    WCHAR    cFileName[MAX_PATH];<br />
+} CE_FIND_DATA, *LPCE_FIND_DATA;<br />
+<br />
+typedef CE_FIND_DATA** LPLPCE_FIND_DATA;<br />
+<br />
+*/<br />
+<br />
+# Use CeFindAllFiles to search the device's Windows directory for GAC_mscorlib_*.dll<br />
+<br />
+System::Call &quot;rapi::CeFindAllFiles(t '\Windows\GAC_mscorlib_*.dll',  \<br />
+                                   i 0x04, \<br />
+                                   *l . r2, \<br />
+                                   *i . r3) b r4&quot;<br />
+                                   <br />
+${If} $4 == 'some value'<br />
+  MessageBox MB_OK 'Found a version of Compact Framework'<br />
+${Else}<br />
+  MessageBox MB_OK 'Did not find a version of Compact Framework'<br />
+${EndIf}<br />
+<br />
+System::Call &quot;rapi::CeRapiUninit() i .r0&quot;<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">12th January 2007, 21:38</div></div><div class="posttext">You're actually supposed to pass a pointer to an allocated structure in the fourth parameter. The structure must be the size of CE_FIND_DATA, which is 552, according to my count. To allocate such a structure, you can use System::Alloc. Pass the result of Alloc as an integer, not a pointer, as it's already the address to the structure.<br />
+<br />
+After the call, you can read the result with System::Call as in the example (http://nsis.sourceforge.net/Docs/System/System.html#structaddr) in the documents. FILETIME is `l`, DWORD is `i` and WCHAR[MAX_PATH] is &amp;w256.<br />
+<br />
+Also, there's no such type as `b`, like you've used in the return value of CeFindAllFiles.<br />
+<br />
+See the System readme for more information.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">briforge</div><div class="date">16th January 2007, 21:03</div></div><div class="posttext">Thanks for the reply. My next attempt is below.<br />
+<br />
+It appears to be not finding the file. CeRapiGetError returns 0, but CeGetLastError returns 87. The docs for that say to use FormatMessage to get a meaningful error out of that, but I haven't figured that out yet.<br />
+<br />
+I also tried searching for a simpler-named file that I verified was actually on the device, in the Windows directory, and it didn't find that one either. I tried finding '\\Windows\\memo.*'. This makes me think I'm doing something else wrong, maybe something wrong with the file string I'm looking for, or the 2nd argument, the Flags parameter to CeFindAllFiles.<br />
+<br />
+Any ideas?<br />
+<br />
+Thanks<br />
+<br />
+<br />
+Section &quot;DetectCF&quot;<br />
+<br />
+System::Call &quot;rapi::CeRapiInit() i .r0&quot;<br />
+DetailPrint &quot;CeRapiInit return : $0&quot;<br />
+<br />
+/***************<br />
+ Dll Call Structure<br />
+<br />
+ STDAPI_(BOOL) CeFindAllFiles(<br />
+   LPCWSTR szPath,<br />
+   DWORD dwFlags,<br />
+   LPDWORD lpdwFoundCount,<br />
+   LPLPCE_FIND_DATA ppFindDataArray<br />
+ );<br />
+<br />
+<br />
+  These are flags for CeFindAllFiles<br />
+  <br />
+  #define FAD_NAME            ((WORD) 0x04)<br />
+  <br />
+//<br />
+// The Windows CE WIN32_FIND_DATA structure differs from the<br />
+// Windows WIN32_FIND_DATA stucture so we copy the Windows CE<br />
+// definition to here so that both sides match.<br />
+//<br />
+typedef struct _CE_FIND_DATA {<br />
+    DWORD    dwFileAttributes;<br />
+    FILETIME ftCreationTime;<br />
+    FILETIME ftLastAccessTime;<br />
+    FILETIME ftLastWriteTime;<br />
+    DWORD    nFileSizeHigh;<br />
+    DWORD    nFileSizeLow;<br />
+    DWORD    dwOID;<br />
+    WCHAR    cFileName[MAX_PATH];<br />
+} CE_FIND_DATA, *LPCE_FIND_DATA;<br />
+<br />
+typedef CE_FIND_DATA** LPLPCE_FIND_DATA;<br />
+<br />
+*/<br />
+<br />
+# Use CeFindAllFiles to search the device's Windows directory for GAC_mscorlib_*.dll<br />
+<br />
+System::Alloc 552<br />
+Pop $3<br />
+<br />
+System::Call &quot;rapi::CeFindAllFiles(t '\\Windows\\GAC_mscorlib_*.dll',  \<br />
+                                   i 0x04, \<br />
+                                   *l . r2, \<br />
+                                   i . r3) i r4&quot;<br />
+                                   <br />
+${If} $4 == 1<br />
+  MessageBox MB_OK 'Found a version of Compact Framework'<br />
+  System::Call &quot;*$3(i .r5, l .r6, l .r7, l .r8, i .r9, i .r10, i .r11, &amp;w256 .r12)&quot;<br />
+  DetailPrint &quot;File Found : $R02&quot;<br />
+${Else}<br />
+  MessageBox MB_OK 'Did not find a version of Compact Framework'<br />
+  System::Call &quot;rapi::CeRapiGetError() i .r0&quot;<br />
+  DetailPrint &quot;RapiGetError return : $0&quot;<br />
+  ${If} $0 == 0<br />
+    System::Call &quot;rapi::CeGetLastError() i .r0&quot;<br />
+    DetailPrint &quot;CeGetLastError return : $0&quot;<br />
+  ${EndIf}<br />
+${EndIf}<br />
+<br />
+System::Free $3<br />
+System::Call &quot;rapi::CeRapiUninit() i .r0&quot;<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">16th January 2007, 21:09</div></div><div class="posttext">The fourth parameter is passed wrongly. Use `ir3` instead of `i.r3`. The dot means no input and only output, so it's not passing anything to the function.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">briforge</div><div class="date">19th January 2007, 20:14</div></div><div class="posttext">Thanks for the reply, that got rid of the error that was reported from CeGetLastError.<br />
+<br />
+However, since I tried this, I've learned that the problem is likely ActiveSync. There's some issue with version 3.7 of ActiveSync that causes CeFindAllFiles to not work.<br />
+<br />
+So now I'm trying CeFindFirstFile. The only problem is I can't find a definition of it's return value, a HANDLE. I tried just returning it to an int/pointer, but I probably need to allocate the space for this structure just like CE_FIND_DATA, right?<br />
+<br />
+This is what I tried : <br />
+<br />
+<br />
+System::Alloc 552<br />
+Pop $3<br />
+<br />
+System::Call &quot;rapi::CeFindFirstFile(t '\Windows\GAC_mscorlib_*.dll', ir3) i r4&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th January 2007, 20:20</div></div><div class="posttext">Integer is fine. There's no need to allocate space for a handle.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">briforge</div><div class="date">19th January 2007, 20:35</div></div><div class="posttext">Wow, another fast response, thanks. CeGetLastError is returning 18. How do I get more information than that? I'm confused by the FormatMessage documentation.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">19th January 2007, 20:48</div></div><div class="posttext">You can use an error lookup tool that calls FormatMessage for you. There's a version that comes with Platform SDK and VC. I couldn't find one for download with a quick search, but I'm sure you'll find one somewhere, if you search a bit more.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

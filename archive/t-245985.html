@@ -1,0 +1,169 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Section Name question in 2.16, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Section Name question in 2.16 NSIS Discussion" />
+	
+	<title> Section Name question in 2.16 [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Section Name question in 2.16</div>
+<hr />
+<div class="pda"><a href="t-245985.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=245985">Section Name question in 2.16</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ethomas</div><div class="date">11th May 2006, 23:19</div></div><div class="posttext">Hello,<br />
+   I'm having a problem with titles of sections.  I assign<br />
+variables within page create functions, and the values do<br />
+not seem to propogate to section titles.  Maybe a code snippet will help.  (Here is my problem, at the simplest level, in a contrived code example)<br />
+<br />
+<br />
+; The name of the installer<br />
+Name &quot;Delete File&quot;<br />
+<br />
+; The file to write<br />
+OutFile &quot;delfile.exe&quot;<br />
+<br />
+; The default installation directory<br />
+InstallDir $PROGRAMFILES\DeleteFile<br />
+<br />
+Var file<br />
+Var result<br />
+;--------------------------------<br />
+<br />
+; Pages<br />
+Page custom LoadFile Empty &quot;File&quot;<br />
+Page directory<br />
+Page components<br />
+Page instfiles<br />
+<br />
+;--------------------------------<br />
+<br />
+Function .onInit<br />
+    InitPluginsDir<br />
+    File /oname=$PLUGINSDIR\file_path.ini &quot;file_path.ini&quot;<br />
+    ;; set an initial value<br />
+    StrCpy $file &quot;initial value&quot;<br />
+FunctionEnd<br />
+<br />
+Function LoadFile<br />
+    InstallOptions::dialog &quot;$PLUGINSDIR\file_path.ini&quot;<br />
+    ;; It puts the status on the stack<br />
+    Pop $result<br />
+    ReadINIStr $file &quot;$PLUGINSDIR\file_path.ini&quot; &quot;Field 1&quot; &quot;State&quot;<br />
+FunctionEnd<br />
+<br />
+Function Empty<br />
+  ;; no validation<br />
+FunctionEnd<br />
+<br />
+; The stuff to install<br />
+Section &quot;Delete File $file&quot;<br />
+    MessageBox MB_OK &quot;File = $file&quot;<br />
+    Delete $file<br />
+SectionEnd ; end the section<br />
+<br />
+<br />
+<br />
+What happens here is that I popup a request for a file to choose to delete, and when I choose that file, the section page still says &quot;Delete file initial value&quot; as the section title, even though the MessageBox says &quot;File = &lt;whatever file I chose&gt;&quot;.  It appears to me as though the strings that are used to populate the Section page must be parsed before the page functions get called.  <br />
+<br />
+What is strange is that when I compile and run the exact same code in v2.0rc4, I get the behaviour that the Section Title is correct, it actually says &quot;Delete File &lt;file I chose&gt;&quot;. <br />
+<br />
+Does anyone know why this is the case?<br />
+<br />
+-Evan</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JasonFriday13</div><div class="date">12th May 2006, 03:22</div></div><div class="posttext">This code in LoadFile:<br />
+ReadINIStr $file &quot;$PLUGINSDIR\file_path.ini&quot; &quot;Field 1&quot; &quot;State&quot;should be in the 'empty' function. Installoptions writes the value to the ini file after you click next, but before the 'empty' function is executed. You read from the ini file in the leave function (in this case the function is called 'empty').<br />
+<br />
+You are also confusing compile-time with run-time. Defines are used at compile time and look like this: ${HELLO}. Variables are used at run-time and look like this: $HELLO.<br />
+You can use compile-time defines at run-time, but not the other way around eg. you can't use run-time variables at compile-time. <br />
+<br />
+Section is a compile-time command, and the title you give it at compile-time is actually saying 'Delete file ', because $file is not used at compile-time, it is used at run-time, and therefore has the value &quot;&quot; (null string). Use SectionSetText to change the text at run-time.<br />
+<br />
+Also, a custom page appends the text to the caption at run-time so I have removed &quot;file&quot; from the end of the page command.<br />
+<br />
+Here is the code that changes the section name at runtime.<br />
+<br />
+; The name of the installer<br />
+Name &quot;Delete File&quot;<br />
+<br />
+; The file to write<br />
+OutFile &quot;delfile.exe&quot;<br />
+<br />
+; The default installation directory<br />
+InstallDir $PROGRAMFILES\DeleteFile<br />
+<br />
+Var file<br />
+<br />
+;--------------------------------<br />
+<br />
+; Pages<br />
+Page custom LoadFile Empty<br />
+Page directory<br />
+Page components<br />
+Page instfiles<br />
+<br />
+;--------------------------------<br />
+<br />
+Function .onInit<br />
+InitPluginsDir<br />
+File /oname=$PLUGINSDIR\file_path.ini &quot;file_path.ini&quot;<br />
+;; set an initial value<br />
+StrCpy $file &quot;initial value&quot;<br />
+FunctionEnd<br />
+<br />
+Function LoadFile<br />
+InstallOptions::dialog &quot;$PLUGINSDIR\file_path.ini&quot;<br />
+;; It puts the status on the stack<br />
+Pop $0 ;$0 to $9 and $R0 to $R9 are internal variables for you to use.<br />
+FunctionEnd<br />
+<br />
+Function Empty<br />
+ReadINIStr $file &quot;$PLUGINSDIR\file_path.ini&quot; &quot;Field 1&quot; &quot;State&quot;<br />
+; Set the section text.<br />
+SectionSetText Sec_Index &quot;Delete file $file&quot;<br />
+FunctionEnd<br />
+<br />
+; The stuff to install<br />
+Section &quot;Dummy&quot; Sec_Index ;name will be changed at run-time<br />
+MessageBox MB_OK &quot;File = $file&quot;<br />
+Delete $file<br />
+SectionEnd ; end the section</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ethomas</div><div class="date">12th May 2006, 08:34</div></div><div class="posttext">I thank you for your reply, though there is one thing I find strange.  When I compile and run this script, the section name is not &quot;Delete file:, it is &quot;Delete file initial value&quot;, so the Section Name is not completely determined at compile time, as the .onInit function has been called.  However, the PageLeave function has not yet been called.  This is why I thought the behavior was strange.  When I used v2.0RC4, the Section title was &quot;Delete File: C:\file.txt&quot; or whatever I chose.  Has the time that the section listing page gets populated within the workflow changed between the versions?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">12th May 2006, 10:23</div></div><div class="posttext">Never read from the INI file in the same function that displays the InstallOptions dialog (i.e. the Show function). InstallOptions writes changes to the INI file after leaving the page (i.e. the Leave function) and not before.<br />
+<br />
+Your other problem which Jason has made is that you need to move your Empty function below your Sections, because otherwise the constant Sec_Index has yet to be defined when used where it is now in your script.<br />
+<br />
+Finally, the SectionSetText Sec_Index ... needs to be:<br />
+SectionSetText ${Sec_Index} ...<br />
+Otherwise you are trying to set the text of a Section with an index number that is &quot;Sec_Index&quot;. You could probably tell that that is a string value and not an integer value. ${Sec_Index} is a defined compile time constant that will contain the Section index.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JasonFriday13</div><div class="date">15th May 2006, 01:12</div></div><div class="posttext">Thanks for pointing that out, Afrow UK. I never knew that if you had to change the section on run-time, the function had to be below the sections. I also momentarily forgot to put ${} around it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">15th May 2006, 14:08</div></div><div class="posttext">Section &quot;my section&quot; MySec<br />
+Is identical to doing:<br />
+!define MySec 0<br />
+<br />
+Naturally, if you try to use the MySec constant before it is defined, you will get a compiler warning.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

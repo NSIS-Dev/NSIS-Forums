@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" problems with Execwait coupled with checking for running while uninstalling..., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  problems with Execwait coupled with checking for running while uninstalling... NSIS Discussion" />
+	
+	<title> problems with Execwait coupled with checking for running while uninstalling... [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  problems with Execwait coupled with checking for running while uninstalling...</div>
+<hr />
+<div class="pda"><a href="t-279035.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=279035">problems with Execwait coupled with checking for running while uninstalling...</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">kinar</div><div class="date">15th October 2007, 18:11</div></div><div class="posttext">I have an installer that checks to see if the software is already installed and forces an uninstall before allowing a reinstall.  To force the uninstall, I use ExecWait.<br />
+<br />
+ExecWait '&quot;$PATH_DIR&quot; _?=$INSTDIR'<br />
+<br />
+I also have a check in my uninstall that verifies the app isn't running when you uninstall by renaming the install directory, renaming it back and checking for errors.<br />
+<br />
+If the rename fails, then the uninstall aborts because files are already in use.<br />
+<br />
+The problem is that when the installer launches the uninstaller, forcing it to not copy to a temp directory so that it actually waits, the uninstaller is in use and the rename fails and doesn't allow the uninstall.<br />
+<br />
+As a result, a user must uninstall &quot;manually&quot; before installing.  So ultimately I have the desired effect but at the expense of end user confusion.<br />
+<br />
+Can someone think of a better way around this?<br />
+<br />
+I could check each individual file to see if it is in use (instead of renaming) but that causes problems of modifying my installer everytime a new file is created that needs to be uninstalled.  This is the only workable, yet undesirable, solution I have thus far.<br />
+<br />
+In the FAQ for ExecWait, I noticed this quote:<br />
+To get around this problem, the executed installer must be told to wait for the sub-installer or simply do the work itself.<br />
+This seems like an acceptable solution.  My above implementation forces the installer to do the work itself (instead of copying itself to a temp dir and then running).  I implemented it this way because I was told it is the only workaround that allows the installer to wait for an uninstall to complete before finishing.<br />
+<br />
+How can I tell the installer to wait for the sub-installer instead?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">15th October 2007, 18:19</div></div><div class="posttext">Can you not just try a rename on the main application executable? Or, use a plug-in such as FindProcDLL or for a even more advanced check, with the LockedList plug-in.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th October 2007, 18:33</div></div><div class="posttext">if you copy the uninstaller to temp and execute it there in your installer(CopyFiles), the wait should work</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kinar</div><div class="date">15th October 2007, 18:44</div></div><div class="posttext">Originally posted by Afrow UK <br />
+Can you not just try a rename on the main application executable? Or, use a plug-in such as FindProcDLL or for a even more advanced check, with the LockedList plug-in.<br />
+<br />
+Stu  <br />
+<br />
+The problem is that it is an API that is being installed and literally hundreds of files (worst case) that would have to be checked individually (not just one exe).  We could probably narrow it down to about 20 core files (exes, dlls, etc) but then it would become a nightmare to support the case where one of the others didn't get updated and is causing unexpected behavior.<br />
+<br />
+I took a brief look at your LockedList plugin.  Does that require the LockedList.dll to be distributed? If so, that is not an acceptable option.  However, I also noticed that you include the source code for the DLL, is it ok to use that source in one of our existing DLLs (in terms of licensing)?<br />
+<br />
+btw, this has kinda gotten away from the original question of &quot;How can I tell the installer to wait for the sub-installer instead?&quot; so if anyone has an answer to that, feel free to interupt this discussion.<br />
+<br />
+-edited to add quote since new replys were in the thread<br />
+<br />
+also noticed that you recommended a second plugin as well, I'll look at that one too and post in a new reply</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kinar</div><div class="date">15th October 2007, 18:48</div></div><div class="posttext">Originally posted by Anders <br />
+if you copy the uninstaller to temp and execute it there in your installer(CopyFiles), the wait should work  <br />
+<br />
+So you are saying to simply manually copy it to a temp and then execute it the same way I did above (with _?=$TEMP_DIR instead of $INSTDIR)?<br />
+<br />
+I think I tried that originally but ran into problems.  I will have to check it out again and get post again.  Do you know if that is what the WikiFAQ was referring to in the bolded section of the quote I have above?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kinar</div><div class="date">15th October 2007, 20:10</div></div><div class="posttext">Changing<br />
+ExecWait '&quot;$PATH_DIR&quot; _?=$INSTDIR' <br />
+to<br />
+CopyFiles &quot;$INSTDIR\uninst.exe&quot; &quot;C:\Temp\&quot;<br />
+ExecWait 'C:\Temp\uninst.exe _?=$INSTDIR'<br />
+<br />
+Just need to add something to get the &quot;real&quot; temp directory and I'll be set.<br />
+<br />
+Thanks everyone</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th October 2007, 20:19</div></div><div class="posttext">$temp is real temp, but using $pluginsdir is probably even better (remember to call InitPluginsDir first if needed)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kinar</div><div class="date">15th October 2007, 20:23</div></div><div class="posttext">Now you've peaked my interest.<br />
+<br />
+Why would $PluginsDir possibly be &quot;better&quot; than $Temp?  Is it still be better considering I currently use no Plugins?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">15th October 2007, 21:16</div></div><div class="posttext">$pluginsdir a subfolder inside $temp(you don't have to worry about an existing file with the same name already in the users temp dir), and it is auto deleted just before the process exits</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kinar</div><div class="date">15th October 2007, 22:50</div></div><div class="posttext">excellent, thanks again</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

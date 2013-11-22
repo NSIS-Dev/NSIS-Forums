@@ -1,0 +1,219 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" External DLLs and passing Windows Constants?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  External DLLs and passing Windows Constants? NSIS Discussion" />
+	
+	<title> External DLLs and passing Windows Constants? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  External DLLs and passing Windows Constants?</div>
+<hr />
+<div class="pda"><a href="t-187203.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=187203">External DLLs and passing Windows Constants?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Nebulus</div><div class="date">20th July 2004, 16:23</div></div><div class="posttext">Does anybody have an example of how you might pass windows constants to an external DLL? MSDN shows for user32.dll, you can call SystemParametersInfo to make changes to icons, fonts, desktop, etc. Here's the link of all the possibilities:<br />
+<br />
+http://msdn.microsoft.com/library/default.asp?url=/library/en-us/sysinfo/base/systemparametersinfo.asp<br />
+<br />
+Is there a way to pass the value of that contant?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">20th July 2004, 16:47</div></div><div class="posttext">You need first to get the constant value in hexadecimal or decimal, name it using a define and use it using System plugin to call the dll. There are some examples of windows constants inside Include\WinMessages.nsh of your NSIS dir.<br />
+<br />
+If you don't know the values in hexa or dec, I'll give 'em if you want.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nebulus</div><div class="date">20th July 2004, 17:09</div></div><div class="posttext">That's where I was going, but have no way to get the hex values. By the way, how DO you get the hex values?<br />
+<br />
+Here're the constants I'm looking for:<br />
+SPI_SETDESKWALLPAPER<br />
+SPIF_UPDATEINIFILE<br />
+SPIF_SENDWININICHANGE<br />
+SPIF_SENDCHANGE<br />
+<br />
+Basically, I'm trying to call user32.dll's SystemParametersInfo method to refresh the desktop wallpaper without a reboot. To date, I haven't seend any NSIS scripting that'll actually pull it of. IF I can manage it, I'll post it to the archive. Thanks for the help!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nebulus</div><div class="date">20th July 2004, 17:29</div></div><div class="posttext">Ok, I've got this code, and while I''m getting an obvious error code back, does anybody know why or where I'm going wrong?<br />
+<br />
+**************<br />
+BEGIN CODE<br />
+**************<br />
+<br />
+!define SPI_SETDESKWALLPAPER 20<br />
+!define WALLPAPER &quot;%SystemRoot%\Web\Wallpaper\test.html&quot;<br />
+!define SPIF_UPDATEINIFILE 0x1<br />
+!define SPIF_SENDWININICHANGE 0x2<br />
+!define SPIF_SENDCHANGE 0x1<br />
+<br />
+System::Call &quot;user32::SystemParametersInfo(i ${SPI_SETDESKWALLPAPER}, i 0, t ${WALLPAPER}, i ${SPIF_SENDCHANGE}|${SPIF_SENDWININICHANGE}) l .r0&quot;<br />
+MessageBox MB_OK &quot;Return Value: $0&quot;<br />
+<br />
+**************<br />
+ENDDE<br />
+**************<br />
+<br />
+The return value I'm getting is: 4294967297. I get a Desktop flicker, but nothing changes, and the value of WALLPAPER isn't set in the registry.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">20th July 2004, 18:08</div></div><div class="posttext">I got it, tested and everything:<br />
+<br />
+!define SPI_SETDESKWALLPAPER        0x0014<br />
+!define WALLPAPER &quot;&quot;%SystemRoot%\Web\Wallpaper\test.html&quot;<br />
+!define SPIF_UPDATEINIFILE    0x0001<br />
+!define SPIF_SENDWININICHANGE 0x0002<br />
+<br />
+System::Alloc ${NSIS_MAX_STRLEN}<br />
+Pop $0<br />
+StrCpy $0 &quot;${WALLPAPER}&quot;<br />
+<br />
+System::Call &quot;user32::SystemParametersInfo(i ${SPI_SETDESKWALLPAPER}, i 0, t r0, i ${SPIF_SENDWININICHANGE}) i .r1&quot;<br />
+<br />
+System::Free $0<br />
+<br />
+One thing to learn here: Everytime it says &quot;set parameter to point to a null-terminated string&quot; you have to allocate memory for a variable, use the variable and free its allocated memory.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nebulus</div><div class="date">20th July 2004, 18:38</div></div><div class="posttext">Deguix - thanks for the help there. I'm not getting the error code anymore, but I am getting a &quot;0&quot; returned from the call - basically a false, and the desktop still doesn't refresh for me. I tested it with some of the default images in windows as well, and they also didn't work.<br />
+<br />
+Is there a way to just broadcast to the system that there was a change in order to trigger a refresh?<br />
+<br />
+By the way, I'm trying this on a Win XP Pro system, but the MDSN docs showed that this should work on Win 9x and up.<br />
+<br />
+Thanks for the help so far!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">20th July 2004, 23:31</div></div><div class="posttext">What? I have Windows XP Home and that code was tested and everything, it even gave 1 as a result.<br />
+<br />
+(Oh... try changing this:<br />
+<br />
+&quot;&quot;%SystemRoot%\Web\Wallpaper\test.html&quot;<br />
+<br />
+to this:<br />
+<br />
+&quot;%SystemRoot%\Web\Wallpaper\test.html&quot;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nebulus</div><div class="date">21st July 2004, 00:41</div></div><div class="posttext">Yeah I did that and checked all the code a few times. I'm not exactly what's going on, but I can't get consistent results. Now I did manage to get it to set a bitmap to the background and refresh, but no go on the html based wallpaper...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">21st July 2004, 12:31</div></div><div class="posttext">Oh yeah, a html as wallpaper... MSDN says that this only works for bitmaps, and I tested w/ bitmaps. So that's why... The only thing I found in my Plataform SDK documentation is about the Active Desktop:<br />
+<br />
+To access the Active Desktop, a client application would need to create an instance of the ActiveDesktop object (CLSID_ActiveDesktop) with the CoCreateInstance function and retrieve a pointer to the object's IActiveDesktop interface.And there says that we can use AddDesktopItemWithUI or AddDesktopItem methods to add an item to it. And the ApplyChanges method that writes to the registry the changes. This seems complicated... <br />
+<br />
+Now there is a question to everyone, how can I use this type of code using System plugin?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">21st July 2004, 13:16</div></div><div class="posttext">Looks like the system plugin would be able to handle all of that. just a few calls:<br />
+<br />
+One to obtain an instance of the ActiveDesktop.<br />
+Then multiple calls to AddItem/AddItemUI<br />
+Then the call to apply the changes</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nebulus</div><div class="date">21st July 2004, 13:43</div></div><div class="posttext">Ok, so I'm not going insane.... just using the wrong code :) If anybody does have a method for doing this, please enlighten us!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nebulus</div><div class="date">20th August 2004, 15:36</div></div><div class="posttext">Ok, in checking the MSDN site and some of the NSIS System usage, I think this is possible to set a wallpaper - I'm just stuck on syntax and usage.<br />
+<br />
+Here's what we'd need to send to the IActiveDesktop instance:<br />
+<br />
+SetWallpaper(&quot;path\wallpaper_page&quot;,0)<br />
+ApplyChanges(dWord)<br />
+<br />
+with dWord being one of these (I suspect AD_APPLY_REFRESH<br />
+):<br />
+AD_APPLY_ALL<br />
+AD_APPLY_BUFFERED_REFRESH<br />
+AD_APPLY_DYNAMICREFRESH<br />
+AD_APPLY_FORCE<br />
+AD_APPLY_HTMLGEN<br />
+AD_APPLY_REFRESH<br />
+AD_APPLY_SAVE<br />
+<br />
+Now, from the NSIS docs and System DLL usage, here's a chunk of code for getting the wallpaper with this code:<br />
+<br />
+<br />
+# defines<br />
+!define CLSCTX_INPROC_SERVER 1<br />
+!define CLSID_ActiveDesktop {75048700-EF1F-11D0-9888-006097DEACF9}<br />
+!define IID_IActiveDesktop {F490EB00-1240-11D1-9888-006097DEACF9}<br />
+# create IActiveDesktop interface<br />
+System::Call &quot;ole32::CoCreateInstance( \<br />
+	g '${CLSID_ActiveDesktop}', i 0, \<br />
+	i ${CLSCTX_INPROC_SERVER}, \<br />
+	g '${IID_IActiveDesktop}', *i .r0) i.r1&quot;<br />
+StrCmp $1 0 0 end<br />
+# call IActiveDesktop-&gt;GetWallpaper<br />
+System::Call &quot;$0-&gt;4(w .r2, i ${NSIS_MAX_STRLEN}, i 0)&quot;<br />
+# call IActiveDesktop-&gt;Release<br />
+System::Call &quot;$0-&gt;2()&quot;<br />
+# print result<br />
+DetailPrint $2<br />
+end:<br />
+<br />
+Now... since I SUCK at using the System DLL, is there any chance somebody could help tweak this?<br />
+<br />
+Also, is there a resource for getting the hex value of the MS dWords? I googled the hell out of it and can't find anything.<br />
+<br />
+Thanks!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">matt21</div><div class="date">20th August 2004, 18:12</div></div><div class="posttext">The following might help! See http://dotnetforums.net/showthread.php?p=420685#post420685 for more. Unfortunately I know nothing about System DLL<br />
+<br />
+Public Const AD_APPLY_ALL As Integer = AD_APPLY_SAVE Or AD_APPLY_HTMLGEN Or AD_APPLY_REFRESH<br />
+<br />
+Public Const AD_APPLY_BUFFERED_REFRESH As Integer = &amp;H10<br />
+<br />
+Public Const AD_APPLY_DYNAMICREFRESH As Integer = &amp;H20<br />
+<br />
+Public Const AD_APPLY_FORCE As Integer = &amp;H8<br />
+<br />
+Public Const AD_APPLY_HTMLGEN As Integer = &amp;H2<br />
+<br />
+Public Const AD_APPLY_REFRESH As Integer = &amp;H4<br />
+<br />
+Public Const AD_APPLY_SAVE As Integer = &amp;H1</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Nebulus</div><div class="date">20th August 2004, 18:28</div></div><div class="posttext">Cool, thanks!<br />
+So far, I can run this script:<br />
+<br />
+# defines<br />
+!define CLSCTX_INPROC_SERVER 1<br />
+!define CLSID_ActiveDesktop {75048700-EF1F-11D0-9888-006097DEACF9}<br />
+!define IID_IActiveDesktop {F490EB00-1240-11D1-9888-006097DEACF9}<br />
+# create IActiveDesktop interface<br />
+System::Call &quot;ole32::CoCreateInstance( \<br />
+	g '${CLSID_ActiveDesktop}', i 0, \<br />
+	i ${CLSCTX_INPROC_SERVER}, \<br />
+	g '${IID_IActiveDesktop}', *i .r0) i.r1&quot;<br />
+StrCmp $1 0 0 end<br />
+<br />
+# call IActiveDesktop-&gt;SetWallpaper<br />
+System::Call &quot;$0-&gt;4(t ${WP_Path}${WP_Page}, i 0, )&quot;<br />
+<br />
+# call IActiveDesktop-&gt;ApplyChanges<br />
+System::Call &quot;$0-&gt;4(i ${AD_APPLY_REFRESH})&quot;<br />
+<br />
+# call IActiveDesktop-&gt;Release<br />
+System::Call &quot;$0-&gt;2()&quot;<br />
+end:<br />
+<br />
+where I've defined <br />
+AD_APPLY_REFRESH as 0x4.<br />
+<br />
+This setup blows up and throws an error window. Imust be close - at the very least I'm causing errors :igor: <br />
+<br />
+Anyone, anyone, bueler?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

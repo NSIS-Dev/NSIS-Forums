@@ -1,0 +1,210 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Another ExecWait / Uninstaller, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Another ExecWait / Uninstaller NSIS Discussion" />
+	
+	<title> Another ExecWait / Uninstaller [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Another ExecWait / Uninstaller</div>
+<hr />
+<div class="pda"><a href="t-223574.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=223574">Another ExecWait / Uninstaller</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">ripper17</div><div class="date">8th August 2005, 22:41</div></div><div class="posttext">Hi everyone<br />
+ I've searched the forum and read about a dozen threads on this, still I just don't get it working properly.<br />
+ Here's what I want my script to do:<br />
+ It checks for old versions in .onInit then goes on to delete it (by using the uninstall.exe)<br />
+ Here's the part of the .onInit (the variables all work fine)<br />
+ <br />
+ ---------------------------<br />
+ ReadRegStr $R1 ${PRODUCT_UNINST_ROOT_KEY} &quot;${PRODUCT_UNINST_KEY}&quot; &quot;UninstallString&quot;<br />
+   IfErrors +6 0<br />
+     MessageBox MB_YESNO|MB_ICONQUESTION|MB_DefButton1 &quot;$(OldInstFound)&quot; IDYES 0 IDNO +4<br />
+     ClearErrors<br />
+     ExecWait '&quot;$R1&quot; &quot;_?=$TEMP&quot;'<br />
+     IfErrors 0 +2<br />
+       MessageBox MB_OK|MB_ICONEXCLAMATION &quot;$(OldInstNotRemoved)&quot;<br />
+   ClearErrors<br />
+ ------------------------------------<br />
+ <br />
+ $R1 is not quoted before so it's not a double quote.<br />
+ Now, the uninstaller runs fine, the ExecWait wait's for me. Problem is, the uninstaller.exe is not deleted, neither the Install-Dir is <br />
+ Here's the part of Section Uninstall that's not working:<br />
+ <br />
+ -------------------------------<br />
+     Delete &quot;$R0\uninst.exe&quot;<br />
+     setoutpath &quot;$R1&quot; ;$R1 is the parent directory<br />
+     RMDir /r &quot;$R0\Opera$8\LEO-Extension&quot;<br />
+ -------------------------------<br />
+ If I'm calling uninst.exe it work's fine, just by copying via ?_=$TEMP doesn't allow me to delete the file and neither the directory.<br />
+ I know I'm waiting for the uninstaller, but ain't I waiting for the *COPY* of the uninstaller? If not, how can I do both things - running and waiting for the uninstall and then deleting itself?<br />
+Thanks in advance<br />
+<br />
+Martin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th August 2005, 10:40</div></div><div class="posttext">You should execute the uninstaller which is in the same folder  as your software. The uninstaller copies itself to $TEMP and then runs from there, and deletes itself on its own.<br />
+Unless your files are installed in $TEMP you shouldn't be passing it _?=$TEMP because that's telling it to uninstall files in the $TEMP folder.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ripper17</div><div class="date">9th August 2005, 15:11</div></div><div class="posttext">Well, yes, I know that uninst.exe copies itself to $TEMP - but that's why Execwait *doesn't* wait for the uninstaller to complete the uninstall. It will continue with the setup immediately - which I don't want. <br />
+Now, if I DO use the _?=$TEMP string on the Execwait command, Execwait works just fine. It doesn't matter that I'm copying it to $TEMP manually because all the files that will be changed or deleted are referenced with a full path.<br />
+Now, let's say the Uninst.exe is written to C:\BLA during install. Some files of the install are in c:\BLA, some in c:\BLE. <br />
+$R1 = C:\BLA\uninst.exe<br />
+Now, with <br />
+<br />
+Execwait '&quot;$R1&quot; _?$TEMP' <br />
+<br />
+I'm copying the uninst.exe to the TEMP-Dir and starting it, right? Then why can't I delete c:\BLA\uninst.exe ? Why can't I   RMDIR /r C:\BLA ? It does delete c:\BLE just fine.<br />
+If I'm calling the uninst.exe manually from C:\BLA everything is ok. <br />
+<br />
+If I'm using   Execwait &quot;$R1&quot;  only, the installer will continue to run the setup without waiting for the uninst.exe to finish.<br />
+Very strange, very strange...<br />
+I'd appreciate any more tips :-)<br />
+Thanks<br />
+<br />
+Martin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th August 2005, 18:03</div></div><div class="posttext">Are you sure $R1 points to $TEMP\uninst.exe? Check it with a MessageBox.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ripper17</div><div class="date">9th August 2005, 18:13</div></div><div class="posttext">No, $R1 points to the location where the file &quot;uninst.exe&quot; was originally written. I thought that specifying _?$TEMP it is copied to the TEMP BEFORE it is executed and BEFORE it would copy itself there?<br />
+So do I have to copy (rename? or is there another way?) the uninst.exe manually to some other directory before calling it just so that Execwait will work? But Execwait still wouldn't work, since the uninst.exe would copy itself AGAIN so it can be deleted during uninstall process, right? <br />
+I simply don't get it - maybe I'm having blinders on or something...<br />
+Martin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">9th August 2005, 18:19</div></div><div class="posttext">Specifying _?=$INSTDIR on the command line simply sets the $INSTDIR for the uninstaller. If it's not specified, the uninstaller will copy itself to the temporary directory, execute that copy with _?=$INSTDIR and exit. What you need to do is copy and execute it yourself.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JasonFriday13</div><div class="date">10th August 2005, 05:36</div></div><div class="posttext">If I remember correctly, the makensis.nsi script has this very subject in it. The current nsis version checks for a nsis installation, if it finds an installation, it checks the version. If there is an older version, the installer will ask to uninstall or continue. Selecting uninstall will execute the uninstaller and wait for it to end. Then the installer continues. Have a look at the script and borrow some code from there.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ripper17</div><div class="date">10th August 2005, 18:17</div></div><div class="posttext">This is my next try, still not working...<br />
+  <br />
+  -----------------------------------------<br />
+    MessageBox MB_OK &quot;$INSTDIR&quot;<br />
+    ClearErrors<br />
+    ReadRegStr $R1 ${PRODUCT_UNINST_ROOT_KEY} &quot;${PRODUCT_UNINST_KEY}&quot; &quot;UninstallString&quot;<br />
+    IfErrors +8 0<br />
+      MessageBox MB_YESNO|MB_ICONQUESTION|MB_DefButton1 &quot;$(OldInstFound)&quot; IDYES 0 IDNO +7<br />
+      ClearErrors<br />
+      CopyFiles /SILENT &quot;$R1&quot; &quot;$TEMP\uninst123.exe&quot;<br />
+      ExecWait '&quot;$TEMP\uninst123.exe&quot; &quot;_?=$INSTDIR&quot;'<br />
+      IfErrors 0 +2<br />
+        MessageBox MB_OK|MB_ICONEXCLAMATION &quot;$(OldInstNotRemoved)&quot;<br />
+      Delete &quot;$TEMP\uninst123.exe&quot;<br />
+    ClearErrors<br />
+  -------------------------------------------<br />
+  <br />
+  It executes fine, it deletes all files fine, but it doesn't wait for the uninstaller to finish.<br />
+  $INSTDIR is set to $TEMP and shows that in the messagebox just fine. Everything is copied or deleted where it should, it's just not waiting.<br />
+  I've tried messing with the quotes as proposed in this thread (http://forums.winamp.com/showthread.php?threadid=212468&amp;highlight=execwait+uninstall) but it doesn't work if I'm leaving out either of the quotes.<br />
+  Well, both strings do contain spaces, but I also tried _?=C:\ with or without quotes (the one without quotes doesn't start at all) and no success...<br />
+  I've also tried to set the $INSTDIR to the directory where the uninst.exe was placed during install - no luck.<br />
+ I've tried to just starting the uninstaller without the _?XXX option - still no luck. <br />
+I've looked at the makensis.nsi script to see what they're doing different but other than not using quotes (which is on purpose according to kichik in another thread because the variables alread contain quotes) I can't see a difference...<br />
+ I'm out of my wits ... <br />
+ Thanks for any more help on this...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">10th August 2005, 18:55</div></div><div class="posttext">This example works fine:<br />
+<br />
+!include MUI.nsh<br />
+<br />
+OutFile 'testing.exe'<br />
+<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+<br />
+!insertmacro MUI_UNPAGE_WELCOME<br />
+!insertmacro MUI_UNPAGE_INSTFILES<br />
+<br />
+!insertmacro MUI_LANGUAGE English<br />
+<br />
+Section Uninstall<br />
+SectionEnd<br />
+<br />
+Section<br />
+<br />
+StrCpy $INSTDIR &quot;$EXEDIR\temp&quot;<br />
+SetOutPath $INSTDIR<br />
+<br />
+WriteUninstaller &quot;$EXEDIR\uninstall.exe&quot;<br />
+CopyFiles &quot;$EXEDIR\uninstall.exe&quot; &quot;$TEMP\uninstall.exe&quot;<br />
+ExecWait '&quot;$TEMP\uninstall.exe&quot; _?=$INSTDIR'<br />
+Delete &quot;$TEMP\uninstall.exe&quot;<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ripper17</div><div class="date">11th August 2005, 17:31</div></div><div class="posttext">OK, I got it working now, thanks for all your help.<br />
+ The solution, however, is kind of strange.<br />
+ I defined the InstallDir like this (straigh after all the !include pages)<br />
+ <br />
+ ; MUI end ------<br />
+ <br />
+ Name &quot;${PRODUCT_NAME}&quot;<br />
+ InstallDir &quot;$TEMP&quot;<br />
+ OutFile &quot;Setup.exe&quot;<br />
+ ShowInstDetails show<br />
+ ShowUnInstDetails show<br />
+ SetCompress off<br />
+ CRCCheck force<br />
+ <br />
+ <br />
+ Now, in .onInit I wrote the check for prior versions and did the uninstall if neccessary. I checked with a MB_OK that the path for $INSTDIR was correctly set (which it was). That didn't help as I stated above.<br />
+Now thanks to the last script-example of Stu I got the missing point: StrCpy $INSTDIR &quot;$TEMP&quot; straight before doing the check and the uninstalling does the trick. <br />
+<br />
+So this is what my solution looks like:<br />
+<br />
+ClearErrors<br />
+  StrCpy $INSTDIR &quot;$TEMP&quot;<br />
+  ReadRegStr $R1 ${PRODUCT_UNINST_ROOT_KEY} &quot;${PRODUCT_UNINST_KEY}&quot; &quot;UninstallString&quot;<br />
+  IfErrors +8 0<br />
+    MessageBox MB_YESNO|MB_ICONQUESTION|MB_DefButton1 &quot;$(OldInstFound)&quot; IDYES 0 IDNO +7<br />
+    ClearErrors<br />
+    CopyFiles /SILENT &quot;$R1&quot; &quot;$TEMP\uninst123.exe&quot;<br />
+    ExecWait '&quot;$TEMP\uninst123.exe&quot; _?=$INSTDIR'<br />
+    IfErrors 0 +2<br />
+      MessageBox MB_OK|MB_ICONEXCLAMATION &quot;$(OldInstNotRemoved)&quot;<br />
+    Delete &quot;$TEMP\uninst123.exe&quot;<br />
+  ClearErrors<br />
+<br />
+<br />
+If I messagebox $INSTDIR before the StrCpy and after, it's the exact same string (due to InstallDir &quot;$TEMP&quot; above) but without the StrCpy I cannot leave out the quotes on the _?XXX section.<br />
+Let me make that clear: quotes on the _?XXX section of ExecWait will result in ExecWait failing. (Insert a MB_OK in Stu's script after the ExecWait and play with the quotes - MB will pop in the backgroung with quotes but won't without) <br />
+Notice that in neither ways of defining $INSTDIR the variable itself contains quotes, but without doing a StrCpy the _?XXX part without quotes is failing to execute the uninstaller and with quotes it's failing to wait for the uninstaller.<br />
+Hope this can help someone in the future and thanks again for all your advice<br />
+<br />
+Martin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">11th August 2005, 18:06</div></div><div class="posttext">Actually, the solution is not to use quotes around the _=? parameter. See chapter 3 (http://nsis.sourceforge.net/Docs/Chapter3.html#3.2) of the documentation for more information.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bradkohl</div><div class="date">8th November 2007, 08:24</div></div><div class="posttext">So Afro in your example, you suggest having another script purely for the uninstaller, you can't bundle it in with the original install script?  I don't see how that example won't just uninstall anything immediately after it's installed otherwise.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">8th November 2007, 17:12</div></div><div class="posttext">The compiled installer which should be used as the uninstaller would indeed uninstall everything, if you execute it. But the idea is not the execute it and instead extract it from the installer as the uninstaller.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bradkohl</div><div class="date">8th November 2007, 19:52</div></div><div class="posttext">Right, I guess I was hoping I could create both installer and uninstaller in the same script as I had been doing before, but  it's not the end of the world if I have to use two files.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

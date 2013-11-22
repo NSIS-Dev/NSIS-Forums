@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Calling external Functions with System::Call, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Calling external Functions with System::Call NSIS Discussion" />
+	
+	<title> Calling external Functions with System::Call [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Calling external Functions with System::Call</div>
+<hr />
+<div class="pda"><a href="t-302245.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=302245">Calling external Functions with System::Call</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">MarWestermann</div><div class="date">19th January 2009, 20:14</div></div><div class="posttext">Hi, I have a problem using a function in a third Party-dll. In fact I have two problems ;-)<br />
+<br />
+1. I do not have a documentation about the external lib.<br />
+2. I dont understand the syntax of the System::Call call.<br />
+<br />
+but I have found an example Install Shild Script where the functions I have to call, are used. So maybe anyone of you can help me with that. Ok, lets start with the three functions I have to call:<br />
+<br />
+in install script they are defined the following:<br />
+<br />
+prototype gptsbinstlms11.GlmsPMKVerify_32( POINTER, BOOL, POINTER, POINTER, POINTER);<br />
+prototype gptsbinstlms11.GlmsFileSetupKeys(POINTER, POINTER, POINTER);    <br />
+prototype gptsbinstlms11.GlmsPrdInstallSetup(POINTER, int, POINTER, POINTER);<br />
+<br />
+<br />
+And here is a function which calls the functions in the dll (also from install shild)<br />
+<br />
+function BOOL CreateGLMSFile(szInstallDir,szValue)<br />
+string svName,svInstallDir,svValue;   <br />
+POINTER pvInstallDir,pvPMCKey;   <br />
+number ipRefCount;           <br />
+long lvPrdInstallSetup;<br />
+number nvRetSetupKey;<br />
+begin  <br />
+<br />
+if UseDLL( GLMSSBInst10 ) != 0 then<br />
+		MessageBox(&quot;Failed to load &quot; + GLMSSBInst10, SEVERE); <br />
+		return FALSE;<br />
+endif;                                             <br />
+	   	svName = LICENSEAPPNAME;<br />
+		//nvSize = -1;     <br />
+		svValue=szValue;			<br />
+		svInstallDir = szInstallDir;<br />
+		pvInstallDir = &amp;svInstallDir;      <br />
+		nvRetSetupKey=GlmsFileSetupKeys(&amp;svName,&amp;svValue,pvInstallDir);<br />
+		    <br />
+		if(nvRetSetupKey=-1) then<br />
+		      return FALSE;<br />
+		endif;<br />
+		<br />
+		ipRefCount = 1;<br />
+		pvPMCKey = &amp;svValue;<br />
+		pvInstallDir = &amp;svInstallDir;           <br />
+		<br />
+		lvPrdInstallSetup = gptsbinstlms11.GlmsPrdInstallSetup(pvPMCKey,<br />
+				&amp;svName, ipRefCount, pvInstallDir);<br />
+		if(lvPrdInstallSetup!=94555) then<br />
+			return FALSE;<br />
+		endif;<br />
+<br />
+			         		<br />
+		if UnUseDLL( GLMSSBInst10 ) != 0 then<br />
+		   MessageBox(&quot;Failed to unload &quot; + GLMSSBInst10, SEVERE); <br />
+		   return FALSE;  <br />
+		endif;  <br />
+  <br />
+ return TRUE;<br />
+<br />
+<br />
+Thanks for any advise or help you can give.<br />
+<br />
+Marco</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MarWestermann</div><div class="date">19th January 2009, 22:16</div></div><div class="posttext">Ok, here's my first try:<br />
+<br />
+<br />
+Function GLMS_Register<br />
+    Var /GLOBAL bRet<br />
+    SetOutPath $TEMP\glms<br />
+    # Save variables in Stack<br />
+    push $0<br />
+    push $1<br />
+    push $2<br />
+    push $3<br />
+    <br />
+    strcpy $bRet &quot;true&quot;<br />
+    strcpy $0 ${LICENSEAPPNAME}<br />
+    strcpy $1 $INSTDIR<br />
+    strcpy $2 &quot;XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX&quot;<br />
+    <br />
+    File /oname=$TEMP\glms\glms.dll C:\Gupta\SQLBase_EDP\InstallComponents\glms\gptsbinstlms11.dll<br />
+    System::Call 'glms::GlmsFileSetupKeys(t, t, t) i(r0, r1, r2) .r3'<br />
+    <br />
+    MessageBox MB_OK &quot;Wert, der ZurÃ¼ck kam: $3&quot;<br />
+    intCmp $3 -1 error 0 0<br />
+    <br />
+    System::Call 'glms::GlmsPrdInstallSetup(t, t, i, t) l(r1, r0, 1, r2) .r3'<br />
+    IntCmp $3 94555 done error error<br />
+    <br />
+    error:<br />
+        DetailPrint &quot;Fehler aufgetreten beim Registrieren des Servers. Bitte PMC&quot;<br />
+        StrCpy $bRet &quot;false&quot;<br />
+    done:<br />
+        System::Free 0<br />
+    <br />
+        # restore variables<br />
+        pop $3<br />
+        pop $2<br />
+        pop $1<br />
+        pop $0<br />
+        push $bRet<br />
+        Return<br />
+FunctionEnd<br />
+<br />
+<br />
+but this doesn't work: $3 is empty after the first System::Call<br />
+Edit: I found an error.. still trying<br />
+Edit: mhh the return value from the first function call is -1<br />
+<br />
+best regards Marco</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MarWestermann</div><div class="date">21st January 2009, 00:54</div></div><div class="posttext">Ok, I got it, for my purposes I only need the function GlmsFileSetupKeys which in c is defined as <br />
+<br />
+long GlmsFileSetupKeys(char*, char*, char*)<br />
+<br />
+so my call is:<br />
+<br />
+System::Call 'glms::GlmsFileSetupKeys(t r0, t r1, t r2) l .r3'<br />
+<br />
+bye Marco</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

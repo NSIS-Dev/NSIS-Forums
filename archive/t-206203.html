@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Needs help with Custom Page creation, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Needs help with Custom Page creation NSIS Discussion" />
+	
+	<title> Needs help with Custom Page creation [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Needs help with Custom Page creation</div>
+<hr />
+<div class="pda"><a href="t-206203.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=206203">Needs help with Custom Page creation</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Dkom</div><div class="date">28th January 2005, 16:22</div></div><div class="posttext">As I'm newbie in custom pages creation, I need a little help - how to put two checkboxes in MUI_PAGE_DIRECTORY and two checkboxes in MUI_UNPAGE_CONFIRM<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">28th January 2005, 19:46</div></div><div class="posttext">1. You need to edit your user interface exe file (e.g. modern.exe) with Resource Hacker and put two check-boxes on there that way. You'd then need to get the state of the check-boxes using SendMessage $hwnd 0x00F2 0 0 $R0 ($R0 = 1 or 0 / checked or unchecked).<br />
+<br />
+2. You need to modify the Modern UI ioSpecial.ini file on uninstall and add two check-box fields.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Dkom</div><div class="date">28th January 2005, 20:45</div></div><div class="posttext">It seems that I understood: dialogs 103 (for MUI_PAGE_DIRECTORY) and 107 (for  MUI_UNPAGE_CONFIRM) in modern.exe (imho it's easiest way for newbies). But how to change text near this checkboxes (installer will be multilinguale). Am I need to use ioSpecial.ini or it can be done by another way?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">28th January 2005, 21:14</div></div><div class="posttext">Sorry, for some reason I though uninstConfirm was a Modern UI custom dialogue (which it isn't).<br />
+<br />
+You just need to add the check-boxes on the dialogues with Resource Hacker.<br />
+Right click on the dialogue, Insert Control, select Checkbox icon, and enter a Caption.<br />
+<br />
+Now, you'll have something like this in the script:<br />
+CONTROL &quot;blah&quot;, 0, BUTTON, BS_CHECKBOX...<br />
+<br />
+You need to replace 0 (the control's item ID) with a unique number like 7. 0, 1 and 2 have been used for the Back, Next and Cancel buttons, so you can't use them again. 7 and 8 hasn't been used for anything, so use 7 for your first check-box and 8 for the second. On your uninstConfirm page put two on there with id's of 9 and 10.<br />
+<br />
+Now, to find out if one of them is checked, you need to use this in the page's Leave function (use !define MUI_PAGE_CUSTOMFUNCTION_LEAVE &quot;funcName&quot; before inserting the MUI_PAGE macro's)...<br />
+<br />
+FindWindow $R1 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+GetDlgItem $R0 $R1 7<br />
+SendMessage $R0 0x00F2 0 0 $R0<br />
+StrCmp $R0 0 +2<br />
+ MessageBox MB_OK &quot;It's checked&quot; IDOK +2<br />
+ MessageBox MB_OK &quot;It's NOT checked&quot; IDOK +2<br />
+<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">29th January 2005, 01:25</div></div><div class="posttext">This might sound a little dumb, but wouldn't it be just as easy to create custom pages using InstallOptions?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Dkom</div><div class="date">29th January 2005, 08:44</div></div><div class="posttext">Thanks, Afrow UK! (but I think it must be CONTROL &quot;blah&quot;, 0, BUTTON, BS_AUTOCHECKBOX...)<br />
+Just another little question: How to change caption of that checkboxes at runtime, using LangString ... ${LANG_ENGLISH} &quot;...&quot; or maybe other command, based on chosen language. <br />
+And how to change default state (checked\unchecked)? Now by default they are both unchecked.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">29th January 2005, 11:08</div></div><div class="posttext">To change the captions use:<br />
+  FindWindow $R1 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+  GetDlgItem $R0 $R1 7<br />
+  SendMessage $R0 0xC 0 &quot;STR:$(LANG_SRING)&quot;<br />
+<br />
+Now to check or uncheck check-box #7, use:<br />
+  SendMessage $R0 0x00F1 1 0 ;check<br />
+  SendMessage $R0 0x00F1 0 0 ;uncheck<br />
+<br />
+You need to put these in the Show page function.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Dkom</div><div class="date">30th January 2005, 21:26</div></div><div class="posttext">Thanks again.<br />
+I want to add such behavior: If user checks button &quot;#8&quot;<br />
+ - then button &quot;#7&quot; must be automatically checked too. I wrote this code but I don't know where to put it. Maybe I need another code...<br />
+<br />
+FindWindow $R1 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+GetDlgItem $R0 $R1 8 <br />
+SendMessage $R0 0x00F2 0 0 $R0<br />
+StrCmp $R0 &quot;0&quot; +4<br />
+FindWindow $R1 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+GetDlgItem $R0 $R1 7<br />
+SendMessage $R0 0x00F1 1 0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">31st January 2005, 10:14</div></div><div class="posttext">I'm afraid that isn't possible. You can't assign a custom function to a control without modifying and recompiling NSIS's source code.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st February 2005, 18:06</div></div><div class="posttext">MUI_UNPAGE_CONFIRM can be easily emulated with InstallOptions and InstallOptions can notify you when buttons are clicked. The directory page will be harder to emulate, but it's possible if you're willing to make some sacrifices.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

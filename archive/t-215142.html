@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Not deleting a writeable file, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Not deleting a writeable file NSIS Discussion" />
+	
+	<title> Not deleting a writeable file [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Not deleting a writeable file</div>
+<hr />
+<div class="pda"><a href="t-215142.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=215142">Not deleting a writeable file</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">calumm</div><div class="date">6th May 2005, 17:22</div></div><div class="posttext">My installation installs some sample files, which are installed readonly, in order to discourage the user from editing them directly, but instead copy them to another location in order to edit them.<br />
+<br />
+If the user does edit them, I want to not delete them when uninstalling.<br />
+<br />
+So, on uninstallation, I really want to delete them if they're readonly, but leave them if they're writeable.<br />
+<br />
+Is there any way to achieve this?<br />
+<br />
+Thanks,<br />
+Calum</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">6th May 2005, 18:03</div></div><div class="posttext">If they're plain files, you can check if they're readonly with FileOpen...<br />
+<br />
+!macro IsReadOnly File IfIs IfIsnt<br />
+Push $R0<br />
+Push $R1<br />
+ ClearErrors<br />
+ FileOpen $R0 &quot;${File}&quot; r<br />
+ FileRead $R0 $R1<br />
+ FileClose $R0<br />
+Pop $R1<br />
+Pop $R0<br />
+IfErrors ${IfIs} ${IfIsnt}<br />
+!macroend<br />
+!define IsReadOnly &quot;!insertmacro IsReadOnly&quot;<br />
+<br />
+Then do for each file to delete...<br />
+${IsReadOnly} &quot;$INSTDIR\File.txt&quot; 0 +2<br />
+Delete &quot;$INSTDIR\File.txt&quot;<br />
+<br />
+Edit: You will need to use SetFileAttributes to turn off the readonly flag before deleting the file. Change +2 to +3 then as well.<br />
+<br />
+${IsReadOnly} &quot;$INSTDIR\File.txt&quot; 0 +3<br />
+SetFileAttributes &quot;$INSTDIR\File.txt&quot; NORMAL<br />
+Delete &quot;$INSTDIR\File.txt&quot;<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">calumm</div><div class="date">6th May 2005, 20:12</div></div><div class="posttext">Thanks for that - I'll try it out.<br />
+<br />
+Just for my understanding: what is it in opening, reading and closing the file which would generate an error if the file is readonly?  (as that's what I understand is happening)<br />
+<br />
+And, I take it there's no built-in way to get file attributes - you've got to take the above round-about way?<br />
+<br />
+Thanks for your help,<br />
+Calum</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">6th May 2005, 21:46</div></div><div class="posttext">Yes, that's how we've always done it.<br />
+<br />
+This would be nice though...<br />
+FileAttributeSet &quot;path\to\file&quot; ATTRIBUTE GotoIfSet NotSet<br />
+<br />
+Or perhaps a GetFileAttributes.<br />
+<br />
+Yes, the error flag is set if a file cannot be opened with FileOpen. You could remove the FileRead and the Push $R1 + Pop $R1 and the error flag should still be set but I put them in just in case.<br />
+<br />
+The Push's and Pop's just save the values of $R0 and $R1 if you happen to be using them before and after including the macro.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">calumm</div><div class="date">7th May 2005, 00:28</div></div><div class="posttext">Hi again<br />
+<br />
+I guess if it works (haven't been able to try it yet), then it's a bit academic.<br />
+But I'm still confused - does FileOpen fail to open a read-only file?<br />
+<br />
+Thanks,<br />
+Calum</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">7th May 2005, 04:27</div></div><div class="posttext">FileOpen should fail on a read-only file, if you try opening it for writing. That's what the read-only attribute is all about.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">7th May 2005, 12:21</div></div><div class="posttext">Oh yes, sorry for some reason I thought it wouldn't be able to read it :D<br />
+Changed:<br />
+<br />
+<br />
+!macro IsReadOnly File IfIs IfIsnt<br />
+Push $R0<br />
+ ClearErrors<br />
+ FileOpen $R0 &quot;${File}&quot; a<br />
+ FileClose $R0<br />
+Pop $R0<br />
+IfErrors ${IfIs} ${IfIsnt}<br />
+!macroend<br />
+!define IsReadOnly &quot;!insertmacro IsReadOnly&quot;<br />
+<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">calumm</div><div class="date">7th May 2005, 12:31</div></div><div class="posttext">Ah - I was wondering if the openmode from your original example should be something other than &quot;r&quot;.<br />
+<br />
+In the documentation, it says:<br />
+<br />
+&quot;w&quot; (write, all contents of file are destroyed)<br />
+&quot;a&quot; (append, meaning opened for both read and write, contents preserved). <br />
+<br />
+So would &quot;a&quot; be more appropriate in my case than &quot;w&quot;, as I want to leave the file alone if it's writeable?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">7th May 2005, 13:13</div></div><div class="posttext">Yes that should work :D<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">7th May 2005, 20:45</div></div><div class="posttext">FileOpen $R0 &quot;File&quot; athis is change modification date of file.<br />
+<br />
+<br />
+ calumm you can try this one: GetFileAttributes (http://nsis.sourceforge.net/archive/nsisweb.php?page=986&amp;instances=0)<br />
+<br />
+${GetFileAttributes} &quot;file&quot; &quot;READONLY&quot; $R0<br />
+StrCmp $R0 0 0 +2<br />
+MessageBox MB_OK &quot;File isn't READONLY&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">calumm</div><div class="date">10th May 2005, 09:03</div></div><div class="posttext">Instructor - thanks for that.<br />
+Calum</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" adjusting height, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  adjusting height NSIS Discussion" />
+	
+	<title> adjusting height [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  adjusting height</div>
+<hr />
+<div class="pda"><a href="t-113619.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=113619">adjusting height</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">amanda_like_it</div><div class="date">11th November 2002, 00:27</div></div><div class="posttext">Is there a way to adjust the height of the install dialog?  I looked through the documentation for &quot;width&quot; and &quot;dimension&quot; and searched the board for the words also, but it doesn't seem anyone has needed this before.  I just want to make my branded picture fit, I am putting it on the left but I want to use a picture that is taller than the installer.<br />
+<br />
+Anyone know how I might do this?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dselkirk</div><div class="date">11th November 2002, 04:57</div></div><div class="posttext">The best method is to use a custom UI. There are several examples located in Contrib\UIs of the NSIS folder. You can edit the existing ones with a program like &quot;Resource Hacker&quot;, or compile your own. Inside your script you simply set the ChangeUI attribute to the location of your new UI and the compiler will do the rest. For example, the following will set your dialog to use the new modern UI dialog.<br />
+<br />
+Name &quot;test&quot;<br />
+OutFile &quot;test.exe&quot;<br />
+ChangeUI all &quot;${NSISDIR}\Contrib\UIs\modern.exe&quot;<br />
+<br />
+Section &quot;&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">amanda_like_it</div><div class="date">11th November 2002, 23:33</div></div><div class="posttext">Thanks for the reply.<br />
+<br />
+I've since played with the ModernUI and tried adding a branding image but it seems to ignore me completely.  Is this something that will be fixed with the Modern UI?  If not, is there some tutorial on how to add an image to the modern ui?  I could see using resource hacker to make space but I don't know how I'd go about loading something into that spot through the scripting language.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dselkirk</div><div class="date">12th November 2002, 02:22</div></div><div class="posttext">theres a couple ways you can do it. first it comes down to what type of branding image you want to add. NSIS has a souple functions which will allow you to add an image to the inner dialog. Use the AddBrandingImage and the SetBrandingImage functions. If this doesn't do what you need then we can go to the next step which is using resource hacker.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">amanda_like_it</div><div class="date">13th November 2002, 02:30</div></div><div class="posttext">Well I found out that if you want to add a branding image to the MODERN_UI using all those fancy macros ;) you have to put it after the !insertmacro MUI_SYSTEM.<br />
+<br />
+This makes space for the image but I am unable to find a function where I can load it from.<br />
+<br />
+By adding another page I was able to get a function to load the image:<br />
+Page directory dirImage<br />
+<br />
+But there are two problems with this.  First of all I don't want to add the Image after I've gone through all the other pages the MODERN_UI macros have created.  Secondly, the image appeared too low and off to the right, clearly not lined up with the borders of the dialog as it should be.  I'm pretty sure this last one is a bug, but if I find a better function to load the branding image from perhaps this problem will go away.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dselkirk</div><div class="date">13th November 2002, 03:53</div></div><div class="posttext">This is what I do for my installer. I have a full screen graphic so I have to add an additional control to the outer dialog. I modify dialog 105 in the modern.exe UI file (I user resource hacker for this). I add the following line right below the &quot;{&quot; symbol.<br />
+<br />
+CONTROL &quot;&quot;,1001,STATIC,SS_BITMAP|WS_CHILD|WS_VISIBLE|WS_GROUP,0,0,0,0<br />
+<br />
+I then recompile the page and save the exe. In my code I add the following.<br />
+<br />
+Function .onGUIInit<br />
+  GetTempFileName $R0<br />
+  File &quot;/oname=$R0&quot; &quot;background.bmp&quot;<br />
+  SetBrandingImage /IMGID=1001 &quot;$R0&quot;<br />
+  Delete $R0<br />
+FunctionEnd<br />
+<br />
+This will load the graphic into the control. You might have to play around with the ording in the modern.exe but that's basically it. <br />
+<br />
+Hope this helps.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">amanda_like_it</div><div class="date">13th November 2002, 04:47</div></div><div class="posttext">This almost works but I get the error:<br />
+Function: &quot;.onGUIInit&quot;<br />
+Error: Function named &quot;.onGUIInit&quot; already exists.<br />
+Error in script &quot;eMule.nsi&quot; on line 57 -- aborting creation process<br />
+<br />
+Is this already defined by the MODERN_UI macro?<br />
+<br />
+I tried putting that code in the .onInit function but while it compiled it did nothing.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dselkirk</div><div class="date">13th November 2002, 13:24</div></div><div class="posttext">MUI does have the GUIInit already used but we should be able to get around it. In your script you should have the following line.<br />
+<br />
+!insertmacro MUI_SYSTEM<br />
+<br />
+replace it with the following.<br />
+<br />
+!insertmacro MUI_INTERFACE<br />
+!insertmacro MUI_FUNCTIONS_PAGES<br />
+Function .onGUIInit<br />
+  GetTempFileName $R0 <br />
+  File &quot;/oname=$R0&quot; &quot;background.bmp&quot; <br />
+  SetBrandingImage /IMGID=1001 &quot;$R0&quot; <br />
+  Delete $R0 <br />
+  !insertmacro MUI_GUIINIT<br />
+FunctionEnd<br />
+!insertmacro MUI_FUNCTIONS_ABORTWARNING<br />
+!insertmacro MUI_UNBASIC<br />
+<br />
+give it a try</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">13th November 2002, 13:40</div></div><div class="posttext">An easier way of using a customized GUIInit function will be added to the next version of the Modern UI.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">amanda_like_it</div><div class="date">13th November 2002, 21:20</div></div><div class="posttext">Ah-ha, thanks dselkirk that did the trick. :D  I'm so close... however I still have a problem getting the image in the right spot/size.<br />
+<br />
+If I use &quot;AddBrandingImage left 164&quot; it will place the branding image down and to the right (and it takes a little more space than I told it to), instead of in the top left corner.  Is there a way to tell the image to be at 0,0 after adding the branding image?<br />
+<br />
+If I add it using reshacker I don't know how much space I'd need since 164 units is not the same as 164 pixels... and don't these units change with system font sizes?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dselkirk</div><div class="date">13th November 2002, 21:58</div></div><div class="posttext">The addbrandingimage function adds the image to the inner dialog. the inner dialog is that grey square you see if you edit dialog 105 of the modern.exe. Thats why I add the bitmap control to the ui using resource hacker, it allows me to place the graphic where I want. Also, in resource hacker 164 translates to 110. This shouldn't matter though. The graphic should automatically resize. Why don't you describe how you want it to look and then we can go form there.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">shantanu_gadgil</div><div class="date">13th November 2002, 22:08</div></div><div class="posttext">This is a modified version of the basic &quot;modern2.exe&quot; UI. You can load it in ResourceHacker and see the location of the image. This is a rough cut :)<br />
+<br />
+- Shantanu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">shantanu_gadgil</div><div class="date">13th November 2002, 22:10</div></div><div class="posttext">here is the file <br />
+<br />
+- Shantanu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">amanda_like_it</div><div class="date">14th November 2002, 09:49</div></div><div class="posttext">Hey dselkirk, thanks for the clarification on the AddBrandingImage issue.  I still think it would be nice to be able to add a branding image with some sort of automatic macro into the MODERN_UI, however resource hacker worked fine.<br />
+<br />
+I think this is the last problem, when I run the uninstaller it doesn't seem to call .onGUIInit so the branding image doesn't get set.  Again, I'd say this is a bug but perhaps it's just ignorance on my behalf. :igor:  Do you have a clever way of working around this too?<br />
+<br />
+@shantanu_gadgil, thanks for the new layout but I got what I needed as far as layout goes.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">14th November 2002, 11:23</div></div><div class="posttext">The uninstaller uses un.onGUIInit, but you should also insert some macro's manually because the Modern UI basic macro inserts un.onGUIInit.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">amanda_like_it</div><div class="date">14th November 2002, 18:14</div></div><div class="posttext">Well this causes a new problem, the branding image takes up 2x the space now.  Is there someway to fix this?  It won't let me mix &quot;un.&quot; function calls with regular &quot;.&quot; functions so I can't see a way around this.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">amanda_like_it</div><div class="date">14th November 2002, 18:25</div></div><div class="posttext">...or perhaps there is a way to use another gui, like say modern.exe, for the uninstaller so I don't have that big space there?<br />
+<br />
+I tried ChangeUI with IDD_UNINST but that only changes the inner dialog.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dselkirk</div><div class="date">14th November 2002, 18:52</div></div><div class="posttext">There seems to be 2 issues here. I'm not sure whats happening with the branding image size. It almost sounds like 2 images are being added. As for mixing the functions, the only way to do this is to use macros. To do this simply add the following code before any of the !insertmacro I showed you in the previous post. <br />
+<br />
+!macro MY_GUIINIT <br />
+  GetTempFileName $R0 <br />
+  File &quot;/oname=$R0&quot; &quot;background.bmp&quot; <br />
+  SetBrandingImage /IMGID=1001 &quot;$R0&quot; <br />
+  Delete $R0 <br />
+  !insertmacro MUI_GUIINIT<br />
+!macroend<br />
+<br />
+Now replace all the code inside the .onGUIInit and un.onGUIInit functions with  the following.<br />
+<br />
+!insertmacro MY_GUIINIT<br />
+<br />
+This will insert the same code in both functions.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">amanda_like_it</div><div class="date">14th November 2002, 23:43</div></div><div class="posttext">I was unclear.<br />
+<br />
+The problem is the image is twice in the installer executable!  The installer has two copys of same image compressed seperatly.  I add branding image and I gain 100k to installer, then I add branding image to un.onGUIInit and now installer gains 200k!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dselkirk</div><div class="date">15th November 2002, 00:07</div></div><div class="posttext">Ahh. Basically the reason is that the uninstall is a seperate executable that is compiled at the same time as your installer. That is why nsis is so seperated in the script. Why there's &quot;.&quot; and &quot;un.&quot;. The only thing you can do is either make a silent uninstall (ie. no graphic need then) or optimize your graphic (index the color). Wish I had a better answer for you. Sorry</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">amanda_like_it</div><div class="date">15th November 2002, 02:11</div></div><div class="posttext">well if you say they are seperate executables, isn't there a way for me to change which UI it uses for the uninstaller?  I'd be happy if it just used the modern.exe ui...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">15th November 2002, 10:35</div></div><div class="posttext">They are not separate executables, just separate data blocks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dselkirk</div><div class="date">15th November 2002, 13:44</div></div><div class="posttext">is it possible to have a common data block? This can be for graphics and functions which are common to both install and uninstall?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">15th November 2002, 13:45</div></div><div class="posttext">I'll check.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dselkirk</div><div class="date">15th November 2002, 13:51</div></div><div class="posttext">cool, thx</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">amanda_like_it</div><div class="date">16th November 2002, 11:48</div></div><div class="posttext">Common data block?  I'd be very much interested in this, would be a useful feature.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

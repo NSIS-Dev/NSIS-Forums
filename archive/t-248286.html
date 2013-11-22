@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" A few registry questions, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  A few registry questions NSIS Discussion" />
+	
+	<title> A few registry questions [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  A few registry questions</div>
+<hr />
+<div class="pda"><a href="t-248286.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=248286">A few registry questions</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jrolling</div><div class="date">9th June 2006, 15:57</div></div><div class="posttext">Hi,<br />
+<br />
+I would like my end users to be able to install many instances of my application. <br />
+<br />
+For example they might want to have the same application at 3 different locations.<br />
+<br />
+1: C:\application1\app.exe<br />
+2: C:\application2\app.exe<br />
+3: C:\application3\app.exe<br />
+<br />
+My problem is that application2 is writing over application1 in the registry and so forth. Also, the uninstaller is removing all sections from the registry, even if its not supposed to. <br />
+<br />
+What is the best way to increment entries in the registry? Or increment uninstall entries in the registry? How do I approach finding out which entry is the correct one to remove during the uninstallation?  <br />
+<br />
+Thanks,</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">9th June 2006, 16:03</div></div><div class="posttext">you could keep a refrence count and only delete the entries if it is less than 1, or if they should not share settings, store with a hash of the path maybe (HKCU\Software\Company\Appname\%HASH%\)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fluidz91</div><div class="date">21st June 2006, 15:52</div></div><div class="posttext">Hello,<br />
+<br />
+I have the same need as jrolling but don't know how to do it even with Anders' response.<br />
+Installer name is the same (so registry markers are the same according to the wizard) but install directory is different and i have different installoptions parameters for each install.<br />
+When the uninstaller is launched is it possible to have a page that lists installed components to uninstall (checkboxes)?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jrolling</div><div class="date">21st June 2006, 16:01</div></div><div class="posttext">You need to figure out a way to make the registry entries unique. One very simple thing to do is to have something <br />
+<br />
+WriteRegStr HKLM  &quot;${REGKEY}\$INSTDIR\Components&quot; Common 1<br />
+<br />
+This way you know which entry to delete during uninstall and you can have. I would only recommend this for short time use until you come up with something better.<br />
+<br />
+You can make a custom uninstall page and during the un.init you can read your registry entry to find out which components are installed for that particular installation. Take a look at custom pages if you haven't already.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fluidz91</div><div class="date">22nd June 2006, 10:40</div></div><div class="posttext">I manage to have unique registry entries for installed components (ServiceName$nbpavi) and the number of installed components (InstalledPavi) by doing :<br />
+<br />
+<br />
+ReadRegStr $nbpavi HKLM &quot;${REGKEY}\Components&quot; &quot;InstalledPavi&quot;<br />
+    Strcmp $nbpavi &quot;&quot; NoPavi OneMorePavi<br />
+    NoPavi:<br />
+        StrCpy $nbpavi 1<br />
+        WriteRegStr HKLM &quot;${REGKEY}\Components&quot; &quot;InstalledPavi&quot; 1<br />
+        goto EndPavi<br />
+    OneMorePavi:<br />
+        IntOp $nbpavi $nbpavi + 1<br />
+        WriteRegStr HKLM &quot;${REGKEY}\Components&quot; &quot;InstalledPavi&quot; $nbpavi<br />
+    EndPavi:<br />
+    <br />
+    WriteRegStr HKLM &quot;${REGKEY}\Components&quot; &quot;ServiceName$nbpavi&quot; $0<br />
+<br />
+<br />
+I also manage to add a components page to the uninstall :<br />
+<br />
+<br />
+!insertmacro MUI_UNPAGE_COMPONENTS<br />
+<br />
+<br />
+For exemple, when running the installer twice i can have :<br />
+<br />
+c:\Program Files\Pavi1<br />
+c:\Program Files\Pavi2<br />
+<br />
+registry :<br />
+&quot;InstalledPavi&quot; &quot;2&quot;<br />
+&quot;ServiceName1&quot; &quot;PAVI1&quot;<br />
+&quot;ServiceName2&quot; &quot;PAVI2&quot;<br />
+<br />
+My problem now is to know how to set &quot;ServiceNameX&quot; as  uninstall sections in order to uninstall only selected services.<br />
+If anyone as a clue.<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fluidz91</div><div class="date">22nd June 2006, 15:51</div></div><div class="posttext">i changed some things :<br />
+<br />
+i use<br />
+<br />
+UninstPage custom un.CustomPageB<br />
+<br />
+ instead of <br />
+<br />
+!insertmacro MUI_UNPAGE_COMPONENTS<br />
+<br />
+<br />
+Then on un.onInit i use<br />
+<br />
+!insertmacro MUI_INSTALLOPTIONS_EXTRACT &quot;unsetup.ini&quot;<br />
+ReadRegStr $nbpavi HKLM &quot;${REGKEY}\Components&quot; &quot;InstalledPavi&quot;<br />
+StrCpy $0 0<br />
+StrCpy $2 &quot;&quot;<br />
+<br />
+<br />
+unsetup.ini contains a droplist that will be filled in function un.CustomPageB by looping values in the registry.<br />
+<br />
+<br />
+Function un.CustomPageB<br />
+  loop:<br />
+    IntCmp $0 $nbpavi done_loop 0 done_loop<br />
+    IntOp $0 $0 + 1<br />
+    ReadRegStr $1 HKLM &quot;${REGKEY}\Components&quot; &quot;ServiceName$0&quot;<br />
+    Strcpy $2 &quot;$2|$1&quot;<br />
+  Goto loop<br />
+  done_loop:<br />
+  !insertmacro MUI_INSTALLOPTIONS_WRITE &quot;unsetup_pavi.ini&quot; &quot;Field 1&quot; &quot;ListItems&quot; &quot;$2|Tous&quot;<br />
+  !insertmacro MUI_HEADER_TEXT &quot;$(TEXT_IO_TITLE)&quot; &quot;$(TEXT_IO_SUBTITLE)&quot;<br />
+  !insertmacro MUI_INSTALLOPTIONS_DISPLAY &quot;unsetup_pavi.ini&quot;<br />
+FunctionEnd<br />
+<br />
+<br />
+i know i could use push and pop but i m not very comfortable with these...<br />
+I have not finished yet but hope this is a good way to solve my need.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

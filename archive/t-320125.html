@@ -1,0 +1,121 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Register a BHO through an NSIS installer, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Register a BHO through an NSIS installer NSIS Discussion" />
+	
+	<title> Register a BHO through an NSIS installer [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Register a BHO through an NSIS installer</div>
+<hr />
+<div class="pda"><a href="t-320125.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=320125">Register a BHO through an NSIS installer</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">kumar.kapil</div><div class="date">21st June 2010, 17:02</div></div><div class="posttext">I have an IE BHO which I was packaging through the Visual Studio setup and deployment project. I now want to the package it through an NSIS installer.<br />
+<br />
+My BHO was registering in the following way:<br />
+<br />
+        [ComRegisterFunctionAttribute]<br />
+        public static void Register(Type t)<br />
+        {<br />
+            string guid = t.GUID.ToString(&quot;B&quot;);<br />
+            <br />
+            RegistryKey rkClass = Registry.ClassesRoot.CreateSubKey(@&quot;CLSID\&quot;+guid );<br />
+            RegistryKey rkCat = rkClass.CreateSubKey(&quot;Implemented Categories&quot;);<br />
+<br />
+            string name = toolbarName;<br />
+            string help = toolbarHelpText;<br />
+            <br />
+            rkClass.SetValue(null, name );<br />
+            rkClass.SetValue(&quot;MenuText&quot;, name );<br />
+            rkClass.SetValue(&quot;HelpText&quot;, help );<br />
+<br />
+            if( 0 != (style &amp; BandObjectStyle.Vertical) )<br />
+                rkCat.CreateSubKey(&quot;{00021493-0000-0000-C000-000000000046}&quot;);<br />
+<br />
+            if( 0 != (style &amp; BandObjectStyle.Horizontal) )<br />
+                rkCat.CreateSubKey(&quot;{00021494-0000-0000-C000-000000000046}&quot;);<br />
+<br />
+            if( 0 != (style &amp; BandObjectStyle.TaskbarToolBar) )<br />
+                rkCat.CreateSubKey(&quot;{00021492-0000-0000-C000-000000000046}&quot;);<br />
+<br />
+            if( 0 != (style &amp; BandObjectStyle.ExplorerToolbar) )<br />
+                Registry.LocalMachine.CreateSubKey(@&quot;SOFTWARE\Microsoft\Internet Explorer\Toolbar&quot;).SetValue(guid,name);<br />
+<br />
+        }<br />
+<br />
+While this is taken care of by the msi installer that is made by VS, I want to know how can I do the same using NSIS?<br />
+<br />
+Any help would be appreciated!<br />
+<br />
+Kapil</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">22nd June 2010, 16:26</div></div><div class="posttext">If it's just a matter of writing those registry values then you've got all the registry functions in the NSIS documentation. You'll just have to get the GUID and pass it to NSIS. You could do this via a .NET DLL (invoked using the CLR plug-in (http://nsis.sourceforge.net/Call_.NET_DLL_methods_plug-in)) or via a .NET console app which you execute with ExecDos (http://nsis.sourceforge.net/ExecDos_plug-in)/nsExec.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">th_mi</div><div class="date">23rd June 2010, 09:37</div></div><div class="posttext">RegistryKey rkClass = Registry.ClassesRoot.CreateSubKey(@&quot;CLSID\&quot;+guid );<br />
+            RegistryKey rkCat = rkClass.CreateSubKey(&quot;Implemented Categories&quot;);<br />
+<br />
+            string name = toolbarName;<br />
+            string help = toolbarHelpText;<br />
+            <br />
+            rkClass.SetValue(null, name );<br />
+            rkClass.SetValue(&quot;MenuText&quot;, name );<br />
+            rkClass.SetValue(&quot;HelpText&quot;, help );<br />
+<br />
+            if( 0 != (style &amp; BandObjectStyle.Vertical) )<br />
+                rkCat.CreateSubKey(&quot;{00021493-0000-0000-C000-000000000046}&quot;);<br />
+<br />
+            if( 0 != (style &amp; BandObjectStyle.Horizontal) )<br />
+                rkCat.CreateSubKey(&quot;{00021494-0000-0000-C000-000000000046}&quot;);<br />
+<br />
+            if( 0 != (style &amp; BandObjectStyle.TaskbarToolBar) )<br />
+                rkCat.CreateSubKey(&quot;{00021492-0000-0000-C000-000000000046}&quot;);<br />
+<br />
+            if( 0 != (style &amp; BandObjectStyle.ExplorerToolbar) )<br />
+                Registry.LocalMachine.CreateSubKey(@&quot;SOFTWARE\Microsoft\Internet Explorer\Toolbar&quot;).SetValue(guid,name);<br />
+<br />
+Your GUID should be known, than you can do it all by yourself using the Registry functions WriteRegXXX of NSIS. <br />
+<br />
+If your shell extension DLL (hopefully) meets the Microsoft design guidlines there is also an much more easier way:<br />
+<br />
+You can use the exported function DllRegisterServer (and for uninstalling DllUnregisterServer). This can easyly done using &quot;RegSvr32.exe&quot;. This would be in NSIS like this command:<br />
+<br />
+Install: ExecWait &quot;$SYSDIR\regsvr32.exe /s $\&quot;$INSTDIR\YourDLLName.dll$\&quot;&quot;<br />
+Uninstall: ExecWait &quot;$SYSDIR\regsvr32.exe /s /u $\&quot;$INSTDIR\YourDLLName.dll$\&quot;&quot;<br />
+<br />
+It is important tu use quotation marks in the command argument of RegSvr32 since the setup directory may contain spaces. If the quotation marks are missing the command argument will be cut at the first space in the argument by RegSvr32!<br />
+<br />
+In case your shell extension DLL does not support the registering and unregistering process completely I advice you to implement this in you DLL. This may be needed in case a re-registering or a manual unregistering is nesessary. This makes life much much easier for your customer support!<br />
+<br />
+hope this helped a little!?<br />
+<br />
+Best regards<br />
+<br />
+th_mi</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">23rd June 2010, 10:06</div></div><div class="posttext">Do you have to use regsvr32? What about NSIS's RegDLL?<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">th_mi</div><div class="date">24th June 2010, 09:38</div></div><div class="posttext">Do you have to use regsvr32? <br />
+No, if you know RegDLL :)<br />
+<br />
+What about NSIS's RegDLL?<br />
+Now I can use it, since I know it ;)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

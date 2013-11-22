@@ -1,0 +1,208 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Questions about a large installer., media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Questions about a large installer. NSIS Discussion" />
+	
+	<title> Questions about a large installer. [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Questions about a large installer.</div>
+<hr />
+<div class="pda"><a href="t-270233.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=270233">Questions about a large installer.</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">rotifer</div><div class="date">26th April 2007, 21:24</div></div><div class="posttext">Hello, I'm constructing a rather large intaller to be distributed on DVD. It contains about 3 GB of data and will probably be about 1.4 GB after compression (I usually use lzma /solid). I've compiled a dozen or so of these installers before, ranging from one to several hundred MB in size at the end. Apparently, those worked without problems, since no one complained. I didn't bother with uninstallers.<br />
+<br />
+My understanding of NSIS is pretty rudimentary and I've mostly cookbooked my way along. The idea of loading a gigabyte sized file into memory from DVD and decompressing it sets off a lot of alarm bells for me. Can (or should) I break the installer file into smaller pieces, and if so how would I do this? My installer script is pretty basic, using a few File /r &quot;Install\*.*&quot; commands, without reference to external ini files, etc.<br />
+<br />
+I am also having trouble with creating an uninstaller. This is data for other applications, so it is installed into the existing application directory structure. My installers use the application directory as $INSTDIR and install to appropriate sub-directories via the File /r &quot;Install\*.*&quot; commands. Nothing is actually written to $INSTDIR, just its subdirectories. Generally there are AppDir\DataDir\MyDataDir\*.* and AppDir\ConfigDir\MyConfigFile.ext. I'm using the directory structure of &quot;Install\*.*&quot; to put everything where it belongs. MyDataDir contains about 1200 branching subdirectories and tens of thousands of small data files.<br />
+<br />
+I can uninstall the data files by writing uninstall.exe to MyDataDir and using RMDir /r &quot;$INSTDIR&quot;. This approach sets off more alarm bells and doesn't remove MyConfigFile.ext. I've tried to create a variable for this file and explicitly delete it, without success. As I say, my grasp of NSIS is very limited. Since the number of files and folders is so large, I don't really want to try to create a log file of all the individual files and paths during installation. Could someone recommend a good solution to this?<br />
+<br />
+Also, are there any built-in strings for the uninstaller that would appear in the uninstaller in other languages (like the installer pages)?<br />
+<br />
+The uninstaller part of my script is:<br />
+Section -Post<br />
+  WriteUninstaller &quot;$INSTDIR\MyDataDir\uninst.exe&quot;<br />
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} &quot;${PRODUCT_UNINST_KEY}&quot; <br />
+&quot;DisplayName&quot; &quot;$(^Name)&quot;<br />
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} &quot;${PRODUCT_UNINST_KEY}&quot; <br />
+&quot;UninstallString&quot; &quot;$INSTDIR\uninst.exe&quot;<br />
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} &quot;${PRODUCT_UNINST_KEY}&quot; <br />
+&quot;DisplayVersion&quot; &quot;${PRODUCT_VERSION}&quot;<br />
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} &quot;${PRODUCT_UNINST_KEY}&quot; <br />
+&quot;URLInfoAbout&quot; &quot;${PRODUCT_WEB_SITE}&quot;<br />
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} &quot;${PRODUCT_UNINST_KEY}&quot; <br />
+&quot;Publisher&quot; &quot;${PRODUCT_PUBLISHER}&quot;<br />
+SectionEnd<br />
+<br />
+Function un.onUninstSuccess<br />
+  HideWindow<br />
+  MessageBox MB_ICONINFORMATION|MB_OK &quot;$(^Name) was successfully <br />
+removed from your computer.&quot;<br />
+FunctionEnd<br />
+<br />
+Function un.onInit<br />
+!insertmacro MUI_UNGETLANGUAGE<br />
+  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 &quot;Are you sure you <br />
+want to completely remove $(^Name) and all of its components? <br />
+This will delete the directory $INSTDIR and all files it contains.&quot; IDYES +2<br />
+  Abort<br />
+FunctionEnd<br />
+<br />
+Section Uninstall<br />
+  Delete &quot;$INSTDIR\ConfigDir\MyConfigFile.ext&quot;  ###  I know this is wrong!<br />
+<br />
+  Delete &quot;$SMPROGRAMS\NSIS_Test-00\Uninstall.lnk&quot;<br />
+  Delete &quot;$SMPROGRAMS\NSIS_Test-00\Website.lnk&quot;<br />
+<br />
+  RMDir /r &quot;$SMPROGRAMS\NSIS_Test-00&quot;<br />
+  RMDir /r &quot;$INSTDIR&quot;<br />
+<br />
+  DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} &quot;${PRODUCT_UNINST_KEY}&quot;<br />
+  SetAutoClose true<br />
+SectionEnd<br />
+ <br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">27th April 2007, 15:09</div></div><div class="posttext">If the file is not being removed with a recursive deletion them it is locked by another process.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rotifer</div><div class="date">27th April 2007, 20:11</div></div><div class="posttext">Thanks for your reply<br />
+<br />
+The deltree portion of the uninstallation works as expected (deletes the tree ;) ). I'm just concerned about the blunt weapon nature of this operation. I put an explicit path statement in the warning confirmation because of this, maybe that's enough. Enumerating all the installed files during installation doesn't seem desirable, given the huge number of small files that I have.<br />
+<br />
+The part that doesn't work at all is removal of MyConfigFile.ext. I realize that this probably isn't a difficult thing, but I don't seem to be able to get the syntax and placement right. I tried some things with un.GetParent, like:<br />
+!include &quot;FileFunc.nsh&quot;<br />
+!insertmacro un.GetParent<br />
+and<br />
+${un.GetParent} &quot;$INSTDIR\ConfigDir\MyConfigFile.ext&quot; $R0<br />
+Delete &quot;$R0\MyConfigFile.ext&quot;<br />
+ <br />
+but I don't understand the structure and locations of these very well. Either they gave errors during compile or didn't delete the desired file.<br />
+<br />
+Do you have any suggestions about using a single-file installer or trying to break it into smaller pieces?<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th April 2007, 20:18</div></div><div class="posttext">My understanding of NSIS is pretty rudimentary and I've mostly cookbooked my way along. The idea of loading a gigabyte sized file into memory from DVD and decompressing it sets off a lot of alarm bells for me. Can (or should) I break the installer file into smaller pieces, and if so how would I do this? My installer script is pretty basic, using a few File /r &quot;Install\*.*&quot; commands, without reference to external ini files, etc.If you're worried about memory requirements, there's no need to split the installer. It will never be loaded into memory in one piece.<br />
+<br />
+As for the uninstaller, write it to $INSTDIR. The directory from which the uninstaller is executed is used as $INSTDIR when the uninstaller runs. Because you write it to $INSTDIR\Something, $INSTDIR won't have the same value in the installer and uninstaller.<br />
+<br />
+To remove only the files you installed without resorting to RMDir /r, use on of the following.<br />
+<br />
+http://nsis.sourceforge.net/Uninstall_only_installed_files<br />
+http://nsis.sourceforge.net/Uninstall_all_dirs_and_subdirs_created_by_your_installer<br />
+http://nsis.sourceforge.net/Advanced_Uninstall_Log_NSIS_Header</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rotifer</div><div class="date">27th April 2007, 21:57</div></div><div class="posttext">Thanks, kichik<br />
+<br />
+If you're worried about memory requirements, there's no need to split the installer. It will never be loaded into memory in one piece. <br />
+Good, so one monster installer file should work without problems.<br />
+<br />
+Because you write it to $INSTDIR\Something, $INSTDIR won't have the same value in the installer and uninstaller. <br />
+<br />
+Yes, I understand that. I put uninstall.exe in MyDataDir so $INSTDIR becomes MyDataDir during uninstall. I don't want to delete the $INSTDIR (AppDir) used initially, since this is a data package for an existing application. My files are a big tree of files in AppDir\DataDir\MyDataDir\*.* and a single file in AppDir\ConfigDir\, MyConfigFile.ext. The RMDir /r &quot;$INSTDIR&quot; line deletes MyDataDir\*.*, since I put uninstall.exe in that subdirectory (AppDir\DataDir\MyDataDir\uninstall.exe). The file AppDir\ConfigDir\MyConfigFile.ext also must be selectively deleted during uninstall. I'm trying to use un.GetParent earlier in the script when $INSTDIR is still the AppDir target, feed that value to a variable and use the variable to define the Delete &quot;$R0\MyConfigFile.ext&quot; command.<br />
+<br />
+I put !include &quot;FileFunc.nsh&quot; at the beginning of the script with the other !include statements. I put the ${un.GetParent} &quot;$INSTDIR\ConfigDir\MyConfigFile.ext&quot; $R0 command in the '-Post' section and the Delete command in the 'Uninstall' section. I never could figure out where to put !insertmacro un.GetParent, so nothing else worked.<br />
+<br />
+I found the references you listed while researching this. My log file would end up with about 35,000 entries for a full installation. http://nsis.sourceforge.net/Uninstall_all_dirs_and_subdirs_created_by_your_installer might be simple enough for me to figure out, eventually. Since I'm having trouble implementing Delete &quot;OneStupidFile.ext&quot; correctly, I hoped to keep it simple.<br />
+<br />
+Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">27th April 2007, 22:02</div></div><div class="posttext">But the parent of $INSTDIR\ConfigDir\MyConfigFile.ext is $INSTDIR\ConfigDir and $INSTDIR itself is $INSTALLER_INSTDIR\AppDir. Use un.GetParent on $INSTDIR, not on $INSTDIR\ConfigDir\MyConfigFile.ext.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rotifer</div><div class="date">28th April 2007, 10:37</div></div><div class="posttext">But the parent of $INSTDIR\ConfigDir\MyConfigFile.ext is $INSTDIR\ConfigDir <br />
+Yes, I was trying to pass '$INSTDIR\ConfigDir' to the uninstall routine.<br />
+<br />
+$INSTDIR itself is $INSTALLER_INSTDIR\AppDir <br />
+Actually, $INSTALLER_INSTDIR = AppDir<br />
+<br />
+Before installation, the directories on the target computer are:<br />
+<br />
+AppDir\<br />
+    \ConfigDir\<br />
+        Existing Config Files<br />
+    \DataDir\<br />
+        \Existing Data Directories\<br />
+ <br />
+The installer uses AppDir as $INSTDIR and File /r &quot;Install\*.*&quot;. The source \Install\ directory contains \ConfigDir\ and \DataDir\MyDataDir\ folders with my files.<br />
+<br />
+After installation, the directories on the target computer are:<br />
+<br />
+AppDir\<br />
+    \ConfigDir\<br />
+        Existing Config Files<br />
+       +MyConfigFile.ext<br />
+    \DataDir\<br />
+        \Existing Data Directories\<br />
+       +\MyDataDir\<br />
+<br />
+<br />
+At this point I have the following after the installation sections:<br />
+<br />
+!include &quot;FileFunc.nsh&quot;<br />
+;!insertmacro un.GetParent<br />
+!insertmacro GetParent<br />
+<br />
+Section -Post<br />
+  ${GetParent} &quot;$INSTDIR&quot; $R0<br />
+  WriteUninstaller &quot;$INSTDIR\DataDir\MyDataDir\uninst.exe&quot;<br />
+  &lt;snip&gt;<br />
+SectionEnd<br />
+<br />
+Function un.onUninstSuccess<br />
+  HideWindow<br />
+  MessageBox MB_ICONINFORMATION|MB_OK &quot;$(^Name) was successfully removed from your computer.&quot;<br />
+FunctionEnd<br />
+<br />
+Function un.onInit<br />
+!insertmacro MUI_UNGETLANGUAGE<br />
+  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 &quot;Are you sure...&quot; IDYES +2<br />
+  Abort<br />
+FunctionEnd<br />
+<br />
+Section Uninstall<br />
+;  ${un.GetParent} &quot;$INSTDIR&quot; $R0<br />
+  Delete &quot;$SMPROGRAMS\NSIS_Test-00\Uninstall.lnk&quot;<br />
+  Delete &quot;$SMPROGRAMS\NSIS_Test-00\Website.lnk&quot;<br />
+<br />
+  RMDir /r &quot;$SMPROGRAMS\NSIS_Test-00&quot;<br />
+  RMDir /r &quot;$INSTDIR&quot;<br />
+  Delete &quot;$R0\ConfigDir\MyConfigFile.ext&quot;<br />
+<br />
+  DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} &quot;${PRODUCT_UNINST_KEY}&quot;<br />
+  SetAutoClose true<br />
+SectionEnd<br />
+ <br />
+<br />
+It does compile ok without error messages, but it still doesn't delete MyConfigFile.ext. I commented out the un.GetParent statements since, if I understand, $INSTDIR in the uninstall section would reference the location of uninstall.exe rather than AppDir (the initial $INSTDIR). I tried un.GetParent in the uninstall section, but that didn't delete AppDir\ConfigDir\MyConfigFile.ext either. Placing the un.GetParent command in the '-Post' section gave an error that 'un.' commands had to be in uninstall sections.<br />
+<br />
+Should $R0 be passed correctly the way I have this? If I change WriteUninstaller &quot;$INSTDIR\MyDataDir\uninst.exe&quot; to WriteUninstaller &quot;$R0\MyDataDir\uninst.exe&quot;, then uninst.exe is no longer created at all.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">28th April 2007, 10:50</div></div><div class="posttext">It'd probably be best if you add some messages boxes to debug the values of $INSTDIR and $R0 after each change. Then you'll see exactly what happens and why the installer's $INSTDIR is not the same as the parent of the uninstaller's $INSTDIR. You need to run GetParent twice there.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">rotifer</div><div class="date">30th April 2007, 18:13</div></div><div class="posttext">Ok, I'll try to get that to work. At this point, I seem to be getting an empty value for $R0. I tried to change $R0 to $R7, without effect. Unfortunately, I'm not entirely confident that I have those sequences correct either :igor: . I'll keep trying. <br />
+<br />
+Thanks for your help.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

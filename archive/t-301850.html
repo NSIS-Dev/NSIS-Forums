@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Decimal Delimiter, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Decimal Delimiter NSIS Discussion" />
+	
+	<title> Decimal Delimiter [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Decimal Delimiter</div>
+<hr />
+<div class="pda"><a href="t-301850.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=301850">Decimal Delimiter</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">GoHa</div><div class="date">9th January 2009, 01:36</div></div><div class="posttext">When installer shows space required/space availabe it use &quot;.&quot; as decimal delimiter. For instance: &quot;Space required 13.1Mb&quot;<br />
+It shows &quot;.&quot; regardless of system regional settings.<br />
+<br />
+How can I make it use system's decimal delimiter rather then just &quot;.&quot;?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">9th January 2009, 01:51</div></div><div class="posttext">Is it really that big of a deal?<br />
+<br />
+anyways, there is already a bug report about it http://sourceforge.net/tracker/index.php?func=detail&amp;aid=2276892&amp;group_id=22049&amp;atid=373085</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GoHa</div><div class="date">9th January 2009, 02:01</div></div><div class="posttext">Our QA team reported it, therefore, I have to investigate.<br />
+<br />
+Thanks! Hope it will be fixed sometimes soon.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">9th January 2009, 02:25</div></div><div class="posttext">You might be able to set the label text yourself, using SectionGetSize to get the size of a section, adding up for each selected section, and rounding that off to megabytes with decimals - with a comma for a decimal - yourself.. if it's something that can't wait for a fix in NSIS itself</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Egor</div><div class="date">9th January 2009, 03:52</div></div><div class="posttext">Yes, I can change label text and can set whatver value I want. But I would be unable to change decimal delimiter in the number.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">9th January 2009, 12:45</div></div><div class="posttext">Edit: All's well - Here's what I have now...<br />
+<br />
+<br />
+SetCompress off<br />
+!include &quot;MUI.nsh&quot;<br />
+!include &quot;WinMessages.nsh&quot;<br />
+!include &quot;LogicLib.nsh&quot;<br />
+<br />
+OutFile &quot;c:\testsetup.exe&quot;<br />
+<br />
+Page Components ComponentsPre<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+Var SpaceReq<br />
+SpaceTexts &quot;Space Required: $SpaceReq$\r$\n$\r$\n$\r$\n&quot;<br />
+<br />
+Section &quot;Test&quot; Test<br />
+	File &quot;c:\windows\system32\wmploc.dll&quot; ; 8,231,936bytes<br />
+SectionEnd<br />
+<br />
+Function .onSelChange<br />
+	; Initialize at zero bytes<br />
+	StrCpy $0 0<br />
+<br />
+	; Add selected sections' sizes<br />
+	${If} ${SectionIsSelected} ${Test}<br />
+	    SectionGetSize ${Test} $1<br />
+		IntOp $0 $0 + $1<br />
+	${EndIf}<br />
+<br />
+	InTop $0 $0 * 1024 ; KBytes -&gt; Bytes<br />
+<br />
+	; Get MegaBytes<br />
+	IntOp $1 $0 / 1000000<br />
+	; Get MegaByte Fraction<br />
+	IntOp $2 $0 % 1000000<br />
+	; Only two characters, please (no rounding)<br />
+	StrCpy $2 $2 2 0<br />
+<br />
+<br />
+	; Same for MebiBytes (yeah, I hate the name, too)<br />
+	IntOp $3 $0 / 1048576<br />
+	IntOp $4 $0 % 1048576<br />
+	StrCpy $4 $4 2 0<br />
+<br />
+	; Hey look, a comma and such<br />
+	StrCpy $SpaceReq &quot;$1,$2MB ($3,$4MiB)&quot;<br />
+FunctionEnd<br />
+<br />
+Function ComponentsPre<br />
+	StrCpy $SpaceReq &quot;Two Billion Bytes!&quot; ; Initial size value<br />
+FunctionEnd<br />
+<br />
+<br />
+For any devs reading, SectionGetSize without the SectionSetSize returns 8039 - I've verified that the correct (7.8something MB) file is what is included in the installer.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">9th January 2009, 13:41</div></div><div class="posttext">That is the size in KB.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">9th January 2009, 14:45</div></div><div class="posttext">Originally posted by Joost Verburg <br />
+That is the size in KB. <br />
+A-ha.  I was thrown off by the help's example for SectionGetSize:<br />
+<br />
+Function .onInit<br />
+  # increase required size of section 'test' by 100 bytes<br />
+  SectionGetSize ${test_section_id} $0<br />
+  IntOp $0 $0 + 100<br />
+  SectionSetSize ${test_section_id} $0<br />
+FunctionEnd<br />
+<br />
+Should read kbytes, then?<br />
+<br />
+I'll adjust my post above - should be a simple mult by 1024 (presuming KiB and not KB)?<br />
+Edit: Yes - and done.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">9th January 2009, 15:04</div></div><div class="posttext">Keep in mind that using IntOp only works up to 2GB of required space. To be sure your code works for future projects, you might consider using the math plugin:<br />
+<br />
+    Math::Script 'r1 = ff(f($SPACENEEDED)/1048576,17); #[r1 &gt; 999, r1 = ff(r1/1024,17) + &quot;GB&quot;, r1 = r1 + &quot;MB&quot;]'<br />
+<br />
+I'm not sure if the math plugin uses the system's decimal sign, you might have to replace it in the output string manually.<br />
+<br />
+<br />
+Edit: Wait, I think I'm talking bullshit. Size in kilobytes, and all. &gt;__&lt;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GoHa</div><div class="date">9th January 2009, 19:26</div></div><div class="posttext">The &quot;required size&quot; output on standard dialog constist of &quot;LABEL&quot; and &quot;NUMBER&quot;:<br />
+&quot;Required Space&quot; &quot;8.3MB&quot;<br />
+Left part can be set as a string. OK.<br />
+Right part can be set only as a number. There are no way to change the format of the number. You cannot delete this number from the dialog and only left the label (wich can be edited as shown above).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">9th January 2009, 19:49</div></div><div class="posttext">er?  have you tried the above code?  That should replace the label and number; which should be the exact same control.  Perhaps you're using a different UI, though? my example uses MUI</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GoHa</div><div class="date">9th January 2009, 20:55</div></div><div class="posttext">deleted</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">GoHa</div><div class="date">10th January 2009, 02:43</div></div><div class="posttext">Thanks. Now I got it. Yes, it works.<br />
+However, we decided to defer this issue for now, and wait for NSIS team fix, as it require to many code for such a small issue (we also need to show space available... bla-bla-bla).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Animaether</div><div class="date">10th January 2009, 03:01</div></div><div class="posttext">fair 'nuff :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

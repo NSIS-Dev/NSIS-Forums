@@ -1,0 +1,53 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Plugin - Load an unload of DLL, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Plugin - Load an unload of DLL NSIS Discussion" />
+	
+	<title> Plugin - Load an unload of DLL [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Plugin - Load an unload of DLL</div>
+<hr />
+<div class="pda"><a href="t-235243.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=235243">Plugin - Load an unload of DLL</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">tbednarz</div><div class="date">11th January 2006, 14:59</div></div><div class="posttext">I currently help Aleksander (aka Instructor) to port his Registry Library (Plugin) to support PocketPC. The goal is, that you can manipulate the Registry of a Windows Mobile based device inside a NSIS script BEFORE you submit a CAB file. To do that we need to add support for RAPI to Aleksanders Plugin.<br />
+<br />
+After a lot of debugging I found, why Aleksanders code did not work. It has something to do with the way NSIS loads and unloads plugins (DLL's).<br />
+<br />
+Could someone confirm that:<br />
+<br />
+- if the parser finds something like &lt;MyPlugin&gt;::&lt;MyFunction&gt; in the script it does:<br />
+HMODULE hModule = LoadLibrary &lt;MyPlugin&gt;.dll<br />
+call &lt;MyFunction&gt;<br />
+FreeLibrary(hModule) which causes an unload of &lt;MyPlugin&gt;.dll if the reference counter is 0.<br />
+<br />
+For RAPI calls this has some bad consequences! To be able to call an API on a PocketPC remotely, you need to initialise communications between the PC and the mobile device. This is done through ActiveSync using an API called CeRapiInit(). This call will load another DLL called Rapi.dll. It stores there a communication handle. <br />
+<br />
+Fist Aleksander exported functions CeRapiInit() and CeRapiUninit(). This would have allowed the developers to write scripts like:<br />
+<br />
+PPCregistry::CeRapiInit()<br />
+PPCregistry::Read &quot;HKEY_LOCAL_MACHINE\SomeKey\Key\....&quot; $RegVar<br />
+PPCregistry::Write &quot;HKEY_LOCAL_MACHINE\SomeKey\....&quot; &quot;ValueName&quot; &quot;Value&quot; REG_SZ<br />
+PPCregistry::CeRapiUninit()<br />
+<br />
+Since all DLLs are unloaded after every call to PPCregistry the Rapi.dll is also unloaded and therefore the handle to the mobile device is lost or freed. So the concept shown above will not work. Communication with the PocketPC has to be established in the implementation of every exported function of the PPCregistry plugin. This is not very efficient but works. Could anybody confirm that NSIS behaves that way?<br />
+<br />
+Tom</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">11th January 2006, 16:01</div></div><div class="posttext">Tomas see email</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">12th January 2006, 13:24</div></div><div class="posttext">That's how it works. You can use the /NOUNLOAD switch to prevent the call to FreeLibrary or you can call LoadLibrary yourself to increase the reference count.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" SectionGroup selection problem, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  SectionGroup selection problem NSIS Discussion" />
+	
+	<title> SectionGroup selection problem [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  SectionGroup selection problem</div>
+<hr />
+<div class="pda"><a href="t-214241.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=214241">SectionGroup selection problem</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">johnny44</div><div class="date">26th April 2005, 17:02</div></div><div class="posttext">I started working on my first NSIS installer and I basically need what Afro UK did in his &quot;Two installations in one installer part 1.nsi&quot; example. The only difference is that I want to be able to not install &quot;Prog2&quot; The condition I am trying to reach is if the sectiongroup is checked, The main program subsection is selected and RO. If the sectiongroup is unchecked, the main program subsection is unchecked. The actual code does not permit to completely unselect Prog2. If I remove the RO option, then I allow the user to install the options without installing the main program. Here's what I want:<br />
+<br />
+[X]Prog2<br />
+---[X]Main (RO)<br />
+---[ ]Option1<br />
+---[ ]Option2<br />
+<br />
+[ ]Prog2<br />
+---[ ]Main (RO)<br />
+---[ ]Option1<br />
+---[ ]Option2<br />
+<br />
+I'm not sure this is possible. I tried to hide the main program section, but again I allow the user to install the options without installing the main program.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">26th April 2005, 18:54</div></div><div class="posttext">I have updated the code. The second group is no longer required.<br />
+http://nsis.sourceforge.net/archive/nsisweb.php?page=676&amp;instances=0,64<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">johnny44</div><div class="date">26th April 2005, 21:12</div></div><div class="posttext">Thanks for the update, but it is not really what I'm looking for. Removing &quot;SectionIn RO&quot; from the &quot;Program #2&quot; SectionGroup allow the user to completely unselect this group, but it also allows him to select only the &quot;Other&quot; subsection without selecting the &quot;Main&quot; subsection. I found this piece of code and it almost works for me. This is how I modified your code. <br />
+<br />
+<br />
+Var flags<br />
+<br />
+Function .selTest<br />
+SectionGetFlags 1 $flags <br />
+StrCmp $flags 0 equal diff <br />
+<br />
+diff:<br />
+SectionSetFlags 2 1<br />
+goto end<br />
+<br />
+equal:<br />
+SectionSetFlags 2 ${SF_RO}<br />
+end:<br />
+FunctionEnd<br />
+<br />
+Function .onSelChange<br />
+Call .selTest<br />
+FunctionEnd<br />
+<br />
+The &quot;Other&quot; section is read-only until I check my main program. The only problem is that diff: sets the value of &quot;Other&quot;. I would like it to simply reenable this section for me to choose if I want to enable it. Do you know how to do this? Would you also know how to apply this to both groups (right now it affects only &quot;Program #1&quot;?<br />
+<br />
+Thanks a lot</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">26th April 2005, 21:44</div></div><div class="posttext">So you want the Main section to be checked when the user checks the Other section?<br />
+<br />
+This will do that (if I understood correctly):<br />
+Function .onSelChange<br />
+Push $R0<br />
+ SectionGetFlags ${SEC4} $R0<br />
+ IntOp $R0 $R0 &amp; ${SF_SELECTED}<br />
+ StrCmp $R0 ${SF_SELECTED} 0 NoSelectMain<br />
+  !insertmacro SelectSection ${SEC3}<br />
+ NoSelectMain:<br />
+Pop $R0<br />
+FunctionEnd<br />
+<br />
+You shouldn't make the Main section read-only after though, because then you can't uncheck the whole section group in one go anymore.<br />
+<br />
+The first group has to have a read only section, otherwise if the user doesn't select anything then nothing will be installed!<br />
+<br />
+Edit: To turn off a flag, you need to use the ClearSectionFlag macro:<br />
+!insertmacro ClearSectionFlag ${SECID} ${SF_RO}<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">johnny44</div><div class="date">26th April 2005, 22:07</div></div><div class="posttext">I should have included the script from the beginning, it's gonna be much easier this way. Look at how the &quot;Program #1&quot; section reacts. If I disable Main, I cannot select other. My only problem is that when I reselect main I only want Other to become active, not permanently enabled. This is because of the part where I have <br />
+<br />
+SectionSetFlags 2 1<br />
+<br />
+What should I set it to to be able to modify it? If the user selects main, I want him to be able to select other, or not.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">johnny44</div><div class="date">27th April 2005, 13:34</div></div><div class="posttext">Nevermind Afro UK, your code works great. I was just not putting it in the right place in my script. I copied it before my sections were defined and that's why it didn't work. <br />
+<br />
+I had another question regarding resuming installation after reboot. I saw a few thread on this topic so I'll post my question there.<br />
+<br />
+Thanks again for your help.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Updating Space required after setting $INSTDIR, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Updating Space required after setting $INSTDIR NSIS Discussion" />
+	
+	<title> Updating Space required after setting $INSTDIR [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Updating Space required after setting $INSTDIR</div>
+<hr />
+<div class="pda"><a href="t-258417.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=258417">Updating Space required after setting $INSTDIR</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">27th October 2006, 20:13</div></div><div class="posttext">In my installer I am copying a 100MB file from a CD to the installation directory using FileCopy. The installer first does MUI_PAGE_COMPONENTS, then asks where to find the file from the CD (called arc.sar), and after that gets to the MUI_PAGE_DIRECTORY. What I want the installer to do is first get $INSTDIR on the DIRECTORY page, then check if $INSTDIR\arc.sar exists, and then substract arc.sar's size from the required free space, updating the Space Required: label on that same page, the DIRECTORY page.<br />
+<br />
+Some parts of the script:<br />
+<br />
+  !insertmacro MUI_PAGE_COMPONENTS<br />
+  ;Custom page: asks where to find arc.sar<br />
+  Page custom GetSarLocation CheckSarLocation<br />
+  ;Find arc.sar in $INSTDIR and substract filesize<br />
+  !define MUI_PAGE_CUSTOMFUNCTION_PRE CheckExistingSar<br />
+  !insertmacro MUI_PAGE_DIRECTORY<br />
+  !insertmacro MUI_PAGE_INSTFILES<br />
+<br />
+Function CheckExistingSar<br />
+  IfFileExists &quot;$INSTDIR\arc.sar&quot; 0 NoExistingSar<br />
+  Push &quot;$INSTDIR\arc.sar&quot;<br />
+  Call FileSizeNew<br />
+  Pop $EXISTING_SAR_SIZE<br />
+  IntOp $EXISTING_SAR_SIZE $EXISTING_SAR_SIZE % -1000<br />
+  SectionGetSize CommonInstall $2<br />
+  IntOp $2 $2 - EXISTING_SAR_SIZE<br />
+  SectionSetSize CommonInstall $2<br />
+<br />
+  NoExistingSar:<br />
+FunctionEnd<br />
+<br />
+<br />
+As you can see I've tried to use PAGE_CUSTOMFUNCTION_PRE on PAGE_DIRECTORY, and indeed the function CheckExistingSar updates the size of the CommonInstall section succesfully if it can find arc.sar. Only the 'Space required' value does not change, and the CheckExistingSar function is in fact called only once. Entering a different install path does not call the function again.<br />
+<br />
+I've read some hints about using FindWindow etc commands to manually influence the label, but I have no clue how to go about this. Any help would be greatly appreciated.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">28th October 2006, 14:15</div></div><div class="posttext">You should call the CheckExistingSar function in .onVerifyInstDir. That'd update the required size every time the installation directory changes.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">28th October 2006, 15:10</div></div><div class="posttext">Obviously I'm not yet used to the way NSIS works... Thanks for the tip.<br />
+<br />
+Because .onVerifyInstDir is called multiple times, I had to create an empty, hidden section that I set to a certain size (instead of decreasing the size of CommonInstall, because that would keep decreasing each time the function is called).<br />
+<br />
+Section &quot;-Install Nothing&quot; EmptyInstall<br />
+  NOP<br />
+SectionEnd<br />
+<br />
+Function .onVerifyInstDir<br />
+  IfFileExists &quot;$INSTDIR\arc.sar&quot; 0 NoExistingSar<br />
+<br />
+  &lt;get filesize of arc.sar in $INSTDIR&gt;<br />
+  &lt;divide $EXISTING_SAR_SIZE by 1024 and round it&gt;<br />
+<br />
+  IntOp $2 -1 * $EXISTING_SAR_SIZE<br />
+  SectionSetSize EmptyInstall $2<br />
+<br />
+  NoExistingSar:<br />
+FunctionEnd<br />
+<br />
+The first problem is that when I enter .onVerifyInstDir for the first time, before doing anything, NSIS tells me that EmptyInstall is 4812 kB large, which seems kind of large for a NOP...<br />
+The second problem is that, even while I succesfully SectionSetSize EmptyInstall to be -100880 kB large, the Space required field remains unchanged. If I set EmptyInstall to +100880kB, it still doesn't update anything. Am I forgetting something?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">28th October 2006, 15:17</div></div><div class="posttext">You're setting the size of your first section and not the new section. You need to use ${EmptyInstall} with section commands. It's a define, so you must use curly brackets with it. If you don't, SectionSetSize will try to get a number out of the string &quot;EmptyInstall&quot; and will always get to zero, which is the index of the first section.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">28th October 2006, 16:03</div></div><div class="posttext">You are, of course, correct. This is the biggest problem I have with learning NSIS, I cannot find any documentation about the basic syntax. Just these things like what {} mean, how I put variables in a string, the very basic stuff. I'm using trial and error, which is probably the worst possible way to figure it out...<br />
+<br />
+This works... Kind of. .onVerifyInstDir is however not called often enough. For example when I start install and reach the DIRECTORY page normally, it does not verify the default directory that is already filled in. Going Back and then Next again doesn't update it either. Typing a different directory then pressing Tab, still nothing.<br />
+I have to click 'browse' or 'next' before it will enter .onVerifyInstDir, and I cannot click 'next' because the installer thinks I don't have enough space (while I do, because I'll be overwriting arc.sar).<br />
+<br />
+I could add an extra CheckExistingSar call in the PAGE_PRE function, but that still doesn't solve the problem of manually typing in an installation directory. I'd need it to update every time I type a character, not just when I change the Drive letter at the front.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">28th October 2006, 16:44</div></div><div class="posttext">Well, it's all there in the documentation. The description for `Section` points to the fact that the section index is !define. However, there's no example, it doesn't link to !define and doesn't explain the consequences. I've updated the documentation to fix those problems and added a few code examples in the description for Section(Get|Set)X.<br />
+<br />
+.onVerifyInstDir is only called when the installation directory is changed and is still valid. If $INSTDIR is invalid to start with, .onVerifyInstDir will not be called. It also means that the size is checked and updated on screen before it's called. Because of that, the directory will have to be updated twice before the user will see your change. One time for the new size and the next for the update itself.<br />
+<br />
+To get around it, you can force the window to update itself after the size changes. Not the simplest thing on earth, because .onVerifyInstDir isn't exactly built for that, as the name suggests. But it works.!define WM_IN_UPDATEMSG 0x40f<br />
+<br />
+Function .onVerifyInstDir<br />
+  # lock to prevent infinite recursion<br />
+  StrCmp $1 lock 0 +2<br />
+    Return<br />
+  StrCpy $1 lock<br />
+<br />
+  # do whatever<br />
+  SectionGetSize 0 $0<br />
+  IntOp $0 $0 + 100<br />
+  SectionSetSize 0 $0<br />
+<br />
+  # update<br />
+  FindWindow $0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+  SendMessage $0 ${WM_IN_UPDATEMSG} 0 0<br />
+<br />
+  # unlock<br />
+  StrCpy $1 &quot;&quot;<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">28th October 2006, 17:06</div></div><div class="posttext">I can't say I really understand what that code does... But putting CheckExistingSar instead of #dowhatever still works only halfway. NSIS still doesn't reach .onVerifyInstDir if the default dir has too little free space to continue. If however the default dir is on a drive with free space, the updating after each keystroke does appear to work.<br />
+<br />
+Unless you'd like to try another idea, I think I will drop the issue - it's not a very important feature. In any case, thanks a lot for the help so far.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">28th October 2006, 17:31</div></div><div class="posttext">Right, the solution was only for the second part of the problem. For updating the text. .onVerifyInstDir is still called only once the directory is valid  in all other areas.<br />
+<br />
+You can have the required size set to zero by default, have .onVerifyInstDir call Abort to tell the directory is invalid and only set the required size once the directory is valid and contains that RAR file. It will still be a problem if there isn't enough space and the user then immediately selects another directory because .onVerifyInstDir won't be called to update it.<br />
+<br />
+That's the best I can think of at the moment. A second solution which isn't exactly the ideal, would be to use two pages or to test the free space for yourself, using CheckSpaceFree (http://nsis.sourceforge.net/CheckSpaceFree) or something similar.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

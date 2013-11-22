@@ -1,0 +1,112 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" File association/defaults question, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  File association/defaults question NSIS Discussion" />
+	
+	<title> File association/defaults question [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  File association/defaults question</div>
+<hr />
+<div class="pda"><a href="t-323199.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=323199">File association/defaults question</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Majek</div><div class="date">17th October 2010, 18:26</div></div><div class="posttext">Hello again, I'm trying to associate my application with .txt files and make it the default program for opening .txt files. My app only runs on Vista/Windows 7 so I figured IApplicationAssociationRegistration would do the trick.<br />
+<br />
+I found this plugin on the nsis website:<br />
+http://nsis.sourceforge.net/Application_Association_Registration_plug-in<br />
+<br />
+I have a custom InstallOptions page with a checkbox &quot;Make Notpad the default text editor&quot;. First it associates .txt files then reads the ini to get the checkbox state. If checked, it sets the app as default:<br />
+<br />
+Function CustomPageEnd<br />
+   WriteRegStr HKLM &quot;Software\Classes\Notpad.TextFile&quot; &quot;&quot; &quot;Text Document&quot;<br />
+   WriteRegStr HKLM &quot;Software\Classes\Notpad.TextFile\DefaultIcon&quot; &quot;&quot; &quot;$INSTDIR\Notpad.exe, 1&quot;<br />
+   WriteRegStr HKLM &quot;Software\Classes\Notpad.TextFile\shell\open\command&quot; &quot;&quot; &quot;$INSTDIR\Notpad.exe %1&quot;<br />
+<br />
+   SetRegView 64<br />
+   WriteRegStr HKLM &quot;Software\Notpad\Capabilities&quot; &quot;ApplicationDescription&quot; &quot;Notpad is not Notepad&quot;<br />
+   WriteRegStr HKLM &quot;Software\Notpad\Capabilities\FileAssociations&quot; &quot;.txt&quot; &quot;Notpad.TextFile&quot;<br />
+    <br />
+   WriteRegStr HKLM &quot;Software\RegisteredApplications&quot; &quot;Notpad&quot; &quot;Software\Notpad\Capabilities&quot;<br />
+   SetRegView 32<br />
+<br />
+  !insertmacro MUI_INSTALLOPTIONS_READ $R1 &quot;notpad.ini&quot; &quot;Field 3&quot; &quot;State&quot;<br />
+  ${If} $R1 == 1<br />
+    AppAssocReg::SetAppAsDefault &quot;Notpad&quot; &quot;.txt&quot; &quot;file&quot;<br />
+    Pop $0<br />
+    MessageBox MB_ICONINFORMATION|MB_OK &quot;SetAppAsDefault Result = $0&quot;<br />
+  ${EndIf}<br />
+FunctionEnd<br />
+<br />
+It seems to associate the type correctly, I can right-click .txt files and Notpad appears in the &quot;Open with&quot; submenu. The problem is the SetAppAsDefault function always returns &quot;method failed&quot;. I don't know if I'm using it properly the documentation on the plugin page is a little confusing.<br />
+<br />
+I looked in the registry and everything looks good, except it creates 2 copies of the RegisteredApplications\Notpad key. One in HKLM\Software and one in HKLM\Software\Wow6432Node, even when I use SetRegView 64 in the script. Maybe this is whats causing SetAppAsDefault to fail. Am I doing something wrong?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Wizou</div><div class="date">17th October 2010, 19:13</div></div><div class="posttext">Try to contact the plugin's author ?<br />
+<br />
+Anybody can list his plugin on http://nsis.sourceforge.net/<br />
+I'm not sure the author reads this forum regularly.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Majek</div><div class="date">18th October 2010, 19:04</div></div><div class="posttext">Well I've done a few tests and noticed something strange...<br />
+First I created a managed wrapper around the IApplicationAssociationRegistration COM interface, and tried using it in my application.<br />
+<br />
+http://pastebin.com/L5xfjdij<br />
+<br />
+private void SetDefault()<br />
+{<br />
+var aar = new ApplicationAssociationRegistration();<br />
+var iaar = (IApplicationAssociationRegistration)aar;<br />
+string currentDefault = iaar.QueryCurrentDefault(&quot;.txt&quot;, Global.AssociationType.AT_FILEEXTENSION, Global.AssociationLevel.AL_EFFECTIVE);<br />
+if (currentDefault != &quot;Notpad.TextFile&quot;) iaar.SetAppAsDefault(&quot;Notpad&quot;, &quot;.txt&quot;, AssociationType.AT_FILEEXTENSION);<br />
+}<br />
+<br />
+From c# everything works fine, QueryCurrentDefault returns &quot;txtfile&quot;, then it sets the default to my app. But when I try the same code in my script using the plugin:<br />
+<br />
+AppAssocReg::QueryCurrentDefault &quot;.txt&quot; &quot;file&quot; &quot;effective&quot;<br />
+Pop $0<br />
+${If} $0 != &quot;Notpad.TextFile&quot;<br />
+AppAssocReg::SetAppAsDefault &quot;Notpad&quot; &quot;.txt&quot; &quot;file&quot;<br />
+Pop $1<br />
+MessageBox MB_ICONINFORMATION|MB_OK &quot;SetAppAsDefault Result: $1&quot;<br />
+${EndIf}<br />
+<br />
+QueryCurrentDefault works, but SetAppAsDefault still returns &quot;method failed&quot;. The strange thing is when I try other applications and association types like &quot;Internet Explorer&quot; &quot;http&quot; &quot;protocol&quot;, the function succeeds and sets the default.<br />
+<br />
+Has anyone else used this plugin before or the IApplicationAssociationRegistration api in their script? I don't understand why it works for other apps but not mine :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">18th October 2010, 20:22</div></div><div class="posttext">Would it make a difference if Notepad were spelled correctly?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Majek</div><div class="date">18th October 2010, 22:22</div></div><div class="posttext">Notpad is the name of my application. It's a replacement for notepad with more features like tabs, desktop composition and windows 7 jumplists. To replace notepad as the default text editor I need to use IApplicationAssociationRegistation api in my nsis script.<br />
+<br />
+The creator of the plugin says it works 100% on vista/7. The api works fine when I run it from c#, it only fails when I run it from my script using the plugin.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Majek</div><div class="date">20th October 2010, 04:14</div></div><div class="posttext">After trying some more tests the error the function is really returning is HRESULT 0x80070002 (file not found). I get the same error from c# so the plugin seems to be working fine. I still can't figure out whats causing it to fail, I'll keep trying I guess :(<br />
+<br />
+If anyone knows what is causing this error please let me know!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Majek</div><div class="date">20th October 2010, 05:22</div></div><div class="posttext">Sorry for double posting, but I noticed something else very strange...<br />
+<br />
+SetAppAsDefault fails when called from the installer<br />
+SetAppAsDefault fails when called from Notpad.vshost.exe (Debug mode)<br />
+SetAppAsDefault succeeds when called from Notpad.exe (Release mode)<br />
+<br />
+It appears the function only succeeds if the process is open, but that still doesn't explain why it works for other programs like ie.<br />
+<br />
+I guess my only option is to launch Notpad.exe silently from the installer and set the default that way. I still need a way to reset the default back to notepad when Notpad is uninstalled.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

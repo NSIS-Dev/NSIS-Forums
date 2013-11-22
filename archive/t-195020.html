@@ -1,0 +1,178 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" administrator check, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  administrator check NSIS Discussion" />
+	
+	<title> administrator check [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  administrator check</div>
+<hr />
+<div class="pda"><a href="t-195020.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=195020">administrator check</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">kio</div><div class="date">29th September 2004, 02:07</div></div><div class="posttext">Has anyone the isadmin.dll?<br />
+I searched everywhere and can't find it..<br />
+I really need it.<br />
+<br />
+also<br />
+Is there a registry key that determines that if the current user logged on is an Administrator or not?<br />
+<br />
+Something like e.x.<br />
+if the current user is an admin then the key will be 1<br />
+if the current user is not an admin the key will be 0<br />
+<br />
+or an environmental variable?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">pengyou</div><div class="date">29th September 2004, 02:39</div></div><div class="posttext">Try the UserInfo plugin which comes with NSIS. There is an example script in the Contrib\UserInfo folder.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JeronimoColon</div><div class="date">29th September 2004, 06:34</div></div><div class="posttext">There is an undocumented Windows API call for this in the shell32.dll.  As part of the Microsoft settlement Microsoft was force to expose a portion of them.  One I'm referring to is: ordinal# 680 a.k.a. IsUserAnAdmin.<br />
+<br />
+It exist, I believe, in all NT based platforms.  I remember only verifying its existence and it working on NT4 and up.<br />
+<br />
+The bad news is:<br />
+It does not contain a function name - only an ordinal#.  I believe Microsoft began including the function name in XP, but I don't know if it was always there or introduced in a later service pack.<br />
+<br />
+This is how you would call it in XP using its function name:<br />
+System::Call 'shell32::IsUserAnAdmin(v)i .r1'<br />
+<br />
+Unfortunately, I don't believe you can call functions by ordinals using the System.dll plugin - though - I think it would be a nice feature to have included in a future revision to the plugin.<br />
+<br />
+The good news is: You could create your own plugin to call the function via its ordinal yourself.<br />
+<br />
+I hope this was informative if nothing else... ;) <br />
+<br />
+jc3</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">29th September 2004, 11:46</div></div><div class="posttext">System::Call &quot;kernel32::GetModuleHandle(t 'shell32.dll') i .s&quot;<br />
+System::Call &quot;kernel32::GetProcAddress(i s, i 680) i .r0&quot;<br />
+System::Call &quot;::$0() i .r0&quot;<br />
+DetailPrint &quot;is admin? $0&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JeronimoColon</div><div class="date">30th September 2004, 05:52</div></div><div class="posttext">kichik,<br />
+<br />
+You never seize to amaze...<br />
+<br />
+:up: <br />
+<br />
+jc3</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">drmabuse</div><div class="date">1st October 2007, 11:52</div></div><div class="posttext">code:<br />
+<br />
+<br />
+Function CheckAdminRights<br />
+    System::Call &quot;kernel32::GetModuleHandle(t 'shell32.dll') i .s&quot;<br />
+    System::Call &quot;kernel32::GetProcAddress(i s, i 680) i .r0&quot;<br />
+    System::Call &quot;::$0() i .r0&quot;<br />
+<br />
+    IntCmp $0 0 isNotAdmin isNotAdmin isAdmin<br />
+    isNotAdmin:<br />
+      DetailPrint &quot;Missing Administrator Rights !!!&quot;<br />
+      messageBox MB_YESNO|MB_DEFBUTTON2 &quot;Die aktuellen Benutzer-Rechte sind zu gering!$\r\<br />
+FÃ¼r die Installation werden Administrator-Rechte benÃ¶tigt!$\r\<br />
+um Bibliotheken (.dll-files) zu registrieren.$\r\<br />
+$\r\<br />
+Im Fall eines Updates kÃ¶nnen die aktuellen Rechte dennoch ausreichen.$\r\<br />
+$\r\<br />
+Soll die Installation ohne Administrator-Rechte fortgesetzt werden ?&quot; IDYES isAdmin<br />
+      quit<br />
+<br />
+    isAdmin:<br />
+      DetailPrint &quot;Administrator Rights granted&quot;<br />
+<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">fishweasel</div><div class="date">4th October 2007, 14:17</div></div><div class="posttext">I use the following for validation of Administrator user <br />
+(not sure where i got it from)<br />
+<br />
+ClearErrors<br />
+	UserInfo::GetName<br />
+	IfErrors Win9x<br />
+	Pop $0<br />
+	UserInfo::GetAccountType<br />
+	Pop $1<br />
+	StrCmp $0 &quot;Administrator&quot; 0 +3 ;<br />
+		Goto done<br />
+	StrCmp $1 &quot;Power&quot; 0 +3<br />
+		MessageBox MB_OK 'You Must be logged in as Administrator!'<br />
+		Quit ;<br />
+	StrCmp $1 &quot;User&quot; 0 +3<br />
+		MessageBox MB_OK 'You Must be logged in as Administrator!'<br />
+		Quit ;<br />
+	StrCmp $1 &quot;Guest&quot; 0 +3<br />
+		MessageBox MB_OK 'You Must be logged in as Administrator!'<br />
+		Quit ;<br />
+	MessageBox MB_OK &quot;Unknown error&quot;<br />
+	Quit ;<br />
+<br />
+	Win9x:<br />
+		# This one means you don't need to care about admin or<br />
+		# not admin because Windows 9x doesn't either<br />
+		MessageBox MB_OK &quot;Error! This DLL can't run under Windows 9x!&quot;<br />
+<br />
+	done:<br />
+ <br />
+<br />
+Fish</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">4th October 2007, 14:23</div></div><div class="posttext">fishweasel, you got this from Examples\UserInfo which is the examples folder for the plug-in written exactly for this purpose.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">didava</div><div class="date">1st August 2013, 00:51</div></div><div class="posttext">Hi<br />
+It does not work in Windows Seven<br />
+<br />
+<br />
+Function .onInit<br />
+<br />
+##############################<br />
+# GetAccountType             #<br />
+##############################<br />
+ClearErrors<br />
+UserInfo::GetAccountType<br />
+IfErrors +3<br />
+Pop $0<br />
+StrCmp $0 &quot;Admin&quot; begin<br />
+MessageBox MB_OK|MB_ICONSTOP|MB_TOPMOST &quot;This user is not an administrator!!&quot;<br />
+Quit<br />
+begin:<br />
+<br />
+<br />
+<br />
+<br />
+Why؟<br />
+Where is the problem؟<br />
+StrCmp $0 &quot;Admin&quot; begin<br />
+MessageBox MB_OK|MB_ICONSTOP|MB_TOPMOST &quot;$0&quot;<br />
+<br />
+A message window MessageBox is the Just type A<br />
+<br />
+Can you please write me a code sample<br />
+!!<br />
+<br />
+<br />
+<br />
+<br />
+Thanks For Hellp- if</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">1st August 2013, 02:29</div></div><div class="posttext">I compiled the example program that comes with NSIS and it ran fine on my Windows 7 system. (I added &quot;RequestExecutionLevel user&quot; to stop UAC from asking me to elevate before it executed the test program.) With elevation, it shows that I am Admin. Without elevation it shows that I am User.<br />
+<br />
+Take another look at the example program.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

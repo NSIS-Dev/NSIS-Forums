@@ -1,0 +1,220 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" How to code a page with &quot;minimal&quot; and &quot;full&quot; install options, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  How to code a page with &quot;minimal&quot; and &quot;full&quot; install options NSIS Discussion" />
+	
+	<title> How to code a page with &quot;minimal&quot; and &quot;full&quot; install options [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  How to code a page with &quot;minimal&quot; and &quot;full&quot; install options</div>
+<hr />
+<div class="pda"><a href="t-263822.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=263822">How to code a page with &quot;minimal&quot; and &quot;full&quot; install options</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">drod</div><div class="date">16th January 2007, 23:26</div></div><div class="posttext">Hi, I'm trying to create an app that has a custom page with two options (icons?); &quot;minimal install&quot; and &quot;full install&quot; - similar to a Microsoft Office type of installation. Depending on which the user selects, I'd like to call the appropriate code. Can anyone give me a brief explanantion of how to do this - I've tried searching but aren't really sure what I'm looking for!. Thanks</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">16th January 2007, 23:31</div></div><div class="posttext">I guess by that you mean that you don't wish to show a components page that it may be customized to show only minimal and full install types, right?<br />
+Did you already set up the custom page or we're talking start from scratch?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">drod</div><div class="date">16th January 2007, 23:43</div></div><div class="posttext">Hi, yes, that's correct - so when the app starts it would go to this &quot;selection page&quot;. Once I knew what type of install they require I can then present pages that will have different type questions. For example the &quot;full&quot; one will have some more text fields that will contain paths to progs only available in the full release.<br />
+<br />
+I've not set any custom pages up yet as I'm still trying to plan/workout exactly what I need to do!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">16th January 2007, 23:52</div></div><div class="posttext">briefly,<br />
+you'd need to get your self familiar with InstallOptions by examining the included examples up to the point that you'd be able to design a custom page and add the desired controls.<br />
+mainly you'd need 2 grouped radio buttons one for full install and the other for minimal.<br />
+also, you need to define your sections as optional with /o switch. in custom page's leave function you're getting user's choice and accordingly you're enabling sections with SectionSetFlag.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">drod</div><div class="date">17th January 2007, 00:01</div></div><div class="posttext">great stuff - that's exactly the info I need; at least now I know the sequence and where to look. Thanks for that!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">17th January 2007, 00:13</div></div><div class="posttext">you're welcome!<br />
+give me a break and i'll show you an example</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">17th January 2007, 00:26</div></div><div class="posttext">compile and execute the following example and see the difference in log window when you choose different install types :)<br />
+Name &quot;My Application&quot;<br />
+OutFile 'test.exe'<br />
+ShowInstDetails show<br />
+LicenseData '${NSISDIR}\License.txt'<br />
+LicenseBkColor 0xFFFFFF<br />
+InstallDir '$PROGRAMFILES\$(^name)'<br />
+<br />
+Page License<br />
+Page Custom customcreate customleave<br />
+Page Directory<br />
+Page InstFiles<br />
+<br />
+Section &quot;main app&quot; sec01 ;executed only for minimal install<br />
+setoutpath '$INSTDIR'<br />
+SectionEnd<br />
+<br />
+Section /o &quot;additional files&quot; sec02<br />
+SetOutpath '$APPDATA'<br />
+sectionend<br />
+<br />
+section /o &quot;common files&quot; sec03<br />
+setoutpath '$COMMONFILES'<br />
+sectionend<br />
+<br />
+function customcreate<br />
+push $1<br />
+InstallOptions::Dialog '$PLUGINSDIR\custom.ini'<br />
+pop $1<br />
+Pop $1<br />
+functionend<br />
+<br />
+function customleave<br />
+ReadINIStr $1 '$PLUGINSDIR\custom.ini' 'field 1' 'state'<br />
+Strcmp $1 '1' end<br />
+SectionSetFlags ${sec02} 1<br />
+SectionSetFlags ${sec03} 1<br />
+end:<br />
+functionend<br />
+<br />
+function .onInit<br />
+InitPluginsDir<br />
+GetTempFileName $0<br />
+Rename $0 '$PLUGINSDIR\custom.ini'<br />
+<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'Settings' 'NumFields' '2'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 1' 'type' 'radiobutton'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 1' 'left' '20'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 1' 'right' '-20'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 1' 'top' '20'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 1' 'bottom' '32'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 1' 'Text' 'minimal install'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 1' 'state' '1'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 1' 'flags' 'group'<br />
+<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 2' 'type' 'radiobutton'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 2' 'left' '20'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 2' 'right' '-20'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 2' 'top' '40'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 2' 'bottom' '52'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 2' 'Text' 'full install'<br />
+WriteINIStr  '$PLUGINSDIR\custom.ini' 'field 2' 'state' '0'<br />
+functionend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Swapan Das</div><div class="date">17th January 2007, 05:03</div></div><div class="posttext">Red Wine you've provided a great working example! I've even added another option 'Typical' to it.<br />
+<br />
+And Drod I must thank you for asking such a good and more precisely real-life project Question.<br />
+<br />
+Red Wine is just doing great job. By the way where is Bruno?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">drod</div><div class="date">17th January 2007, 10:19</div></div><div class="posttext">Hi Red Wine. Thanks for all the help and especially the code example - it would have taken me ages to get to that!<br />
+<br />
+I've just got back on line so will start to work through and make sense of it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">18th January 2007, 16:06</div></div><div class="posttext">stop that.<br />
+<br />
+there's a faaaaaaare more easy way than this.<br />
+<br />
+use the normal components page and use &quot;InstType&quot; settings.<br />
+<br />
+for every section you can set:<br />
+<br />
+<br />
+InstType &quot;Full&quot;<br />
+InstType &quot;Minimal&quot;<br />
+<br />
+Section test testid<br />
+SectionIn 1 #section is in installtype Full only<br />
+SectionEnd<br />
+<br />
+Section test2 testid2<br />
+SectionIn 1 2 #section is in installtype Full and Minimal<br />
+SectionEnd<br />
+you also can use sections without using SectionIn, they then can only be selected in &quot;Custom&quot; InstType (which is always predefined, see NSIS doc, chapter 4.8.1.24 InstType.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">18th January 2007, 16:28</div></div><div class="posttext">stop that.I assume this is addressed to me right?<br />
+Stop what? <br />
+What exactly is bothering you and I'm supposed to stop it?<br />
+What is your problem anyway, unless you were blind you would seen above that I've already asked drod why not a components page.<br />
+Sorry if when I post it bothers you, I'm not posting on threads that you have opened, I'd never do I promise, but I can't do something beyond this because I intend to keep posting, so you'd have to deal with your problem!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">18th January 2007, 17:41</div></div><div class="posttext">well, this was in no wy ment agressive, plz do not missunderstand this :)<br />
+<br />
+it was rather ment that you two are discussing about quite a biiig and complicated solution. i just meant you should not waste so much time with installoptions before trying out nsis' included functions :)<br />
+<br />
+<br />
+sorry again, if you thought i was attacking you.<br />
+i appreciate how you're helping ppl in this forums, don't take it personally.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">18th January 2007, 18:06</div></div><div class="posttext">Originally posted by Comm@nder21 <br />
+well, this was in no wy ment agressive, plz do not missunderstand this :)<br />
+<br />
+it was rather ment that you two are discussing about quite a biiig and complicated solution. i just meant you should not waste so much time with installoptions before trying out nsis' included functions :)<br />
+<br />
+<br />
+sorry again, if you thought i was attacking you.<br />
+i appreciate how you're helping ppl in this forums, don't take it personally.  <br />
+Regarding to my self, I like to &quot;waste&quot; my time keep trying with NSIS, and I also like to share this &quot;time wasting&quot; with others, but only when they have request this share, so you'd better avoid reading my posts if you wish to save your time.<br />
+Last and least. When I'm able, I like to welcome new users who asking for help related to NSIS, by the mean to show them, how great, and far beyond a typical installation system, stands this incredible scriptable system.<br />
+That's all.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">18th January 2007, 18:16</div></div><div class="posttext">i do too, but i also always try to find just any solution.<br />
+<br />
+so the first that comes to my mind will be taken, except it will probably take more time to implement it than to think about a more simple one.<br />
+<br />
+and yes, i often just overfly your posts, but this is what i do with all forum posts, if i do not need the exact knowledge at the moment and just a hint what all is about.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">18th January 2007, 18:31</div></div><div class="posttext">Dealing with you here? That's the real waste of time ;)<br />
+I do not intend to waste my time here, nor I intend to control what I'm going to write when I'm answering to user's request, taking in account that you might not approve my post ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comm@nder21</div><div class="date">18th January 2007, 20:56</div></div><div class="posttext">hey, hey :)<br />
+<br />
+at least i am still dealing with you and do NOT see that as a waste of time ;)<br />
+<br />
+irc is a waste of time, yes :D but nevertheless its great fun... you ought to come there sometime, then we could continue such useless discussions :D ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">19th January 2007, 10:31</div></div><div class="posttext">I have serious problems to browse the forum since last evening! Who knows what's going on...<br />
+Anyway... comm@nder21 see my new signature ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">19th January 2007, 20:27</div></div><div class="posttext">I saw that signature and can't figure out what it means in English!<br />
+<br />
+Maiden castle?? absolutely no idea.<br />
+<br />
+&quot;not willing to defeat the human stupidity&quot;?? = unwilling to attempt to conquer human stupidity? I don't know. Oh well, I guess it's just more drek the internet floated my way.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">19th January 2007, 21:05</div></div><div class="posttext">@demiller9 thanks for the help with english,<br />
+defeat is wrong expression? should I change it? I do not mean conquer, I mean  something like 'try to deal with'...<br />
+Maiden castle = unbeatable castle, also wrong?<br />
+<br />
+edit:<br />
+done, removed until i find the correct expressions, often I use a dictionary to translate my expressions, seems the translation is not successful all the time, or my expressions are too complicated to be translated correctly :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">19th January 2007, 21:53</div></div><div class="posttext">@Red Wine - We're getting off topic here, but...<br />
+I think (after your last post) perhaps the 'maiden castle' might be an 'invincible fortress'? I don't recall the exact signature now, so its hard to say how to improve it.<br />
+<br />
+I realize English isn't the native language for everyone, and I thank everyone for making the effort to use it.<br />
+<br />
+Don</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

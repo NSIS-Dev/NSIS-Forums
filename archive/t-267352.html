@@ -1,0 +1,111 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Deleting Dynamic Registry key, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Deleting Dynamic Registry key NSIS Discussion" />
+	
+	<title> Deleting Dynamic Registry key [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Deleting Dynamic Registry key</div>
+<hr />
+<div class="pda"><a href="t-267352.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=267352">Deleting Dynamic Registry key</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jparker</div><div class="date">8th March 2007, 01:15</div></div><div class="posttext">I am trying to delete a registry key. The problem is the name of the key is dependent on how many apps you have installed on your palm pilot. Here is the key :<br />
+<br />
+[HKEY_CURRENT_USER\Software\U.S. Robotics\Pilot Desktop\Application6]<br />
+&quot;Creator&quot;=dword:53704e6f<br />
+&quot;Conduit&quot;=&quot;TFCnd.dll&quot;<br />
+&quot;Name&quot;=&quot;MyApp&quot;<br />
+&quot;Priority&quot;=dword:00000002<br />
+&quot;Directory&quot;=&quot;MyApp&quot;<br />
+&quot;Integrate&quot;=dword:00000001<br />
+&quot;Module&quot;=&quot;C:\\Program Files\\MyApp.exe&quot;<br />
+<br />
+the Application6 could be any number. Here is the NSIS code I use to try and delete it :<br />
+<br />
+loop:<br />
+  EnumRegKey $1 HKCU &quot;\Software\U.S. Robotics\Pilot Desktop&quot; $0<br />
+  StrCmp $1 &quot;&quot; done<br />
+  IntOp $0 $0 + 1<br />
+  ReadRegStr $1 HKCU &quot;\Software\U.S. Robotics\Pilot Desktop\Application$1&quot; &quot;Name&quot;<br />
+  StrCmp $1 &quot;MyApp&quot; removeKey loop<br />
+  <br />
+removeKey:<br />
+  DeleteRegKey HKCU &quot;\Software\U.S. Robotics\Pilot Desktop\Application$1&quot;<br />
+  <br />
+done:<br />
+<br />
+  SetAutoClose true<br />
+<br />
+The code doesn't work, any ideas how to remove this key ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">8th March 2007, 05:21</div></div><div class="posttext">OutFile &quot;test.exe&quot;<br />
+<br />
+Section &quot;boo&quot;<br />
+StrCpy $0 0<br />
+<br />
+loop:<br />
+EnumRegKey $1 HKCU &quot;Software\U.S. Robotics\Pilot Desktop&quot; $0<br />
+StrCmp $1 &quot;&quot; done<br />
+IntOp $0 $0 + 1<br />
+MessageBox MB_OK &quot;$$1 == [$1]&quot;<br />
+<br />
+ReadRegStr $2 HKCU &quot;Software\U.S. Robotics\Pilot Desktop\$1&quot; &quot;Name&quot;<br />
+MessageBox MB_OK &quot;$$2 == [$2]&quot;<br />
+StrCmp $2 &quot;MyApp&quot; removeKey loop<br />
+<br />
+removeKey:<br />
+DeleteRegKey HKCU &quot;Software\U.S. Robotics\Pilot Desktop\$1&quot;<br />
+<br />
+done:<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Comperio</div><div class="date">8th March 2007, 05:23</div></div><div class="posttext">well, a couple issues:<br />
+[list=1]<br />
+ First, ReadRegStr does not need the leading backslash.<br />
+Example:  ReadRegStr $1 HKCU &quot;Software\U.S. Robotics\Pilot Desktop\Application$0&quot; &quot;Name&quot;<br />
+<br />
+ Second, in this line:<br />
+<br />
+ReadRegStr $1 HKCU &quot;\Software\U.S. Robotics\Pilot Desktop\Application$1&quot; &quot;Name&quot;<br />
+<br />
+You are reading a completely bogus key becuase of what $1 is set to at that part of the code.<br />
+[/list=1] <br />
+<br />
+I assume that the &quot;application#&quot; part of the example would be where &quot;#&quot; is a number counted up, starting at one, and continuing for however many application are installed.  If so, then something like this might work better.  (I'm using LogicLib here just to make it easier to code.  And this is un-tested, so you may have to tweak it a bit, but shoudl at least get you started:<br />
+<br />
+!include LogicLib.nsh<br />
+...<br />
+<br />
+StrCpy $0 0<br />
+ClearErrors<br />
+${Do}<br />
+  IntOp $0 $0 + 1<br />
+  ReadRegStr $1 HKCU &quot;Software\U.S. Robotics\Pilot Desktop\Application$0&quot; &quot;Name&quot;<br />
+  ${If} ${Errors}<br />
+    ${ExitDo}<br />
+  ${EndIf}<br />
+  ${If} &quot;$1&quot; == &quot;MyApp&quot;<br />
+    DeleteRegKey HKCU &quot;Software\U.S. Robotics\Pilot Desktop\Application$0&quot; &quot;Name&quot;<br />
+    ${ExitDo}<br />
+  ${EndIf}<br />
+${Loop}<br />
+SetAutoClose true<br />
+<br />
+<br />
+edit:<br />
+I just hit submit as RedWine posted his...  I guess now you have 2 options! :D</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

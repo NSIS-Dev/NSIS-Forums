@@ -1,0 +1,124 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Font installation, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Font installation NSIS Discussion" />
+	
+	<title> Font installation [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Font installation</div>
+<hr />
+<div class="pda"><a href="t-246051.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=246051">Font installation</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">littlerob</div><div class="date">12th May 2006, 16:41</div></div><div class="posttext">Hi<br />
+<br />
+i'm trying to get my app to install a font. I've downloaded the fontName and fontNameAdv stuff from Vytautas but I can't get it to work.<br />
+<br />
+The .nsh files seem to be in th eright place, as does the dll but my code<br />
+<br />
+<br />
+!include FontRegAdv.nsh<br />
+!include FontName.nsh<br />
+<br />
+!define FontBackup Software\myapp\Telnet<br />
+<br />
+Section &quot;Fonts&quot;<br />
+<br />
+  StrCpy $FONT_DIR $FONTS<br />
+<br />
+  !insertmacro InstallTTF 'D:\AProducts\Utilities\Telnet\fonts\linedraw.ttf'<br />
+<br />
+  SendMessage ${HWND_BROADCAST} ${WM_FONTCHANGE} 0 0 /TIMEOUT=5000<br />
+SectionEnd<br />
+<br />
+<br />
+gives me the error<br />
+<br />
+!insertmacro: InstallTTF<br />
+Push: $0<br />
+Push: $R0<br />
+Push: $R1<br />
+Push: $R2<br />
+Push: $R3<br />
+!define: &quot;Index&quot;=&quot;Line207.7&quot;<br />
+!insertmacro: GetFileNameCall<br />
+!insertmacro: macro &quot;GetFileNameCall&quot; requires 2 parameter(s), passed 3!<br />
+Error in macro InstallTTF on macroline 10<br />
+Error in script &quot;D:\AProducts\Utilities\Setup\NSIS\telnet_setup.nsi&quot; on line 207 -- aborting creation process<br />
+<br />
+Any ideas where I'm going wrong?<br />
+<br />
+Rob</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">littlerob</div><div class="date">12th May 2006, 17:17</div></div><div class="posttext">B*ggerit.<br />
+<br />
+I've found the problem. I simplified the example, and in doing so completely removed the problem. Its actually that InstallTTF doesn't like filenames with spaces. The real line was more like<br />
+<br />
+<br />
+  !insertmacro InstallTTF 'D:\AProducts\My Utilities\Telnet\fonts\linedraw.ttf'<br />
+<br />
+<br />
+<br />
+and this caused the error.<br />
+<br />
+So sorry for confusing anybody, but it is a genuine bug I believe.<br />
+<br />
+Rob</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">12th May 2006, 19:24</div></div><div class="posttext">It is indeed. You should contact the author and get him to put quotes around his parameters for GetFileNameCall.<br />
+<br />
+He's probably using:<br />
+<br />
+!insertmacro GetFileNameCall ... ${File}<br />
+<br />
+Where ${File} will be 'D:\AProducts\My Utilities\Telnet\fonts\linedraw.ttf', which contains a space and thus ${File} becomes two parameters and not one. He needs  to use &quot;${File}&quot; to make it one parameter again.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">foxmt</div><div class="date">15th May 2006, 09:59</div></div><div class="posttext">I'm using this to install fonts:<br />
+<br />
+IfFileExists &quot;$FONTS\Forgotti.ttf&quot; FontOK<br />
+  SetOutPath &quot;$FONTS&quot;<br />
+  File &quot;..\..\Common\Font\*.*&quot;<br />
+  WriteRegStr HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts&quot; &quot;Forgotten Futurist&quot; &quot;Forgotte.ttf&quot;<br />
+  WriteRegStr HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts&quot; &quot;Forgotten Futurist Italic&quot; &quot;Forgotti.ttf&quot;<br />
+  WriteRegStr HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts&quot; &quot;Forgotten Futurist Bold&quot; &quot;Forgottb.ttf&quot;<br />
+  WriteRegStr HKEY_LOCAL_MACHINE &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts&quot; &quot;Forgotten Futurist Bold Italic&quot; &quot;Forgotbi.ttf&quot;<br />
+  StrCpy $FONT_DIR $FONTS<br />
+  GetTempFileName $R0<br />
+  File /oname=$R0 &quot;..\..\Common\Font\Fonts.dll&quot; ;on met la dll dans l'Install et dans le dossier temporaire lors de son exécution<br />
+  Push &quot;Forgotti.ttf&quot;<br />
+  CallInstDLL $R0 registerFont ;utilisation de la dll pour enregistrer la fonte<br />
+  GetTempFileName $R0<br />
+  Pop $R0<br />
+  Push &quot;Forgotte.ttf&quot;<br />
+  CallInstDLL $R0 registerFont ;utilisation de la dll pour enregistrer la fonte<br />
+  GetTempFileName $R0<br />
+  Pop $R0<br />
+  Push &quot;Forgottb.ttf&quot;<br />
+  CallInstDLL $R0 registerFont ;utilisation de la dll pour enregistrer la fonte<br />
+  GetTempFileName $R0<br />
+  Pop $R0<br />
+  Push &quot;Forgotti.ttf&quot;<br />
+  CallInstDLL $R0 registerFont ;utilisation de la dll pour enregistrer la fonte<br />
+  SendMessage ${HWND_BROADCAST} ${WM_FONTCHANGE} 0 0 /TIMEOUT=5000<br />
+  FontOK:<br />
+  fonts::registerFont &quot;Forgotte.ttf&quot; ;utilisation de la dll pour enregistrer la fonte<br />
+  fonts::registerFont &quot;Forgotti.ttf&quot; ;utilisation de la dll pour enregistrer la fonte<br />
+  fonts::registerFont &quot;Forgottb.ttf&quot; ;utilisation de la dll pour enregistrer la fonte<br />
+  fonts::registerFont &quot;Forgotbi.ttf&quot; ;utilisation de la dll pour enregistrer la fonte</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

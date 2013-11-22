@@ -1,0 +1,135 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" UI dead when button click event execute long time function, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  UI dead when button click event execute long time function NSIS Discussion" />
+	
+	<title> UI dead when button click event execute long time function [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  UI dead when button click event execute long time function</div>
+<hr />
+<div class="pda"><a href="t-297483.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=297483">UI dead when button click event execute long time function</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">oscargee1</div><div class="date">16th September 2008, 20:20</div></div><div class="posttext">Hi, My problem is very easy to be reproduced.<br />
+<br />
+I have a background running function which will be launched when a button was clicked. But it will cause all UI be locked and looks urgly. Please help me out of the problem.<br />
+<br />
+The code could be like below. It's example code under NSIS example folder. I just inserted &quot;Sleep 10000&quot; in button function. And it will lock the UI.<br />
+<br />
+!include nsDialogs.nsh<br />
+!include LogicLib.nsh<br />
+<br />
+Name &quot;nsDialogs Example&quot;<br />
+OutFile &quot;nsDialogs Example.exe&quot;<br />
+<br />
+XPStyle on<br />
+<br />
+Page license<br />
+Page custom nsDialogsPage<br />
+<br />
+Var BUTTON<br />
+Var EDIT<br />
+Var CHECKBOX<br />
+<br />
+Function nsDialogsPage<br />
+<br />
+	nsDialogs::Create /NOUNLOAD 1018<br />
+	Pop $0<br />
+<br />
+	GetFunctionAddress $0 OnBack<br />
+	nsDialogs::OnBack /NOUNLOAD $0<br />
+<br />
+	${NSD_CreateButton} 0 0 100% 12u Test<br />
+	Pop $BUTTON<br />
+	GetFunctionAddress $0 OnClick<br />
+	nsDialogs::OnClick /NOUNLOAD $BUTTON $0<br />
+<br />
+	${NSD_CreateText} 0 35 100% 12u hello<br />
+	Pop $EDIT<br />
+	GetFunctionAddress $0 OnChange<br />
+	nsDialogs::OnChange /NOUNLOAD $EDIT $0<br />
+<br />
+	${NSD_CreateCheckbox} 0 -50 100% 8u Test<br />
+	Pop $CHECKBOX<br />
+	GetFunctionAddress $0 OnCheckbox<br />
+	nsDialogs::OnClick /NOUNLOAD $CHECKBOX $0<br />
+<br />
+	${NSD_CreateLabel} 0 40u 75% 40u &quot;* Type `hello there` above.$\n* Click the button.$\n* Check the checkbox.$\n* Hit the Back button.&quot;<br />
+	Pop $0<br />
+<br />
+	nsDialogs::Show<br />
+<br />
+FunctionEnd<br />
+<br />
+Function OnClick<br />
+<br />
+	Pop $0 # HWND<br />
+        Sleep 10000<br />
+	MessageBox MB_OK clicky<br />
+<br />
+FunctionEnd<br />
+<br />
+Function OnChange<br />
+<br />
+	Pop $0 # HWND<br />
+<br />
+	System::Call user32::GetWindowText(i$EDIT,t.r0,i${NSIS_MAX_STRLEN})<br />
+<br />
+	${If} $0 == &quot;hello there&quot;<br />
+		MessageBox MB_OK &quot;right back at ya&quot;<br />
+	${EndIf}<br />
+<br />
+FunctionEnd<br />
+<br />
+Function OnBack<br />
+<br />
+	MessageBox MB_YESNO &quot;are you sure?&quot; IDYES +2<br />
+	Abort<br />
+<br />
+FunctionEnd<br />
+<br />
+Function OnCheckbox<br />
+<br />
+	Pop $0 # HWND<br />
+<br />
+	MessageBox MB_OK &quot;checkbox clicked&quot;<br />
+<br />
+FunctionEnd<br />
+<br />
+Section<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">demiller9</div><div class="date">16th September 2008, 22:20</div></div><div class="posttext">Right before you sleep (or whatever the button is really going to do) you could disable the other controls/buttons to indicate that they are not currently listening to the user. Then when the sleep/task completes, you reenable the controls again.<br />
+EnableWindow $Edit 0<br />
+GetDlgItem $0 $HWNDPARENT 1 'next button<br />
+EnableWindow $0 0<br />
+EnableWindow $CHECKBOX 0<br />
+<br />
+Sleep 10000<br />
+<br />
+EnableWindow $Edit 1<br />
+GetDlgItem $0 $HWNDPARENT 1 'next button<br />
+EnableWindow $0 1<br />
+EnableWindow $CHECKBOX 1<br />
+Don</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">oscargee1</div><div class="date">16th September 2008, 23:10</div></div><div class="posttext">Sorry, it doesn't help. You can see the window isn't refresh when you click the button. Well, other controls are disabled but it doesn't mean the UI can response any mouse command like move window or minimize the window. I hope the UI is still alive after user click button.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ZmAn3</div><div class="date">28th September 2008, 01:51</div></div><div class="posttext">i think thats a issue with nsdialogs ,kichik has said<br />
+&quot;nsDialogs doesn't support asynchronous operations so you can't keep on doing something, updating the GUI while you do it and still have user interaction.&quot;<br />
+ive kinda ran into that my self with a extracting a big file</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

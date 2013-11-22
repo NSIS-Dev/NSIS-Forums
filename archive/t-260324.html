@@ -1,0 +1,134 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Detect NSIS compiler version, branch?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Detect NSIS compiler version, branch? NSIS Discussion" />
+	
+	<title> Detect NSIS compiler version, branch? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Detect NSIS compiler version, branch?</div>
+<hr />
+<div class="pda"><a href="t-260324.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=260324">Detect NSIS compiler version, branch?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jamescookmd</div><div class="date">25th November 2006, 00:00</div></div><div class="posttext">I need to write a NSIS script that supports both NSIS 2.04 and 2.21.  Between these two version the lzma compressor changed to not default to &quot;solid&quot;.  The older version does not support the /solid flag.<br />
+<br />
+Is there a way I can do something like:<br />
+<br />
+!ifdef NSIS_204<br />
+SetCompressor lzma<br />
+!else<br />
+SetCompressor /solid lzma<br />
+!endif<br />
+<br />
+Thanks,<br />
+<br />
+James</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bholliger</div><div class="date">25th November 2006, 02:17</div></div><div class="posttext">Hi jamescookmd!<br />
+<br />
+The constant NSIS_VERSION holds the version of the compiler. I think the best way is using a second file and include the output.<br />
+<br />
+NSIS &gt;= 2.07 SetCompressor /SOLID lzma<br />
+NSIS &lt;  2.07 SetCompressor lzma<br />
+<br />
+Try this:<br />
+<br />
+nsiscompressionmaximiser.nsi (save in the same directory):<br />
+<br />
+; include header files<br />
+!include LogicLib.nsh<br />
+!include WordFunc.nsh<br />
+<br />
+!insertmacro VersionCompare<br />
+ <br />
+OutFile &quot;nsiscompressionmaximiser.exe&quot;<br />
+ <br />
+Function .onInit<br />
+<br />
+  StrCpy $R0 ${NSIS_VERSION} &quot;&quot; 1 ; usual output is &quot;vX.YZ&quot;<br />
+<br />
+  ${VersionCompare} $R0 &quot;2.07&quot; $R1<br />
+<br />
+  ; equal or higher, use solid compression<br />
+  ${If} $R1 == 0<br />
+  ${OrIf} $R1 == 1<br />
+    StrCpy $R3 &quot;SetCompressor /SOLID lzma&quot;<br />
+  ${Else}<br />
+    StrCpy $R3 &quot;SetCompressor lzma&quot;<br />
+  ${EndIf}<br />
+ <br />
+  ; Write output to file and include<br />
+  FileOpen $R0 &quot;$EXEDIR\maxcompression.nsh&quot; w<br />
+    FileWrite $R0 &quot;$R3$\r$\n&quot;<br />
+  FileClose $R0<br />
+ <br />
+  Quit<br />
+FunctionEnd<br />
+ <br />
+Section<br />
+SectionEnd<br />
+<br />
+<br />
+Put this in your script:<br />
+<br />
+!system &quot;${NSISDIR}\makensis.exe nsiscompressionmaximiser.nsi&quot;<br />
+!system &quot;nsiscompressionmaximiser.exe&quot;<br />
+!include &quot;maxcompression.nsh&quot;<br />
+<br />
+<br />
+edit: Make sure the header files are in the installation of 2.04 as well.<br />
+<br />
+Have fun!<br />
+<br />
+Cheers<br />
+<br />
+Bruno</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">bholliger</div><div class="date">25th November 2006, 02:41</div></div><div class="posttext">Hi James!<br />
+<br />
+What a great feeling to improve yourself.<br />
+<br />
+Here is a shorter version:<br />
+<br />
+<br />
+<br />
+; whatever NSIS version is used, use solid compression<br />
+; Works for NSIS &gt; 2.01<br />
+!define COMPRESSOR_${NSIS_VERSION}<br />
+<br />
+!ifdef COMPRESSOR_v2.01 | COMPRESSOR_v2.02 | COMPRESSOR_v2.03 | COMPRESSOR_v2.04 | COMPRESSOR_v2.05 | COMPRESSOR_v2.06<br />
+  SetCompressor lzma<br />
+!else<br />
+  SetCompressor /SOLID lzma<br />
+!endif<br />
+<br />
+!undef COMPRESSOR_${NSIS_VERSION}<br />
+<br />
+:<br />
+:<br />
+<br />
+<br />
+Have fun.<br />
+<br />
+Cheers<br />
+<br />
+Bruno</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jamescookmd</div><div class="date">25th November 2006, 06:09</div></div><div class="posttext">Thanks!  I tried the latter example and it works well for me.<br />
+<br />
+James</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

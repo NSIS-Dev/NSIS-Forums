@@ -1,0 +1,86 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Pocket PC Registry with RAPI.DLL, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Pocket PC Registry with RAPI.DLL NSIS Discussion" />
+	
+	<title> Pocket PC Registry with RAPI.DLL [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Pocket PC Registry with RAPI.DLL</div>
+<hr />
+<div class="pda"><a href="t-233519.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=233519">Pocket PC Registry with RAPI.DLL</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">treizesegments</div><div class="date">19th December 2005, 07:26</div></div><div class="posttext">Hello,<br />
+<br />
+I want to read data from the PocketPC Registry.<br />
+I use this code :<br />
+ <br />
+System::Call &quot;rapi::CeRapiInit() i .r0&quot;<br />
+; Recherche la clé Ident<br />
+; LONG CeRegOpenKeyEx( HKEY hKey, LPCWSTR lpszSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult);<br />
+System::Call &quot;rapi::CeRegOpenKeyEx(i, w, i, i, *i)     i(0x80000002, 'Ident', 0, 0, .r1) .r0&quot;<br />
+; LONG CeRegQueryValueEx( HKEY hKey, LPCWSTR lpValueName, LPDWORD lpReserved,LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData ); <br />
+System::Call &quot;rapi::CeRegQueryValueEx(i, w, i, *i, i, *i) i(r1., 'Name', 0, .r2, 0, .r3) .r0&quot;<br />
+; LONG CeRegQueryValueEx( HKEY hKey, LPCWSTR lpValueName, LPDWORD lpReserved,LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData ); <br />
+System::Call &quot;rapi::CeRegQueryValueEx(i, w, i, *i, *t, *i) i(r1., 'Name', 0, .r2, .r4, .r3) .r0&quot;<br />
+ <br />
+I can read type of data and its number of bytes with the second call. But when I want to read the data itself (third call), the CeRegQueryValueEx function returns ERROR_FILE_NOT_FOUND or E_FAIL (0x80004005) error code.<br />
+I can't find the correct parameter type or I forget an important initialization !!! Somebody have an idea ? Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">19th December 2005, 14:51</div></div><div class="posttext">Maybe something like this (I can't test it):Name &quot;Output&quot;<br />
+OutFile &quot;Output.exe&quot;<br />
+<br />
+Section<br />
+	System::Call &quot;rapi::CeRapiInit() i .r0&quot;<br />
+	System::Call &quot;rapi::CeRegOpenKeyEx(i, w, i, i, *i) i(0x80000002, 'Ident', 0, 0, .r1) .r0&quot;<br />
+	System::Call &quot;rapi::CeRegQueryValueEx(i, w, i, *i, i, *i) i(r1., 'Name', 0, 0, 0, .r2) .r0&quot;<br />
+<br />
+	System::Call &quot;*$2(&amp;i4 .r3)&quot;<br />
+	System::Alloc $3<br />
+	Pop $3<br />
+	System::Call &quot;rapi::CeRegQueryValueEx(i, w, i, *i, *i, *i) i(r2., 'Name', 0, .r4, .r3, .r2) .r0&quot;<br />
+	StrCpy $5 $3<br />
+	StrCpy $6 $2<br />
+	System::Call &quot;*$4(&amp;i4 .r7)&quot;<br />
+	System::Call &quot;*$5(&amp;t${NSIS_MAX_STRLEN} .r8)&quot;<br />
+	System::Call &quot;*$6(&amp;i4 .r9)&quot;<br />
+	System::Free $2<br />
+	System::Free $3<br />
+	System::Free $4<br />
+	System::Free $5<br />
+	System::Free $6<br />
+<br />
+	MessageBox MB_OK &quot;Type={$7}$\nValue={$8}$\nLen={$9}&quot;<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">treizesegments</div><div class="date">19th December 2005, 16:33</div></div><div class="posttext">It's making a fatal error on this line :<br />
+	System::Call &quot;*$2(&amp;i4 .r3)&quot; <br />
+$2 equals 20 after the previous instruction.<br />
+<br />
+I saw this king of code in another example but, i can't understand what it's doing :<br />
+<br />
+System::Call &quot;*$4(&amp;i4 .r7)&quot;<br />
+System::Call &quot;*$5(&amp;t${NSIS_MAX_STRLEN} .r8)&quot;<br />
+System::Call &quot;*$6(&amp;i4 .r9)&quot;<br />
+ <br />
+<br />
+Can you explain me quickly ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">19th December 2005, 18:04</div></div><div class="posttext">System::Call &quot;*$2(&amp;i4 .r3)&quot;You use this structure to reach the number. $2 it is the pointer to the registry value lenght number, $3 its an object (number) on which $2 points. Try to replace CeRegOpenKeyEx line withSystem::Call &quot;*(i) i (0) .r1&quot;<br />
+System::Call &quot;rapi::CeRegOpenKeyEx(i, w, i, i, *i) i(0x80000002, 'Ident', 0, 0, r1) .r0&quot;<br />
+MessageBox MB_OK '$0'</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,729 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" custom page issue, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  custom page issue NSIS Discussion" />
+	
+	<title> custom page issue [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  custom page issue</div>
+<hr />
+<div class="pda"><a href="t-346903.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=346903">custom page issue</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Mark O'Neal</div><div class="date">9th August 2012, 19:59</div></div><div class="posttext">Below is the NSIS script I am working on.<br />
+For it to run it would require a file called SideGroup.txt to be in c:\NSISFiles and<br />
+the file would have the format of:<br />
+a<br />
+b<br />
+c<br />
+<br />
+Now to my problem.<br />
+<br />
+I have create three cutom pages. <br />
+The first queries the user as to the type of database they are using.<br />
+The Second will either get a access database or the SQL server info needed to make a connection.<br />
+<br />
+The third is conditional based on if the 'Section &quot;Install Desktop Shortcut for Training Database&quot; AppTraining' is selected. By default it is off.<br />
+<br />
+When this selection is made and the install button clicked, it displays this screen and allows<br />
+a training database to be selected.... but no further action is possible. All buttons on this screen are disabled and the only way to get out of it is to kill the task manually via task manager.<br />
+<br />
+So.... what am I doing wrong here? (And 'everything' might be an acceptable answer.)<br />
+<br />
+Many thanks for any help provided. <br />
+<br />
+#---------------------------------<br />
+#App Installer<br />
+#<br />
+# v-Install Process Options-v<br />
+#<br />
+# -- Determine what type of database the user is using with pave<br />
+#<br />
+# -- Query the user as to the Access database location or the SQl server info<br />
+#<br />
+# -- Unload the Java side group program and JRE<br />
+#<br />
+# -- Execute the Java side group program<br />
+#<br />
+# -- Retreive the side groups from the file produced by the side group program<br />
+#<br />
+# -- Delete the side group program, JRE and side group file<br />
+#<br />
+# Note: if no side groups are found the following step need not be performed<br />
+#<br />
+# ---- Build side group startup.bat files for install.<br />
+#<br />
+#<br />
+# -- install App<br />
+# -- install App training<br />
+# -- <br />
+#<br />
+# -(Start menu icons)<br />
+# --install start menu icons (all short cuts)<br />
+#<br />
+# -(desktop)<br />
+# --install player sides icons (desktop)<br />
+# --install editor icons<br />
+# --install playback icons<br />
+# --install whitecell icons<br />
+# --install training icon (if training is being installed)<br />
+#<br />
+#<br />
+;---------------------------------<br />
+;Includes.<br />
+	!include &quot;Sections.nsh&quot;<br />
+<br />
+<br />
+ 	!include &quot;StrFunc.nsh&quot;<br />
+	${StrLoc}<br />
+	${StrRep}<br />
+	${StrTrimNewLines}<br />
+	!include &quot;MUI2.nsh&quot;<br />
+	!include &quot;LogicLib.nsh&quot;<br />
+	!include &quot;nsDialogs.nsh&quot;<br />
+<br />
+<br />
+;--------------------------------<br />
+;General.<br />
+<br />
+ 	;Name and file<br />
+	Name &quot;App&quot;<br />
+	OutFile &quot;AppInstaller.exe&quot;<br />
+<br />
+ 	;Default installation folder<br />
+	InstallDir &quot;$PROGRAMFILES32\App&quot;<br />
+<br />
+ 	;Request application privileges for Windows Vista<br />
+  	RequestExecutionLevel user<br />
+<br />
+<br />
+<br />
+	;Query the user for the database type and then the database.<br />
+	;Once we have the database, we need to retreive the sides from the database<br />
+	;so we can build the startup.bat files for each side.<br />
+<br />
+	Page Custom getDatabaseTypeToUse<br />
+<br />
+	Page custom getDatabaseToReadFrom checkForValidEntries<br />
+<br />
+	;This page is supposed to be conditional. <br />
+	;But it won't go away once a file is selected.<br />
+	Page custom getTrainingDatabaseToReadFrom 	; &lt;-problem child<br />
+	<br />
+	Var Dialog<br />
+	var hwnd<br />
+<br />
+	Var databaseType<br />
+	Var databaseSelected<br />
+	Var serverName<br />
+	Var appInstalled<br />
+	Var parameters<br />
+	Var traningDatabaseSelected<br />
+<br />
+	Var header<br />
+	Var Get_BrowseButton<br />
+	Var IsTraining<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+;--------------------------------<br />
+;Icon files<br />
+<br />
+	;!define MUI_ICON installerImages\orange-install.ico<br />
+	;!define MUI_UNICON installerImages\orange-uninstall.ico<br />
+<br />
+<br />
+;--------------------------------<br />
+;Pages.<br />
+; APP Installation directory Page<br />
+<br />
+<br />
+	!insertmacro MUI_PAGE_COMPONENTS<br />
+<br />
+  	;!define MUI_PAGE_CUSTOMFUNCTION_LEAVE CheckDirectoryPermission<br />
+	;!insertmacro MUI_PAGE_DIRECTORY<br />
+<br />
+  	!insertmacro MUI_PAGE_INSTFILES<br />
+  <br />
+  	!insertmacro MUI_UNPAGE_CONFIRM<br />
+  	!insertmacro MUI_UNPAGE_INSTFILES<br />
+<br />
+<br />
+;--------------------------------<br />
+;Languages.<br />
+ <br />
+  !insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+<br />
+<br />
+;--------------------------------<br />
+;App install sections.<br />
+<br />
+<br />
+Section &quot;Install App&quot; App<br />
+<br />
+	<br />
+<br />
+	SetOutPath $INSTDIR<br />
+	<br />
+	;Copy files to install directory<br />
+	;File /r distBin\App\*<br />
+;	File /r \*<br />
+<br />
+	;Create uninstaller<br />
+;  	WriteUninstaller $INSTDIR\Uninstall.exe<br />
+<br />
+	;Build startup files<br />
+;	Delete $INSTDIR\startupWhiteCell.bat<br />
+<br />
+	ClearErrors  <br />
+<br />
+;	FileOpen $0 $INSTDIR\startupWhiteCell.bat w<br />
+<br />
+	IfErrors done<br />
+<br />
+	StrCpy $appInstalled &quot;true&quot;<br />
+<br />
+;	FileWrite $0 &quot;set APP_PATH=$INSTDIR&quot;<br />
+;	FileWrite $0 &quot;$\r$\n&quot;<br />
+;	FileWrite $0 &quot;jre7\bin\java.exe -Xms512m -Xmx512m -classpath %APP_PATH%;%APP_PATH%/lib/jh.jar src/application.Main&quot;<br />
+;	FileClose $0<br />
+ <br />
+	;need some kind of loop to figure out what sides are available from the database to create the bat files.<br />
+<br />
+<br />
+done:<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+Section &quot;Install Desktop Shortcut for Training Database&quot; AppTraining<br />
+<br />
+	${If} $appInstalled == &quot;true&quot;<br />
+<br />
+		Call getTrainingDatabaseToReadFrom<br />
+<br />
+		MessageBox MB_OK &quot; value(1) $traningDatabaseSelected&quot;<br />
+<br />
+		${StrLoc} $0 $traningDatabaseSelected  &quot;.accdb&quot; &quot;&gt;&quot;<br />
+<br />
+		${If} $traningDatabaseSelected != &quot;&quot;<br />
+		${AndIF} $traningDatabaseSelected != &quot;*.accdb&quot;<br />
+		${AndIf} $0 != &quot;&quot;<br />
+			MessageBox MB_OK &quot;value(2) $traningDatabaseSelected $0&quot;<br />
+			call installTrainingSideGroupFiles<br />
+<br />
+		${EndIf}<br />
+<br />
+	${EndIf}<br />
+<br />
+SectionEnd<br />
+<br />
+;--------------------------------<br />
+;This section creates a desktop shortcut for the full version.<br />
+<br />
+Section &quot;Install Desktop Shortcut For Sides&quot; DesktopShortCuts<br />
+<br />
+	<br />
+	Call installSideGroupFiles<br />
+<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+;--------------------------------<br />
+;This section creates start menu shortcuts.<br />
+<br />
+Section &quot;Install Start Menu Shortcuts&quot; StartMenu<br />
+<br />
+  CreateDirectory $SMPROGRAMS\App<br />
+<br />
+  CreateShortCut $SMPROGRAMS\App\App-WhiteCell.lnk $INSTDIR\startupWhiteCell.bat ;&quot;&quot; ${MUI_DESKTOP_ICON_G}<br />
+<br />
+  CreateShortCut $SMPROGRAMS\App\Uninstall-App.lnk $INSTDIR\uninstall.exe<br />
+<br />
+SectionEnd<br />
+<br />
+<br />
+<br />
+;--------------------------------<br />
+;Create descriptions of each component.<br />
+<br />
+	LangString DESC_App ${LANG_ENGLISH} &quot;Installs the App application.&quot;<br />
+<br />
+	LangString DESC_AppTraining ${LANG_ENGLISH} &quot;Install the App Training startup files. Requires App to be installed and a Training database.&quot;<br />
+<br />
+	LangString DESC_StartMenu ${LANG_ENGLISH} &quot;Place shortcuts for running and uninstalling App in the Start Menu.&quot;<br />
+<br />
+	LangString DESC_DesktopShortCuts ${LANG_ENGLISH} &quot;Place shortcuts for running App on the desktop.&quot;<br />
+<br />
+<br />
+	!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN<br />
+		!insertmacro MUI_DESCRIPTION_TEXT ${App} $(DESC_App)<br />
+		!insertmacro MUI_DESCRIPTION_TEXT ${AppTraining} $(DESC_AppTraining)<br />
+		!insertmacro MUI_DESCRIPTION_TEXT ${StartMenu} $(DESC_StartMenu)<br />
+		!insertmacro MUI_DESCRIPTION_TEXT ${DeskTopShortCuts} $(DESC_DesktopShortCuts)<br />
+	!insertmacro MUI_FUNCTION_DESCRIPTION_END<br />
+<br />
+<br />
+<br />
+<br />
+#<br />
+# Note: .onInit has to come after all defined section if you want to reference a section for<br />
+# conditional processing.<br />
+#<br />
+Function .onInit<br />
+<br />
+	StrCpy $databaseType &quot;Access&quot;<br />
+	StrCpy $databaseSelected &quot;&quot;<br />
+	StrCpy $serverName &quot;&quot;<br />
+	StrCpy $appInstalled &quot;false&quot;<br />
+	StrCpy $traningDatabaseSelected &quot;&quot;<br />
+	StrCpy $IsTraining &quot;false&quot;<br />
+<br />
+	;default this section to off so it is conditional <br />
+	SectionGetFlags ${AppTraining} $0<br />
+	IntOp $0 $0 &amp; ${SECTION_OFF}<br />
+	SectionSetFlags ${AppTraining} $0<br />
+<br />
+<br />
+	;These are not the droids I was looking for.....<br />
+	;SectionSetFlags ${AppTraining} 17 	; this forces it to be checked and unselectable by the user<br />
+	;SectionSetFlags ${AppTraining} 16 	; this forces it to be unchecked and unselectable by the user<br />
+	;SectionSetFlags ${AppTraining} 15 	; this forces it to be unchecked and unselectable by the user - but all other sections are in a sub tree and selected<br />
+	;SectionSetFlags ${AppTraining} 14 	; this forces it to be unchecked and unselectable by the user - but all other sections are in a sub tree and unselected<br />
+	;SectionSetFlags ${AppTraining} 13 	; this forces it to be unchecked and selectable by the user - but not all sections availible<br />
+	;SectionSetFlags ${AppTraining} 12 	; this forces it to be checked and selectable by the user - but not all sections availible - almost worked<br />
+<br />
+<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+#############################################<br />
+#<br />
+# Additional functions and sections used in processing the install<br />
+#<br />
+#############################################<br />
+<br />
+<br />
+#####################################################################################<br />
+# Depending on the option selected, either get the access database or<br />
+# the SQL Server parameters needed.<br />
+#####################################################################################<br />
+Function getDatabaseToReadFrom<br />
+	<br />
+	${If} $databaseType == &quot;Access&quot;<br />
+		Strcpy $header &quot;Please select an $databaseType database.&quot;<br />
+<br />
+		StrCpy $IsTraining &quot;false&quot;<br />
+		!insertmacro MUI_HEADER_TEXT $header &quot; &quot;<br />
+	<br />
+		nsDialogs::Create /NOUNLOAD 1018<br />
+		Pop $Dialog<br />
+    <br />
+		${If} $Dialog == error<br />
+		    Abort<br />
+		${EndIf}<br />
+<br />
+		${NSD_CreateFileRequest} 10 120 85% 20 &quot;&quot;<br />
+		;Pop $hwnd<br />
+        	Pop $databaseSelected<br />
+<br />
+		${NSD_CreateBrowseButton} 89% 120 7% 20 ...<br />
+		Pop $Get_BrowseButton <br />
+<br />
+		GetFunctionAddress $0 OnCLick_Get_BrowseButton <br />
+		nsDialogs::OnClick /NOUNLOAD $Get_BrowseButton $0<br />
+<br />
+		nsDialogs::Show<br />
+<br />
+	${Else}<br />
+<br />
+		Strcpy $header &quot;Please provided $databaseType database information.&quot;<br />
+		!insertmacro MUI_HEADER_TEXT $header &quot; &quot;<br />
+		nsDialogs::Create /NOUNLOAD 1018<br />
+		Pop $Dialog<br />
+    <br />
+		${If} $Dialog == error<br />
+		    Abort<br />
+		${EndIf}<br />
+<br />
+		${NSD_CreateLabel} 0 0 100u 12u &quot;Please enter SQl Server Name:&quot; <br />
+		Pop $hwnd<br />
+<br />
+		${NSD_CreateText} 101u 0 100u 12u &quot;&quot;<br />
+		Pop $0		<br />
+		<br />
+<br />
+		${NSD_CreateLabel} 0 14u 100u 12u &quot;Please enter database name:&quot; <br />
+		Pop $hwnd<br />
+<br />
+		${NSD_CreateText} 101u 14u 100u 12u &quot;&quot;<br />
+		Pop $1<br />
+<br />
+		nsDialogs::Show<br />
+<br />
+	${EndIf}<br />
+<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+Function getTrainingDatabaseToReadFrom<br />
+	<br />
+	SectionGetFlags ${AppTraining} $R0 <br />
+  	IntOp $R0 $R0 &amp; ${SF_SELECTED} <br />
+  	IntCmp $R0 ${SF_SELECTED} okToShow <br />
+ <br />
+  	Abort <br />
+ <br />
+  	okToShow: <br />
+<br />
+<br />
+	Strcpy $header &quot;Please select an Access training database.&quot;<br />
+<br />
+	StrCpy $IsTraining &quot;true&quot;<br />
+	!insertmacro MUI_HEADER_TEXT $header &quot; &quot;<br />
+	<br />
+<br />
+	nsDialogs::Create /NOUNLOAD 1018<br />
+	Pop $Dialog<br />
+    <br />
+	${If} $Dialog == error<br />
+	    Abort<br />
+	${EndIf}<br />
+<br />
+	${NSD_CreateFileRequest} 10 120 85% 20 &quot;&quot;<br />
+	;Pop $hwnd<br />
+       	Pop $traningDatabaseSelected<br />
+<br />
+	${NSD_CreateBrowseButton} 89% 120 7% 20 ...<br />
+	<br />
+	Pop $Get_BrowseButton <br />
+<br />
+	GetFunctionAddress $0 OnCLick_Get_BrowseButton <br />
+	nsDialogs::OnClick /NOUNLOAD $Get_BrowseButton $0<br />
+<br />
+	nsDialogs::Show<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+Function OnCLick_Get_BrowseButton<br />
+<br />
+	#Show the file input dialog to the user so they can select an access database<br />
+<br />
+	nsDialogs::SelectFileDialog /NOUNLOAD open &quot;$INSTDIR\*.accdb&quot; &quot;Access DB|*.accdb|All Files|*.*&quot;<br />
+	Pop $0<br />
+<br />
+	${If} $0 != &quot;&quot;<br />
+		${if} $IsTraining == &quot;false&quot;<br />
+			${NSD_SetText} $databaseSelected $0<br />
+		${Else}<br />
+			${NSD_SetText} $traningDatabaseSelected $0	<br />
+		${EndIf}<br />
+	${EndIf}<br />
+<br />
+	;MessageBox MB_OK $0<br />
+<br />
+	${if} $IsTraining == &quot;false&quot;<br />
+		StrCpy  $databaseSelected $0<br />
+	${Else}<br />
+		StrCpy  $traningDatabaseSelected $0	<br />
+	${EndIf}<br />
+	<br />
+	;MessageBox MB_OK $databaseSelected<br />
+<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+#####################################################################################<br />
+#<br />
+# This will verify that the input provided by the user meets the min requirements<br />
+# of need for the database type selected.... <br />
+# has a file or sqlServer name have been supplyed, it is an access database(ends with .accdb)<br />
+#<br />
+#####################################################################################<br />
+<br />
+Function checkForValidEntries<br />
+<br />
+	${If} $databaseType == &quot;Access&quot;<br />
+<br />
+<br />
+		#odd how this silly function works - or it could just be me,<br />
+		#but it doesn't really return a true location, just that the substring<br />
+		#is in the search string, exists.<br />
+<br />
+		${StrLoc} $0 $databaseSelected  &quot;.accdb&quot; &quot;&gt;&quot;<br />
+<br />
+		<br />
+<br />
+		${If} $databaseSelected != &quot;&quot;<br />
+		${AndIF} $databaseSelected != &quot;*.accdb&quot;<br />
+		${AndIf} $0 != &quot;&quot;<br />
+			;MessageBox MB_OK $databaseSelected<br />
+<br />
+		${Else}<br />
+			MessageBox MB_OK &quot;No Access database provided&quot;<br />
+			Abort<br />
+		${EndIf}<br />
+<br />
+<br />
+	${Else}<br />
+		#not sure why it needs to be done this way<br />
+		#but this is the only way I can get the variables assigned with the proper values<br />
+		Var /Global sn ;servername<br />
+		Var /Global ds ;database<br />
+<br />
+		${NSD_GetText} $0 $sn <br />
+		${NSD_GetText} $1 $ds <br />
+<br />
+		StrCpy $serverName $sn <br />
+		StrCpy $databaseSelected $ds <br />
+<br />
+<br />
+		${If} $databaseSelected != &quot;DatabaseName&quot;<br />
+		${AndIF} $databaseSelected != &quot;&quot;<br />
+<br />
+			${if} $serverName != &quot;ServerName&quot;<br />
+			${AndIF} $serverName != &quot;&quot;<br />
+<br />
+			${Else}<br />
+				MessageBox MB_OK &quot;No SQL serve name provided&quot;<br />
+				Abort<br />
+			${EndIf}<br />
+<br />
+		${Else}<br />
+			MessageBox MB_OK &quot;No SQL database provided $databaseSelected&quot;<br />
+			Abort<br />
+		${EndIf}<br />
+<br />
+	${EndIf}<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+#####################################################################################<br />
+#<br />
+# Retreive the database type that the user has. Access or SQL Server<br />
+#<br />
+#####################################################################################<br />
+<br />
+Function getDatabaseTypeToUse<br />
+	!insertmacro MUI_HEADER_TEXT &quot;Please select the database type you are using.&quot; &quot; &quot;<br />
+	<br />
+	nsDialogs::Create 1018<br />
+		Pop $dialog<br />
+<br />
+	${NSD_CreateRadioButton} 0 0 40% 6% &quot;Access Database&quot;	<br />
+		Pop $hwnd<br />
+		${NSD_AddStyle} $hwnd ${WS_GROUP}<br />
+<br />
+		${If} $databaseType == &quot;Access&quot;<br />
+			${NSD_SetState} $hwnd ${BST_CHECKED}<br />
+		${EndIF}<br />
+<br />
+		${NSD_OnClick} $hwnd AccessDatabaseSelected<br />
+<br />
+	${NSD_CreateRadioButton} 0 12% 40% 6% &quot;SQL Server Database&quot;<br />
+		Pop $hwnd<br />
+<br />
+		${If} $databaseType == &quot;SQLServer&quot;<br />
+			${NSD_SetState} $hwnd ${BST_CHECKED}<br />
+		${EndIF}<br />
+<br />
+		${NSD_OnClick} $hwnd SQLServerDatabaseSelected<br />
+ <br />
+	nsDialogs::Show<br />
+<br />
+FunctionEnd<br />
+<br />
+Function AccessDatabaseSelected<br />
+	#set the database type selected<br />
+	Pop $hwnd<br />
+	StrCpy $databaseType &quot;Access&quot;<br />
+FunctionEnd<br />
+<br />
+Function SQLServerDatabaseSelected<br />
+	#set the database type selected<br />
+	Pop $hwnd<br />
+	StrCpy $databaseType &quot;SQLServer&quot;<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+#####################################################################################<br />
+#<br />
+#####################################################################################<br />
+<br />
+<br />
+Function installTrainingSideGroupFiles<br />
+<br />
+	SetOutPath &quot;C:\NSISFiles&quot;<br />
+<br />
+	;InstallDir &quot;C:\NSISFiles&quot;<br />
+<br />
+	FileOpen $0 &quot;C:\NSISFiles\SideGroup.txt&quot; r<br />
+<br />
+		;SQLSERVER<br />
+;		-dbType sqlServer<br />
+;		-s serverName<br />
+;		-d databasename ;sqlserver no path<br />
+<br />
+		;Access<br />
+;		-d path/databasename<br />
+;		-t true ;training mode<br />
+<br />
+	StrCpy $parameters &quot; -d $traningDatabaseSelected -t true&quot;<br />
+<br />
+	loop:<br />
+		FileRead $0 $1 <br />
+		IfErrors done 			; end of file<br />
+		${StrRep} $2 $1 &quot; &quot; &quot;_&quot; 	; get rid of any spaces<br />
+		StrCpy $3 &quot;Startup_$2.bat&quot;	; create the file name to use<br />
+		${StrTrimNewLines} $4 $1	; remove the newline from the end		<br />
+		StrCpy $6 '&quot;$4&quot;'		; quote the side group name<br />
+<br />
+		;open the new side group startup bat file for writting<br />
+<br />
+		CreateShortCut $DESKTOP\$2.lnk &quot;C:\NSISFiles\$3&quot; &quot;&quot; ${MUI_DESKTOP_ICON}<br />
+<br />
+		FileOpen $5 &quot;C:\NSISFiles\$3&quot; w<br />
+<br />
+<br />
+		;write to the file<br />
+		FileWrite $5 &quot;set APP_PATH=$INSTDIR&quot;<br />
+		FileWrite $5 &quot;$\r$\n&quot;<br />
+		FileWrite $5 &quot;jre7\bin\java.exe -Xms512m -Xmx512m -classpath %APP_PATH%;%APP_PATH%/lib/jh.jar src/application.Main -g $6 $parameters&quot;<br />
+<br />
+		FileClose $5<br />
+		goto loop<br />
+<br />
+	done:<br />
+	FileClose $0<br />
+<br />
+FunctionEnd<br />
+<br />
+Function installSideGroupFiles<br />
+<br />
+	SetOutPath &quot;C:\Users\Mark.Strein\Desktop\NSISFiles&quot;<br />
+<br />
+	;InstallDir &quot;C:\Users\Mark.Strein\Desktop\NSISFiles&quot;<br />
+<br />
+	FileOpen $0 &quot;C:\Users\Mark.Strein\Desktop\NSISFiles\SideGroup.txt&quot; r<br />
+<br />
+<br />
+		;SQLSERVER<br />
+;		-dbType sqlServer<br />
+;		-s serverName<br />
+;		-d databasename ;sqlserver no path<br />
+<br />
+		;Access<br />
+;		-d path/databasename<br />
+;		-t true ;training mode<br />
+<br />
+	${If} $databaseType == &quot;Access&quot;<br />
+		StrCpy $parameters &quot; -d $databaseSelected&quot;<br />
+	${Else}<br />
+		StrCpy $parameters &quot; -dbType sqlServer -s $serverName -d $databaseSelected&quot;<br />
+	${EndIF}<br />
+<br />
+	loop:<br />
+		FileRead $0 $1 <br />
+		IfErrors done 			; end of file<br />
+		${StrRep} $2 $1 &quot; &quot; &quot;_&quot; 	; get rid of any spaces<br />
+		StrCpy $3 &quot;Startup_$2.bat&quot;	; create the file name to use<br />
+		${StrTrimNewLines} $4 $1	; remove the newline from the end		<br />
+		StrCpy $6 '&quot;$4&quot;'		; quote the side group name<br />
+<br />
+		;open the new side group startup bat file for writting<br />
+<br />
+		CreateShortCut $DESKTOP\$2.lnk &quot;C:\Users\Mark.Strein\Desktop\NSISFiles\$3&quot; &quot;&quot; ${MUI_DESKTOP_ICON}<br />
+<br />
+		FileOpen $5 &quot;C:\Users\Mark.Strein\Desktop\NSISFiles\$3&quot; w<br />
+<br />
+<br />
+		;write to the file<br />
+		FileWrite $5 &quot;set APP_PATH=$INSTDIR&quot;<br />
+		FileWrite $5 &quot;$\r$\n&quot;<br />
+		FileWrite $5 &quot;jre7\bin\java.exe -Xms512m -Xmx512m -classpath %APP_PATH%;%APP_PATH%/lib/jh.jar src/application.Main -g $6 $parameters&quot;<br />
+<br />
+		FileClose $5<br />
+		goto loop<br />
+<br />
+	done:<br />
+	FileClose $0<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+#####################################################################################<br />
+#<br />
+#####################################################################################<br />
+<br />
+;--------------------------------<br />
+;This function checks if the user has permissions to write to the selected directory.<br />
+<br />
+Function CheckDirectoryPermission<br />
+<br />
+	ClearErrors<br />
+  	SetOutPath $INSTDIR<br />
+  	FileOpen $R0 $INSTDIR\tmp.dat w<br />
+  	FileClose $R0<br />
+  	Delete $INSTDIR\tmp.dat<br />
+<br />
+  	${If} ${Errors}<br />
+    		MessageBox MB_OK &quot;You do not have permission to write to directory $INSTDIR. Please select another directory.&quot;<br />
+    		Abort<br />
+  	${EndIf}<br />
+<br />
+FunctionEnd<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+;--------------------------------<br />
+;Uninstaller Section<br />
+<br />
+Section &quot;Uninstall&quot;<br />
+<br />
+	;Database directory<br />
+  	RMDir /r $INSTDIR<br />
+<br />
+  	;Remove start menu and desktop shortcuts<br />
+  	RMDir /r $SMPROGRAMS\App<br />
+<br />
+;this works for other app, but for App it can have dynamic links built for each side<br />
+;need to figure out how to make that happen<br />
+<br />
+  	Delete $DESKTOP\OtherApp-Full.lnk<br />
+	Delete $DESKTOP\OtherApp-Functions.lnk<br />
+  	Delete $DESKTOP\OtherApp-Dependencies.lnk<br />
+  	Delete $DESKTOP\OtherApp-DM.lnk<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">9th August 2012, 20:07</div></div><div class="posttext">Please edit your post so the code is a file attachment. It is far too much code for a snippet. Your error is that you are trying to show the custom page from a section. You cannot do this. You can only call nsDialogs from a Page Custom show function. Therefore you must add a custom page after your components page and only show the page if your section is selected.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" CreateNewShare macro does not allow multiple user, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  CreateNewShare macro does not allow multiple user NSIS Discussion" />
+	
+	<title> CreateNewShare macro does not allow multiple user [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  CreateNewShare macro does not allow multiple user</div>
+<hr />
+<div class="pda"><a href="t-276697.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=276697">CreateNewShare macro does not allow multiple user</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">123mobile</div><div class="date">30th August 2007, 12:31</div></div><div class="posttext">Hi,<br />
+<br />
+I am using the macro CreateNewShare to share a folder. when I call this macro first time to share a folder it works fine, but a second call(To add one more user to the share folder list) for the same folder gives me an error message, Saying there was an error creating the share!<br />
+<br />
+Can somebody tell me where I am going wrong.<br />
+Here is the code I am using.<br />
+<br />
+<br />
+!insertmacro CreateNewShare &quot;NSADMIN&quot; &quot;_NS_DATA3&quot; ${STYPE_DISKTREE} &quot;Allows access to data&quot; \<br />
+   ${ACCESS_ALL} ${GENERIC_ALL} -1 2 &quot;D:\books&quot; &quot;&quot;<br />
+<br />
+!insertmacro CreateNewShare &quot;prabhat&quot; &quot;_NS_DATA3&quot; <br />
+${STYPE_DISKTREE} &quot;Allows access to data&quot; \<br />
+   ${ACCESS_ALL} ${GENERIC_ALL} -1 2 &quot;D:\books&quot; &quot;&quot;<br />
+<br />
+<br />
+Thanks in adv,<br />
+Prabhat.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">31st August 2007, 21:49</div></div><div class="posttext">Well, the name of the macro suggests it creates a new share, so I wouldn't guess it's also able to add new permissions to an existing one. Isn't there another macro for permissions? Maybe this macro calls another macro that does the permissions bit internally?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">2nd September 2007, 13:41</div></div><div class="posttext">If you refer to this (http://nsis.sourceforge.net/Sharing_Folders) macro (taken from this (http://forums.winamp.com/showthread.php?s=&amp;threadid=269060) thread) then it is not possible to call it twice in order to add new permissions. The macro constructs a security descriptor structure with an ACL for a user, then calls NetShareAdd to create a share. Calling the macro twice tries to create the share again, hence the error you are getting.<br />
+<br />
+Without testing it, I think that you would need to modify the macro so that the generated ACL would contain more then one EXPLICIT_ACCESS (http://msdn2.microsoft.com/en-us/library/aa379576.aspx) structures (one for each user you want to give access to), then create the share using this ACL.<br />
+<br />
+Complicated as it may sound, it is probably easier then using the Netapi32 NetShareSetInfo (http://msdn2.microsoft.com/en-us/library/aa380483.aspx) in order to set again the security descriptor.<br />
+<br />
+Hope this helps ...<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">CancerFace</div><div class="date">3rd September 2007, 16:11</div></div><div class="posttext">Actually what I wrote is a bit misleading, as it sounds that you should construct an EXPLICIT_ACCESS structure for each user and then generate the ACL.<br />
+<br />
+In fact you should create an array of EXPLICIT_ACCESS structures within the same structure.<br />
+So here is the modified macro that you can call for two users instead of one:<br />
+!macro CreateNewShare2 NAME1 NAME2 SHARENAME SHARE_TYPE SHARE_COMMENT SHARE_PERMISSIONS ACL_ACCESS MAX_USERS CURRENT_USES SHARE_PATH SHARE_PASS<br />
+# Get the 1st user's SID from NAME1<br />
+  System::Call /NOUNLOAD '*(&amp;w${NSIS_MAX_STRLEN})i.R9'<br />
+  System::Call /NOUNLOAD 'advapi32::LookupAccountNameA(,t &quot;${NAME1}&quot;,i R9,*i ${NSIS_MAX_STRLEN},w .R8,*i ${NSIS_MAX_STRLEN},*i .r4)i.r5'<br />
+  System::Call /NOUNLOAD 'advapi32::ConvertSidToStringSid(i R9,*t .R8)i.r5'<br />
+${If} $R8 == ''<br />
+  MessageBox MB_OK|MB_ICONSTOP|MB_TOPMOST 'User &quot;${NAME1}&quot; does not exist!$\nAborting...'<br />
+  System::Free $R9<br />
+  Quit<br />
+${EndIf}<br />
+# Get the 2nd user's SID from NAME2<br />
+  System::Call /NOUNLOAD '*(&amp;w${NSIS_MAX_STRLEN})i.R7'<br />
+  System::Call /NOUNLOAD 'advapi32::LookupAccountNameA(,t &quot;${NAME2}&quot;,i R7,*i ${NSIS_MAX_STRLEN},w .R8,*i ${NSIS_MAX_STRLEN},*i .r4)i.r5'<br />
+  System::Call /NOUNLOAD 'advapi32::ConvertSidToStringSid(i R7,*t .R8)i.r5'<br />
+${If} $R8 == ''<br />
+  MessageBox MB_OK|MB_ICONSTOP|MB_TOPMOST 'User &quot;${NAME2}&quot; does not exist!$\nAborting...'<br />
+  System::Free $R9<br />
+  System::Free $R7<br />
+  Quit<br />
+${EndIf}<br />
+# Create an EXPLICIT_ACCESS structure that contains both users and place it on $R6<br />
+  System::Call /NOUNLOAD '*(i ${ACL_ACCESS},i ${SET_ACCESS},i ${NO_INHERITANCE},i 0,i ${NO_MULTIPLE_TRUSTEE},i ${TRUSTEE_IS_SID},i ${TRUSTEE_IS_USER},i $R9,i ${ACL_ACCESS},i ${SET_ACCESS},i ${NO_INHERITANCE},i 0,i ${NO_MULTIPLE_TRUSTEE},i ${TRUSTEE_IS_SID},i ${TRUSTEE_IS_USER},i $R7)i.R6'<br />
+  System::Call /NOUNLOAD 'advapi32::SetEntriesInAclA(i 1,i R6,,*i .R5)i.r1'<br />
+  ${If} $1 &lt;&gt; 0<br />
+    System::Free $R9<br />
+    System::Free $R7<br />
+    System::Free $R6<br />
+    Quit<br />
+  ${EndIf}<br />
+# Create an empty security descriptor and place it in R4.<br />
+  System::Alloc ${NSIS_MAX_STRLEN}<br />
+  Pop $R4<br />
+  System::Call /NOUNLOAD 'advapi32::InitializeSecurityDescriptor(i R4,i ${SECURITY_DESCRIPTOR_REVISION})i.r1'<br />
+  ${If} $1 == 0<br />
+    System::Free $R9<br />
+    System::Free $R7<br />
+    System::Free $R6<br />
+    System::Call 'kernel32::LocalFree(i R5)i.r0'<br />
+    Quit<br />
+  ${EndIf}<br />
+# Add the ACL to the security descriptor<br />
+  System::Call /NOUNLOAD 'advapi32::SetSecurityDescriptorDacl(i R4,i 1,i R5,i 0)i.r1'<br />
+  ${If} $1 == 0<br />
+    System::Free $R9<br />
+    System::Free $R7<br />
+    System::Free $R6<br />
+    System::Call 'kernel32::LocalFree(i R5)i.r0'<br />
+    Quit<br />
+  ${EndIf}<br />
+# Generate the structure that holds the share info and place it on $R0<br />
+  System::Call /NOUNLOAD '*${strSHARE_INFO_502}(&quot;${SHARENAME}&quot;,${SHARE_TYPE},&quot;${SHARE_COMMENT}&quot;,${SHARE_PERMISSIONS},${MAX_USERS},${CURRENT_USES},&quot;${SHARE_PATH}&quot;,&quot;${SHARE_PASS}&quot;,0,R4).R0'<br />
+  System::Call /NOUNLOAD 'netapi32::NetShareAdd(, i 502, i R0, *i .R1) i .r1'<br />
+  ${If} $1 = 2118<br />
+    MessageBox MB_OK|MB_ICONSTOP|MB_TOPMOST 'Folder &quot;${SHARE_PATH}&quot; has already been shared!'<br />
+  ${EndIf}<br />
+  ${If} $1 &lt;&gt; 0<br />
+  ${AndIf} $1 &lt;&gt; 2118<br />
+    MessageBox MB_OK|MB_ICONSTOP|MB_TOPMOST 'There was an error creating the share!'<br />
+  ${EndIf}<br />
+# Cleanup<br />
+  System::Free $R9<br />
+  System::Free $R7<br />
+  System::Free $R6<br />
+  System::Call 'kernel32::LocalFree(i R5)i.r0'<br />
+  System::Free $R0<br />
+!macroend<br />
+To use this you need to supply both usernames at the same time, so in your case you should call it like this:<br />
+!insertmacro CreateNewShare2 &quot;NSADMIN&quot; &quot;prabhat&quot; &quot;_NS_DATA3&quot; ${STYPE_DISKTREE} &quot;Allows access to data&quot; ${ACCESS_ALL} ${GENERIC_ALL} -1 2 &quot;D:\books&quot; &quot;&quot;<br />
+Make sure you include the header with the definitions from the wiki (http://nsis.sourceforge.net/Sharing_Folders) page ...<br />
+Hope this helps :)<br />
+CF</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">123mobile</div><div class="date">3rd September 2007, 17:02</div></div><div class="posttext">Oye, Thanks a lot dear....<br />
+This forum is really great...<br />
+Actually I started solving this problem myself and created a Nsis plugin which does the same, I also borrow some ideas from your implementation for that puspose :) <br />
+I will check what you have written and will use whichever is good for my particular case...<br />
+<br />
+Thanks again. <br />
+Prabhat.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

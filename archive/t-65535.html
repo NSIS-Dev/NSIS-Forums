@@ -1,0 +1,207 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Feature Request: GetFileAttributes, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Feature Request: GetFileAttributes NSIS Discussion" />
+	
+	<title> Feature Request: GetFileAttributes [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Feature Request: GetFileAttributes</div>
+<hr />
+<div class="pda"><a href="t-65535.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=65535">Feature Request: GetFileAttributes</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">AndiG</div><div class="date">13th November 2001, 12:53</div></div><div class="posttext">Hi there,<br />
+<br />
+I was faced with the task to write an installer that searches for any occurrence of file A on hte drive and replaces it with a file inside the installer. NSIS provides FindFirst and FindNext, but without determining if something is actually a directory, there is no good way to implemented a depht search- I was thinking GetFileAttributes working like the SetFileAttributes could take care of that :)<br />
+<br />
+Not sure if this is of general interest though...<br />
+<br />
+Thanks, Andi</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">14th November 2001, 19:28</div></div><div class="posttext">Use <br />
+<br />
+<br />
+IfFileExists $1\*.* end<br />
+DetailPrint &quot;$1 is a directory&quot;<br />
+end:<br />
+<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AndiG</div><div class="date">15th November 2001, 11:41</div></div><div class="posttext">Right... I'll try that, THANKS!<br />
+<br />
+Andi</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AndiG</div><div class="date">15th November 2001, 13:27</div></div><div class="posttext">Hi Justin,<br />
+<br />
+your suggestion was fine, installer is basically working but... it crashes. Installer does a depht first search for files and remembers found directories on the stack. Attached installer at some point crashes with a software exception-no idea why....<br />
+<br />
+Andi<br />
+<br />
+<br />
+Name &quot;Find Files&quot;<br />
+OutFile &quot;NsisFind.exe&quot;<br />
+Caption &quot;File Find Installer&quot;<br />
+ShowInstDetails show<br />
+<br />
+Section &quot;Find&quot;<br />
+<br />
+StrCpy $6 1<br />
+<br />
+  StrCpy $6 0<br />
+<br />
+  StrCpy $8 1<br />
+  Push &quot;c:&quot;<br />
+  Call FindFiles<br />
+SectionEnd<br />
+<br />
+Function PopIt<br />
+         Pop $9<br />
+         IntOp $8 $8 - 1<br />
+FunctionEnd<br />
+<br />
+Function PushIt<br />
+         Push &quot;$9\$1&quot;<br />
+         IntOp $8 $8 + 1<br />
+FunctionEnd<br />
+<br />
+Function FindFiles<br />
+<br />
+         call PopIt<br />
+         FindFirst $0 $1 &quot;$9\*.*&quot;<br />
+<br />
+         IfErrors NotFound1<br />
+         DoFindNext1:<br />
+<br />
+                 IntOp $6 $6 + 1<br />
+<br />
+                 StrCmp $1 &quot;.&quot; DoFindNext2<br />
+                 StrCmp $1 &quot;..&quot; DoFindNext2<br />
+<br />
+                 IfFileExists &quot;$9\$1\*.*&quot; &quot;&quot; DoFindNext2<br />
+                 call PushIt<br />
+                 DetailPrint &quot;$8 $9\$1&quot;<br />
+<br />
+                 FileOpen $5 &quot;c:\nsis.log&quot; a<br />
+                 FileSeek $5 0 END<br />
+                 FileWrite $5 &quot;$6 $8 $9\$1$\n&quot;<br />
+                 FileClose $5<br />
+<br />
+                 DoFindNext2:<br />
+                 FindNext $0 $1<br />
+                 IfErrors &quot;&quot; DoFindNext1<br />
+         NotFound1:<br />
+         FindClose $0<br />
+<br />
+         StrCmp $8 0 NoRecurse<br />
+                 Call FindFiles<br />
+         NoRecurse:<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">15th November 2001, 21:06</div></div><div class="posttext">I found two issues, when I fixed both, it ran perfectly for me.<br />
+<br />
+1) FindClose was being called even if FindFirst failed.<br />
+2) Calling the function recursively wasn't really necessary, since you have a stack (a Goto is a lot more efficient, and doesn't have the issues with having the stack overflow).<br />
+3) I put some ClearErrors in there just to make sure.<br />
+<br />
+-Justin<br />
+<br />
+Name &quot;Find Files&quot; <br />
+OutFile &quot;NsisFind.exe&quot; <br />
+Caption &quot;File Find Installer&quot; <br />
+ShowInstDetails show <br />
+<br />
+Section &quot;Find&quot; <br />
+<br />
+StrCpy $6 1 <br />
+<br />
+StrCpy $6 0 <br />
+<br />
+StrCpy $8 1 <br />
+Push &quot;c:&quot; <br />
+Call FindFiles <br />
+SectionEnd <br />
+<br />
+Function PopIt <br />
+Pop $9 <br />
+IntOp $8 $8 - 1 <br />
+FunctionEnd <br />
+<br />
+Function PushIt <br />
+Push &quot;$9\$1&quot; <br />
+IntOp $8 $8 + 1 <br />
+FunctionEnd <br />
+<br />
+Function FindFiles <br />
+GoAgain:<br />
+  call PopIt <br />
+  ClearErrors<br />
+  FindFirst $0 $1 &quot;$9\*.*&quot; <br />
+  IfErrors NotFound1 <br />
+    DoFindNext1: <br />
+      IntOp $6 $6 + 1 <br />
+      StrCmp $1 &quot;.&quot; DoFindNext2 <br />
+      StrCmp $1 &quot;..&quot; DoFindNext2 <br />
+      IfFileExists &quot;$9\$1\*.*&quot; &quot;&quot; DoFindNext2 <br />
+        call PushIt <br />
+        DetailPrint &quot;$8 $9\$1&quot; <br />
+        FileOpen $5 &quot;c:\nsis.log&quot; a <br />
+        FileSeek $5 0 END <br />
+        FileWrite $5 &quot;$6 $8 $9\$1$\n&quot; <br />
+        FileClose $5 <br />
+      DoFindNext2: <br />
+      ClearErrors<br />
+      FindNext $0 $1 <br />
+      IfErrors &quot;&quot; DoFindNext1 <br />
+    FindClose $0 <br />
+  NotFound1: <br />
+  StrCmp $8 0 &quot;&quot; GoAgain<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AndiG2</div><div class="date">16th November 2001, 12:35</div></div><div class="posttext">Justin,<br />
+<br />
+thanks for your help, I'll try it. i understand the FileClose error, sorry for that. As for stack overflow I don't think that that's the issue- at most 130 items were on the stack on my disk.<br />
+<br />
+Thanks a lot,<br />
+Andi</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">AndiG2</div><div class="date">16th November 2001, 17:20</div></div><div class="posttext">Justin,<br />
+<br />
+attached is a brushed up version of the installer, including your changes. One thing came to my mind:<br />
+<br />
+Would it make sense to have Pop set the error flag when the stack is empty, instead of failing? This way one wouldn't need to keep count of items on the stack? :eek: <br />
+<br />
+Cheers, Andi<br />
+<br />
+<br />
+PS.: If interested, please use the attached file for functions.htm or FNSIS ;) <br />
+<br />
+PPS.: The forum doesn't allow to upload .nsi- yuck.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">16th November 2001, 19:57</div></div><div class="posttext">Originally posted by AndiG2 <br />
+Would it make sense to have Pop set the error flag when the stack is empty, instead of failing? This way one wouldn't need to keep count of items on the stack? :eek: <br />
+<br />
+<br />
+Good idea, will do for 1.67.<br />
+An exch on an empty stack will still give fatal error though, but Pop will fail gracefully.<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

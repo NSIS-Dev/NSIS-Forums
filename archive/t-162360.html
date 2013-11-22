@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" GetDeviceCaps Macro, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  GetDeviceCaps Macro NSIS Discussion" />
+	
+	<title> GetDeviceCaps Macro [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  GetDeviceCaps Macro</div>
+<hr />
+<div class="pda"><a href="t-162360.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=162360">GetDeviceCaps Macro</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">billym</div><div class="date">29th December 2003, 18:47</div></div><div class="posttext">can someone assist me with getting the bitdepth converted. I want the output to be in bits ex. 1, 2, 4, 8, 16, etc...<br />
+<br />
+here is what I have so far.<br />
+<br />
+!macro GetDeviceCaps devCap<br />
+<br />
+	System::Call &quot;user32::GetDC(i $HWNDPARENT) i .s&quot;<br />
+	System::Call &quot;gdi32::GetDeviceCaps(i s, i ${devCap}) i .r0&quot;<br />
+	StrCmp ${devCap} &quot;BITSPIXEL&quot; +1 +3<br />
+		System::Call &quot;kernel32::MulDiv??????????????<br />
+<br />
+<br />
+!macroEnd<br />
+<br />
+	!insertmacro GetDeviceCaps &quot;BITSPIXEL&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">30th December 2003, 16:10</div></div><div class="posttext">Just for the record, did you get the awnser?<br />
+Maybe I can help (http://nsis.sourceforge.net/archive/viewpage.php?pageid=325)... :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">billym</div><div class="date">30th December 2003, 22:23</div></div><div class="posttext">Actually no, but I did get it working partially. I have a macro that is almost complete for calling the getdevice cap api.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">billym</div><div class="date">31st December 2003, 14:41</div></div><div class="posttext">I am in the process of creating the plugin version of this as well but having a problem. Here is my function:<br />
+<br />
+void __declspec(dllexport) nsGetDeviceCaps(HWND hwndParent, int string_size, char *variables, stack_t **stacktop)<br />
+{  <br />
+  char buf[1024];<br />
+  popstring(buf);<br />
+  EXDLL_INIT();<br />
+  {<br />
+	HWND winHandle = GetDesktopWindow();<br />
+	HDC deviceContext = GetDC(winHandle);<br />
+	int colorDepth = GetDeviceCaps(deviceContext, buf);<br />
+    ltoa(colorDepth, buf, 10);<br />
+    pushstring(buf);<br />
+  }<br />
+}<br />
+<br />
+This fails when I call it from the script like this:<br />
+<br />
+nsAPIgdi::nsGetDeviceCaps BITSPIXEL<br />
+<br />
+I have determined that the cause of the problem is when the parameter is passed to the function. In the case of this API call, the params that get passed are defined in a header file. &quot;BITSPIXEL&quot;, when passed into the buffer does not get changed into the defined value before being handed off to the API call causing it to fail. <br />
+<br />
+I am a DOTNET developer and learning C/C++ at the moment. Really enjoying nsis. I am starting with this plugin as the first of a framework of nsAPI plugins for the more advanced API's that are harder to call from the system plugin. I have intentions of working on suites of these plugins so that you can choose any number of these mini-plugins for your installer without bloating your install package.<br />
+<br />
+If someone knows how to get the function to lookup the value of the parameter passed before the API is called it would really help.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">31st December 2003, 16:20</div></div><div class="posttext">Yeah, it's the HWND hwndParent.<br />
+You'll need to use strings....<br />
+Use some of atoi or atof functions to convert a string to a decent integer or long integer.<br />
+There's a function in system plugin source named &quot;myatoi&quot;.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">billym</div><div class="date">31st December 2003, 18:39</div></div><div class="posttext">If I try to do it this way I will need to build a reference table for all of the defines that already exist. I am looking for a way to make the API call to see my parameter as the define that windows provides for this API. I may be wrong. Could you please provide an example.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">31st December 2003, 19:45</div></div><div class="posttext">Let me try one....</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">1st January 2004, 17:25</div></div><div class="posttext">You can't use defines in the plug-in. Defines are processed at compile time on the compiler side. You will have to convert the string into a number as Lobo suggested.<br />
+<br />
+As for the System.dll code, as BITPIXEL was only defined when the macro was inserted, it wasn't defined when you actually called !insertmacro. That means that ${BITSPIXEL} was passed as ${BITSPIXEL} and not as 12.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">billym</div><div class="date">2nd January 2004, 14:31</div></div><div class="posttext">It seems to handle the conversion of ${BITSPIXEL} to the 12 fine in this example.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd January 2004, 14:33</div></div><div class="posttext">It handles the conversion once BITSPIXEL is actually defined. That only happens after the macro is inserted for the first time. You should define it outside of the macro so you can use it as a parameter for the macro without actually inserting the macro.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">billym</div><div class="date">2nd January 2004, 15:25</div></div><div class="posttext">So instead of just uncommenting the defines needed within the macro you would define the params in your script and never modify the macro?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">2nd January 2004, 15:26</div></div><div class="posttext">You should define them above the macro definition but still in the header file. See Include\Sections.nsh for an example.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

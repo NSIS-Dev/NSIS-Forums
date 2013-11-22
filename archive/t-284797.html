@@ -1,0 +1,164 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" WinVer does not detect Vista, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  WinVer does not detect Vista NSIS Discussion" />
+	
+	<title> WinVer does not detect Vista [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  WinVer does not detect Vista</div>
+<hr />
+<div class="pda"><a href="t-284797.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=284797">WinVer does not detect Vista</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Protagonist</div><div class="date">11th January 2008, 15:44</div></div><div class="posttext">Hi all, <br />
+<br />
+I am currently writing an Installer for XP / Vista. I use Winver to detect the Windows Version. On the Vista System (Vista Home Basic) WinVer detects XP. Here is the script I use, perhaps someone can point me in the right direction.<br />
+<br />
+!include &quot;LogicLib.nsh&quot;<br />
+!include &quot;WinVer.nsh&quot;<br />
+.<br />
+var version<br />
+.<br />
+Function CheckWindowsVersion<br />
+ <br />
+  ${if} ${IsWinVista}<br />
+	 StrCpy $version &quot;vista&quot;<br />
+	 MessageBox MB_OK &quot;Windows Vista detected&quot;<br />
+  ${elseif} ${IsWinXP}<br />
+        StrCpy $version &quot;xp&quot;<br />
+        MessageBox MB_OK &quot;Windows XP detected&quot;<br />
+  ${else}<br />
+	 MessageBox MB_OK &quot;Windows XP or Windows Vista required&quot;<br />
+	 abort<br />
+  ${endif}<br />
+<br />
+FunctionEnd<br />
+<br />
+Thanks very much in advance<br />
+<br />
+Protagonist</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">11th January 2008, 17:25</div></div><div class="posttext">What does the GetVersion plug-in (http://nsis.sf.net/File:GetVersion.zip) return?<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">11th January 2008, 17:47</div></div><div class="posttext">Make sure you didn't forget to use RequestExecutionLevel to disable Vista's compatibility patches.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Protagonist</div><div class="date">14th January 2008, 11:00</div></div><div class="posttext">@ kichik: Adding RequestExecutionLevel admin lead to the same result. The example script under NSIS\Examples\GetVersion runs without it too and returns the correct result (see below)<br />
+<br />
+@ Stu: here comes the funny part: I tried the GetVersion Plugin by creating the getversion.exe from the example.nsi file which comes with the plugin. I returned the correct result, identifying Vista correctly. I altered my script to the following: <br />
+<br />
+!define CUST_INI &quot;$PLUGINSDIR\custom.ini&quot;<br />
+<br />
+Name &quot;Testinstaller&quot;<br />
+OutFile &quot;Setuptester.exe&quot;<br />
+ShowInstDetails show<br />
+!include &quot;LogicLib.nsh&quot;<br />
+!include &quot;mui.nsh&quot;<br />
+<br />
+Function CheckWindowsVersion<br />
+<br />
+Push $R0<br />
+ dumpstate::debug<br />
+ GetVersion::WindowsName<br />
+  Pop $R0<br />
+ dumpstate::debug<br />
+FunctionEnd<br />
+<br />
+Function .onInit<br />
+  Call CheckWindowsVersion<br />
+FunctionEnd<br />
+<br />
+Running the above script returns on the same Vista machine as the GetVersion.exe from the sample script returned Windowsname = XP<br />
+Dumbstate shows that $R0 ist empty prior to GetVersion::WindowsName but its value changes to XP after Getversion.<br />
+<br />
+GetVersion is the first function I call, as the rest of the installer process depends on the variable returned.<br />
+<br />
+The only difference I could find compared to the sample script is the inclusion of Logiclib and Mui, the rest of the code is identical.<br />
+<br />
+Thanks for the help, I appreciate it very much.<br />
+<br />
+Protagonist</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">14th January 2008, 11:08</div></div><div class="posttext">This is strange. Both WinVer and GetVersion use the GetVersion/GetVersionEx API's and therefore on your system it is returning 5 for the major version which is wrong (6 is Vista and 5.x is XP I believe).<br />
+<br />
+By any chance is Vista running the application in compatibility mode for XP? I have heard GetVersion can return 5 if this is the case.<br />
+<br />
+Edit: And applying a Vista manifest (RequestExecutionLevel?) should stop this...<br />
+Edit #2: Maybe the System/GetVersion plug-in dll's need a manifest as well lol: http://forums.microsoft.com/MSDN/ShowPost.aspx?PostID=822199&amp;SiteID=1<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Protagonist</div><div class="date">14th January 2008, 11:29</div></div><div class="posttext">Woah, thanks :d <br />
+<br />
+What also helped was renaming the installer from &quot;Setuptester.exe&quot; to &quot;testit.exe&quot; for Vista not to run it under XP compatibility mode. <br />
+<br />
+As the installer i write will be used for different projects I will just get work around by reading HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion. <br />
+<br />
+Thanks very much, you helped a Kraut in despair :D<br />
+<br />
+Prota</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">14th January 2008, 11:34</div></div><div class="posttext">Awesome, no problem.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">99999999</div><div class="date">5th February 2008, 07:10</div></div><div class="posttext">So I've been doing testing with 2003, VISTA Enterprise, and Vista Enterprise SP1.  <br />
+<br />
+I've found with 2003, that when the user uses compatibility mode for the specific application, I cna use the registry key to determine the current real OS, (it will always say 2003)<br />
+<br />
+However I've also discovered on Vista Enterprise SP1, that if my application is set to compatibility mode XP, that the registry key now returns XP, and not Vista as it does in previous versions of Vista and earlier OS's.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">5th February 2008, 10:43</div></div><div class="posttext">Thats the point of compatibility mode is it not? You can't have it both ways, either fix your app to run on Vista, or pretend its XP and stick to your old ways. If you must know the real OS, you could probably check the version info for kernel32.dll or make a little helper app with a manifest that checks the real version and saves it in $pluginsdir (its $exedir if you run it from the parents $pluginsdir)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">99999999</div><div class="date">5th February 2008, 23:29</div></div><div class="posttext">Yes we actually do have manifests in our installers.  <br />
+<br />
+So the reason we need to do this, is because our Customer Service dept used this as a catch all for all problems people had on Vista.  We have only a couple places we care about the OS, and now we are attempting to release a newer version of the product, and because our Customer Service dept used this pretty much as their catch all, (even though it never seemed to help anyone,) we have versions of our applications which are starting up. <br />
+<br />
+However when running on the latest version of Vista, we find that when use the following chunk of code in our installer:<br />
+<br />
+ReadRegStr $R0 HKLM \<br />
+   &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion&quot; CurrentVersion<br />
+<br />
+$R0 will be equal to the Windows version value for which the installer is configured to run in compatibility mode for.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">5th February 2008, 23:39</div></div><div class="posttext">I hate to repeat myself but, that behaviour is by design, MS is doing the right thing. <br />
+<br />
+I have not tested Vista SP1, but I'm pretty sure using GetDLLVersion on kernel32.dll should do the trick and give you the real version. Or you could go the other way, detect compatibility mode and tell the user to turn it off</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">99999999</div><div class="date">5th February 2008, 23:48</div></div><div class="posttext">The only reason I even bothered to mention it, is that our application we are installing, also does the same check, and it does not read that registry entry as what the compatibility mode it is using is set to.<br />
+<br />
+I'll try the kernel32.dll version check.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">BuilderBob</div><div class="date">16th March 2008, 11:10</div></div><div class="posttext">A note on why changing the file's name helped you<br />
+There are two important reg keys that control Vista Compatibility Assistant behavior:<br />
+<br />
+HKCU\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Compatibility Assistant\Persisted\&lt;EXE_FULL_PATH&gt;<br />
+which is a DWORD, and when set to 1 even from withing the installer, will prevent Compatibility Assistant from popping up.<br />
+<br />
+HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers\&lt;EXE_FULL_PATH&gt;<br />
+which is a string (REG_SZ). If Vista thinks your installer is incompatible, it pops up Compatibility Assistant. If the user clicked &quot;Reinstall using recommended settings&quot;, it will add this reg entry with value of &quot;WINXPSP2&quot; or something similar. From that moment on, most methods of detecting OS version will return the wrong result, because your installer and every process it starts will run in compatibility mode, getting fake values from registry.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Hidden Section gets &quot;deselected&quot;, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Hidden Section gets &quot;deselected&quot; NSIS Discussion" />
+	
+	<title> Hidden Section gets &quot;deselected&quot; [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Hidden Section gets &quot;deselected&quot;</div>
+<hr />
+<div class="pda"><a href="t-314225.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=314225">Hidden Section gets &quot;deselected&quot;</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">xbarns</div><div class="date">28th October 2009, 19:26</div></div><div class="posttext">Hi everyone,<br />
+<br />
+i have a hidden section,<br />
+<br />
+<br />
+Section -FirstToExecute SEC_FIRSTTOEXECUTE<br />
+SectionEnd<br />
+<br />
+<br />
+and a couple more sections (one more hidden, about 20 or so regular). <br />
+<br />
+Now in some cases that section does not get executed, i could narrow it down to this happening when i change something in the component selection (select an additional section). The Setup can be used to install (previously not installed) components when called a second time, to accomodate this i use a macro that i have &quot;derived&quot; from the &quot;SELECT_UNSECTION&quot; macro from the examples.<br />
+<br />
+<br />
+!macro DISABLE_SECTION SECTION_NAME SECTION_ID<br />
+    Push $R0<br />
+    ReadRegStr $R0 HKLM &quot;${REGKEY}\Components&quot; &quot;${SECTION_NAME}&quot;<br />
+    StrCmp $R0 1 0 next${SECTION_ID}<br />
+    !insertmacro SetSectionFlag &quot;${SECTION_ID}&quot; ${SF_RO}<br />
+	!insertmacro ClearSectionFlag &quot;${SECTION_ID}&quot; ${SF_SELECTED}<br />
+next${SECTION_ID}:<br />
+    Pop $R0<br />
+!macroend<br />
+<br />
+<br />
+That macro is called from <br />
+<br />
+!define MUI_PAGE_CUSTOMFUNCTION_PRE &quot;PRE_PAGE_COMPONENTS&quot;<br />
+<br />
+<br />
+<br />
+Function PRE_PAGE_COMPONENTS<br />
+<br />
+	!insertmacro DISABLE_SECTION &quot;Business Logic (required)&quot; ${SEC_FRAMEWORK}<br />
+	!insertmacro DISABLE_SECTION &quot;Backup Server&quot; ${SEC_BACKUPSERVER}<br />
+	!insertmacro DISABLE_SECTION &quot;Deployment Service&quot; ${SEC_DEPLOYMENTSERVICE}<br />
+.<br />
+.<br />
+.<br />
+FunctionEnd<br />
+<br />
+<br />
+I put <br />
+<br />
+Function .onSelChange<br />
+	<br />
+SectionGetFlags ${SEC_FIRSTTOEXECUTE} $0<br />
+IntOp $0 $0 | ${SF_SELECTED}<br />
+SectionSetFlags ${SEC_FIRSTTOEXECUTE} $0<br />
+	<br />
+!insertmacro StartRadioButtons $1<br />
+!insertmacro RadioButton ${SEC_FIREBIRDSERVER2}<br />
+!insertmacro RadioButton ${SEC_FIREBIRDSERVER264}<br />
+!insertmacro EndRadioButtons<br />
+FunctionEnd<br />
+<br />
+<br />
+ in (the code is an example from the manual) but it does not help, the section is not executed.<br />
+<br />
+I checked if i accidentally &quot;uncheck&quot; the section &quot;SEC_FIRSTTOEXECUTE&quot; but i don't, i also do not loop through the sections to do anything to them (i have seen you can do that).<br />
+<br />
+Any ideas?<br />
+<br />
+Your help is much appreciated.<br />
+Thanks.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">xbarns</div><div class="date">28th October 2009, 22:13</div></div><div class="posttext">Well the problem seems to be the RadioButton macros in .onSelChange, if i remark that block everything works wonderful. I have looked at the macros in section.nsh but i have no clue why it would behave like that. <br />
+<br />
+<br />
+<br />
+!insertmacro StartRadioButtons $1<br />
+!insertmacro RadioButton ${SEC_FIREBIRDSERVER2}<br />
+!insertmacro RadioButton ${SEC_FIREBIRDSERVER264}<br />
+!insertmacro EndRadioButtons</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">xbarns</div><div class="date">28th October 2009, 22:21</div></div><div class="posttext">*sigh* <br />
+<br />
+i also tried changing the variables in the &quot;keep always selected&quot; part of .onSelChange so it looks like this:<br />
+<br />
+<br />
+SectionGetFlags ${SEC_FIRSTTOEXECUTE} $R9<br />
+IntOp $R9 $R9 | ${SF_SELECTED}<br />
+SectionSetFlags ${SEC_FIRSTTOEXECUTE} $R9<br />
+<br />
+<br />
+but no :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">ChocJunkie</div><div class="date">29th October 2009, 08:39</div></div><div class="posttext">For unselecting a selected section you can use:SectionGetFlags ${SectionIndex} $R0<br />
+IntOp $R0 $R0 &amp; ${SECTION_OFF}<br />
+SectionSetFlags ${SectionIndex} $R0<br />
+<br />
+For selecting a unselected section the code is:SectionGetFlags ${SectionIndex} $R0<br />
+IntOp $R0 $R0 ^ ${SF_SELECTED}<br />
+SectionSetFlags ${SectionIndex} $R0<br />
+<br />
+I hope it helps you.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">29th October 2009, 10:00</div></div><div class="posttext">Actually for selecting any section (selected or unselected) use:SectionGetFlags ${SectionIndex} $R0<br />
+IntOp $R0 $R0 | ${SF_SELECTED}<br />
+SectionSetFlags ${SectionIndex} $R0For unselecting any section use:SectionGetFlags ${SectionIndex} $R0<br />
+Intop $R1 ${SF_SELECTED} ~<br />
+IntOp $R0 $R0 &amp; $R1<br />
+SectionSetFlags ${SectionIndex} $R0To toggle any section use:SectionGetFlags ${SectionIndex} $R0<br />
+IntOp $R0 $R0 ^ ${SF_SELECTED}<br />
+SectionSetFlags ${SectionIndex} $R0</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">xbarns</div><div class="date">29th October 2009, 10:44</div></div><div class="posttext">jpderuiter:<br />
+<br />
+your example for selecting a section (selected or unselected) is what i need, and its what i got from the manuals, but it doesn't work reliable for me :(<br />
+<br />
+Is there another way to get that &quot;RadioButton&quot; functionality into the components tree, without using the macros?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jpderuiter</div><div class="date">29th October 2009, 11:54</div></div><div class="posttext">Hi xbarns,<br />
+<br />
+I just wanted to correct the post from ChocJunkie.<br />
+<br />
+I don't know another method, as far as I can see you are doing nothing wrong.<br />
+Strange that even forcing the selected state in .OnSelChange does not work.<br />
+Can you check if that peace of code is actually called (with a messagebox or something)?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">xbarns</div><div class="date">29th October 2009, 12:02</div></div><div class="posttext">Hi jpderuiter,<br />
+<br />
+oh :) <br />
+<br />
+I did the Messagebox thingy already it is called :(</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">29th October 2009, 13:47</div></div><div class="posttext">Are you sure you're not using $1 anywhere else? If you are, change the radiobuttons variable to something you don't use.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">xbarns</div><div class="date">29th October 2009, 13:53</div></div><div class="posttext">MSG,<br />
+<br />
+well $1 is used quite frequently during that setup (its a rather large setup). <br />
+<br />
+But i have already tried setting a unique variable for this, same result sadly....<br />
+<br />
+Btw. i am using the unicode (2.45) Version of NSIS (i forgot to mention this earlier).</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

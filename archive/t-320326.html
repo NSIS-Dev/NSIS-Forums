@@ -1,0 +1,165 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" !define /redef flag, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  !define /redef flag NSIS Discussion" />
+	
+	<title> !define /redef flag [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  !define /redef flag</div>
+<hr />
+<div class="pda"><a href="t-320326.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=320326">!define /redef flag</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">JoeMcC00L</div><div class="date">28th June 2010, 22:59</div></div><div class="posttext">According to The Official NSIS Documentation (http://nsis.sourceforge.net/Docs/Chapter5.html#5.4.1), !define supports a /redef flag. I want to use this in my installer, but the latest release version (2.46 at the time of this post) apparently throws an error when I try to use this. The documentation that was installed with this version does not mention the /redef flag. Is this something that's in a development version of NSIS?<br />
+<br />
+Thanks,<br />
+Joe</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DrO</div><div class="date">28th June 2010, 23:18</div></div><div class="posttext">Is this something that's in a development version of NSIS?according to the development changes, it was added on 10th June so is only available from svn and requires you to build NSIS via Scons to get it ahead of a full release with it included.<br />
+<br />
+-daz</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">28th June 2010, 23:24</div></div><div class="posttext">while you wait, just use a !ifdef +!undef + !define macro</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JoeMcC00L</div><div class="date">29th June 2010, 02:42</div></div><div class="posttext">Thanks for the quick answer. I'll just wait for the next release then. <br />
+<br />
+FYI, I was trying to do find a better way to do this:<br />
+<br />
+LangString DESC_SecUnecessaryID ${LANG_ENGLISH} &quot;Description&quot;<br />
+Section &quot;Section Name&quot; SecUnecessaryID<br />
+    ; regular section code goes here<br />
+SectionEnd<br />
+<br />
+;... somewhere near the end of the file<br />
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN<br />
+!insertmacro MUI_DESCRIPTION_TEXT ${SecUnecessaryID} $(DESC_SecUnecessaryID)<br />
+;... do this for all the sections<br />
+!insertmacro MUI_FUNCTION_DESCRIPTION_END<br />
+<br />
+<br />
+If I could use the /redef flag, I could refactor this code into a header file and use my own custom section tags:<br />
+<br />
+${CUSTOM_SECTION} &quot;Section Name&quot; &quot;Description&quot;<br />
+     ; Normal section goes here<br />
+${CUSTOM_SECTION_END}<br />
+<br />
+Granted, you do lose some flexibility with internationalization, but our project has no such requirement. The /redef flag would be used to keep count of how many sections were being declared so it could build the MUI_FUNCTION_DESCRIPTION section at the end of the code by calling something like:<br />
+<br />
+!insertmacro CUSTOM_SECTION_DESCRIPTIONS<br />
+<br />
+No big deal. I'll probably end up working on it again once this feature is in the latest stable release.<br />
+<br />
+Thanks,<br />
+Joe</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">29th June 2010, 03:05</div></div><div class="posttext">I still don't understand why you have to wait<br />
+<br />
+!macro ReDef name val<br />
+!ifdef ${name}<br />
+!undef ${name}<br />
+!endif<br />
+!define ${name} &quot;${val}&quot;<br />
+!macroend<br />
+!define ReDef  &quot;!insertmacro ReDef &quot;<br />
+...<br />
+!define foo bar<br />
+${ReDef} foo baz</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JoeMcC00L</div><div class="date">29th June 2010, 18:40</div></div><div class="posttext">I can't get into more specifics, but basically something like this:<br />
+<br />
+<br />
+!define SecCount 0<br />
+!macro CUSTOM_SECTION &quot;Name&quot; &quot;Description&quot;<br />
+!define /redef /math SecCount ${SecCount} + 1<br />
+LangString DESC_SecCustom${SecCount} ${LANG_ENGLISH} ${Description}<br />
+Section ${Name} SecCustom${SecCount}<br />
+!macroend<br />
+<br />
+<br />
+In the code for CUSTOM_SECTION_DESCRIPTIONS, I would use macro recursion to loop through ${SecCount} sections and call MUI_DESCRIPTION_TEXT. Hopefully when the next version of NSIS is released I'll make another post with the full-working code.<br />
+<br />
+Thanks,<br />
+Joe</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">29th June 2010, 20:43</div></div><div class="posttext">!define SecCountTmp ${SecCount}<br />
+!undef SecCount<br />
+!define /math SecCount ${SecCountTmp} + 1<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jiake</div><div class="date">1st July 2010, 03:04</div></div><div class="posttext">!ifdef define<br />
+    !undef define<br />
+!endif<br />
+<br />
+!macro USER_DEFINE CONSTANT VALUE<br />
+    !ifndef ${CONSTANT}<br />
+        !define ${CONSTANT} ${VALUE}<br />
+    !endif<br />
+!macroend<br />
+<br />
+!define define '!insertmacro USER_DEFINE'<br />
+${define} PI 3.14</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JoeMcC00L</div><div class="date">7th July 2010, 02:38</div></div><div class="posttext">!define SecCountTmp ${SecCount}<br />
+!undef SecCount<br />
+!define /math SecCount ${SecCountTmp} + 1<br />
+<br />
+Stu<br />
+<br />
+Great work! I actually used this to make an Increment macro that does exactly what I needed it to do.<br />
+<br />
+!macro _increment _value<br />
+!define _tempVal ${${_value}}<br />
+!undef ${_value}<br />
+!define /math ${_value} ${_tempVal} + 1<br />
+!undef _tempVal<br />
+!macroend<br />
+<br />
+!define INCREMENT &quot;!insertmacro _increment&quot;<br />
+<br />
+<br />
+The newest problem is that I can't perform any sort of looping by the compiler. Recursive macro calls are unsupported (and probably a bad idea as well). I guess there's a reason I haven't seen anyone else try this. :-)<br />
+<br />
+Thanks for your help!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">7th July 2010, 10:10</div></div><div class="posttext">Wait, why the ${${_value}}? Did I put that in my post? If _value = 1 say then that will evaluate to ${1} (and will stop there unless you happen to have !define 1 somewhere). It might work if /math parses out the 1 but you don't want the double parentheses.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">JoeMcC00L</div><div class="date">8th July 2010, 00:02</div></div><div class="posttext">Sorry, I didn't make it clear:<br />
+<br />
+!define sectionCount 0<br />
+${INCREMENT} sectionCount<br />
+; Now ${sectionCount} = 1<br />
+<br />
+In other words, _value isn't 1. _value is expected to be a defined symbol with a value. Works every time.<br />
+<br />
+Thanks,<br />
+Joe</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">8th July 2010, 00:24</div></div><div class="posttext">Ah right yep that's fine.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

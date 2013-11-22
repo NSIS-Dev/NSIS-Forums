@@ -1,0 +1,206 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" GetWinVersion, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  GetWinVersion NSIS Discussion" />
+	
+	<title> GetWinVersion [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  GetWinVersion</div>
+<hr />
+<div class="pda"><a href="t-173698.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=173698">GetWinVersion</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">KirillKr</div><div class="date">17th March 2004, 13:52</div></div><div class="posttext">Function .onInit<br />
+<br />
+  Call GetWindowsVersion<br />
+  Pop $R0<br />
+  StrCmp $R0 &quot;XP&quot; +1 +3<br />
+    !define WINNT<br />
+    Goto inst<br />
+  StrCmp $R0 &quot;2000&quot; +1 +5<br />
+    !ifndef WINNT<br />
+      !define WINNT<br />
+    !endif<br />
+    Goto inst<br />
+  StrCmp $R0 &quot;2003&quot; +1 +5<br />
+    !ifndef WINNT<br />
+      !define WINNT<br />
+    !endif<br />
+    Goto inst<br />
+  !define WIN9X<br />
+  inst:<br />
+FunctionEnd<br />
+<br />
+SubSection /e &quot;For Win2k or WinXP&quot;<br />
+!ifdef WINNT<br />
+  Section &quot;Russian&quot; Section1<br />
+!else<br />
+  Section /o &quot;Russian&quot; Section1<br />
+!endif<br />
+.....<br />
+<br />
+SubSection /e &quot;For Win98 or WinME&quot;<br />
+!ifndef WINNT<br />
+  Section &quot;Russian&quot; Section1<br />
+!else<br />
+  Section /o &quot;Russian&quot; Section1<br />
+!endif<br />
+<br />
+On Windows XP work Ok, but if I run on Win98 not working.<br />
+How I can change default section in runtime<br />
+My Sections:<br />
+<br />
++For Win2k and WinXP<br />
+  -Russian<br />
+  -English<br />
++For Win98 and WinMe<br />
+  -Russian<br />
+  -English</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">TheChewy</div><div class="date">17th March 2004, 14:45</div></div><div class="posttext">I copied the function:<br />
+<br />
+;==========================================================================<br />
+;                            GetWindowsVersion<br />
+;==========================================================================<br />
+; GetWindowsVersion<br />
+;<br />
+; Based on Yazno's function, http://yazno.***********/powerpimpit/<br />
+; Updated by Joost Verburg<br />
+;<br />
+; Returns on top of stack<br />
+;<br />
+; Windows Version (95, 98, ME, NT x.x, 2000, XP, 2003)<br />
+; or<br />
+; '' (Unknown Windows Version)<br />
+;<br />
+; Usage:<br />
+;   Call GetWindowsVersion<br />
+;   Pop $R0<br />
+;   ; at this point $R0 is &quot;NT 4.0&quot; or whatnot<br />
+Function GetWindowsVersion<br />
+<br />
+   Push $R0<br />
+   Push $R1<br />
+<br />
+   ReadRegStr $R0 HKLM \<br />
+   &quot;SOFTWARE\Microsoft\Windows NT\CurrentVersion&quot; CurrentVersion<br />
+<br />
+   IfErrors 0 lbl_winnt<br />
+<br />
+   ; we are not NT<br />
+   ReadRegStr $R0 HKLM \<br />
+   &quot;SOFTWARE\Microsoft\Windows\CurrentVersion&quot; VersionNumber<br />
+<br />
+   StrCpy $R1 $R0 1<br />
+   StrCmp $R1 '4' 0 lbl_error<br />
+<br />
+   StrCpy $R1 $R0 3<br />
+<br />
+   StrCmp $R1 '4.0' lbl_win32_95<br />
+   StrCmp $R1 '4.9' lbl_win32_ME lbl_win32_98<br />
+<br />
+   lbl_win32_95:<br />
+     StrCpy $R0 '95'<br />
+   Goto lbl_done<br />
+<br />
+   lbl_win32_98:<br />
+     StrCpy $R0 '98'<br />
+   Goto lbl_done<br />
+<br />
+   lbl_win32_ME:<br />
+     StrCpy $R0 'ME'<br />
+   Goto lbl_done<br />
+<br />
+   lbl_winnt:<br />
+<br />
+   StrCpy $R1 $R0 1<br />
+<br />
+   StrCmp $R1 '3' lbl_winnt_x<br />
+   StrCmp $R1 '4' lbl_winnt_x<br />
+<br />
+   StrCpy $R1 $R0 3<br />
+<br />
+   StrCmp $R1 '5.0' lbl_winnt_2000<br />
+   StrCmp $R1 '5.1' lbl_winnt_XP<br />
+   StrCmp $R1 '5.2' lbl_winnt_2003 lbl_error<br />
+<br />
+   lbl_winnt_x:<br />
+     StrCpy $R0 &quot;NT $R0&quot; 6<br />
+   Goto lbl_done<br />
+<br />
+   lbl_winnt_2000:<br />
+     Strcpy $R0 '2000'<br />
+   Goto lbl_done<br />
+<br />
+   lbl_winnt_XP:<br />
+     Strcpy $R0 'XP'<br />
+   Goto lbl_done<br />
+<br />
+   lbl_winnt_2003:<br />
+     Strcpy $R0 '2003'<br />
+   Goto lbl_done<br />
+<br />
+   lbl_error:<br />
+     Strcpy $R0 ''<br />
+   lbl_done:<br />
+<br />
+   Pop $R1<br />
+   Exch $R0<br />
+<br />
+FunctionEnd<br />
+<br />
+which works perfect on all win versions...<br />
+<br />
+  StrCmp &quot;$WINDOWS_VERSION&quot; '95' doWin_95<br />
+  StrCmp &quot;$WINDOWS_VERSION&quot; '98' doWin_98<br />
+  StrCmp &quot;$WINDOWS_VERSION&quot; 'ME' doWin_ME<br />
+  StrCmp &quot;$WINDOWS_VERSION&quot; 'NT' doWin_NT<br />
+  StrCmp &quot;$WINDOWS_VERSION&quot; '2000' doWin_2K<br />
+  StrCmp &quot;$WINDOWS_VERSION&quot; 'XP' doWin_XP</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">17th March 2004, 14:55</div></div><div class="posttext">You are mixing up compile-time and run-time. Defines are processed on compile-time. The version check is a run-time action, you should therefore use a variable to set whether NT is used or not.<br />
+<br />
+Checking for the existance of the Windows version in the Windows NT registry key is also a better method.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">KirillKr</div><div class="date">17th March 2004, 15:01</div></div><div class="posttext">I replaced to code:<br />
+<br />
+  StrCmp $R0 &quot;XP&quot; doWinNT<br />
+  StrCmp $R0 &quot;2000&quot; doWinNT<br />
+  StrCmp $R0 &quot;2003&quot; doWinNT<br />
+  !define WIN9X<br />
+<br />
+  Goto inst<br />
+<br />
+  doWinNT:<br />
+    !define WINNT<br />
+  Goto inst<br />
+<br />
+  inst:<br />
+<br />
+but Section not set.<br />
+I want say, that version detect correctly, and Default section not work.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">17th March 2004, 15:33</div></div><div class="posttext">Again, defines are compile-time operations, use variables instead.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">KirillKr</div><div class="date">17th March 2004, 15:39</div></div><div class="posttext">Originally posted by Joost Verburg <br />
+Again, defines are compile-time operations, use variables instead.  <br />
+How? I don't undetstand how I can do this?<br />
+<br />
+But I solved with SetCurInstType 1 or 0</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" VPatch v1.1 released!, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  VPatch v1.1 released! NSIS Discussion" />
+	
+	<title> VPatch v1.1 released! [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  VPatch v1.1 released!</div>
+<hr />
+<div class="pda"><a href="t-49203.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=49203">VPatch v1.1 released!</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Koen van de Sande</div><div class="date">7th May 2001, 19:01</div></div><div class="posttext">VPatch v1.1 has been released:<br />
+<br />
+http://www.tibed.net/vpatch<br />
+<br />
+What's new:<br />
+<br />
+- Edgewize's runtime is now included by default because of it's low overhead (only 4 Kb!) <br />
+- Greatly optimized the Patch Generator. It now loads the entire files into memory, which makes it 5 times faster. If you don't want to do this (because of extremely large files), you can still change the MemoryMode setting in the ini file to revert back to the 1.0 engine.<br />
+<br />
+A GUI is coming soon...<br />
+<br />
+VPatch is currently based on a routine which scans a file for similar blocks.<br />
+Ideas on how to generate patches are welcome! (mainly because Clickteam Patch Maker sometimes creates smaller, sometimes bigger patches). I want VPatch to be better than Patch Maker!<br />
+<br />
+Especially EXEcutable files are better with Patch Maker.<br />
+If you have any ideas on how to create smaller/better patches, post them here!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dbareis</div><div class="date">9th May 2001, 06:55</div></div><div class="posttext">It sounds like you may be doing this but I generated a patch maker for OS/2 (have c source) and it didn't look for differences but looked for matches for fragments of the file you wish to end up with. This worked quite well, to speed up lookup I had a number of techniques the main one I can remember off hand (I wrote it years ago) was keeping a table of link lists, each list pointing to matching strings in the original file so if a string began with '0003' it would check all strings identified in the 3rd linked list. I had a lot of different &quot;op codes&quot; to handle short/long as well as near and far strings etc.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koen van de Sande</div><div class="date">9th May 2001, 18:45</div></div><div class="posttext">Yes you are right, searching for fragments of the target file is better, and VPatch does that.<br />
+However, size of these fragments determines the compression - and making fragments too small (currently 256 bytes) will make things quite slow.<br />
+I'm not really sure what you mean by link lists, but I'm sure it's something similar to what I use.<br />
+Perhaps making fragments smaller will help. Do you know what kind of fragment size you used?<br />
+Currently I'm using 256 bytes as standard size because this gives good performance on my PII 233 - but since most people have faster machines nowadays, perhaps I should make it a lot smaller.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dbareis</div><div class="date">9th May 2001, 22:53</div></div><div class="posttext">My smallest fragment was one byte past the smallest number of codes that I could represent it with, which with the best opcodes was 5 or so bytes! <br />
+<br />
+If I was looking for a fragment that began with &quot;12345678&quot;x then I would take the first 2 bytes &quot;1234&quot;x and look up the table (entry '1234'x) which pointed to a linked list of source fragments which started with '1234'x.<br />
+<br />
+Now a better way might be to pick the first byte and one or more bytes futher into the fragement to do a similar thing, so for example if your were insisting on 256 byte fragments, you might pick the first byte and the middle byte. Of course all this is just to improve performance.<br />
+Note that I wouldn't base my design on what a 233 can do, these won't be around much longer (and I had a 200 when I was writing my program)...<br />
+<br />
+While relatively fast to build the patch (given sufficient ram) the actual application of a patch was fast.<br />
+<br />
+With small patches like I was using I found I could do a good job even basing my patch on completely dissimilar/unrelated source files!</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koen van de Sande</div><div class="date">10th May 2001, 08:19</div></div><div class="posttext">The actual minimum for fragment size is 16 (or maybe 12). But I never tried setting it this low - with the 1.0 version it took ages, but perhaps with this faster one it'll work.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dbareis</div><div class="date">10th May 2001, 10:25</div></div><div class="posttext">With a number of OP codes you can handle &quot;near&quot; and different length fragments (ie &lt; 64, &lt; 128, &lt;256 - ie combine opcode with counter, same for repeat codes) etc and don't forget the fragments available EARLIER in the file being built.  With My table lookup the program was pretty fast. It did of course always look for the longest fragment</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koen van de Sande</div><div class="date">10th May 2001, 19:09</div></div><div class="posttext">VPatch scans the entire (source) file for fragments in the target files, and it searches for multiple fragments and then chooses the biggest one (longest fragment).<br />
+I did some analysis, and the routine which takes up most time is the scanning routine (I have a block of say, 32 bytes, and I need to find all occurences in a 1 MB memory array). It takes up 90% of the time.<br />
+<br />
+I have multiple OP codes (I always called them headers). 1, 2 and 3: copy from source offset, Size block<br />
+<br />
+<br />
+1 (1 byte)    sourceoffset (long, 4 bytes)     size (1 byte)<br />
+2 (1 byte)    sourceoffset (long, 4 bytes)     size (2 bytes)<br />
+3 (1 byte)    sourceoffset (long, 4 bytes)     size (4 bytes)<br />
+<br />
+And I have the same for copy (which are 5-6-7) and consist of ID byte and Size to follow.<br />
+<br />
+Which gives the following header size totals:<br />
+1=6<br />
+2=7<br />
+3=9<br />
+5=5<br />
+6=6<br />
+7=8<br />
+<br />
+I know this wastes a few bits, but this allows for future extension.<br />
+<br />
+What kind of lookup table do you use? I just get the first 4 bytes of the block-to-find, and check every 4 bytes of the target files if they match (increasing by 1 each time). If so, it uses the Delphi command CompareMem() to check if the blocks actually match (CompareMem is an Assembler routine of Delphi).<br />
+How could you do this more efficient? (I know... write it in assembler).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Edgewize</div><div class="date">10th May 2001, 22:07</div></div><div class="posttext">This may sound a little complex, but its how my (still unfinished) personal patching program will work.<br />
+<br />
+It generates CRC16s (unsigned short integer checksums) of consecutive non-overlapping 64-byte chunks of data in the original file.  These 2-byte CRCs are used as indexes into a hash array of linked lists.<br />
+<br />
+Each linked list item has an offset (the position in the original file where the 64-byte block that had this CRC can be found) and a pointer to the next item.<br />
+<br />
+To scan for fragments, the code generates a CRC16 for the first 64 bytes of the file.  It then looks up the offsets and compares them to those found in the hash array; if there is a match, it computes the length of any of the possible matches in the linked list and picks the longest.<br />
+<br />
+If it can't find a match, it advances by one byte and computes a new CRC16.  Lather, rinse, repeat.<br />
+<br />
+This is not quite an optimal approach but it very, very good.  It is not fast by any means, but it can be speeded up by increasing the block size from 64 to 128 or any other amount.  It can be made to perform 'perfect' patches by reducing the block size to 2, but it will then take hours (if not days) to complete even a medium-sized patch.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">dbareis</div><div class="date">10th May 2001, 22:53</div></div><div class="posttext">To Koen van de Sande:<br />
+<br />
+The look up is as described ealier I know where ther first two bytes (and I think I did other &quot;magic&quot;) of every string is. The patch process on a P200 took very little time even on 100K or more files (it did however need a lot of RAM to do this - mind you not a lot of RAM compared with what is no typical in PCs).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koen van de Sande</div><div class="date">11th May 2001, 10:58</div></div><div class="posttext">To Edgewize:<br />
+<br />
+This is a way to do it. VPatch does something similar, but with the actual data of the fragments (and I increase not by 1 byte, but by BlockSize/2).<br />
+In theory, BlockSize=2 gives the smallest patches, but you have to watch the overhead of your opcodes. VPatch's biggest opcode is 9 bytes long, so BlockSize=8 would be the bare minimum (because 8/9 are for large blocks).<br />
+<br />
+General:<br />
+<br />
+What kind of file sizes should the patch generator be able to handle? VPatch can handle files up to RAM size (or 2GB if you use the old MemoryMode=0 thingy).<br />
+<br />
+To dbareis:<br />
+<br />
+I think these lookup tables are not suitable for files larger than 1 MB (because for every 2 bytes you need to store the offset in the look-up table-&gt;1000000*4=4MB of memory for the lookup table of a 1 MB file).<br />
+Wait a minute, 4 MB isn't so bad... Perhaps I think about lookup tables :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">yazno</div><div class="date">13th May 2001, 18:01</div></div><div class="posttext">hi koen,<br />
+<br />
+could you add a switch so that GenPat.exe/LNK.exe closes after the patchfile creation, or make it close by default and add a /PAUSE switch like nsis has?<br />
+<br />
+at the moment WaitForSingleObject doesn't work correctly and i can't get the console outputs in the GUI i wrote ;)<br />
+<br />
+cu yzo</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koen van de Sande</div><div class="date">13th May 2001, 19:16</div></div><div class="posttext">Yes, such an option is needed. It's just that in Delphi, the console automatically closes after program execution finishes, so I added the press key thing. I'll make sure it's deactivated by default in the next version.<br />
+<br />
+On what kind of GUI are you working? For NSIS or VPatch or both?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">yazno</div><div class="date">13th May 2001, 21:08</div></div><div class="posttext">hi,<br />
+<br />
+Originally posted by Koen van de Sande <br />
+Yes, such an option is needed. It's just that in Delphi, the console automatically closes after program execution finishes, so I added the press key thing. I'll make sure it's deactivated by default in the next version.<br />
+<br />
+so you could do it like this before finishing:<br />
+<br />
+if ParamCount &gt; 0 then<br />
+for p:=1 to ParamCount do<br />
+if ParamStr[p] = UpperCase('/PAUSE') <br />
+then<br />
+begin<br />
+Writeln('Press ENTER to Exit');<br />
+Readln;<br />
+Break;<br />
+end;<br />
+<br />
+Originally posted by Koen van de Sande <br />
+On what kind of GUI are you working? For NSIS or VPatch or both? <br />
+<br />
+well, powerpimpit for pimp/nsis is almost done and today i found your vpatch and thought i make a quick 'n dirty gui for it ;)<br />
+<br />
+cu yzo</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koen van de Sande</div><div class="date">17th May 2001, 19:15</div></div><div class="posttext">I just found in the help there also is a command called FindCmdLineStr which does the same.<br />
+<br />
+So here's a new (and faster again) version:<br />
+<br />
+VPatch v1.11<br />
+============<br />
+<br />
+What's new:<br />
+<br />
+- Command line options added (such as /WAIT, /DEBUG, and all the ini settings can now be changed on the command line)<br />
+<br />
+- Optimizations to the patch generator (a bit faster)<br />
+<br />
+- Added example of usage in NSIS in file Test.nsi<br />
+<br />
+- Changed the default settings another time<br />
+<br />
+- Increased maximum number of blocks to 10,000 from 1,000.<br />
+<br />
+Which leads me to another question: What filesize do you intend to use with NSIS? 100 KB? 1 MB? 10 MB?<br />
+What should be the normal filesize (aka the size for which everything is optimized)?<br />
+<br />
+Has anyone got suggestions for a 'standard' set of patch files, in order to compare performance on different machines?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">polaughlin</div><div class="date">17th May 2001, 23:02</div></div><div class="posttext">When can a GUI be expected?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koen van de Sande</div><div class="date">18th May 2001, 09:59</div></div><div class="posttext">yazno is working on something. And I just don't have time at the moment - until the end of Mai I don't have the time to create a GUI.<br />
+<br />
+So I guess you'll have to wait.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">yazno</div><div class="date">18th May 2001, 20:28</div></div><div class="posttext">hi,<br />
+<br />
+i am close to finish it, so stay tuned ;)<br />
+<br />
+cu yzo</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koen van de Sande</div><div class="date">18th May 2001, 21:21</div></div><div class="posttext">Mmm, I didn't include a link with the v1.11 release. So now's the time to test out my new download start script:<br />
+<br />
+http://www.tibed.net/download?id=vpatch<br />
+<br />
+This link should automatically redirect you to the latest version. I like it myself :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koen van de Sande</div><div class="date">21st May 2001, 20:57</div></div><div class="posttext">yazno, I didn't know you'd already released a GUI 2 days ago!<br />
+Cool, I'm downloading it now... stay tuned.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">yazno</div><div class="date">21st May 2001, 21:16</div></div><div class="posttext">hi,<br />
+<br />
+ups sorry i forgot to tell you :)<br />
+<br />
+well it's just basic funtionality and coded straight away. not that beauty and undocumented.<br />
+if you want i send you the sources for further development.<br />
+<br />
+cu yzo</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Koen van de Sande</div><div class="date">22nd May 2001, 19:26</div></div><div class="posttext">Sure, then I have something to start with :)<br />
+My e-mail is koen@tibed.net<br />
+It's nice (though there is a small thing with the Options, the Maximum setting is for large files only, but hey, it didn't say that in the ini :)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

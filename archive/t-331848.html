@@ -1,0 +1,113 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" ProgressBar with silent silentMod, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  ProgressBar with silent silentMod NSIS Discussion" />
+	
+	<title> ProgressBar with silent silentMod [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  ProgressBar with silent silentMod</div>
+<hr />
+<div class="pda"><a href="t-331848.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=331848">ProgressBar with silent silentMod</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">hanenjom</div><div class="date">24th June 2011, 11:54</div></div><div class="posttext">Hi,<br />
+<br />
+please i use a silent mode for my installation, but I notied that installation is so silent , i don't have any sign, i would like using progress bar for user.<br />
+<br />
+in my research I found the progress bar in a page, but my need is just a progress without page to have in idea for the progress installation.<br />
+<br />
+Please help me.<br />
+<br />
+Thx.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">24th June 2011, 12:54</div></div><div class="posttext">I would really suggest NOT having a progress bar. It really annoys me when I want to install a 3rd party program or run a 3rd party command line application with a silent switch that isn't silent. The whole point of a silent switch is so that the caller can manage progress while waiting for your process to complete, perhaps with a simple one line message.<br />
+<br />
+But to answer your question, this can't be done properly (i.e. like the NSIS progress bar) because in silent mode there is no NSIS UI and so no progress messages are sent (PBM_SETPOS). You can still use a plug-in such as Banner or NXS to show a message to the user but again this defeats the purpose of a silent install.<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hanenjom</div><div class="date">24th June 2011, 13:51</div></div><div class="posttext">thx for you answers</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">24th June 2011, 17:49</div></div><div class="posttext">This is ugly, but it sort of works:<br />
+<br />
+!include LogicLib.nsh<br />
+!include FileFunc.nsh<br />
+<br />
+Var SilentGUI<br />
+!define SILENTGUI_INSTJUMP 2 ;page jump from first page to instfiles<br />
+<br />
+!define SWP_NOMOVE 0x0002<br />
+!define SWP_NOZORDER 0x0004<br />
+!define SWP_NOSIZE 0x0001<br />
+!define SWP_FRAMECHANGED 0x0020<br />
+<br />
+<br />
+<br />
+Function .onGuiInit<br />
+${GetParameters} $0<br />
+ClearErrors<br />
+${GetOptions} $0 &quot;/SilentGUI&quot; $0<br />
+${IfNot} ${Errors}<br />
+	StrCpy $SilentGUI 1<br />
+	System::Call 'USER32::SetWindowLong(i $HWNDPARENT,i -16,i 0x800008C8|0x00400000)' <br />
+	SendMessage $HWNDPARENT &quot;0x408&quot; &quot;${SILENTGUI_INSTJUMP}&quot; &quot;&quot; <br />
+${EndIf}<br />
+FunctionEnd<br />
+<br />
+Function InstFilesShow<br />
+${IfNotThen} $SilentGUI &lt;&gt; 0 ${|} Return ${|}<br />
+FindWindow $0 &quot;#32770&quot; &quot;&quot; $HWNDPARENT<br />
+GetDlgItem $9 $0 0x3EC<br />
+StrCpy $1 &quot;&quot;<br />
+hideloop:<br />
+FindWindow $1 &quot;&quot; &quot;&quot; $0 $1<br />
+ShowWindow $1 0<br />
+StrCmp $1 0 &quot;&quot; hideloop<br />
+ShowWindow $9 1<br />
+System::Call '*(i,i,i,i)i.r0'<br />
+System::Call 'USER32::GetClientRect(i $9,ir0)'<br />
+System::Call '*$0(i,i,i,i.r2)i'<br />
+System::Call 'USER32::GetClientRect(i $HWNDPARENT,ir0)'<br />
+System::Call '*$0(i,i,i.r1,i)i'<br />
+IntOp $3 $1 - 25<br />
+System::Call 'USER32::SetWindowPos(i $9,i,i0,i0,ir3,ir2,i ${SWP_NOZORDER})'<br />
+System::Free $0<br />
+IntOp $2 $2 + 25<br />
+System::Call 'USER32::SetWindowPos(i $HWNDPARENT,i,i,i,ir1,ir2,i ${SWP_NOMOVE}|${SWP_NOZORDER}|${SWP_FRAMECHANGED})'<br />
+FunctionEnd<br />
+<br />
+Function InstFilesLeave<br />
+${If} $SilentGUI &lt;&gt; 0<br />
+	Quit<br />
+	Abort<br />
+${EndIf}<br />
+FunctionEnd<br />
+<br />
+Section<br />
+Sleep 1000<br />
+Sleep 1000<br />
+Sleep 1000<br />
+Sleep 1000<br />
+SectionEnd<br />
+<br />
+Page Components<br />
+Page Directory<br />
+Page InstFiles &quot;&quot; InstFilesShow InstFilesLeave<br />
+<br />
+<br />
+Run with setup.exe /silentgui</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

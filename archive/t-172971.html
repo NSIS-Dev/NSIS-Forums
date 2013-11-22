@@ -1,0 +1,128 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Wish registry functions worked with variables for rootkeys, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Wish registry functions worked with variables for rootkeys NSIS Discussion" />
+	
+	<title> Wish registry functions worked with variables for rootkeys [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Wish registry functions worked with variables for rootkeys</div>
+<hr />
+<div class="pda"><a href="t-172971.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=172971">Wish registry functions worked with variables for rootkeys</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">nsfis</div><div class="date">11th March 2004, 16:14</div></div><div class="posttext">I started to write this piece of code to decide which root key to use for storing certain configuration values in registry.<br />
+<br />
+<br />
+${If} $OSgen == &quot;Win9x&quot; ; Windows 95/98/ME<br />
+  StrCpy $RootKey &quot;HKLM&quot;<br />
+${Else} ; WinNT/Win2000,WinXP<br />
+  ${Select} $UserRights<br />
+    ${Case2} &quot;User&quot; &quot;Guest&quot;<br />
+      StrCpy $RootKey &quot;HKCU&quot;<br />
+    ${Case2} &quot;Admin&quot; &quot;Power&quot;<br />
+      ${If} ${Context} == &quot;1&quot; ; context selected during instalation, 1=All users, 0=Current user<br />
+        StrCpy $RootKey &quot;HKLM&quot;<br />
+      ${Else}<br />
+        StrCpy $RootKey &quot;HKCU&quot;<br />
+      ${EndIf}<br />
+  ${EndSelect}<br />
+${EndIf}<br />
+<br />
+And I wanted to use it this way:<br />
+<br />
+WriteRegStr $RootKey &quot;Software\${Company}\${ProductName}&quot; &quot;Key1&quot; &quot;Value&quot;<br />
+<br />
+But finally I have found that registry functions don't accept variables for rootkey. So this is my feature suggestion for next version of NSIS.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">11th March 2004, 16:34</div></div><div class="posttext">Use quotes around $rootkey:<br />
+<br />
+WriteRegStr &quot;$RootKey&quot; &quot;Software\${Company}\${ProductName}&quot; &quot;Key1&quot; &quot;Value&quot;</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">11th March 2004, 17:39</div></div><div class="posttext">That won't help. Variables are not supported there.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">nsfis</div><div class="date">12th March 2004, 10:14</div></div><div class="posttext">And one more note:<br />
+<br />
+It would be also nice if Start menu would support variable rootkey. Currently it is defined during compilation (!define MUI_STARTMENUPAGE_REGISTRY_ROOT &quot;HKLM&quot;) and does not allow to set it in runtime based on user environment.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">12th March 2004, 18:11</div></div><div class="posttext">I created a macro for writing to the registry, in which I pass HKLM or HKCU depending and then reference it like a normal macro would. This appears to work fine for me.<br />
+<br />
+!insertmacro Write2Reg &quot;HKLM&quot; &quot;Software\MyCompany&quot; &quot;Chicken&quot; &quot;Egg&quot;<br />
+<br />
+!macro Write2Reg ROOT KEY NAME VALUE<br />
+  WriteRegStr &quot;${ROOT}&quot; &quot;${KEY}&quot; &quot;${NAME}&quot; &quot;${VALUE}&quot;<br />
+!macroend<br />
+<br />
+<br />
+Are you saying, Joost, that this isn't supported?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">12th March 2004, 18:45</div></div><div class="posttext">I have not checked the details. It it works fine for you, you have found a way to avoid the check.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">12th March 2004, 18:47</div></div><div class="posttext">So should I change this, or will the above be supported?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">12th March 2004, 19:38</div></div><div class="posttext">If it works there is no need to change it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">nsfis</div><div class="date">15th March 2004, 08:59</div></div><div class="posttext">zimsms,<br />
+<br />
+your macro works, but it doesn't solve what I wanted. Macro only expands its definition during compilation, nothing more. I wanted to use variable (defined in runtime) for a root key. If I use your macro with variable ($R1):<br />
+<br />
+!insertmacro Write2Reg $R1 &quot;Software\MyCompany&quot; &quot;Chicken&quot; &quot;Egg&quot;<br />
+<br />
+it does not work and I get the same error during compilation:<br />
+<br />
+Usage: WriteRegStr rootkey subkey entry_name new_value_string<br />
+    root_key=(HKCR|HKLM|HKCU|HKU|HKCC|HKDD|HKPD)<br />
+<br />
+because WriteRegStr function does not allow first parameter to be variable. Macro cannot change anything with this.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">zimsms</div><div class="date">15th March 2004, 14:15</div></div><div class="posttext">Ahh, sorry I missed that. I only needed to know at compile time. I agree that would be a nice feature request.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joost Verburg</div><div class="date">15th March 2004, 15:41</div></div><div class="posttext">I did not check that code. It's indeed just a macro that is processed on compile-time.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">deguix</div><div class="date">16th March 2004, 22:32</div></div><div class="posttext">Summarizing:<br />
+<br />
+Macros parameters in which are used codes are like defines, it is like just putting another name to a variable, like:<br />
+<br />
+Section<br />
+<br />
+StrCpy $R0 Test<br />
+!define TEST $R0<br />
+MessageBox MB_OK ${TEST}<br />
+<br />
+SectionEnd<br />
+<br />
+As the professional way to say it, when you use ${TEST} it is just linking to the buffer that contains the string, but not the string itself, so if a parameter doesn't support variables feature, it doesn't look inside that buffer for the string, it returns the variable name as a string (i.e. $R0).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Vytautas</div><div class="date">17th March 2004, 01:18</div></div><div class="posttext">I think I might have designed a macro that should fix your problem.  If you could test the attached macro and if it works I shall convert all of the reg functions into similar macros.<br />
+<br />
+Vytautas</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">nsfis</div><div class="date">17th March 2004, 10:47</div></div><div class="posttext">Vytautas,<br />
+<br />
+yes, it is a solution. I wrote something similar for HKLM and HKCU only. But the disadvantage of using macros is that each usage of your WriteRegStr macro (and I have lot of them) is expanded during compilation to 21 instructions. That's why I wrote my wish so some core NSIS developer could enable variable rootkey in WriteRegStr instruction.<br />
+<br />
+Thanks anyway.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

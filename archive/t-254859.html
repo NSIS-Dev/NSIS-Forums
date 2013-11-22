@@ -1,0 +1,213 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Problems with Setting Environment Variables, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Problems with Setting Environment Variables NSIS Discussion" />
+	
+	<title> Problems with Setting Environment Variables [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Problems with Setting Environment Variables</div>
+<hr />
+<div class="pda"><a href="t-254859.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=254859">Problems with Setting Environment Variables</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Joker2006</div><div class="date">5th September 2006, 13:22</div></div><div class="posttext">I will set few new enviroment variables, i got the source from HERE (http://nsis.sourceforge.net/Setting_Environment_Variables) <br />
+My source is<br />
+<br />
+!include &quot;MUI.nsh&quot;<br />
+!include &quot;WriteEnvStr.nsh&quot;<br />
+!define MUI_HEADERIMAGE<br />
+!define MUI_HEADERIMAGE_BITMAP &quot;logo_fzk_1.bmp&quot;<br />
+!define MUI_ABORTWARNING<br />
+!define ALL_USERS<br />
+;!define MUI_FINISHPAGE<br />
+;!define MUI_FINISHPAGE_NOAUTOCLOSE<br />
+<br />
+Name &quot;AAA&quot;<br />
+OutFile &quot;AAA.exe&quot;<br />
+InstallDir &quot;C:\&quot;<br />
+<br />
+!insertmacro MUI_PAGE_DIRECTORY <br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+;!insertmacro MUI_PAGE_FINISH<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;GERMAN&quot;<br />
+<br />
+Section <br />
+ SetOutPath $INSTDIR\<br />
+<br />
+ File /r Embedded<br />
+SectionEnd<br />
+<br />
+Section &quot;Add Env Var&quot;<br />
+  Push BBB<br />
+  Push BBB<br />
+  Call WriteEnvStr<br />
+SectionEnd<br />
+<br />
+Function .onInstSuccess<br />
+ MessageBox MB_OK &quot;BLA&quot;<br />
+ REBOOT<br />
+FunctionEnd<br />
+<br />
+And thatÂ´s the error message i get:<br />
+<br />
+Processed 1 file, writing output:<br />
+Adding plug-ins initializing function... Done!<br />
+warning: Uninstall section found but WriteUninstaller never used - no uninstaller will be created.<br />
+Error: resolving install function &quot;IsNT&quot; in function &quot;WriteEnvStr&quot;<br />
+Note: uninstall functions must begin with &quot;un.&quot;, and install functions must not<br />
+Error - aborting creation process</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">5th September 2006, 16:56</div></div><div class="posttext">Make sure you copy all the code into WriteEnvStr.nsh. Not just the Function WriteEnvStr bit.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joker2006</div><div class="date">6th September 2006, 07:29</div></div><div class="posttext">Where can i get WriteEnvStr.nsh??</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joker2006</div><div class="date">6th September 2006, 08:23</div></div><div class="posttext">My Script<br />
+<br />
+Section &quot;Add Env Var&quot;<br />
+  Push &quot;HOMEDIR&quot;           <br />
+  Push &quot;C:\New Home Dir\&quot;  <br />
+  Call WriteEnvStr<br />
+SectionEnd<br />
+<br />
+My WriteEnvStr.nsh<br />
+<br />
+!include WinMessages.nsh<br />
+<br />
+!ifdef ALL_USERS<br />
+  !define WriteEnvStr_RegKey \<br />
+     'HKLM &quot;SYSTEM\CurrentControlSet\Control\Session Manager\Environment&quot;'<br />
+!else<br />
+  !define WriteEnvStr_RegKey 'HKCU &quot;Environment&quot;'<br />
+!endif<br />
+<br />
+#<br />
+# WriteEnvStr - Writes an environment variable<br />
+# Note: Win9x systems requires reboot<br />
+#<br />
+# Example:<br />
+#  Push &quot;HOMEDIR&quot;           # name<br />
+#  Push &quot;C:\New Home Dir\&quot;  # value<br />
+#  Call WriteEnvStr<br />
+#<br />
+Function WriteEnvStr<br />
+  Exch $1 ; $1 has environment variable value<br />
+  Exch<br />
+  Exch $0 ; $0 has environment variable name<br />
+  Push $2<br />
+  <br />
+  Call IsNT<br />
+  Pop $2<br />
+  StrCmp $2 1 WriteEnvStr_NT<br />
+    ; Not on NT<br />
+    StrCpy $2 $WINDIR 2 ; Copy drive of windows (c:)<br />
+    FileOpen $2 &quot;$2\autoexec.bat&quot; a<br />
+    FileSeek $2 0 END<br />
+    FileWrite $2 &quot;$\r$\nSET $0=$1$\r$\n&quot;<br />
+    FileClose $2<br />
+    SetRebootFlag true<br />
+    Goto WriteEnvStr_done<br />
+<br />
+  WriteEnvStr_NT:<br />
+      WriteRegExpandStr ${WriteEnvStr_RegKey} $0 $1<br />
+      SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} \<br />
+        0 &quot;STR:Environment&quot; /TIMEOUT=5000<br />
+  <br />
+  WriteEnvStr_done:<br />
+    Pop $2<br />
+    Pop $1<br />
+    Pop $0<br />
+FunctionEnd<br />
+<br />
+#<br />
+# un.DeleteEnvStr - Removes an environment variable<br />
+# Note: Win9x systems requires reboot<br />
+#<br />
+# Example:<br />
+#  Push &quot;HOMEDIR&quot;           # name<br />
+#  Call un.DeleteEnvStr<br />
+#<br />
+Function un.DeleteEnvStr<br />
+  Exch $0 ; $0 now has the name of the variable<br />
+  Push $1<br />
+  Push $2<br />
+  Push $3<br />
+  Push $4<br />
+  Push $5<br />
+  <br />
+  Call un.IsNT<br />
+  Pop $1<br />
+  StrCmp $1 1 DeleteEnvStr_NT<br />
+    ; Not on NT<br />
+    StrCpy $1 $WINDIR 2<br />
+    FileOpen $1 &quot;$1\autoexec.bat&quot; r<br />
+    GetTempFileName $4<br />
+    FileOpen $2 $4 w<br />
+    StrCpy $0 &quot;SET $0=&quot;<br />
+    SetRebootFlag true<br />
+    <br />
+    DeleteEnvStr_dosLoop:<br />
+      FileRead $1 $3<br />
+      StrLen $5 $0<br />
+      StrCpy $5 $3 $5<br />
+      StrCmp $5 $0 DeleteEnvStr_dosLoop<br />
+      StrCmp $5 &quot;&quot; DeleteEnvStr_dosLoopEnd<br />
+      FileWrite $2 $3<br />
+      Goto DeleteEnvStr_dosLoop<br />
+    <br />
+    DeleteEnvStr_dosLoopEnd:<br />
+      FileClose $2<br />
+      FileClose $1<br />
+      StrCpy $1 $WINDIR 2<br />
+      Delete &quot;$1\autoexec.bat&quot;<br />
+      CopyFiles /SILENT $4 &quot;$1\autoexec.bat&quot;<br />
+      Delete $4<br />
+      Goto DeleteEnvStr_done<br />
+<br />
+  DeleteEnvStr_NT:<br />
+    DeleteRegValue ${WriteEnvStr_RegKey} $0<br />
+    SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} \<br />
+      0 &quot;STR:Environment&quot; /TIMEOUT=5000<br />
+  <br />
+  DeleteEnvStr_done:<br />
+    Pop $5<br />
+    Pop $4<br />
+    Pop $3<br />
+    Pop $2<br />
+    Pop $1<br />
+    Pop $0<br />
+FunctionEnd<br />
+<br />
+My Error Message<br />
+<br />
+Processed 1 file, writing output:<br />
+Adding plug-ins initializing function... Done!<br />
+Error: resolving install function &quot;WriteEnvStr&quot; in install section &quot;Add Env Var&quot; (1)<br />
+Note: uninstall functions must begin with &quot;un.&quot;, and install functions must not<br />
+Error - aborting creation process<br />
+Compilation time:              1.249 sec.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joker2006</div><div class="date">6th September 2006, 14:28</div></div><div class="posttext">IÂ´ve found the right version of the WriteEnvStr.nsh so now it works, but i still got a warning:<br />
+<br />
+1 warning:<br />
+  Uninstall section found but WriteUninstaller never used - no uninstaller will be created.<br />
+<br />
+But now i also have read an Enviroment Variable, maybe someone can help me.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

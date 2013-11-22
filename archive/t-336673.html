@@ -1,0 +1,109 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" having trouble with NSD_OnNotify with ListBox, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  having trouble with NSD_OnNotify with ListBox NSIS Discussion" />
+	
+	<title> having trouble with NSD_OnNotify with ListBox [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  having trouble with NSD_OnNotify with ListBox</div>
+<hr />
+<div class="pda"><a href="t-336673.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=336673">having trouble with NSD_OnNotify with ListBox</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">DrBonzo</div><div class="date">28th October 2011, 18:12</div></div><div class="posttext">I'm trying to respond to clicks on a listbox.  Here's the setup:<br />
+<br />
+	nsDialogs::Create /NOUNLOAD 1018<br />
+	Pop $ListBoxPage<br />
+	${NSD_CreateListBox} 0 20 100% 80% &quot;Backup folders&quot;<br />
+	Pop $ListBox<br />
+	Call PopulateListBox<br />
+	${NSD_OnNotify} $ListBox ListClicked<br />
+	nsDialogs::Show<br />
+<br />
+The list box is getting populated, but ListClicked is never getting called.<br />
+<br />
+What am I missing?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">29th October 2011, 17:55</div></div><div class="posttext">Not every notification works for every control. OnNotify hooks WM_NOTIFY and a listbox does not use that message IIRC</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DrBonzo</div><div class="date">31st October 2011, 14:49</div></div><div class="posttext">Thanks, Anders, for your reply.<br />
+<br />
+Yes, indeed, listboxes neither generate nor receive WM_NOTIFY messages for selection changes.  I had been encouraged by another thread (http://forums.winamp.com/showthread.php?t=276367&amp;highlight=lbs_notify) mentioning LBS_NOTIFY, but that poster was looking for OnChange notifications.<br />
+<br />
+The MSDN dox say that the list box's *parent* ($ListBoxPage in my example) receives selection change notifications and I've verified with Spy++ that, in fact, this notification is in the form of a WM_COMMAND message with a wNotifyCode (HIWORD of wParam) of LBN_SELCHANGE.<br />
+<br />
+So it looks like I need to subclass $ListBoxPage.  I've found WndSubclass - http://nsis.sourceforge.net/WndSubclass_plug-in (yours, Anders?), which looks like it might do the trick.  If so, I'll post the results.  If not, I'll probably ask for more help...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">DrBonzo</div><div class="date">31st October 2011, 17:18</div></div><div class="posttext">Thanks to WndSubclass, here's a working example :<br />
+<br />
+<br />
+Page custom ListBoxDialogPage<br />
+OutFile ListBoxTest.exe<br />
+<br />
+Section &quot;Empty section&quot;<br />
+SectionEnd<br />
+<br />
+!include LogicLib.nsh<br />
+!include NsDialogs.nsh<br />
+!include WinMessages.nsh<br />
+!include WndSubclass.nsh<br />
+<br />
+var ListBox<br />
+var ListBoxPage<br />
+<br />
+!define __NSD_ListBoxMulti_CLASS LISTBOX<br />
+!define __NSD_ListBoxMulti_STYLE ${DEFAULT_STYLES}|${WS_TABSTOP}|${WS_VSCROLL}|${LBS_EXTENDEDSEL}|${LBS_HASSTRINGS}|${LBS_NOTIFY}<br />
+!define __NSD_ListBoxMulti_EXSTYLE ${WS_EX_WINDOWEDGE}|${WS_EX_CLIENTEDGE}<br />
+<br />
+!insertmacro __NSD_DefineControl ListBoxMulti<br />
+<br />
+Function PopulateListBox<br />
+    SendMessage $ListBox ${LB_ADDSTRING} 0 &quot;STR:Abel&quot;<br />
+    SendMessage $ListBox ${LB_ADDSTRING} 0 &quot;STR:Baker&quot;<br />
+    SendMessage $ListBox ${LB_ADDSTRING} 0 &quot;STR:Charlie&quot;<br />
+FunctionEnd<br />
+<br />
+Function ListClicked<br />
+	SendMessage $ListBox ${LB_GETCURSEL} 0 0 $0<br />
+	MessageBox MB_OK &quot;Cursel: $0&quot;<br />
+FunctionEnd<br />
+<br />
+Var CommandCaptureVar<br />
+<br />
+!define LBN_SELCHANGE 1<br />
+<br />
+Function CommandCapture<br />
+	${If} $2 = ${WM_COMMAND}<br />
+	    Var /Global HiWord<br />
+	    IntOp $HiWord $3 &gt;&gt; 16<br />
+	    IntOp $HiWord $HiWord &amp; 0xff<br />
+	    ${If} $HiWord = ${LBN_SELCHANGE}<br />
+			Call ListClicked<br />
+	    ${EndIf}<br />
+	${EndIf}<br />
+FunctionEnd<br />
+<br />
+Function ListBoxDialogPage<br />
+	nsDialogs::Create /NOUNLOAD 1018<br />
+	Pop $ListBoxPage<br />
+	${NSD_CreateListBoxMulti} 0 20 100% 80% &quot;&quot;<br />
+	Pop $ListBox<br />
+	Call PopulateListBox<br />
+	${WndSubclass_Subclass} $ListBoxPage CommandCapture $CommandCaptureVar $CommandCaptureVar<br />
+	nsDialogs::Show<br />
+FunctionEnd</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

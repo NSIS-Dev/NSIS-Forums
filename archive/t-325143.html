@@ -1,0 +1,549 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Symbolic Links, Junctions, Hard Links, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Symbolic Links, Junctions, Hard Links NSIS Discussion" />
+	
+	<title> Symbolic Links, Junctions, Hard Links [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Symbolic Links, Junctions, Hard Links</div>
+<hr />
+<div class="pda"><a href="t-325143.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=325143">Symbolic Links, Junctions, Hard Links</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">hnedka</div><div class="date">22nd December 2010, 18:30</div></div><div class="posttext">Hi, I have created a set of functions to deal with symbolic links, junctions and hard links. These functions are able to create them, delete them and identify them. Treat it as an alpha, because it has been tested only on latest version of XP and 7 (32-bit) and outside of that, there are probably more bugs. It may also not work on Ansi version of NSIS. Let me know if you find any bugs. First save this to &quot;Junction.nsh&quot;:<br />
+<br />
+<br />
+; misc<br />
+!define CreateParentFolder &quot;!insertmacro CreateParentFolder&quot;<br />
+<br />
+!macro CreateParentFolder Path<br />
+  Push $1  <br />
+  ${GetParent} &quot;${Path}&quot; $1<br />
+  CreateDirectory &quot;$1&quot;<br />
+  Pop $1<br />
+!macroend<br />
+<br />
+; info<br />
+!define IsLink &quot;!insertmacro IsLink&quot;<br />
+!define IsSoftLink &quot;!insertmacro IsSoftLink&quot;<br />
+!define IsHardLink &quot;!insertmacro IsHardLink&quot;<br />
+<br />
+Function IsSoftLink<br />
+  Exch $0<br />
+  ${GetFileAttributes} &quot;$0&quot; &quot;REPARSE_POINT&quot; $0<br />
+<br />
+  ${If} $0 != &quot;1&quot;<br />
+    StrCpy $0 &quot;0&quot;<br />
+  ${EndIf}<br />
+  Exch $0<br />
+FunctionEnd<br />
+<br />
+!macro IsSoftLink Path outVar<br />
+  Push &quot;${Path}&quot;<br />
+  Call IsSoftLink<br />
+  Pop ${outVar}<br />
+!macroend<br />
+<br />
+Function IsHardLink<br />
+  Exch $1<br />
+  System::Call &quot;kernel32::CreateFileW(w `$1`, i 0x40000000, i 0, i 0, i 3, i 0, i 0) i .r0&quot;<br />
+  <br />
+  ${If} $0 = &quot;-1&quot;<br />
+    StrCpy $0 &quot;0&quot;<br />
+    goto is_hard_link_end  <br />
+  ${EndIf}<br />
+    <br />
+  System::Call &quot;*(&amp;i256 0) i. r1&quot;       <br />
+  System::Call &quot;kernel32::GetFileInformationByHandle(i r0, i r1) i .s&quot;<br />
+  System::Call &quot;kernel32::CloseHandle(i r0) i.r0&quot;<br />
+  Pop $0<br />
+  <br />
+  ${If} $0 == &quot;0&quot;<br />
+    goto is_hard_link_end  <br />
+  ${EndIf}  <br />
+  <br />
+  System::Call &quot;*$1(&amp;i40 0, &amp;i4 .r0)&quot;<br />
+  <br />
+  ${If} $0 != &quot;0&quot;<br />
+    IntOp $0 $0 - 1  <br />
+  ${EndIf}    <br />
+<br />
+  is_hard_link_end:<br />
+  Pop $1<br />
+FunctionEnd<br />
+<br />
+!macro IsHardLink Path outVar<br />
+  Push $0<br />
+  Push &quot;${Path}&quot;<br />
+  Call IsHardLink<br />
+  StrCpy ${outVar} $0<br />
+  Pop $0<br />
+!macroend<br />
+<br />
+!macro IsLink Path outVar<br />
+  ${IsSoftLink} &quot;${Path}&quot; ${outVar}<br />
+<br />
+  ${If} ${outVar} == 0<br />
+    ${IsHardLink} &quot;${Path}&quot; ${outVar}<br />
+  ${EndIf} <br />
+!macroend<br />
+<br />
+; files<br />
+!define CreateHardLink &quot;!insertmacro CreateHardLink&quot;<br />
+!define CreateSymbolicLinkFile &quot;!insertmacro CreateSymbolicLinkFile&quot;<br />
+!define CreateLinkFile &quot;!insertmacro CreateLinkFile&quot;<br />
+!define DeleteLinkFile &quot;!insertmacro DeleteLinkFile&quot;<br />
+<br />
+!macro CreateSymbolicLinkFile Junction Target outVar<br />
+  ${CreateParentFolder} &quot;${Junction}&quot;<br />
+  System::Call &quot;kernel32::CreateSymbolicLinkW(w `${Junction}`, w `${Target}`, i 0) i .s&quot;<br />
+  Pop ${outVar}<br />
+  <br />
+  ${If} ${outVar} == &quot;error&quot;<br />
+    StrCpy ${outVar} &quot;0&quot;<br />
+  ${EndIf}<br />
+!macroend<br />
+<br />
+!macro CreateHardLink Junction Target outVar<br />
+  ${CreateParentFolder} &quot;${Junction}&quot;<br />
+  System::Call &quot;kernel32::CreateHardLinkW(w `${Junction}`, w `${Target}`, i 0) i .s&quot;<br />
+  Pop ${outVar}<br />
+!macroend<br />
+<br />
+!macro CreateLinkFile Junction Target outVar<br />
+  ${CreateSymbolicLinkFile} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}<br />
+  <br />
+  ${If} ${outVar} == 0<br />
+    ${CreateHardLink} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}    <br />
+  ${EndIf}<br />
+!macroend<br />
+<br />
+!macro DeleteLinkFile Path outVar<br />
+  ${IsLink} &quot;${Path}&quot; ${outVar}<br />
+<br />
+  ${If} ${outVar} != 0<br />
+    SetFileAttributes &quot;${Path}&quot; &quot;NORMAL&quot;<br />
+    System::Call &quot;kernel32::DeleteFileW(w `${Path}`) i.s&quot;<br />
+    Pop ${outVar}<br />
+  ${EndIf}<br />
+!macroend<br />
+<br />
+; folders<br />
+!define CreateJunction &quot;!insertmacro CreateJunction&quot;<br />
+!define CreateSymbolicLinkFolder &quot;!insertmacro CreateSymbolicLinkFolder&quot;<br />
+!define CreateLinkFolder &quot;!insertmacro CreateLinkFolder&quot;<br />
+!define DeleteLinkFolder &quot;!insertmacro DeleteLinkFolder&quot;<br />
+<br />
+Function CreateJunction<br />
+  Exch $4<br />
+  Exch<br />
+  Exch $5<br />
+  Push $1<br />
+  Push $2<br />
+  Push $3<br />
+  Push $6<br />
+  CreateDirectory &quot;$5&quot;<br />
+  System::Call &quot;kernel32::CreateFileW(w `$5`, i 0x40000000, i 0, i 0, i 3, i 0x02200000, i 0) i .r6&quot;<br />
+<br />
+  ${If} $0 = &quot;-1&quot;<br />
+    StrCpy $0 &quot;0&quot;<br />
+    RMDir &quot;$5&quot; <br />
+    goto create_junction_end  <br />
+  ${EndIf}<br />
+  <br />
+  CreateDirectory &quot;$4&quot;  ; Windows XP requires that the destination exists<br />
+  StrCpy $4 &quot;\??\$4&quot;<br />
+  StrLen $0 $4<br />
+  IntOp $0 $0 * 2  <br />
+  IntOp $1 $0 + 2<br />
+  IntOp $2 $1 + 10<br />
+  IntOp $3 $1 + 18<br />
+  System::Call &quot;*(i 0xA0000003, &amp;i4 $2, &amp;i2 0, &amp;i2 $0, &amp;i2 $1, &amp;i2 0, &amp;w$1 `$4`, &amp;i2 0)i.r2&quot;<br />
+  System::Call &quot;kernel32::DeviceIoControl(i r6, i 0x900A4, i r2, i r3, i 0, i 0, *i r4r4, i 0) i.r0&quot;<br />
+  System::Call &quot;kernel32::CloseHandle(i r6) i.r1&quot;<br />
+<br />
+  ${If} $0 == &quot;0&quot;<br />
+    RMDir &quot;$5&quot;  <br />
+  ${EndIf}<br />
+  <br />
+  create_junction_end:<br />
+  Pop $6<br />
+  Pop $3<br />
+  Pop $2<br />
+  Pop $1<br />
+  Pop $5<br />
+  Pop $4        <br />
+FunctionEnd<br />
+<br />
+!macro CreateJunction Junction Target outVar<br />
+  Push $0<br />
+  Push &quot;${Junction}&quot;<br />
+  Push &quot;${Target}&quot;<br />
+  Call CreateJunction<br />
+  StrCpy ${outVar} $0<br />
+  Pop $0<br />
+!macroend<br />
+<br />
+!macro CreateSymbolicLinkFolder Junction Target outVar<br />
+  ${CreateParentFolder} &quot;${Junction}&quot;<br />
+  System::Call &quot;kernel32::CreateSymbolicLinkW(w `${Junction}`, w `${Target}`, i 1) i .s&quot;<br />
+  Pop ${outVar}<br />
+  <br />
+  ${If} ${outVar} == &quot;error&quot;<br />
+    StrCpy ${outVar} &quot;0&quot;<br />
+  ${EndIf}<br />
+!macroend<br />
+<br />
+!macro CreateLinkFolder Junction Target outVar<br />
+  ${CreateSymbolicLinkFolder} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}<br />
+  <br />
+  ${If} ${outVar} == 0<br />
+    ${CreateJunction} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}    <br />
+  ${EndIf}  <br />
+!macroend<br />
+<br />
+!macro DeleteLinkFolder Path outVar<br />
+  ${IsSoftLink} &quot;${Path}&quot; ${outVar} <br />
+  <br />
+  ${If} ${outVar} != 0<br />
+    SetFileAttributes &quot;${Path}&quot; &quot;NORMAL&quot;<br />
+    System::Call &quot;kernel32::RemoveDirectoryW(w `${Path}`) i.s&quot;<br />
+    Pop ${outVar}<br />
+  ${EndIf}<br />
+!macroend<br />
+<br />
+Then you can use these functions:<br />
+<br />
+!include &quot;Junction.nsh&quot;<br />
+<br />
+; checks if target is hard link<br />
+${IsHardLink} &quot;${Path}&quot; ${outVar}<br />
+; checks if target is a soft link (symbolic link or junction)<br />
+${IsSoftLink} &quot;${Path}&quot; ${outVar}<br />
+; checks if target is either a hard link or a soft link<br />
+${IsLink} &quot;${Path}&quot; ${outVar}<br />
+<br />
+; creates a hard link (file only, must be on the same volume, and target must exist)<br />
+${CreateHardLink} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}<br />
+; creates a symbolic link for a file (Vista+, target doesn't need to exist and can be anywhere)<br />
+${CreateSymbolicLinkFile} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}<br />
+; tries to create a symbolic link first and when it fails, then it tries to create a hard link (files only)<br />
+${CreateLinkFile} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}<br />
+<br />
+; creates a symbolic link for a folder (Vista+, target doesn't need to exist)<br />
+${CreateSymbolicLinkFolder} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}<br />
+; creates a junction (folders only, path must be absolute and target should exist)<br />
+${CreateJunction} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}<br />
+; tries to create symbolic link first and when it fails, then it tries to create a junctions (directories only)<br />
+${CreateLinkFolder} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}<br />
+<br />
+; checks if a folder is a junction or a symbolic link, and if it is, it deletes it<br />
+${DeleteLinkFolder} &quot;${Path}&quot; ${outVar}<br />
+; checks if a file is a symbolic link or a hard link, and if it is, it deletes it<br />
+${DeleteLinkFile} &quot;${Path}&quot; ${outVar}<br />
+All of the above returns &quot;0&quot; on fail and anything else (usually 1, but not always) on success. <br />
+<br />
+Some basic differences between these three guys are:<br />
+all 3 of them:<br />
+- must be located on a NTFS volume (but not necessarily their target)<br />
+- system must be Windows 2000 or newer<br />
+<br />
+Hard links:<br />
+- only for files<br />
+- both the link and the target must be on the same volume and must exist<br />
+- path must be absolute<br />
+- it is indistinguishable from the original file and doesn't really act like a link, but rather like another copy of the target file (except that when you edit one, both get changed; but you need to delete both to get that file actually deleted)<br />
+<br />
+Junctions:<br />
+- only for folders<br />
+- in XP and older, when they are deleted in the explorer, the target gets wiped out as well (see wikipedia entry on junctions)<br />
+- path must be absolute, target can be anywhere<br />
+- on Win XP SP 4, creation fails if the target doesn't exist, on Win 7, it gets created (didn't try anywhere else)<br />
+<br />
+Symbolic Links:<br />
+- only Vista and newer<br />
+- supports both files and folders<br />
+- target can be anywhere and doesn't need to exist<br />
+- path can be relative or absolute<br />
+<br />
+more info:<br />
+http://msdn.microsoft.com/en-us/library/aa365680(v=vs.85).aspx<br />
+http://msdn.microsoft.com/en-us/library/aa365006(v=vs.85).aspx<br />
+http://en.wikipedia.org/wiki/NTFS_junction_point<br />
+http://en.wikipedia.org/wiki/NTFS_symbolic_link</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">22nd December 2010, 18:36</div></div><div class="posttext">You should create a wiki page for something like this (This stupid forum will break code even when using code tags etc)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hnedka</div><div class="date">22nd December 2010, 18:46</div></div><div class="posttext">I will, thanks for the suggestion. But first I will wait a little bit and fix possible issues/bugs.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">hnedka</div><div class="date">3rd June 2011, 11:08</div></div><div class="posttext">I have (over time) fixed various issues with the script. When I have more time, I will create a wikipage for it:<br />
+<br />
+!ifndef JUNCTION_INCLUDED<br />
+!define JUNCTION_INCLUDED<br />
+<br />
+; misc<br />
+!define CreateParentFolder &quot;!insertmacro CreateParentFolder&quot;<br />
+<br />
+!macro CreateParentFolder Path<br />
+  Push $1  <br />
+  ${GetParent} &quot;${Path}&quot; $1<br />
+  CreateDirectory &quot;$1&quot;<br />
+  Pop $1<br />
+!macroend<br />
+<br />
+; info<br />
+!define IsLink &quot;!insertmacro IsLink&quot;<br />
+!define IsSoftLink &quot;!insertmacro IsSoftLink&quot;<br />
+!define IsHardLink &quot;!insertmacro IsHardLink&quot;<br />
+<br />
+Function IsSoftLink<br />
+  Exch $0<br />
+  ${GetFileAttributes} &quot;$0&quot; &quot;REPARSE_POINT&quot; $0<br />
+<br />
+  ${If} $0 != &quot;1&quot;<br />
+    StrCpy $0 &quot;0&quot;<br />
+  ${EndIf}<br />
+  Exch $0<br />
+FunctionEnd<br />
+<br />
+!macro IsSoftLink Path outVar<br />
+  Push &quot;${Path}&quot;<br />
+  Call IsSoftLink<br />
+  Pop ${outVar}<br />
+!macroend<br />
+<br />
+Function IsHardLink<br />
+  Exch $1<br />
+  System::Call &quot;kernel32::CreateFileW(w `$1`, i 0x40000000, i 0, i 0, i 3, i 0, i 0) i .r0&quot;<br />
+  <br />
+  ${If} $0 = &quot;-1&quot;<br />
+    StrCpy $0 &quot;0&quot;<br />
+    goto is_hard_link_end  <br />
+  ${EndIf}<br />
+    <br />
+  System::Call &quot;*(&amp;i256 0) i. r1&quot;       <br />
+  System::Call &quot;kernel32::GetFileInformationByHandle(i r0, i r1) i .s&quot;<br />
+  System::Call &quot;kernel32::CloseHandle(i r0) i.r0&quot;<br />
+  Pop $0<br />
+  <br />
+  ${If} $0 == &quot;0&quot;<br />
+    goto is_hard_link_end  <br />
+  ${EndIf}  <br />
+  <br />
+  System::Call &quot;*$1(&amp;i40 0, &amp;i4 .r0)&quot;<br />
+  <br />
+  ${If} $0 != &quot;0&quot;<br />
+    IntOp $0 $0 - 1  <br />
+  ${EndIf}    <br />
+<br />
+  is_hard_link_end:<br />
+  Pop $1<br />
+FunctionEnd<br />
+<br />
+!macro IsHardLink Path outVar<br />
+  Push $0<br />
+  Push &quot;${Path}&quot;<br />
+  Call IsHardLink<br />
+  Exch $0<br />
+  Pop ${outVar}<br />
+!macroend<br />
+<br />
+!macro IsLink Path outVar<br />
+  ${IsSoftLink} &quot;${Path}&quot; ${outVar}<br />
+<br />
+  ${If} ${outVar} == 0<br />
+    ${IsHardLink} &quot;${Path}&quot; ${outVar}<br />
+  ${EndIf} <br />
+!macroend<br />
+<br />
+; files<br />
+!define CreateHardLink &quot;!insertmacro CreateHardLink&quot;<br />
+!define CreateSymbolicLinkFile &quot;!insertmacro CreateSymbolicLinkFile&quot;<br />
+!define CreateLinkFile &quot;!insertmacro CreateLinkFile&quot;<br />
+!define DeleteLinkFile &quot;!insertmacro DeleteLinkFile&quot;<br />
+<br />
+!macro CreateSymbolicLinkFile Junction Target outVar<br />
+  ${CreateParentFolder} &quot;${Junction}&quot;<br />
+  System::Call &quot;kernel32::CreateSymbolicLinkW(w `${Junction}`, w `${Target}`, i 0) i .s&quot;<br />
+  Pop ${outVar}<br />
+  <br />
+  ${If} ${outVar} == &quot;error&quot;<br />
+    StrCpy ${outVar} &quot;0&quot;<br />
+  ${EndIf}<br />
+!macroend<br />
+<br />
+!macro CreateHardLink Junction Target outVar<br />
+  ${CreateParentFolder} &quot;${Junction}&quot;<br />
+  System::Call &quot;kernel32::CreateHardLinkW(w `${Junction}`, w `${Target}`, i 0) i .s&quot;<br />
+  <br />
+  Pop ${outVar}<br />
+  <br />
+  ${If} ${outVar} == 0  <br />
+    StrCpy ${outVar} &quot;1&quot;<br />
+  ${Else}<br />
+    StrCpy ${outVar} &quot;0&quot;<br />
+  ${EndIf}  <br />
+!macroend<br />
+<br />
+!macro CreateLinkFile Junction Target outVar<br />
+  ${CreateSymbolicLinkFile} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}<br />
+  <br />
+  ${If} ${outVar} == 0  <br />
+    ${CreateHardLink} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}    <br />
+  ${EndIf}<br />
+!macroend<br />
+<br />
+!macro DeleteLinkFile Path outVar<br />
+  ${IsLink} &quot;${Path}&quot; ${outVar}<br />
+<br />
+  ${If} ${outVar} != 0<br />
+    SetFileAttributes &quot;${Path}&quot; &quot;NORMAL&quot;<br />
+    System::Call &quot;kernel32::DeleteFileW(w `${Path}`) i.s&quot;<br />
+    Pop ${outVar}<br />
+  ${EndIf}<br />
+!macroend<br />
+<br />
+; folders<br />
+!define CreateJunction &quot;!insertmacro CreateJunction&quot;<br />
+!define CreateSymbolicLinkFolder &quot;!insertmacro CreateSymbolicLinkFolder&quot;<br />
+!define CreateLinkFolder &quot;!insertmacro CreateLinkFolder&quot;<br />
+!define DeleteLinkFolder &quot;!insertmacro DeleteLinkFolder&quot;<br />
+<br />
+Function CreateJunction<br />
+  Exch $4<br />
+  Exch<br />
+  Exch $5<br />
+  Push $1<br />
+  Push $2<br />
+  Push $3<br />
+  Push $6<br />
+  CreateDirectory &quot;$5&quot;<br />
+  System::Call &quot;kernel32::CreateFileW(w `$5`, i 0x40000000, i 0, i 0, i 3, i 0x02200000, i 0) i .r6&quot;<br />
+<br />
+  ${If} $0 = &quot;-1&quot;<br />
+    StrCpy $0 &quot;0&quot;<br />
+    RMDir &quot;$5&quot; <br />
+    goto create_junction_end  <br />
+  ${EndIf}<br />
+  <br />
+  CreateDirectory &quot;$4&quot;  ; Windows XP requires that the destination exists<br />
+  StrCpy $4 &quot;\??\$4&quot;<br />
+  StrLen $0 $4<br />
+  IntOp $0 $0 * 2  <br />
+  IntOp $1 $0 + 2<br />
+  IntOp $2 $1 + 10<br />
+  IntOp $3 $1 + 18<br />
+  System::Call &quot;*(i 0xA0000003, &amp;i4 $2, &amp;i2 0, &amp;i2 $0, &amp;i2 $1, &amp;i2 0, &amp;w$1 `$4`, &amp;i2 0)i.r2&quot;<br />
+  System::Call &quot;kernel32::DeviceIoControl(i r6, i 0x900A4, i r2, i r3, i 0, i 0, *i r4r4, i 0) i.r0&quot;<br />
+  System::Call &quot;kernel32::CloseHandle(i r6) i.r1&quot;<br />
+<br />
+  ${If} $0 == &quot;0&quot;<br />
+    RMDir &quot;$5&quot;  <br />
+  ${EndIf}<br />
+  <br />
+  create_junction_end:<br />
+  Pop $6<br />
+  Pop $3<br />
+  Pop $2<br />
+  Pop $1<br />
+  Pop $5<br />
+  Pop $4        <br />
+FunctionEnd<br />
+<br />
+!macro CreateJunction Junction Target outVar<br />
+  Push $0<br />
+  Push &quot;${Junction}&quot;<br />
+  Push &quot;${Target}&quot;<br />
+  Call CreateJunction<br />
+  Exch $0<br />
+  Pop ${outVar}<br />
+!macroend<br />
+<br />
+!macro CreateSymbolicLinkFolder Junction Target outVar<br />
+  ${CreateParentFolder} &quot;${Junction}&quot;<br />
+  System::Call &quot;kernel32::CreateSymbolicLinkW(w `${Junction}`, w `${Target}`, i 1) i .s&quot;<br />
+  Pop ${outVar}<br />
+  <br />
+  ${If} ${outVar} == &quot;error&quot;<br />
+    StrCpy ${outVar} &quot;0&quot;<br />
+  ${EndIf}<br />
+!macroend<br />
+<br />
+!macro CreateLinkFolder Junction Target outVar<br />
+  ${CreateSymbolicLinkFolder} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}<br />
+  <br />
+  ${If} ${outVar} == 0<br />
+    ${CreateJunction} &quot;${Junction}&quot; &quot;${Target}&quot; ${outVar}    <br />
+  ${EndIf}  <br />
+!macroend<br />
+<br />
+!macro DeleteLinkFolder Path outVar<br />
+  ${IsSoftLink} &quot;${Path}&quot; ${outVar} <br />
+  <br />
+  ${If} ${outVar} != 0<br />
+    SetFileAttributes &quot;${Path}&quot; &quot;NORMAL&quot;<br />
+    System::Call &quot;kernel32::RemoveDirectoryW(w `${Path}`) i.s&quot;<br />
+    Pop ${outVar}<br />
+  ${EndIf}<br />
+!macroend<br />
+<br />
+; turn off NSIS warnings<br />
+Section &quot;-JunctionRemoveWarnings&quot;<br />
+  Return<br />
+  Call CreateJunction<br />
+  Call IsHardLink<br />
+  Call IsSoftLink<br />
+SectionEnd<br />
+<br />
+!endif</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">David Pi</div><div class="date">8th September 2011, 15:52</div></div><div class="posttext">Thank you very much. It's very helpful to me.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">David Pi</div><div class="date">24th September 2011, 11:10</div></div><div class="posttext">!macro CreateHardLink Junction Target outVar<br />
+  ${CreateParentFolder} &quot;${Junction}&quot;<br />
+  System::Call &quot;kernel32::CreateHardLinkW(w `${Junction}`, w `${Target}`, i 0) i .s&quot;<br />
+  <br />
+  Pop ${outVar}<br />
+  <br />
+  ${If} ${outVar} == 0  <br />
+    StrCpy ${outVar} &quot;1&quot;<br />
+  ${Else}<br />
+    StrCpy ${outVar} &quot;0&quot;<br />
+  ${EndIf}  <br />
+!macroend <br />
+<br />
+It seems the macro CreateHardLink has make a mistake.<br />
+The system call return &quot;1&quot; on success, return &quot;0&quot; on fail. But the ${ourVar} was transfered to the opposite... Finally it return &quot;0&quot; on sucess.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">PoRtAbLe_StEaLtH</div><div class="date">6th December 2012, 10:42</div></div><div class="posttext">very useful, thanks for sharing.<br />
+i was just thinking about this after SetEnvironment failed in results.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">majikaz</div><div class="date">18th February 2013, 09:37</div></div><div class="posttext">Excellent resource.. I was stuck trying to figure out the problem of creating junctions from within my nsis installer. I only found this thread after kindly being pointed in the right direction.  <br />
+<br />
+You should defo. make a wiki page for this one. ;)<br />
+<br />
+A BIG help,<br />
+<br />
+Thanks  :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">PoRtAbLe_StEaLtH</div><div class="date">11th July 2013, 16:03</div></div><div class="posttext">n/m.. error was with me..</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

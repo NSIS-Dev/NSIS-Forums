@@ -1,0 +1,132 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Stop Install files process and display finish page, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Stop Install files process and display finish page NSIS Discussion" />
+	
+	<title> Stop Install files process and display finish page [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Stop Install files process and display finish page</div>
+<hr />
+<div class="pda"><a href="t-330315.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=330315">Stop Install files process and display finish page</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">jammusi</div><div class="date">4th May 2011, 13:17</div></div><div class="posttext">Hi<br />
+<br />
+Is is possible to force stopping the Install file section and jump immediately to the finish page?  <br />
+<br />
+tx<br />
+<br />
+Oren</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">4th May 2011, 13:35</div></div><div class="posttext">Calling abort will stop the installer:<br />
+Section<br />
+SendMessage $HWNDPARENT 0x408 1 0 ;Hack to move to the next page<br />
+Abort<br />
+SectionEnd<br />
+...but, this means the install has been aborted and the only thing the user can do is to close the installer.<br />
+<br />
+If you want to continue doing stuff after the stop, you can't call abort. You can emulate the abort with some ugly code:<br />
+<br />
+var abortedhack<br />
+!macro BeginAbortableSection<br />
+StrCmp $abortedhack &quot;&quot; 0 abortedhack_end<br />
+!macroend<br />
+!macro EndAbortableSection<br />
+goto abortedhack_end<br />
+abortedhack_stop:<br />
+SetAutoClose true<br />
+StrCpy $abortedhack 1<br />
+abortedhack_end:<br />
+!macroend<br />
+!macro StopInstall<br />
+goto abortedhack_stop<br />
+!macroend<br />
+<br />
+<br />
+Section <br />
+!insertmacro BeginAbortableSection<br />
+<br />
+MessageBox mb_yesno &quot;Stop?&quot; IDNO nope<br />
+!insertmacro StopInstall<br />
+nope:<br />
+<br />
+!insertmacro EndAbortableSection<br />
+SectionEnd<br />
+<br />
+<br />
+Section <br />
+!insertmacro BeginAbortableSection<br />
+<br />
+MessageBox mb_yesno &quot;Stop?&quot; IDNO nope<br />
+!insertmacro StopInstall<br />
+nope:<br />
+<br />
+!insertmacro EndAbortableSection<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jammusi</div><div class="date">4th May 2011, 14:03</div></div><div class="posttext">Hi <br />
+abort is no good for me as I want to exit the installer gracefully.<br />
+<br />
+I can see what you mean. <br />
+Your code enforce all code must be place within the section (either explicitly or implicitly by using macros). This is because of the  Goto abortedhack_end placed at the end of each  section.<br />
+  <br />
+The problem is I have lots of functions being called from the sections. how (and if) can I Goto this label from within a &quot;called function&quot;<br />
+<br />
+I saw Goto can also get a var. I actaually do not really understand yet what does it do - but maybe this can help?<br />
+<br />
+tx</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">MSG</div><div class="date">4th May 2011, 17:40</div></div><div class="posttext">The problem is I have lots of functions being called from the sections. how (and if) can I Goto this label from within a &quot;called function&quot;<br />
+When you want to 'abort', set a variable and jump to the end of your function. After each function call, check that variable and if it's set jump to end of your section.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jammusi</div><div class="date">4th May 2011, 19:20</div></div><div class="posttext">thanks mate.<br />
+<br />
+Ya I know this option but I prefer to achieve it in the easy way. without lots of code modifications...<br />
+  <br />
+Seems like there is no such a way<br />
+<br />
+tx<br />
+<br />
+Oren</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">4th May 2011, 21:50</div></div><div class="posttext">You can also call Return from functions to exit them early (without using the Goto).<br />
+<br />
+Edit: However, as long as you skip over those function calls then why do you need to have this code in the functions?<br />
+<br />
+Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">jammusi</div><div class="date">5th May 2011, 12:22</div></div><div class="posttext">Thanks.<br />
+<br />
+If I skip the functions i do not need the &quot;Return&quot; within the functions <br />
+<br />
+I will try to explain again what I need. I have a pretty complex scripts with lots of functions, macros, and commands (i.e ${MyCommand})<br />
+<br />
+Currently whenever the setup encounters an unexpected error which can not be processed - a central function to roll back all operations already been taken by the setup is being called. <br />
+than the user is informed and the script is Aborted.<br />
+<br />
+What I need is to terminate the setup in a more friendly way - by displaying the finish page.<br />
+ <br />
+The question is how can i achieve that? <br />
+One possible way, as suggested,  is to check and handle status status variable that should be checked before calling to each function or within the functions<br />
+<br />
+Is there an easier way - that will solved me the necessity to modify a lot of code.<br />
+<br />
+tx</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

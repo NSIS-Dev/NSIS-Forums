@@ -1,0 +1,528 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" InstallOptions as an extension DLL, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  InstallOptions as an extension DLL NSIS Discussion" />
+	
+	<title> InstallOptions as an extension DLL [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  InstallOptions as an extension DLL</div>
+<hr />
+<div class="pda"><a href="t-68756.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=68756">InstallOptions as an extension DLL</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">15th December 2001, 06:07</div></div><div class="posttext">Anybody want to do it, or should I?<br />
+<br />
+Benefits: <br />
+  * better integration (can subclass and do things like use the normal cancel and next&gt; buttons -- see nsisdl.dll for some good examples)<br />
+  * better script integration (don't have to write out the HWND, can have items go direct from/to variables)<br />
+<br />
+Downsides:<br />
+  * have to make sure the DLL frees all memory, since it is running in-process (looks like this can already be done with a #define in installoptions.exe :)<br />
+<br />
+Thoughts, etc? :)<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">15th December 2001, 10:05</div></div><div class="posttext">Went ahead and got bored and hacked it together.<br />
+<br />
+From the iodll.cpp header:<br />
+<br />
+ *  key changes<br />
+ *   - no longer need parentwnd ini writing shit<br />
+ *   - to call now, use:<br />
+ *        Push $TEMP\inst.ini<br />
+ *        CallInstDLL $TEMP\mydll.dll dialog<br />
+ *        Pop $0 <br />
+ *         ($0 would be &quot;success&quot; &quot;cancel&quot; or some other value on error.<br />
+ *   - new INI entries: [settings]\cancelconfirm (text to confirm cancel on cancel button click)<br />
+ *   - fixed some flag related bugs (multiple of them at 0x100 etc)<br />
+ *   - made it so you can specify positions in negative, for distance from the right/bottom edges.<br />
+ *   - made it so that the file/dir requests automatically size the browse button in<br />
+ *   - removed a lot of code for the old style integration<br />
+ *   - removed support for silent installers (it seems the old version would bring up it's own dialog)<br />
+<br />
+<br />
+Attached is source and compiled version (in release/)<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">petersa</div><div class="date">15th December 2001, 10:11</div></div><div class="posttext">This is a great idea, Justin! :D<br />
+<br />
+Small problem, though. The compiled installer can't be cancelled. You have to choose Next. Why doesn't this work?<br />
+<br />
+I really don't like that old Win3.1ish box you get when you click the Browse button either. Or the useless Read-Only checkbox on it.<br />
+<br />
+Any chance of putting the [Settings]\Title option back in?<br />
+<br />
+Hiding the disabled Back button?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Hando</div><div class="date">15th December 2001, 11:12</div></div><div class="posttext">The example test.nsi has an error in it. Calls a non-existant label/function &quot;Quit&quot;.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Thor</div><div class="date">15th December 2001, 12:56</div></div><div class="posttext">Great idea<br />
+i was wondering before why install options needed to be a seperate exe, instead of beeing a plugin like nsisdl...<br />
+<br />
+btw Justin, would it be a good idea to make splash.exe a plugin too?<br />
+prolly not really any more usefull i suppose...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">F. Heidenreich</div><div class="date">15th December 2001, 18:22</div></div><div class="posttext">Originally posted by petersa <br />
+<br />
+I really don't like that old Win3.1ish box you get when you click the Browse button either. Or the useless Read-Only checkbox on it.<br />
+<br />
+Simply add two new flags to the flag table at ReadSettings<br />
+<br />
+{ &quot;FILE_EXPLORER&quot;,     OFN_EXPLORER      },<br />
+{ &quot;FILE_HIDEREADONLY&quot;, OFN_HIDEREADONLY  },<br />
+<br />
+<br />
+With the FILE_EXPLORER flag you have the new-style dialog box, the FILE_HIDEREADONLY flag ... will hide the readonly checkbox :) <br />
+<br />
+Regards,<br />
+~ Florian</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">15th December 2001, 18:45</div></div><div class="posttext">maybe a good idea (i hope so):<br />
+Maybe it's possible to allready have a window or something at .onInint to be able to use InstOpts there?<br />
+<br />
+But maybe that conflicts with the use of splash, but i don't know, I'm no c expert, sorry...<br />
+<br />
+The reason i'm asking: it would be a lot easier to ask for e.g. RegCodes or something. Right now, i'm using a second installer which has instopts in a section, in my .onInit to ask for RegCode.<br />
+<br />
+Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">15th December 2001, 19:53</div></div><div class="posttext">Here's an updated DLL+source:<br />
+<br />
+  Return of [Settings]\Title support<br />
+  Keyboard shortcuts fix (elegant way :).<br />
+  Fixes for file open dialog (doesn't prompt you twice on cancel)<br />
+  Fixes of test.nsi<br />
+<br />
+<br />
+And to those who asks, cancel should work, the result will be &quot;cancel&quot; on the top of the stack (so you can act accordingly in your script).<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">15th December 2001, 19:55</div></div><div class="posttext">Originally posted by Smile2Me <br />
+maybe a good idea (i hope so):<br />
+Maybe it's possible to allready have a window or something at .onInint to be able to use InstOpts there?<br />
+<br />
+But maybe that conflicts with the use of splash, but i don't know, I'm no c expert, sorry...<br />
+<br />
+The reason i'm asking: it would be a lot easier to ask for e.g. RegCodes or something. Right now, i'm using a second installer which has instopts in a section, in my .onInit to ask for RegCode.<br />
+<br />
+Hendri. <br />
+<br />
+There are issues with that currently, but that's not to say it couldn't happen soon. I'll work on a solution.<br />
+<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">15th December 2001, 20:49</div></div><div class="posttext">OK here's another update. Made the back button optional now, and started upgrading NSIS for better integration. I'll put up nsis 1.9b2 up later today that will really help (a couple of new callbacks and a new instruction). Included in the .zip is an example test-setup.exe, that shows how you can go backwards and forwards..<br />
+<br />
+Something I am thinking is, I want to store the results of a dialog in the ini in such a way so that when you read it back in, the changes you made are saved. <br />
+<br />
+That way, when you go back to a page you already editted, your changes will be preserved. and so on.<br />
+<br />
+The new callbacks I've added to NSIS aren't really right yet. It's a pain figuring out the most general but not painful way to do these things.<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">16th December 2001, 01:48</div></div><div class="posttext">Here's yet another version, that adds a few options, but the primary difference is that it reads control state information from State=, and writes out the results to the same place (this lets you do neat things like in the example I included). The example I included requires NSIS 1.9b2 which is on www.firehose.net/free/nsis/ (I also included a compiled exe for you to try)<br />
+<br />
+Try this puppy out, let me know what you think.. I suppose I'll clean it up, update the documentation, and all that, unless Michael would rather do it. :)<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">16th December 2001, 08:28</div></div><div class="posttext">hi justin,<br />
+<br />
+i noticed a little detail in test-setup.exe:<br />
+if instopts have been displayed and you continue to select a dir, but then again return to the instopts page, the Next button still says &quot;install&quot;<br />
+<br />
+Greetzzz, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">16th December 2001, 08:53</div></div><div class="posttext">hi justin,<br />
+<br />
+sorry, i found the necessary settings to change button text in test.ini...<br />
+<br />
+another thing, we can call instopts after license now. So including RegCode has become possible! Well done!!!<br />
+<br />
+Greetz, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">16th December 2001, 14:56</div></div><div class="posttext">Justin,<br />
+<br />
+i think i have found a little bug in InstOpts.dll (that's also in InstOpts.exe BTW):<br />
+<br />
+i use editboxes to get user name and regcode. if these are left blank, then instopts procudes a runtime error.<br />
+<br />
+(at least in my install...)<br />
+<br />
+good luck, greetz, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">16th December 2001, 15:57</div></div><div class="posttext">Justin,<br />
+<br />
+two more strange things i noticed using 1.9b2 and instoptsdll4:<br />
+<br />
+-if you use a splash screen, the installer moves to the background suddenly after finishing the splash (no problem in 1.81!)<br />
+<br />
+-if you use .onNextPage and .onPrevPage and program something in these functions (eg a Messagebox, eg after checking RegCode) than the first screen (lisence) appears again, then the message appears and after clicking ok, the page for dirselect appears...<br />
+<br />
+So my order of pages is: lisence agreement, RegCode, DirSelect,...<br />
+<br />
+and using 1.9b2 and instoptsdll4, the installer returns to lisence while checking the code and after that, moves on to DirSelect.<br />
+<br />
+Why is the installer returning to the lisence agreement between page changes?<br />
+<br />
+Greetz, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Hando</div><div class="date">16th December 2001, 17:07</div></div><div class="posttext">.onNextPage and .onPrevPage work for next/previous screens but what if you wanted to do something on the inital screen?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">16th December 2001, 20:31</div></div><div class="posttext">Originally posted by Hando <br />
+.onNextPage and .onPrevPage work for next/previous screens but what if you wanted to do something on the inital screen? <br />
+<br />
+In .onInit do:<br />
+<br />
+BringToFront<br />
+CallInstDLL...<br />
+<br />
+<br />
+BringToFront is necessary because in .onInit the installer window is initially hidden.<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">17th December 2001, 01:35</div></div><div class="posttext">Originally posted by Smile2Me <br />
+Justin,<br />
+<br />
+i think i have found a little bug in InstOpts.dll (that's also in InstOpts.exe BTW):<br />
+<br />
+i use editboxes to get user name and regcode. if these are left blank, then instopts procudes a runtime error.<br />
+<br />
+(at least in my install...)<br />
+<br />
+good luck, greetz, Hendri. <br />
+<br />
+Hmm, empty editboxes don't cause problems for me.. Anything in particular you are doing? Feel free to post your .nsi etc..<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">17th December 2001, 07:42</div></div><div class="posttext">hi justin,<br />
+<br />
+sorry, nsi not available right now, because i'm not at home...<br />
+but this is what i'm doing:<br />
+<br />
+using .onNextPage and .onPrevPage to activate the ini with editboxes using instopts.dll dialog.<br />
+Then reading the output of the dll (Pop $R8).<br />
+using this to determine what to do (just as in your example...)<br />
+The if user has clicked &quot;register&quot;, read the ini with readinistr $0 $TEMP\mtlis.ini &quot;FIELD 5&quot; State<br />
+<br />
+And this causes some problem, i think in instopts.dll but maybe it's in my install if you do not experience problems...<br />
+<br />
+Well what I do next:<br />
+pass regname and regcode to exe: execwait &quot;check.exe n=$0 c=$1&quot;<br />
+and in my exe there's a try environment, so this cannot cause any problem (i guess...)<br />
+<br />
+This exe pushes a 1 if name and code match, a 0 otherwise (eg on error). Then the install checks whether the exitcode of the exe is 1 or 0 and display a message...<br />
+<br />
+But I had some trouble before using this try in a dll (there it didn't do anything so maybe this is the case here, see the thread on RegCode). I will check the source code of my checker, thanks for you response!!<br />
+<br />
+And what about this returning to first page thing??? I want to display a message (eg: Code is ok, thx for registering) but this message appears on top of the lisence agreement (the prev page) and than (after clickin ok) the installer shift to dirselect. This message should be on top of the regname and regcode page, shouldn't it?<br />
+<br />
+Thx for your trouble, greetz, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">17th December 2001, 08:01</div></div><div class="posttext">Originally posted by Smile2Me <br />
+hi justin,<br />
+<br />
+sorry, nsi not available right now, because i'm not at home...<br />
+but this is what i'm doing:<br />
+<br />
+using .onNextPage and .onPrevPage to activate the ini with editboxes using instopts.dll dialog.<br />
+Then reading the output of the dll (Pop $R8).<br />
+using this to determine what to do (just as in your example...)<br />
+The if user has clicked &quot;register&quot;, read the ini with readinistr $0 $TEMP\mtlis.ini &quot;FIELD 5&quot; State<br />
+<br />
+And this causes some problem, i think in instopts.dll but maybe it's in my install if you do not experience problems...<br />
+<br />
+Well what I do next:<br />
+pass regname and regcode to exe: execwait &quot;check.exe n=$0 c=$1&quot;<br />
+and in my exe there's a try environment, so this cannot cause any problem (i guess...)<br />
+<br />
+This exe pushes a 1 if name and code match, a 0 otherwise (eg on error). Then the install checks whether the exitcode of the exe is 1 or 0 and display a message...<br />
+<br />
+But I had some trouble before using this try in a dll (there it didn't do anything so maybe this is the case here, see the thread on RegCode). I will check the source code of my checker, thanks for you response!!<br />
+<br />
+<br />
+Hmm, I'm not sure why this would cause a crash.. does your code properly handle where the command line has n= and c= (meaning no text after them)...<br />
+<br />
+<br />
+And what about this returning to first page thing??? I want to display a message (eg: Code is ok, thx for registering) but this message appears on top of the lisence agreement (the prev page) and than (after clickin ok) the installer shift to dirselect. This message should be on top of the regname and regcode page, shouldn't it?<br />
+<br />
+Thx for your trouble, greetz, Hendri. <br />
+<br />
+<br />
+Ahh this is because you are calling the messagebox from within onNextPage, which is called before the license page is hidden. You could do one of the following:<br />
+<br />
+<br />
+  Use installoptions to make the thank-you dialog within the main window.<br />
+  Call HideWindow, then MessageBox, and then BringToFront at the end. (this will hide the main install window while it displays the messagebox).<br />
+<br />
+<br />
+Probably the first item is nicer looking :) And you can always dynamically generate the ini file using WriteINIStr (so you can include their name and regcode or something like that).<br />
+<br />
+-Justin<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">17th December 2001, 08:08</div></div><div class="posttext">hi justin,<br />
+<br />
+Call HideWindow, then MessageBox, and then BringToFront at the end. (this will hide the main install window while it displays the messagebox).<br />
+<br />
+Probably the first item is nicer looking  And you can always dynamically generate the ini file using WriteINIStr (so you can include their name and regcode or something like that). <br />
+<br />
+This is a great idea! I will implement it when i get home, after first completing my final exam of Applied Microeconomics :(<br />
+<br />
+I will also check whether my check.exe handles empty strings allright. I allready tested this a little bit and did not find problems. Maybe there is something I overlooked...<br />
+<br />
+But this should be caught by try (if it does work...) I'll test some more :)<br />
+<br />
+Thx, greetz, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">17th December 2001, 08:13</div></div><div class="posttext">Use installoptions to make the thank-you dialog within the main window. <br />
+<br />
+<br />
+well i copied the wrong one :)<br />
+<br />
+The above is a great idea!<br />
+<br />
+Greetz, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">eccles</div><div class="date">17th December 2001, 17:52</div></div><div class="posttext">Hi Justin...<br />
+<br />
+I too was having problems with splash screens with NSIS 1.9x, and the new .onNextPage/.onPrevPage functions were /almost/ letting me do something I've wanted to do for ages, so I thought I'd dive in again...  :) <br />
+<br />
+How about this..?  I've moved .onInit back to where it was, but made .onNextPage triggered before the first page as well as the others.  I've also made it possible to jump to any page you like from .onNextPage/.onPrevPage by doing e.g., Abort 2, to go forward 2 pages.  Abort 1 in .onNextPage, and Abort -1 in .onPrevPage, would be the same as returning normally without an Abort.<br />
+<br />
+btw, using makensis-bz2.exe saves my installer a whole MB :cool: (down to 7.5MB from 8.5MB).<br />
+<br />
+Dave.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">17th December 2001, 19:38</div></div><div class="posttext">Originally posted by eccles <br />
+I too was having problems with splash screens with NSIS 1.9x, and the new .onNextPage/.onPrevPage functions were /almost/ letting me do something I've wanted to do for ages, so I thought I'd dive in again...  :) <br />
+<br />
+<br />
+What exactly is the problem with splash screens in 1.90? They seem to work fine for me.<br />
+<br />
+<br />
+How about this..?  I've moved .onInit back to where it was, but made .onNextPage triggered before the first page as well as the others.  I've also made it possible to jump to any page you like from .onNextPage/.onPrevPage by doing e.g., Abort 2, to go forward 2 pages.  Abort 1 in .onNextPage, and Abort -1 in .onPrevPage, would be the same as returning normally without an Abort.<br />
+<br />
+<br />
+Hmm, not sure how I feel about this... I guess being able to skip pages is nice, but it increases teh complexity.. Also, did you need to modify exec.c for Abort -1/1/2? :)<br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Angry Weasel</div><div class="date">17th December 2001, 20:36</div></div><div class="posttext">I think NSIS needs this sort of functionality built in. The ability to create up to eight pages (it's a bit much but you never know), and you would (with my proposed method) specify the contents as follows:<br />
+<br />
+[code]<br />
+; Instead of the SubCaption page_num function, you would just do this:<br />
+; If the page name is one of the defaults, &quot;License&quot;, &quot;DirSelect&quot;, etc. then NSIS should look for the appropriate data here. A page name of &quot;Init&quot; would be the first page displayed in the installer.<br />
+<br />
+Page &quot;License&quot;<br />
+<br />
+PageIn 1 2 ; this is much like SectionIn, it specifies which install type(s) will display this page<br />
+<br />
+SubCaption &quot;: License Agreement&quot; ; Not changed from the default, <br />
+; only used to illustrate my idea for a new SubCaption function.<br />
+<br />
+PutText 50,50 &quot;You must agree to the following license before continuing:&quot; ; This replaces the LicenseData function, and allows <br />
+; the user to place any text on any page. Syntax: PutText x,y &quot;text&quot; <br />
+; where x is the distance from the left and y is the distance from the top<br />
+<br />
+TextBox 50,75 &quot;license.txt&quot; /noedit ; Places a textbox on a page. By <br />
+; default it would be editable, so the /noedit switch allows for it <br />
+; to be grayed out like the current license agreement.<br />
+<br />
+CheckBox 50,300&quot;I &amp;Agree&quot; AgreeCBox /type=checkbox ; The /type switch <br />
+; specifies whether it's a radio button (with radiobuttons, they <br />
+; would all be part of the same set for a particular page, meaning <br />
+; only one radiobutton could be selected per page.) or a checkbox, <br />
+; AgreeCBox is the name which can be called by the VerifyCB function.<br />
+<br />
+PageEnd<br />
+Function .onVerifyPage License ; Nice callback. If Abort is called within this, then the Next button for the specified page is greyed out until the condition triggering the abort is no longer true.<br />
+<br />
+VerifyCB $0 AgreeCBox ; Stores the status (&quot;true&quot; for <br />
+; checked, &quot;false&quot; for unchecked) of checkbox AgreeCBox <br />
+; in user variable $0.<br />
+StrCmp $0 &quot;true&quot; UserAgrees<br />
+Abort<br />
+UserAgrees:<br />
+CallPage &quot;DirSelect&quot; ; This would call whatever you want the next page to be.<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">eccles</div><div class="date">17th December 2001, 21:25</div></div><div class="posttext">Originally posted by justin <br />
+What exactly is the problem with splash screens in 1.90? They seem to work fine for me. First off, I'm working in XP at the mo, so maybe it's an XP only thing...<br />
+<br />
+I use a modified splash.exe which waits indefinitely.  My installer Exec's it, waits for a short pause, brings up a message box, then sends a message to close it afterwards.<br />
+ With NSIS 1.90 the splash screen doesn't become visible until the message box is shown.<br />
+ When it is shown, it appears in front of the message box.<br />
+ Admittedly, I could get around this by sending 0 instead of $HWNDPARENT (?)<br />
+ Originally posted by justin <br />
+Hmm, not sure how I feel about this... I guess being able to skip pages is nice, but it increases teh complexity.. Also, did you need to modify exec.c for Abort -1/1/2? :)<br />
+<br />
+-Justin Well, did you think I made those earlier savings for nothing? :D <br />
+<br />
+But no - didn't touch it.  Only modified ui.c.  In some ways it's simpler than before?  (.onNextPage/.onPrevPage are only called from one place, for instance.)  Have you cast a quick eye over the changes?<br />
+<br />
+Thanks anyway,<br />
+<br />
+Dave.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">justin</div><div class="date">18th December 2001, 01:18</div></div><div class="posttext">Fine fine. :)<br />
+Since 1.90 was never on nullsoft.com (only firehose.net) I updated it silently. <br />
+<br />
+-Justin</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">eccles</div><div class="date">18th December 2001, 06:57</div></div><div class="posttext">Cheers Justin :) <br />
+<br />
+Dave.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">18th December 2001, 07:10</div></div><div class="posttext">Hi justin,<br />
+<br />
+this is my .onInit:<br />
+<br />
+  File /oname=spltmp.bmp &quot;splash.bmp&quot;<br />
+  File /oname=spltmp.exe &quot;splash.exe&quot;<br />
+  ExecWait '&quot;$TEMP\spltmp.exe&quot; 3000 $HWNDPARENT $TEMP\spltmp'<br />
+  BringToFront<br />
+  Delete &quot;$TEMP\spltmp.exe&quot;<br />
+  Delete &quot;$TEMP\spltmp.bmp&quot;<br />
+<br />
+But still my installer moves to the background after finishing splash. So I have to click in the taskbar to activate it again...<br />
+<br />
+Greetz, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">eccles</div><div class="date">18th December 2001, 07:30</div></div><div class="posttext">Hi Hendri...<br />
+<br />
+Have you tried the slightly-modified NSIS 1.90 from firehose.net?  .onInit has been moved back to where it used to be (before NSIS creates any windows).<br />
+<br />
+Also, you shouldn't need the BringToFront now.  (Actually, maybe this is what's doing the damage now)...<br />
+<br />
+-- <br />
+Dave.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">18th December 2001, 10:46</div></div><div class="posttext">Dave, thx, i'll download it now.<br />
+I didn't realize there was a difference between 1.9 from Nullsoft and that from firehose...<br />
+<br />
+Greetz, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">18th December 2001, 11:08</div></div><div class="posttext">hmmm,<br />
+<br />
+now the splash works and the installer doesn't move to the background anymore (I also removed BringToFront)<br />
+<br />
+But also the page numbers have changed!!! so I had to adapt onNextPage and onPrevPage commands...<br />
+<br />
+but it works fine now.<br />
+<br />
+The nice thing about onNextPage and onPrevPage is that it's possible to do something like .onVerifyInstDir but now only after clicking install. So much problems solved!<br />
+<br />
+Thx greetz, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">eccles</div><div class="date">18th December 2001, 11:28</div></div><div class="posttext">Originally posted by Smile2Me <br />
+But also the page numbers have changed!!! so I had to adapt onNextPage and onPrevPage commands...<br />
+<br />
+Thx greetz, Hendri. Sorry about that..  my fault :)  They shouldn't change again...<br />
+<br />
+-- <br />
+Dave.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Smile2Me</div><div class="date">18th December 2001, 12:48</div></div><div class="posttext">Dave, thx, it's ok...<br />
+the change of page numbers was due to the movement in .onInit,<br />
+but i saw the problem and what caused it, so no problems anymore :D.<br />
+<br />
+Now my installer does everything i always wanted it to do:<br />
+-Check dir at clicking install<br />
+-display splash<br />
+-ask for regcode<br />
+-create backup<br />
+-install the main program into another application<br />
+-automatic uninstall if previous version is detected<br />
+-and much more....<br />
+<br />
+so i'm happy :)<br />
+<br />
+Maybe, after the 4th of january, Justin will post new possibilities for NSIS and i will get back to work again, but for the moment:<br />
+<br />
+HOLIDAYS!!!<br />
+<br />
+Thx all and greetz, Hendri.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Hando</div><div class="date">18th December 2001, 15:44</div></div><div class="posttext">Here's what I want to do:<br />
+I have a folio of work which I plan to distribute on CD. When the user runs the installer they are given a choice whether they wish to install the folio to their harddrive and run it as an application or run a &quot;lite&quot; (HTML version) from the CD. If the user selects the app version then the installer continues, otherwise I open the webpage and the installer aborts.<br />
+<br />
+Unfortunately the difference between 1.90 at firehose.net and the newer 1.90 has broken my script. With 1.90 from firehose.net I could call the InstallOptions dll with .onInit and the first screen the user saw was my InstallOptions choices page. Now when I compile and run it, it skips the InstallOptions screen and jumps right to the component page. <br />
+<br />
+While I could continue using the older 1.90 I will probably want to take advantage of improvements/features in later releases. So how can I implement this in the new version?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">eccles</div><div class="date">18th December 2001, 17:48</div></div><div class="posttext">Mmm, sorry about that, my fault again :( <br />
+<br />
+The last couple of 1.9 betas and the original 1.90 broke some installers' splash screens behaviour because they were changed so that .onInit was called after the NSIS window had been created.  I submitted a modification which Justin kindly merged in which put the call to .onInit back to where it was (before the NSIS window is created).  However, the .onNextPage callback was also changed so that it is also called before the first page (the same place .onInit was called in the original 1.90), so you can move your call to InstallOptions to the .onNextPage function to get the same behaviour as before.  The only other change you'll need is to set a flag (in .onInit) and test for it before showing InstallOptions, as .onNextPage is called for every page change.Function .onInit<br />
+  StrCpy $9 &quot;&quot;<br />
+FunctionEnd<br />
+<br />
+Function .onNextPage<br />
+  StrCmp $9 &quot;&quot; isFirstPage<br />
+    Return<br />
+isFirstPage:<br />
+  StrCpy $9 &quot;Y&quot;<br />
+  ; Do InstallOptions stuff<br />
+FunctionEnd <br />
+HTH<br />
+<br />
+-- <br />
+Dave.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Hando</div><div class="date">19th December 2001, 15:36</div></div><div class="posttext">problem solvered!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

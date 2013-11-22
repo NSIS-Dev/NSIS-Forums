@@ -1,0 +1,258 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Anouther Newbish System Plugin Question, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Anouther Newbish System Plugin Question NSIS Discussion" />
+	
+	<title> Anouther Newbish System Plugin Question [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Anouther Newbish System Plugin Question</div>
+<hr />
+<div class="pda"><a href="t-322409.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=322409">Anouther Newbish System Plugin Question</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">15th September 2010, 03:18</div></div><div class="posttext">I have a DLL called SbAdmDll.dll.<br />
+<br />
+The documentation has a function defined as follows...<br />
+<br />
+“extern C” LPWSTR <br />
+SBADM_execute( <br />
+   LPCWSTR  exec_xml, <br />
+   SBADM_CALLBACK callback <br />
+);<br />
+<br />
+exec_xml [In] Pointer to a null terminated Unicode string that contains the XML of the command to execute.<br />
+<br />
+callback [In] Optional pointer to a callback function that can be used to receive additional progress and information.  This can be NULL if no callback is required. This is primarily intended for use by the command line interface to display more information.<br />
+Here is what I interpreted is to be using NSIS....<br />
+InitPluginsDir<br />
+SetOutPath $PLUGINSDIR<br />
+File SbAdmDll.dll<br />
+<br />
+StrCpy $1 `${XMLStuff}`<br />
+<br />
+ClearErrors<br />
+System::Call `SbAdmDll::SBADM_execute(w r1,i 0)w .r0`<br />
+DetailPrint $0<br />
+<br />
+The returned value is &quot;error&quot; which tells me that system::call is choking on something...  Any ideas what I may be doing wrong here?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">punkomat</div><div class="date">15th September 2010, 09:57</div></div><div class="posttext">Check with Depends that your entypoint is propperly exported.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">15th September 2010, 13:56</div></div><div class="posttext">I think I found the problem...<br />
+<br />
+I'm recreating the NSIS script using AutoIt's DLL calls.  AutoIt is telling me that there are missing DLLs.   Good to know... <br />
+<br />
+I guess I'll be prototyping all my NSIS scripts with AutoIt from now on.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">16th September 2010, 22:01</div></div><div class="posttext">I checked with Dependency Walker and everything is in place now but now I'm getting a &quot;function not found in the DLL file&quot; error although I'm using the named as supplied by Dependency Walker:unsigned short * SBADM_execute(unsigned short const *,int (*)(unsigned long,void *))I have the function entry point address..  Can I use that in place of the name?  At least for this instance / version of the dll?<br />
+Dose the system plugin allow for this?  If so who would I do it...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">16th September 2010, 22:53</div></div><div class="posttext">Not really sure how it can return a string (is it just a pointer into exec_xml?) anyway, you don't provide any information about the calling convention, so maybe its cdecl (system plugin uses stdcall by default) try: System::Call 'SbAdmDll::SBADM_execute(w r1,i 0)i.r0 ? c'</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">17th September 2010, 16:21</div></div><div class="posttext">I give up...  I think there is something seriously wrong with this dll..  I can't even get the thing to execute in AutoIt.<br />
+<br />
+I'm in touch with the vendor but they are feeding me crap about using the COM DLL instead.  (Note the COM DLL requires the DLL I'm trying to call So I would be adding 36K and increasing the complexity exponentially)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">17th September 2010, 18:40</div></div><div class="posttext">I assume you are talking about a Mcafee thing, in that case, I also found references to another function: SBADMDLL_API void SBADM_free_string(LPWSTR str) so then it makes sense how the first call can return a string. Now we just need to know what SBADMDLL_API is defined as. Do you have a header file or something?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">17th September 2010, 22:11</div></div><div class="posttext">Your correct...<br />
+<br />
+I'm trying to get examples from McAfee but all I have at the moment is the PDF Scripting Guide provided by McAfee.  Here is an excerpt...<br />
+<br />
+SBADM_execute <br />
+This is the main function via which all the commands are “executed”.“extern C” LPWSTR<br />
+SBADM_execute(<br />
+    LPCWSTR  exec_xml,<br />
+    SBADM_CALLBACK callback<br />
+);<br />
+Parameters: <br />
+exec_xml ___[In] Pointer to a null terminated Unicode string that contains the XML of the command to execute (see section 3 for the details of XML format). <br />
+callback ___[In] Optional pointer to a callback function that can be used to receive additional progress and information.  This can be NULL if no callback is required. This is primarily intended for use by the command line interface to display more information. The supported callback codes are:SBADM_CALLBACK_CODE_TRACE_AReturn value:<br />
+Pointer to a null terminated Unicode string that contains the result XML. If there was an error processing the input XML, then this function will return NULL.  <br />
+The function will allocate the return buffer.  The caller should use the SBADM_free_string() function to free the return buffer when it is no longer required.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">18th September 2010, 11:49</div></div><div class="posttext">Yeah I saw that already, but like I said, I posted some code that _should_ work, if not, try it without ?c <br />
+<br />
+(Could you maybe upload this dll somewhere so I could take a look at it?)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">20th September 2010, 15:56</div></div><div class="posttext">Yeah I saw that already, but like I said, I posted some code that _should_ work, if not, try it without ?c <br />
+<br />
+(Could you maybe upload this dll somewhere so I could take a look at it?)<br />
+With and without the ?c option it fails.<br />
+<br />
+Sadly, I don't think I can share the DLL as it is a part of the server installation for the client software I'm managing.  I'm pretty sure McAfee's lawyers might grunt in disapproval.<br />
+<br />
+I've ran the DLL through a assembler decompiler in hope I might gleam some insight.  I didn't find anything gleamingly obvious but I did get these...<br />
+The Undecorated function name is: &quot;?SBADM_execute@@YAPAGPBGP6AHKPAX@Z@Z&quot;<br />
+The Address is: 0x0001eab0<br />
+The Ordinal is: 0x1<br />
+<br />
+I have no basis except for intuition, but it feels like the issue is with the function name lookup.  Can the System plugin call dll functions by the ordinal or address values?Looking at the documentation I'll give GetModuleHandle a try and see if it will work.<br />
+<br />
+For the time being, I'm using the command-line utility in addition to the DLL.  I seams stupid that I'm forced to add an exe wrapper to call an added dll that I would call directly if I knew how. :(<br />
+<br />
+I'm hoping McAfee will provide me with some actual C usage examples so I can get this properly implemented.<br />
+<br />
+<br />
+Thank you soo much for your assistance.. this one it turning into a problem I'm going to have to solve on my own but your encouraging nudges do help  :D<br />
+<br />
+Here is an interesting quip I conjured I feel is partially relevant, &quot;Bugs are only introduced when you implement someone else's code.&quot;  It's not actually true but I thought it funny.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">20th September 2010, 22:11</div></div><div class="posttext">?SBADM_execute@@YAPAGPBGP6AHKPAX@Z@Z == unsigned short * __cdecl SBADM_execute(unsigned short const *,int (__cdecl*)(unsigned long,void *))<br />
+<br />
+...it is cdecl so you need ?c<br />
+<br />
+For fun I compiled a simple dll<br />
+#include &lt;Windows.h&gt;<br />
+__declspec(dllexport) unsigned short * __cdecl SBADM_execute(unsigned short const *xml,int (__cdecl*)(unsigned long,void *)) <br />
+{<br />
+	MessageBoxW(0,L&quot;hello world&quot;,xml,0);<br />
+	return 0;<br />
+}<br />
+BOOL WINAPI DllMain(HANDLE,DWORD,DWORD) {return true;}<br />
+<br />
+And I'm able to call it with<br />
+outfile test.exe<br />
+section<br />
+initpluginsdir<br />
+setoutpath $pluginsdir<br />
+file tempdev.dll<br />
+system::call 'kernel32::LoadLibrary(t &quot;$pluginsdir\tempdev.dll&quot;)i.r0'<br />
+system::call 'kernel32::GetProcAddress(i r0,i 1)i.r2' ;ordinal 1<br />
+System::Call '::$2(w &quot;xml w00t&quot;,i0)i ?c'<br />
+system::call 'kernel32::FreeLibrary(i r0)'<br />
+setoutpath $temp<br />
+sectionend</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">20th September 2010, 22:57</div></div><div class="posttext">OMG :stare: THANK YOU!!!<br />
+<br />
+It finally works!!!<br />
+<br />
+outfile test.exe<br />
+section<br />
+setoutpath &quot;C:\Program Files\McAfee\Endpoint Encryption for PC&quot;<br />
+system::call 'kernel32::LoadLibrary(t &quot;$OUTDIR\SbAdmDll.dll&quot;)i.r0'<br />
+system::call 'kernel32::GetProcAddress(i r0,i 1)i.r2' ;ordinal 1<br />
+System::Call '::$2(w &quot;&lt;SafeBoot&gt;&lt;SbAdminScripting&gt;&lt;SbAdminCommand&gt;&lt;Command&gt;GetVersion&lt;/Command&gt;&lt;/SbAdminCommand&gt;&lt;/SbAdminScripting&gt;&lt;/SafeBoot&gt;&quot;,i0)w .r3 ?c'<br />
+DetailPrint $3<br />
+system::call 'kernel32::FreeLibrary(i r0)'<br />
+sectionend  Output folder: C:\Program Files\McAfee\Endpoint Encryption for PC<br />
+?&lt;?xml version=&quot;1.0&quot;?&gt;<br />
+  &lt;SafeBoot&gt;<br />
+    &lt;SbAdminScripting&gt;<br />
+      &lt;SbAdminConnectionResult&gt;<br />
+        &lt;ResultCode&gt;0x00000000&lt;/ResultCode&gt;<br />
+        &lt;ResultDescription&gt;The operation completed successfully.<br />
+&lt;/ResultDescription&gt;<br />
+      &lt;/SbAdminConnectionResult&gt;<br />
+      &lt;SbAdminCommandResult&gt;<br />
+        &lt;Command&gt;GetVersion&lt;/Command&gt;<br />
+        &lt;ResultCode&gt;0x00000000&lt;/ResultCode&gt;<br />
+        &lt;ResultDescription&gt;The operation completed successfully.<br />
+&lt;/ResultDescription&gt;<br />
+        &lt;Version&gt;5.2.3.5&lt;/Version&gt;<br />
+      &lt;/SbAdminCommandResult&gt;<br />
+    &lt;/SbAdminScripting&gt;<br />
+  &lt;/SafeBoot&gt;<br />
+<br />
+Completed<br />
+<br />
+http://www.messentools.com/images/emoticones/varios/www.MessenTools.com-Varios-big-179.gif</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">20th September 2010, 23:02</div></div><div class="posttext">You should probably call SBADM_free_string to free the returned string (If you only call it once, its probably ok just to leak that memory, but if you call it a lot you might want to free the strings) (But when doing that, the return needs to be i to preserve the pointer, then convert the returned string to a &quot;nsis string&quot; with the system plugin struct syntax)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">21st September 2010, 16:51</div></div><div class="posttext">Ok, now that we have it working I need to try and address the issue of extracting the DLL into the client system.  We don't want to deploy the DLL, only use it to make the change and then ensure the DLL is removed to attempt to prevent any possible security issues.<br />
+<br />
+I found the SetDLLDirectory api call and it explains exactly what I need but the final call to the SbAdmDll.dll still fails error with &quot;MSVC++ Runtime Library RuntimeError...abnormal program termination&quot;.<br />
+<br />
+section<br />
+    ;!define UseSetDLLDirectory<br />
+    !ifdef UseSetDLLDirectory<br />
+        ## Use the SetDLLDirectory API call to temporarily add the client programs path to the DLL search order.<br />
+        ##  MSDN: http://msdn.microsoft.com/en-us/library/ms686203%28VS.85%29.aspx<br />
+            InitPluginsDir<br />
+            SetOutPath $PLUGINSDIR<br />
+            <br />
+            file &quot;SbAdmDll.dll&quot;<br />
+<br />
+            System::Call 'Kernel32::SetDllDirectory(t &quot;C:\Program Files\McAfee\Endpoint Encryption for PC&quot;)i .r0'<br />
+            DetailPrint &quot;SetDllDirectory RC=$0&quot; ;&lt;-- Returns 1 so it is a success<br />
+    !else<br />
+        ## Extract to actual client application path<br />
+            SetOutPath &quot;C:\Program Files\McAfee\Endpoint Encryption for PC&quot;<br />
+            file &quot;SbAdmDll.dll&quot;<br />
+    !endif<br />
+    <br />
+    System::Call 'kernel32::LoadLibrary(t &quot;$OUTDIR\SbAdmDll.dll&quot;)i.r0'<br />
+    System::Call 'kernel32::GetProcAddress(i r0,i 1)i.r2' ;ordinal 1<br />
+    System::Call '::$2(w &quot;&lt;SafeBoot&gt;&lt;SbAdminScripting&gt;&lt;SbAdminCommand&gt;&lt;Command&gt;GetVersion&lt;/Command&gt;&lt;/SbAdminCommand&gt;&lt;/SbAdminScripting&gt;&lt;/SafeBoot&gt;&quot;,i0)w .r3 ?c'<br />
+    DetailPrint $3<br />
+    <br />
+    System::Call 'kernel32::FreeLibrary(i r0)'<br />
+    <br />
+sectionendThe call works fine when I don't define the UseSetDLLDirectory... any ideas?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">21st September 2010, 17:01</div></div><div class="posttext">I don't see why you need to use SetDllDirectory.<br />
+<br />
+What about:<br />
+SetOutPath $PLUGINSDIR <br />
+file &quot;SbAdmDll.dll&quot; <br />
+SetOutPath c:\programfiles...<br />
+System::Call 'kernel32::LoadLibrary(t &quot;$PLUGINSDIR \SbAdmDll.dll&quot;)i.r0' <br />
+?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">21st September 2010, 17:40</div></div><div class="posttext">... Yeah, that is a lot simpler isn't it?<br />
+<br />
+Working good now  :D</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Zinthose</div><div class="date">21st September 2010, 20:35</div></div><div class="posttext">I think I know the answer but I'll ask to verify.<br />
+<br />
+The SBADM_free_string function needed to free the memory doesn't have a return value so I'm uncertain if it succeeded.void __cdecl SBADM_free_string(unsigned short *}I tried reading the memory value again so see if it was cleared, gives me an error, or is different. But the value is exactly the same as it was before the call to release the memory.System::Call `*$3(&amp;w${NSIS_MAX_STRLEN} .r4)`I have two possible conclusions....<br />
+<br />
+ The API call to free the memory is failing.<br />
+ The API call succeeded but the value was left intact at the address.<br />
+<br />
+<br />
+#2 worries me as it implies that the DLL developers are leaving potentially private data as plain text in the memory space to be easily scanned.<br />
+<br />
+I'm going to try and create a controlled memory and compare the results of the program to see if it is indeed freeing the memory.<br />
+<br />
+<br />
+UPDATE: I see that the FreeLibrary function is freeing the memory but I think the api call is failing as the memory increases about the same with and without the free_string api call.  I'm using.... System::Call 'kernel32::GetProcAddress(i r0,i 2)i.r2' ;ordinal 2<br />
+System::Call '::$2(i $3) ?c'<br />
+<br />
+<br />
+UPDATE: I fixed a typo in my code and ran the loops again... The API is indeed releasing the memory as I'm seeing almost a 1MB memory size difference when looping 1000 times with and without the free string function.  It looks like the memory is indeed left intact.  That sucks..  I suppose I could let McAfee know but is it really an issue or is this common practice?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">21st September 2010, 21:52</div></div><div class="posttext">System::Call '::$2(i *$3) ?c'  is wrong, no need for *, just &quot;i&quot; is what you need ($3 is a memory address already)<br />
+<br />
+Edit: Did you edit the * out of your post or Icanhazgonecrazy?</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

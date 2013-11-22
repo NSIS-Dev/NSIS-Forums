@@ -1,0 +1,180 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Cannot find nsub.tmp?, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Cannot find nsub.tmp? NSIS Discussion" />
+	
+	<title> Cannot find nsub.tmp? [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Cannot find nsub.tmp?</div>
+<hr />
+<div class="pda"><a href="t-259701.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=259701">Cannot find nsub.tmp?</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">winwaed</div><div class="date">16th November 2006, 21:01</div></div><div class="posttext">I've been using NSIS for some of our applications for a couple of years now.<br />
+<br />
+I occasionally get reports of it requesting a reboot and then Windows saying it can't find a temporary file. Everything is okay after that.<br />
+Unfortunately I can't reproduce the problem.<br />
+Today, a new customer reported the actual message: &quot;Windows cannot open this file nsub.tmp&quot;<br />
+<br />
+This occurs when Windows restarts.<br />
+<br />
+The application is a VB6 DLL (add-in for an MS application), but the installer also includes the VB6 runtimes (code taken from the Appendix) and a third party DLL.<br />
+<br />
+I assume the reboot is required because one of the DLLs is already loaded in memory?<br />
+<br />
+But what is causing the error? What is nsub.tmp? Has anyone seen anything like this before? What should I look for in the NSIS script?<br />
+<br />
+I didn't want to post the entire script with a &quot;where's my bug&quot; question, but I can post bits or the entire thing if it will prove useful...<br />
+<br />
+Richard</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">goldy1064</div><div class="date">16th November 2006, 21:31</div></div><div class="posttext">nsub.tmp sounds like the name of the $PLUGINSDIR folder.  If you are trying to re-run an installer after restart that references that tmp directory, that could cause the failure as the PLUGINSDIR directory is removed when the installer exits.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">17th November 2006, 11:57</div></div><div class="posttext">It most likely means the file set to automatically register the DLL files after reboot was deleted. That file should be located along with the DLL files themselves, so deleting the temporary directory on reboot shouldn't bother it. However, you should still ask your user if he does that. Also have him try and disable the anti-virus.<br />
+<br />
+Besides that, post the part of the script where the DLL files are installed, any other InstallLib calls you might have there and the version of NSIS you've used to create the installer. Maybe there's something in the script.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">winwaed</div><div class="date">17th November 2006, 21:13</div></div><div class="posttext">Finding the NSIS version will take some time - it was built on my old dev machine which I retired from front-line work last week. It will still be installed on it, but it isn't connected up. I'm guessing it was about 12-18months old.<br />
+I installed the latest&amp;greatest for this PC here.<br />
+<br />
+If I understand it correctly, I'm only registering my own DLL. Here are the DLL installation extracts.<br />
+<br />
+<br />
+; DLL stuff for VB6<br />
+!include &quot;UpgradeDLL.nsh&quot;<br />
+!define VBFILESDIR &quot;VB_DLLs&quot;   ; Location of VB6 runtime files<br />
+<br />
+<br />
+Section &quot;MainSection&quot; SEC01<br />
+<br />
+; stuff deleted here - list of files and menu shortcuts, registry writes,etc<br />
+<br />
+  File &quot;MileCharter.dll&quot;<br />
+  RegDLL $INSTDIR\MileCharter.dll<br />
+SectionEnd<br />
+<br />
+Section &quot;Install VB DLLs&quot;<br />
+  !insertmacro UpgradeDLL ${VBFILESDIR}\Comcat.dll $SYSDIR\Comcat.dll $SYSDIR<br />
+  !insertmacro UpgradeDLL ${VBFILESDIR}\Msvbvm60.dll $SYSDIR\Msvbvm60.dll $SYSDIR<br />
+  !insertmacro UpgradeDLL ${VBFILESDIR}\Oleaut32.dll $SYSDIR\Oleaut32.dll $SYSDIR<br />
+  !insertmacro UpgradeDLL ${VBFILESDIR}\Olepro32.dll $SYSDIR\Olepro32.dll $SYSDIR<br />
+  !insertmacro UpgradeDLL ${VBFILESDIR}\ArmAccess.dll $SYSDIR\ArmAccess.dll $SYSDIR<br />
+  !insertmacro UpgradeDLL ${VBFILESDIR}\Comdlg32.ocx $SYSDIR\Comdlg32.ocx $SYSDIR<br />
+  !insertmacro UpgradeDLL ${VBFILESDIR}\mscomctl.ocx $SYSDIR\mscomctl.ocx $SYSDIR<br />
+  !define UPGRADEDLL_NOREGISTER<br />
+    !insertmacro UpgradeDLL ${VBFILESDIR}\Asycfilt.dll $SYSDIR\Asycfilt.dll $SYSDIR<br />
+    !insertmacro UpgradeDLL ${VBFILESDIR}\Stdole2.tlb $SYSDIR\Stdole2.tlb $SYSDIR<br />
+  !undef UPGRADEDLL_NOREGISTER<br />
+  ; Only lease DLL count on new installation<br />
+  IfFileExists $INSTDIR\MileCharter.dll skipAddSharedDLL<br />
+    Push $SYSDIR\Comdlg32.ocx<br />
+    Call AddSharedDLL<br />
+    Push $SYSDIR\mscomctl.ocx<br />
+    Call AddSharedDLL<br />
+    Push $SYSDIR\ArmAccess.dll<br />
+    Call AddSharedDLL<br />
+    Push $SYSDIR\Asycfilt.dll<br />
+    Call AddSharedDLL<br />
+    Push $SYSDIR\Comcat.dll<br />
+    Call AddSharedDLL<br />
+    Push $SYSDIR\Msvbm60.dll<br />
+    Call AddSharedDLL<br />
+    Push $SYSDIR\Oleaut32.dll<br />
+    Call AddSharedDLL<br />
+    Push $SYSDIR\Olepro32.dll<br />
+    Call AddSharedDLL<br />
+    Push $SYSDIR\Stdole2.tlb<br />
+    Call AddSharedDLL<br />
+  skipAddSharedDLL:<br />
+SectionEnd<br />
+<br />
+<br />
+Function AddSharedDLL<br />
+  Exch $R1<br />
+  Push $R0<br />
+    ReadRegDword $R0 HKLM Software\Microsoft\Windows\CurrentVersion\SharedDLLs $R1<br />
+    IntOp $R0 $R0 + 1<br />
+    WriteRegDWORD HKLM Software\Microsoft\Windows\CurrentVersion\SharedDLLs $R1 $R0<br />
+  Pop $R0<br />
+  Pop $R1<br />
+FunctionEnd<br />
+<br />
+Function un.DecrementSharedDLL<br />
+  Exch $R1<br />
+  Push $R0<br />
+  ReadRegDword $R0 HKLM Software\Microsoft\Windows\CurrentVersion\SharedDLLs $R1<br />
+  StrCmp $R0 &quot;&quot; done<br />
+    IntOp $R0 $R0 - 1<br />
+    IntCmp $R0 0 rk rk uk<br />
+    rk:<br />
+      DeleteRegValue HKLM Software\Microsoft\Windows\CurrentVersion\SharedDLLs $R1<br />
+      Goto done<br />
+    uk:<br />
+      WriteRegDWORD HKLM Software\Microsoft\Windows\CurrentVersion\SharedDLLs $R1 $R0<br />
+  done:<br />
+  Pop $R0<br />
+  Pop $R1<br />
+FunctionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">winwaed</div><div class="date">17th November 2006, 21:16</div></div><div class="posttext">I should also add that I am not doing anything explicitly for a reboot. Or doing anything to handle a reboot, for that matter.<br />
+<br />
+NSIS must be detecting that a reboot is required on its own (I assume something is in use).<br />
+<br />
+<br />
+Richard</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th November 2006, 11:14</div></div><div class="posttext">Well, that was pretty easy to reproduce. I just installed RouterWriter.exe and got this message. It's because the RegTool was extracted without the .exe extension and Windows didn't know how to execute it. Simply upgrade to the latest version of NSIS, use Library (http://nsis.sourceforge.net/Docs/AppendixB.html#B.4) and you're set.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">winwaed</div><div class="date">18th November 2006, 14:14</div></div><div class="posttext">Thanks - yes RouteWriter's installation script was copied from MileCharter so it will have the same problem.<br />
+<br />
+So &quot;insertmacro InstallLib&quot; replaces the UpgradeDLL that I had?<br />
+And it looks like I no longer need the Add/Decrement DLL code?<br />
+That will simplify things :-)<br />
+<br />
+<br />
+btw, Thanks for everyone's help.<br />
+<br />
+<br />
+Richard</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">18th November 2006, 14:17</div></div><div class="posttext">Yes, InstallLib completely replaces UpgradeDLL, including the shared reference count handlers.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">winwaed</div><div class="date">18th November 2006, 14:26</div></div><div class="posttext">Excellent!  That does simplify things. I'll try it out this weekend - I have to build a new version for the same customer (to fix an unrelated bug).<br />
+<br />
+I already have the latest NSIS installed - I installed it when I built my new dev machine last week.  (my old dev PC must have been a bit old - this Core2Duo screams :-)  )<br />
+<br />
+Thanks everyone!<br />
+<br />
+Richard</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">winwaed</div><div class="date">19th November 2006, 21:02</div></div><div class="posttext">Although I had problems reproducing the problem, initial tests of the rebuilt installation exe look good. I'll be passing it to the customer on Monday.<br />
+<br />
+Also the new DLL installation script bits are much better looking and cleaner - an improvement that I definitely appreciate.<br />
+<br />
+Thanks!<br />
+<br />
+Richard</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">kichik</div><div class="date">21st November 2006, 18:20</div></div><div class="posttext">You have to have an older version of one of the DLL files installed to reproduce this. On a new installation, XP apparently has an older version of MSVBVM60.dll.</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

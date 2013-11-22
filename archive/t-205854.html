@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" plugin hooking... one step to void the /NOUNLOAD, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  plugin hooking... one step to void the /NOUNLOAD NSIS Discussion" />
+	
+	<title> plugin hooking... one step to void the /NOUNLOAD [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  plugin hooking... one step to void the /NOUNLOAD</div>
+<hr />
+<div class="pda"><a href="t-205854.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=205854">plugin hooking... one step to void the /NOUNLOAD</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">24th January 2005, 22:14</div></div><div class="posttext">HINSTANCE hInst;<br />
+HMODULE hMod;<br />
+int i;<br />
+HHOOK hHook;<br />
+HOOKPROC hHookProc;<br />
+<br />
+#define Function(name) extern &quot;C&quot; void __declspec(dllexport) name(HWND hwndParent, int string_size, char *variables, stack_t **stacktop)<br />
+<br />
+Function(suma)<br />
+{<br />
+	EXDLL_INIT();<br />
+	setuservariable(0, int2str(++i));<br />
+}<br />
+<br />
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved)<br />
+{<br />
+	hInst = hinstDLL;<br />
+	switch (fdwReason)<br />
+	{<br />
+	case DLL_PROCESS_ATTACH:<br />
+		{<br />
+			i = 0;<br />
+			hMod = LoadLibrary(&quot;nsDLL&quot;);<br />
+			hHookProc = (HOOKPROC)GetProcAddress(hMod, &quot;suma&quot;);<br />
+			hHook = SetWindowsHookEx(WH_CBT, hHookProc, hMod, 0);<br />
+			return TRUE;<br />
+		}<br />
+	case DLL_PROCESS_DETACH:<br />
+		{<br />
+			UnhookWindowsHookEx(hHook);<br />
+			FreeLibrary(hMod);<br />
+			return TRUE;<br />
+		}<br />
+	}<br />
+	return TRUE;<br />
+}<br />
+<br />
+Example:<br />
+<br />
+Section<br />
+nsDLL::suma ; $0 1<br />
+nsDLL::suma; $0 2<br />
+nsDLL::suma ; $0 1<br />
+nsDLL::suma ; $0 2<br />
+DetailPrint $0 ; $0 2<br />
+SectionEnd<br />
+<br />
+at the end, $0 returns 2, when it suppose to be 4.... what I'm missing? :igor:</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">24th January 2005, 23:07</div></div><div class="posttext">-LoadLibrary in DllMain, safe?<br />
+-SetWindowsHookEx in DllMain, safe? (if I remember correctly only some of the functions in kernel32 may be used in DllMain)<br />
+-wrong function type for SetWindowsHookEx (suma returns void, hookproc returns LRESULT)<br />
+-does not call CallNextHookEx<br />
+-global hook needed?<br />
+-why is hHookProc a global variable?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Joel</div><div class="date">24th January 2005, 23:13</div></div><div class="posttext">so, any ideas how? :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Anders</div><div class="date">24th January 2005, 23:20</div></div><div class="posttext">I have not tested this code and im not even sure that the dll is not unloaded right away<br />
+<br />
+As I have told you before, the way I have done it is to call LoadLibrary on yourself each time one of the exported functions are called by nsis, the only problem with this is unloading, so you could subclass the nsis window and unload in WM_DESTROY or use a hook. Dro has also talked about api hooking FreeLibrary or something like that</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

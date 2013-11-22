@@ -1,0 +1,399 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Finding DLLs on the dev machine, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Finding DLLs on the dev machine NSIS Discussion" />
+	
+	<title> Finding DLLs on the dev machine [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Finding DLLs on the dev machine</div>
+<hr />
+<div class="pda"><a href="t-241327.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=241327">Finding DLLs on the dev machine</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">baxissimo</div><div class="date">20th March 2006, 07:27</div></div><div class="posttext">Ok, I have a program that uses a bunch of DLLs on my dev machine.  I want to package all those DLLs up along with my app into the installer.  I know the names of all the DLLs, I just don't know where they're all located, I just know they're all on my %PATH% somewhere.  The easiest thing for me would be if there were a &quot;SearchPath&quot; function that got invoked at compile time.  (That's all I need since I know all the DLLs I'm using are on my %PATH% somewhere.  I guess it would be a different situation if some of them were only listed in the registry.)<br />
+<br />
+Anyway, I looked at the Locate plug-in but it doesn't look like it's really made for this sort of search.<br />
+<br />
+The SearchPath command would be great, but apparently it only gets invoked at install time, not compile time.<br />
+<br />
+Exec and ShellExec commands also only get called on the target machine.<br />
+<br />
+Am I missing something simple?<br />
+<br />
+This was a problem I had with InnoSetup too.  I eventually just ended up writing my own InnoSetup pre-processor in perl to find the things on my path.  I can always do that again with NSIS, but I'd rather just be able to use work with NSIS rather than having to go around it.<br />
+<br />
+<br />
+I find it odd that this sort of functionality isn't more in demand.  If I test my program on machine A and it works, I'd like to build the installer on machine A, and I'd like to make sure I package up the same DLLs that I tested with, and not a different version that also just happens to be installed on my machine somewhere.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">20th March 2006, 07:52</div></div><div class="posttext">I think this is no good idea. There are several issues with searching on compile time:<br />
+<br />
+- You can easily mess up some installation by using <br />
+  files from c:\windows\system32.<br />
+  These versions are sometimes newer than they should be<br />
+  for older Windows versions. If you e.g. use Win XP and<br />
+  create an installer using the system32 files you will<br />
+  mess up Win 9x installations. The newer files seem to<br />
+  be non-generic.<br />
+<br />
+- It could happen that you get the wrong file (if someone/<br />
+  some software creates a new file with that name in your<br />
+  PATH).<br />
+<br />
+- You should know about each dll whether you are allowed<br />
+  (copyright) to include it or whether this is necessary<br />
+  (may be included by Windows / Office / Software xyz).<br />
+<br />
+I suggest you make a sub directory with those files you really you really need, look carefully for versions and copyright. <br />
+<br />
+This way you can be sure what really gets installed.<br />
+<br />
+I think you can find the policy to distribute those DLLs on your development system's installation cd etc. At least Microsoft generally makes statements about this.<br />
+<br />
+Here some example information for MS Visual C++<br />
+http://msdn.microsoft.com/library/en-us/dnvc60/html/redistribvc6.asp<br />
+<br />
+Of course you should use the dll versions from the latest service pack.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">baxissimo</div><div class="date">20th March 2006, 08:18</div></div><div class="posttext">Wow, fast reply!<br />
+<br />
+stb <br />
+I think this is no good idea. There are several issues with searching on compile time:<br />
+<br />
+- You can easily mess up some installation by using <br />
+  files from c:\windows\system32.<br />
+  These versions are sometimes newer than they should be<br />
+  for older Windows versions. If you e.g. use Win XP and<br />
+  create an installer using the system32 files you will<br />
+  mess up Win 9x installations. The newer files seem to<br />
+  be non-generic.<br />
+<br />
+<br />
+I'm not just trying to indiscriminately include every single dll my program is linked against.  Like I said, I have the list of DLL names I want to include with my app.  The only thing I'm pulling out of C:\WINDOWS currently is the redistributable Visual C++ runtime libraries, and I don't see how that's going to mess up an installation.<br />
+<br />
+stb <br />
+- It could happen that you get the wrong file (if someone/<br />
+  some software creates a new file with that name in your<br />
+  PATH).<br />
+<br />
+Are you talking about at installer compile-time for me, or run-time for the user?  If the former, my whole point is that I just finished tested my app on a particular machine. It passed testing, so whatever DLLs I was just using are the ones I want to include.  If someone has recently created a new file on my path with the same name, and my app passed testing successfully, then that's the DLL I want to ship.<br />
+<br />
+If you meant the latter, something happening on the user's machine, then that's not a problem either.  As I said, I'm installing all the DLLs to the app's exe directory so Windows will link to them regardless of whatever else is installed on the system.  Probably I should use a different approach for MSVCR71.dll, since users might have that installed already, but the others are very unlikely to be present prior to installing my app.<br />
+<br />
+stb <br />
+- You should know about each dll whether you are allowed<br />
+  (copyright) to include it or whether this is necessary<br />
+  (may be included by Windows / Office / Software xyz).<br />
+<br />
+That's got nothing to do with my problem.  As I said I have the list of DLLs I want to include.  I know what each one of them is for and why I need to distribute it with my app.  And I know what the license terms are, too (most are LGPL libs.)<br />
+<br />
+stb <br />
+I suggest you make a sub directory with those files you really you really need, look carefully for versions and copyright. <br />
+<br />
+This way you can be sure what really gets installed.<br />
+<br />
+Yeh, that's annoying though, because most of these DLLs are are external LGPL open source projects.  I compile them from source and they get updated from time to time, and I use the resulting DLLs in various projects.  I don't want to have to copy DLLs all over the place every time I recompile OpenSourceProjectXYZ.  As it is, they're installed to my path and so all projects that use them automatically pick up the changes.  You could argue that's a bad idea.  If it were more than just me coding, I would probably agree.<br />
+<br />
+stb <br />
+I think you can find the policy to distribute those DLLs on your development system's installation cd etc. At least Microsoft generally makes statements about this.<br />
+<br />
+Here some example information for MS Visual C++<br />
+http://msdn.microsoft.com/library/en-us/dnvc60/html/redistribvc6.asp<br />
+<br />
+Of course you should use the dll versions from the latest service pack. [/B]<br />
+Licensing issues are not the problem.<br />
+Thanks for taking the time to reply, though.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">20th March 2006, 08:47</div></div><div class="posttext">The only thing I'm pulling out of C:\WINDOWS currently is the redistributable Visual C++ runtime libraries, and I don't see how that's going to mess up an installation.<br />
+<br />
+This is bad behaviour. If Microsoft includes some special DLL for a specific operating system (think about XP/Vista) these DLLs should not be replaced. Microsoft will use a higher version number so if you compare your version (generic, older) to the installed one you (your installer) will decide not to update (would be a downgrade).<br />
+<br />
+The other way: If you have installed XP/Vista on your development machine and create an installer using the system32 files, your installer will contain those XP/Vista-specific releases which are newer than the generic ones. Your installer will install them on older Windows (9x) versions because they have a higher version number. This may break those older installations.<br />
+<br />
+You should always install the latest _generic_ versions of the DLLs. In case of Microsoft Visual Studio 6 you should download the latest service pack and use the versions supplied in there.<br />
+<br />
+Are you talking about at installer compile-time for me, or run-time for the user?<br />
+<br />
+We're both talking about compile-time.<br />
+<br />
+If someone has recently created a new file on my path with the same name, and my app passed testing successfully, then that's the DLL I want to ship.<br />
+<br />
+This is bad, see above. If you ship just the files that make the application work on YOUR machine the software may only work on machines like YOURS.<br />
+<br />
+Ok, if you install files only to your app's exe directory, you might not break the target machine (as long as your app's exe directory is not in the PATH and is no current dir when executing other applications...)<br />
+<br />
+But the installed files might have dependencies which could be OS-specific (e.g. XP and higher) etc.<br />
+<br />
+Probably I should use a different approach for MSVCR71.dll, since users might have that installed already, but the others are very unlikely to be present prior to installing my app.<br />
+<br />
+MSVCR71.dll will not be present on all Windows systems. You should include it.<br />
+<br />
+Yeh, that's annoying though, because most of these DLLs are are external LGPL open source projects.  I compile them from source and they get updated from time to time, and I use the resulting DLLs in various projects.  I don't want to have to copy DLLs all over the place every time I recompile OpenSourceProjectXYZ.<br />
+<br />
+I understand that. You should create a common directory &quot;DLLs for distribution&quot; which can be used by all installers.<br />
+<br />
+As it is, they're installed to my path and so all projects that use them automatically pick up the changes.<br />
+<br />
+Do you mean &quot;when running the application&quot;? This is run-time behaviour (by design). If you mean compile time, we're back to your feature request: I think this would be a &quot;dangerous&quot; feature.<br />
+<br />
+If it were more than just me coding, I would probably agree.<br />
+<br />
+Hey, you would curse if some other developer installs incompatible DLLs to your system. Think about your users.<br />
+<br />
+Anyway, it's a good idea to not install those DLLs shared (i.e. in system32), you're not joining the DLL hell this way. And in case of problems your users can easily zero out your app's exe dir...</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">20th March 2006, 08:55</div></div><div class="posttext">CompileTime.nsi<br />
+Name &quot;CompileTime&quot;<br />
+OutFile &quot;CompileTime.exe&quot;<br />
+<br />
+!include &quot;FileFunc.nsh&quot;<br />
+!insertmacro GetParameters<br />
+<br />
+Function .onInit<br />
+	${GetParameters} $0<br />
+	StrCmp $0 '' end<br />
+<br />
+	FileOpen $1 $0 w<br />
+	IfErrors end<br />
+<br />
+	SearchPath $2 riched20.dll<br />
+	IfErrors +3<br />
+	FileWrite $1 'SetOutPath &quot;$EXEDIR&quot;$\r$\n'<br />
+	FileWrite $1 'File &quot;$2&quot;$\r$\n'<br />
+<br />
+	SearchPath $2 myfile2.dll<br />
+	IfErrors +2<br />
+	FileWrite $1 'File &quot;$2&quot;$\r$\n'<br />
+<br />
+	SearchPath $2 myfile3.dll<br />
+	IfErrors +2<br />
+	FileWrite $1 'File &quot;$2&quot;$\r$\n'<br />
+<br />
+	FileClose $1<br />
+<br />
+	end:<br />
+	Quit<br />
+FunctionEnd<br />
+<br />
+Section<br />
+SectionEnd<br />
+RunTime.nsi<br />
+Name &quot;RunTime&quot;<br />
+OutFile &quot;RunTime.exe&quot;<br />
+<br />
+Section<br />
+	!execute 'CompileTime.exe files.lst'<br />
+	!include 'files.lst'<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Takhir</div><div class="date">20th March 2006, 09:00</div></div><div class="posttext">You can use System plug-in for LoadLibrary(), GetModuleFileName(), FreeLibrary() calls chain. Search order (http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dllproc/base/dynamic-link_library_search_order.asp) includes PATH.<br />
+Edited: oups.. API/NSIS SearchPath looks better :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">baxissimo</div><div class="date">21st March 2006, 12:12</div></div><div class="posttext">Originally posted by Instructor <br />
+CompileTime.nsi<br />
+Name &quot;CompileTime&quot;<br />
+OutFile &quot;CompileTime.exe&quot;<br />
+...<br />
+<br />
+...<br />
+RunTime.nsi<br />
+Name &quot;RunTime&quot;<br />
+OutFile &quot;RunTime.exe&quot;<br />
+<br />
+Section<br />
+	!execute 'CompileTime.exe files.lst'<br />
+	!include 'files.lst'<br />
+SectionEnd  <br />
+<br />
+Heh heh.  That's cute.  So you make one &quot;installer&quot; whose job is to be run when making the actual installer.<br />
+<br />
+Anyway, I didn't realize there was a compile time !execute directive, so that means I can just implement the DLL finder in whatever language I want, be it your NSIS script or python or whatever.  Great.  Thanks Instructor!<br />
+<br />
+And @stb, thanks for your efforts to get me to mend my wicked ways.  I'll consider changing the way I do things.<br />
+<br />
+--bb</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">21st March 2006, 18:37</div></div><div class="posttext">@ Instructor<br />
+a couple of issues on the above post:<br />
+!execute or could be !system should not included in section as they are &quot;Compiler Utility Commands&quot;.<br />
+The line &quot;...FileWrite $1 'SetOutPath &quot;$EXEDIR&quot;...&quot; should not be used.<br />
+RunTime:<br />
+Name &quot;RunTime&quot;<br />
+OutFile &quot;RunTime.exe&quot;<br />
+InstallDir '$PROGRAMFILES\MyTest'<br />
+<br />
+	!system 'CompileTime.exe files.nsh'<br />
+      ;  !execute 'CompileTime.exe files.nsh'<br />
+<br />
+Section<br />
+<br />
+       SetOutPath '$INSTDIR'<br />
+       !include 'files.nsh'<br />
+<br />
+SectionEnd<br />
+CompileTime:<br />
+Name &quot;CompileTime&quot;<br />
+OutFile &quot;CompileTime.exe&quot;<br />
+<br />
+!include &quot;FileFunc.nsh&quot;<br />
+!insertmacro GetParameters<br />
+<br />
+Function .onInit<br />
+	${GetParameters} $0<br />
+	StrCmp $0 '' end<br />
+<br />
+	FileOpen $1 $0 w<br />
+	IfErrors end<br />
+<br />
+	SearchPath $2 'Notepad.exe'<br />
+	IfErrors +2<br />
+;	FileWrite $1 'SetOutPath &quot;$EXEDIR&quot;$\r$\n'<br />
+	FileWrite $1 'File &quot;$2&quot;$\r$\n'<br />
+<br />
+	SearchPath $2 'regedit.exe'<br />
+	IfErrors +2<br />
+	FileWrite $1 'File &quot;$2&quot;$\r$\n'<br />
+<br />
+	SearchPath $2 'winhlp32.exe'<br />
+	IfErrors +2<br />
+	FileWrite $1 'File &quot;$2&quot;$\r$\n'<br />
+<br />
+	FileClose $1<br />
+<br />
+	end:<br />
+	Quit<br />
+FunctionEnd<br />
+<br />
+Section<br />
+SectionEnd<br />
+They worked just fine for me. Thus, I think &quot;Locate&quot; could be more reliable and flexible instead of &quot;SearchPath&quot;.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">21st March 2006, 19:19</div></div><div class="posttext">!execute or could be !system should not included in section as they are &quot;Compiler Utility Commands&quot;.Why not?<br />
+The line &quot;...FileWrite $1 'SetOutPath &quot;$EXEDIR&quot;...&quot; should not be used.How you set different OutPath for the files included on compile time?<br />
+Thus, I think &quot;Locate&quot; could be more reliable and flexible instead of &quot;SearchPath&quot;. The easiest thing for me would be if there were a &quot;SearchPath&quot; function that got invoked at compile time. (That's all I need since I know all the DLLs I'm using are on my %PATH% somewhere...)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">21st March 2006, 20:20</div></div><div class="posttext">@ Instructor:<br />
+Sorry if I miss something here but when I use !execute in section the compiler returns this error:<br />
+<br />
+&quot;Processing script file: &quot;D:\NSISProjects\Compile Time\run_time.nsi&quot;<br />
+Name: &quot;RunTime&quot;<br />
+OutFile: &quot;RunTime.exe&quot;<br />
+InstallDir: &quot;$PROGRAMFILES\MyTest&quot;<br />
+Section: &quot;&quot;<br />
+SetOutPath: &quot;$INSTDIR&quot;<br />
+!execute: &quot;CompileTime.exe files.nsh&quot;<br />
+!include: could not find: &quot;files.nsh&quot;<br />
+Error in script &quot;D:\NSISProjects\Compile Time\run_time.nsi&quot; on line 12 -- aborting creation process&quot;<br />
+<br />
+And when I use &quot;...FileWrite $1 'SetOutPath &quot;$EXEDIR&quot;...&quot; I have this:<br />
+(SetOutPath &quot;D:\NSISProjects\Compile Time&quot;<br />
+File &quot;C:\WINDOWS\system32\winhlp32.exe&quot;<br />
+File &quot;C:\WINDOWS\system32\xvidcore.dll&quot;<br />
+File &quot;C:\WINDOWS\vmmreg32.dll&quot;)<br />
+<br />
+Otherwise I have:<br />
+(File &quot;C:\WINDOWS\system32\winhlp32.exe&quot;<br />
+File &quot;C:\WINDOWS\system32\xvidcore.dll&quot;<br />
+File &quot;C:\WINDOWS\vmmreg32.dll&quot;)<br />
+<br />
+I can't see why I should point outputpath to where I am compiling. This needed only if I want to copy those files in my compiling dir. If I just want to include them in my installation I don't need that line.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Afrow UK</div><div class="date">21st March 2006, 20:49</div></div><div class="posttext">I think you probably need SetOutPath $EXEDIR before FileOpen in the CompileTime.nsi script to ensure that it writes the output file in the same directory.<br />
+<br />
+-Stu</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Instructor</div><div class="date">22nd March 2006, 06:24</div></div><div class="posttext">Special for Red Wine :)<br />
+<br />
+CompileTime.nsiName &quot;CompileTime&quot;<br />
+OutFile &quot;CompileTime.exe&quot;<br />
+<br />
+!include &quot;FileFunc.nsh&quot;<br />
+!insertmacro GetParameters<br />
+<br />
+Function .onInit<br />
+	${GetParameters} $0<br />
+	StrCmp $0 '' end<br />
+<br />
+	FileOpen $1 $0 w<br />
+	IfErrors end<br />
+<br />
+	FileWrite $1 'SetOutPath &quot;$$INSTDIR&quot;$\r$\n'<br />
+<br />
+	SearchPath $2 riched20.dll<br />
+	IfErrors +2<br />
+	FileWrite $1 'File &quot;$2&quot;$\r$\n'<br />
+<br />
+	SearchPath $2 twain.dll<br />
+	IfErrors +2<br />
+	FileWrite $1 'File &quot;$2&quot;$\r$\n'<br />
+<br />
+	SearchPath $2 diskcopy.dll<br />
+	IfErrors +3<br />
+	FileWrite $1 'SetOutPath &quot;$$INSTDIR\folder1&quot;$\r$\n'<br />
+	FileWrite $1 'File &quot;$2&quot;$\r$\n'<br />
+<br />
+	SearchPath $2 wtsapi32.dll<br />
+	IfErrors +3<br />
+	FileWrite $1 'SetOutPath &quot;$$INSTDIR\folder2&quot;$\r$\n'<br />
+	FileWrite $1 'File &quot;$2&quot;$\r$\n'<br />
+<br />
+	FileClose $1<br />
+<br />
+	end:<br />
+	Quit<br />
+FunctionEnd<br />
+<br />
+Section<br />
+SectionEnd<br />
+RunTime.nsiName &quot;RunTime&quot;<br />
+OutFile &quot;RunTime.exe&quot;<br />
+<br />
+InstallDir '$PROGRAMFILES\MyTest'<br />
+Page directory<br />
+Page instfiles<br />
+<br />
+Section<br />
+	!execute 'CompileTime.exe files.lst'<br />
+	!include 'files.lst'<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">baxissimo</div><div class="date">22nd March 2006, 07:27</div></div><div class="posttext">I got things working to my liking using an external python script I whipped up in a jiff.  The script generates both a list of files to install and a list of files to uninstall.<br />
+<br />
+<br />
+  !system &quot;c:\python24\python finddlls.py dab_dlls.nsi dab_undlls.nsi&quot; = 0<br />
+<br />
+<br />
+The nice thing about using !system instead of !execute is that you can check the return code (the &quot;= 0&quot; part on the end).  And if it's not what's expected the compile will abort.<br />
+<br />
+I'm kind of surprised there's not an easier way to handle uninstallation with NSIS.  Automatic removal of everything installed is default behavior in InnoSetup and it makes a lot of sense to me.  The installer knows where its putting files, why can't it just remove them too?  If I were going to be using NSIS a lot for a lot of different projects I would be very tempted to write an expanded version of the above Python script which takes a list of files and spits out one .nsi with all the File commands and one with all the Delete commands.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">stb</div><div class="date">22nd March 2006, 10:19</div></div><div class="posttext">NSIS is very flexible, I like the possibility to do things in uninstall unrelated to install. Having only a single file list is possible using macros and/or a file list stored in INSTDIR or registry (which could be read and used by uninstall). Some standard way (included with NSIS) would be fine anyway (especially doing the opposite of commands like RegDll and File in reverse order cannot be solved by a simple macro alone).</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">22nd March 2006, 13:18</div></div><div class="posttext">@ Instructor:<br />
+Your last post above works just fine for me. Congrats!<br />
+Though it's an excellent job, it is quite different from your  previous job. That one never worked for me. Perhaps I missed something. Thanks, regards!</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>

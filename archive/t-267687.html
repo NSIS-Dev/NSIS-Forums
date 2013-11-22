@@ -1,0 +1,176 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content=" Another Custom Page question, media player, mp3 player, music player, ipod sync, multimedia player, player, winamp, audio player" />
+	<meta name="description" content="[Archive]  Another Custom Page question NSIS Discussion" />
+	
+	<title> Another Custom Page question [Archive]  - Winamp Forums</title>
+	<link rel="stylesheet" type="text/css" href="archive.css" />
+</head>
+<body>
+<div class="pagebody">
+<div id="navbar">Winamp Forums &gt; Developer Center &gt; <a href="f-65.html">NSIS Discussion</a> &gt;  Another Custom Page question</div>
+<hr />
+<div class="pda"><a href="t-267687.html?login=1" rel="nofollow">Log in</a></div>
+<p class="largefont">Try the Internet Archive: <a href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=267687">Another Custom Page question</a></p>
+<hr />
+
+<div class="post"><div class="posttop"><div class="username">is99</div><div class="date">13th March 2007, 11:33</div></div><div class="posttext">I know I can change the imahe at the header of the installer using someting like this:<br />
+<br />
+!define MUI_HEADERIMAGE<br />
+!define MUI_HEADERIMAGE_BITMAP &quot;..\Sources\top.bmp&quot;<br />
+<br />
+<br />
+But this will change it in all the pages of the installer.<br />
+<br />
+Is it possible to change it only for one custom page?<br />
+<br />
+For exampele I can change the text in the header of a custom page using !insertmacro MUI_HEADER_TEXT in the function of this custom page, but can I also change the bitmap ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">13th March 2007, 13:55</div></div><div class="posttext">http://forums.winamp.com/showthread.php?s=&amp;threadid=158179<br />
+<br />
+http://nsis.sourceforge.net/ModernUI_Mod_to_Display_Images_while_installing_files</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">is99</div><div class="date">13th March 2007, 14:03</div></div><div class="posttext">Actually I alredy sow this, but I think its a bit too complicated and not exaclty what I'm looking for.<br />
+<br />
+NSIS supports changing HEADERIMAGE in all the pages, so isn\t there some more easy way to change the HEADERIMAGE only in one custom page and not in all the pages?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">13th March 2007, 14:08</div></div><div class="posttext">if you dig a bit on these, you'll get to the point you like to go, it is too close.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">is99</div><div class="date">13th March 2007, 14:21</div></div><div class="posttext">If you know I'm close and you know the answer why then not tell me it?<br />
+Why do I need to waist hours looking for it if you already know the answer ?</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">13th March 2007, 14:35</div></div><div class="posttext">Well, as you probably know, if I had a piece or code ready or even near ready, that'd be already posted here.<br />
+I'm just realizing that infos provided in above links, seem enough for someone who cares to start digging ;)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">13th March 2007, 15:57</div></div><div class="posttext">Well, I'm in a good temper today, plus it was more easy than expected...<br />
+!define LR_LOADFROMFILE     0x0010<br />
+!define LR_CREATEDIBSECTION 0x2000<br />
+!define IMAGE_BITMAP        0<br />
+!define sysLoadImage        &quot;user32::LoadImageA(i, t, i, i, i, i) i&quot;<br />
+!define IMG_CHANGE          &quot;$PLUGINSDIR\win.bmp&quot;<br />
+!define IMG_RESTORE         &quot;$PLUGINSDIR\modern-header.bmp&quot;<br />
+!define BMP_CTL             &quot;1046&quot;<br />
+<br />
+!macro CHANGE_HEADER_IMG _IMAGE<br />
+  GetDlgItem $0 $HWNDPARENT ${BMP_CTL}<br />
+  System::Call '${sysLoadImage} (0, s, ${IMAGE_BITMAP}, 0, 0, ${LR_CREATEDIBSECTION}|${LR_LOADFROMFILE}) .r6' &quot;${_IMAGE}&quot;<br />
+  SendMessage $0 ${STM_SETIMAGE} ${IMAGE_BITMAP} $6<br />
+  ShowWindow  $HWNDPARENT ${SW_HIDE}<br />
+  ShowWindow  $HWNDPARENT ${SW_RESTORE}<br />
+!macroend<br />
+<br />
+!include &quot;mui.nsh&quot;<br />
+<br />
+!define MUI_HEADERIMAGE<br />
+!define MUI_HEADERIMAGE_BITMAP &quot;${NSISDIR}\Contrib\Graphics\Header\orange.bmp&quot;<br />
+<br />
+!insertmacro MUI_PAGE_WELCOME<br />
+!insertmacro MUI_PAGE_LICENSE &quot;${NSISDIR}\Docs\Modern UI\License.txt&quot;<br />
+!insertmacro MUI_PAGE_COMPONENTS<br />
+Page Custom custcreate custleave<br />
+!insertmacro MUI_PAGE_DIRECTORY<br />
+!insertmacro MUI_PAGE_INSTFILES<br />
+!insertmacro MUI_PAGE_FINISH<br />
+<br />
+!insertmacro MUI_LANGUAGE &quot;English&quot;<br />
+<br />
+OutFile &quot;Test.exe&quot;<br />
+InstallDir &quot;$EXEDIR&quot;<br />
+<br />
+Function custcreate<br />
+   !insertmacro CHANGE_HEADER_IMG &quot;${IMG_CHANGE}&quot;<br />
+<br />
+   !insertmacro MUI_HEADER_TEXT &quot;Custom Page&quot; \<br />
+   &quot;This page should show a different image&quot;<br />
+   push $0<br />
+   InstallOptions::Dialog &quot;$PLUGINSDIR\custom.ini&quot;<br />
+   pop $0<br />
+   pop $0<br />
+<br />
+   !insertmacro CHANGE_HEADER_IMG &quot;${IMG_RESTORE}&quot;<br />
+FunctionEnd<br />
+<br />
+Function custleave<br />
+MessageBox MB_YESNO &quot;Continue?&quot; IDYES noabort<br />
+Abort<br />
+noabort:<br />
+FunctionEnd<br />
+<br />
+Function .onInit<br />
+   InitPluginsDir<br />
+   File /oname=${IMG_CHANGE} &quot;${NSISDIR}\Contrib\Graphics\Header\win.bmp&quot;<br />
+   GetTempFileName $0<br />
+   Rename $0 &quot;$PLUGINSDIR\custom.ini&quot;<br />
+<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;settings&quot; &quot;numfields&quot; &quot;1&quot;<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;field 1&quot; &quot;type&quot; &quot;groupbox&quot;<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;field 1&quot; &quot;text&quot; &quot;I'm a GroupBox, or not...&quot;<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;field 1&quot; &quot;left&quot; &quot;10&quot;<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;field 1&quot; &quot;right&quot; &quot;-10&quot;<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;field 1&quot; &quot;top&quot; &quot;10&quot;<br />
+   WriteINIStr &quot;$PLUGINSDIR\custom.ini&quot; &quot;field 1&quot; &quot;bottom&quot; &quot;-10&quot;<br />
+FunctionEnd<br />
+<br />
+Section -<br />
+<br />
+SectionEnd</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">is99</div><div class="date">13th March 2007, 16:05</div></div><div class="posttext">Yes a good temper indeed.<br />
+<br />
+Thanks I will try it.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">13th March 2007, 19:32</div></div><div class="posttext">Let me know if the code works as expected on a full installer environment,<br />
+I'd like to post an example at wiki to be accessible by everyone who might need it :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">is99</div><div class="date">13th March 2007, 20:58</div></div><div class="posttext">Yes it is working.<br />
+There is one small bug I still can't point when it exactly happends.<br />
+<br />
+Sometimes when the logo is changing, I mean when I go to the page where the logo is suppose to change the installer window &quot;hides&quot; behing one of the other open windows.<br />
+<br />
+I mean for example I have IE open on ful screen and then I run the installer, I see the Welcome screen, licnese ..... amd then when I hit next and suppose to see the page where the image suppose to change the setup windows &quot;hides&quot; behing IE window.<br />
+But the image is changing as it should.<br />
+<br />
+<br />
+I will try to check it on other PCs to see if its a bug in my PC or something general.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">13th March 2007, 21:04</div></div><div class="posttext">This happens because I had to to use it in the script (hide/restore window) in order to refresh it and show the changed image.<br />
+I'll check further possibilities.<br />
+<br />
+EDIT:<br />
+Actually there's no need for hide/restore window!<br />
+This happened on my old tired pc in works!<br />
+Now in home everything works just fine!<br />
+You should remove the 2 lines of code inside the macro,<br />
+ShowWindow  $HWNDPARENT ${SW_HIDE} -&gt; remove it<br />
+ShowWindow  $HWNDPARENT ${SW_RESTORE} -&gt; remove it</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">is99</div><div class="date">13th March 2007, 21:43</div></div><div class="posttext">Ok I will do it and also do more tests on more PCs and see if its ok and then let you know</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">13th March 2007, 21:49</div></div><div class="posttext">Cool! thanks :)</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">is99</div><div class="date">14th March 2007, 09:20</div></div><div class="posttext">Without these two lines the code dosn't work :(<br />
+It shows the new bitmap for a second and then it just shows white space instead of the bitmap.</div></div><hr />
+
+
+<div class="post"><div class="posttop"><div class="username">Red Wine</div><div class="date">14th March 2007, 11:25</div></div><div class="posttext">Works just fine on 2 pc's I'm able to test right now (XP)</div></div><hr />
+
+
+<div id="copyright">2001-2013 <a href="http://creativecommons.org/publicdomain/mark/1.0/" target="_blank">Public Domain Mark 1.0</a></div>
+</div>
+</body>
+</html>
