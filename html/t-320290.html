@@ -1,0 +1,134 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="how to deny &quot;goto next page&quot;?" />
+
+  <title>how to deny "goto next page"? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">how to deny "goto next page"?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=320290">how to deny "goto next page"?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">orecchionebruno</span><br />
+      <span class="post-time small text-muted">27th June 2010 11:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>how to deny "goto next page"?</strong><br />
+      Hi to everyone, I read the help on line and NSIS site but I didn't find a solution for this problem. Someone have a suggestion for don't allow that install process could start?<br />
+      <br />
+      My target is to update a file and user should choose right folder.<br />
+      <br />
+      I tried with this script, but the result is that the installer will be closed if doesn't find right file. What I would is that the installer doesn't "Goto next page" untill user choose right folder. (at the startup installer reads Install path in the registry)<br />
+      <br />
+      Function .onVerifyInstDir<br />
+      IfFileExists "$INSTDIR\MyApp.exe" +3 0<br />
+      MessageBox MB_OK "MyApp doesn't exist. Please select MyApp directory."<br />
+      Abort<br />
+      MoreInfo::GetProductVersion "$INSTDIR\MyApp.exe" ;get exe version (MoreInfo plug-in)<br />
+      Pop $1<br />
+      StrCmp $1 "3.1 " +3 0<br />
+      MessageBox MB_OK "Invalid version!$\rPlease select MyApp directory."<br />
+      Abort<br />
+      FunctionEnd</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">27th June 2010 12:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">What is causing the installer to close? Is it the Abort calls?<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">27th June 2010 12:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This works fine for me (attached). Don't put any message boxes in there because it will spam the user multiple times.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">orecchionebruno</span><br />
+      <span class="post-time small text-muted">27th June 2010 13:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi Stu, thanksss for your help now I've found My mistake.<br />
+      <br />
+      MY MISTAKE was in the "jump to line n.r X o Y" in the event "onInit" and I've leaved wrong and true strings:<br />
+      <br />
+      Function .onInit<br />
+      Processes::FindProcess "MyApp.exe"<br />
+      StrCmp "$R0" "0" +3 0<br />
+      Messagebox MB_OK "MyApp doesn't exist. Please select MyApp directory."<br />
+      Abort<br />
+      ReadRegStr $1 HKCR "MyApp\Path" ""<br />
+      ; IfFileExists "$1\MyApp.exe" 0 +3 ;!!!THIS STRING IS WRONG BEACAUSE NEXT IfFileExists SHOULD NOT BE PRESENTS TWO TIMES!!!!!!!!!!!<br />
+      IfFileExists "$1\MyApp.exe" 0 +2 ;!!!THIS IS TRUE<br />
+      StrCpy $INSTDIR "$1"<br />
+      FunctionEnd<br />
+      <br />
+      Ciao<br />
+      Bruno<br />
+      <br />
+      PS: in the orginal script I dint' wrote two IfFileExists commands so "+3" was wrong because goes directly to next event witout reading "FunctionEnd"</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">27th June 2010 15:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">orecchionebruno: I suggest you start using LogicLib to simplify your code. Instead of IfFileExists etcetc, you can do<br />
+      ${If} ${FileExists}<br />
+      stuff here<br />
+      ${Else}<br />
+      other stuff here<br />
+      ${EndIf}<br />
+      <br />
+      And so on and so forth.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">orecchionebruno</span><br />
+      <span class="post-time small text-muted">27th June 2010 15:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ok I'll do it, thankss</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

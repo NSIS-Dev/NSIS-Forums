@@ -1,0 +1,218 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="My understanding to date - Basic Installer" />
+
+  <title>My understanding to date - Basic Installer - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">My understanding to date - Basic Installer</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=290201">My understanding to date - Basic Installer</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">hungryOrb</span><br />
+      <span class="post-time small text-muted">14th April 2008 11:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>My understanding to date - Basic Installer</strong><br />
+      I hope this info can potentially help someone who is starting out. It's a culmination of help from many sources, including Cheryll, RedWine, and AfrowUK. Thanks to the other guys as well :) I'm bound to perhaps misrepresent a feature or element somehow, so please just post away with the correction, as the edit feature will not allow for late edits to the OP.<br />
+      <br />
+      ------------------------------------------------------<br />
+      <br />
+      This is a list of functions that I think people will be able to make use of when trying to learn NSIS.<br />
+      <br />
+      1.) <font color="green">User Account Type Check.</font><br />
+      <br /></p>
+
+      <blockquote>
+        Function .onInit<br />
+        <br />
+        UserInfo::GetAccountType<br />
+        Pop $0<br />
+        StrCmp $0 "Admin" 0 +3 ;<br />
+        ;MessageBox MB_OK 'You seem to be an admin!'<br />
+        Goto done<br />
+        StrCmp $0 "Power" 0 +3<br />
+        MessageBox MB_OK 'You must be logged in as Administrator!'<br />
+        Quit ;<br />
+        StrCmp $0 "User" 0 +3<br />
+        MessageBox MB_OK 'You must be logged in as Administrator!'<br />
+        Quit ;<br />
+        StrCmp $0 "Guest" 0 +3<br />
+        MessageBox MB_OK 'You must be logged in as Administrator!'<br />
+        Quit ;<br />
+        MessageBox MB_OK "Unknown error (Perhaps unknown account type?)"<br />
+        Quit ;<br />
+        <br />
+        Win9x:<br />
+        # This one means you don't need to care about admin or<br />
+        # not admin because Windows 9x doesn't either<br />
+        MessageBox MB_OK "(Checking Account Type) Error! This DLL can't run under Windows 9x!"<br />
+        <br />
+        done:
+      </blockquote><font color="royalblue">This is obviously an NSIS function that will check the current user account type. Use the working example to check if the user is allowed to mess with your installer/uninstaller.<br />
+      This should really go in your initialisation, note the example doesn't close the function, and that's simply because you'll want to put some other things in your initialisation too.</font><br />
+      <br />
+      2.) <font color="green">Custom Page (Login Details)</font><br />
+      <br />
+
+      <blockquote>
+        !insertmacro MUI_INSTALLOPTIONS_EXTRACT_AS "Custom.ini" "Custom"<br />
+        Functionend<br />
+        <br />
+        LangString CUSTOM_TITLE ${LANG_ENGLISH} "Enter your Login Details."<br />
+        LangString CUSTOM_SUBTITLE ${LANG_ENGLISH} " "<br />
+        <br />
+        Page custom CustomPage MyCustomLeave<br />
+        <br />
+        #==================================<br />
+        Function CustomPage<br />
+        <br />
+        !insertmacro MUI_HEADER_TEXT "$(CUSTOM_TITLE)" "$(CUSTOM_SUBTITLE)"<br />
+        # Display the page.<br />
+        !insertmacro MUI_INSTALLOPTIONS_DISPLAY "Custom"<br />
+        <br />
+        FunctionEnd
+      </blockquote><font color="royalblue">This is actually the section cut after the last. So the Functionend is the end of the initialisation.<br />
+      This example assumes that you want your custom page to appear before your main sections. Notice that the 'Page custom' wants to run two functions, 'CustomPage' and 'MyCustomLeave'. The CustomPage function simply adds info to the header text and of course, displays the page (renders your .ini file).</font><br />
+      <br />
+
+      <blockquote>
+        Function MyCustomLeave<br />
+        <br />
+        ReadINIStr $0 "Custom.ini" "Settings" "State"<br />
+        StrCmp $0 0 extract ; Next button?<br />
+        ;Abort<br />
+        <br />
+        extract:<br />
+        # Get the user entered values. ---------------==============================<br />
+        !insertmacro MUI_INSTALLOPTIONS_READ $Username "Custom" "Field 1" "State"<br />
+        !insertmacro MUI_INSTALLOPTIONS_READ $Password "Custom" "Field 2" "State"<br />
+        !insertmacro MUI_INSTALLOPTIONS_READ $Server "Custom" "Field 3" "State"<br />
+        !insertmacro MUI_INSTALLOPTIONS_READ $Autoupdate "Custom" "Field 4" "State"<br />
+        !insertmacro MUI_INSTALLOPTIONS_READ $AUpdatePath "Custom" "Field 5" "State"<br />
+        !insertmacro MUI_INSTALLOPTIONS_READ $DatabaseName "Custom" "Field 6" "State"<br />
+        <br />
+        done:<br />
+        FunctionEnd
+      </blockquote><font color="royalblue">I don't know everything (anything? ^^) about how the .ini files work, but it would seem that the .ini file can be read for the state of a button which is automatically added by NSIS, the next button.<br />
+      The Leave function simply wants to do stuff when you continue past the page, which is the same as saying that you click the next button. The details that user's have input on our custom page now get extracted to variables.</font><br />
+      <br />
+
+      <blockquote>
+        WriteRegStr HKCU "Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main" "MySQLUser" $Username ;As per install instruction file.<br />
+        WriteRegStr HKCU "Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main" "MySQLPass" $Password<br />
+        WriteRegStr HKCU "Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main" "MySQLADDR" $Server<br />
+        WriteRegStr HKCU "Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main" "AutoUpdatePath" $AUpdatePath<br />
+        WriteRegStr HKCU "Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main" "MySQLDBName" $DatabaseName<br />
+        WriteRegStr HKCU "Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main" "DBAccessMode" "1"<br />
+        WriteRegStr HKCU "Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main" "Status" "1"<br />
+        <br />
+        ;MessageBox MB_OK '0 is off and 1 is on! :: $Autoupdate' -====== Check!<br />
+        <br />
+        ${If} $Autoupdate == "1" ;control was selected<br />
+        WriteRegStr HKCU "Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main" "AutoUpdateEnable" "1"<br />
+        ${EndIf}<br />
+        ${If} $Autoupdate == "0"<br />
+        WriteRegStr HKCU "Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main" "AutoUpdateEnable" "0"<br />
+        ${EndIf}
+      </blockquote><font color="royalblue">This writing to registry is placed in the main section, which in install time, is just after the last file is copied. The logic ${If} statements assume that you have included the Logic library (!include 'LogicLib.nsh').<br />
+      You'll notice a message box line that is commented out. Remember to use these to check on the different stages of install of certain elements.</font><br />
+      <br />
+      3.) <font color="green">Uninstaller Planning(a)</font><br />
+      <br />
+
+      <blockquote>
+        WriteRegStr HKLM "Software\VB and VBA Program Settings\${PRODUCT_NAME}\Main" "InstPathHere" "$INSTDIR"
+      </blockquote><font color="royalblue">When using the uninstaller, to correctly identify the install path, we cannot use $INSTDIR <i>if</i> our uninstaller is not placed in the $INSTDIR at install time. This suggests and means that the $INSTDIR used in the uninstaller is based on the location of the uninst.exe or whatever your uninstaller is called.</font><br />
+      <br />
+      <br />
+      4.) <font color="green">Deleting Files(risky)</font><br />
+      <br />
+
+      <blockquote>
+        RMDIR /r "$R0"
+      </blockquote><font color="royalblue">Firstly, this is not recommended by the majority here it seems, so I shan't encourage it much, but rather offer how and why and when it can be useful.<br />
+      Having taken steps similar to the previous, the correct install path will remain in the registry and be able to be extracted accurately and used UNLESS a user:<br />
+      1) changes that registry<br />
+      2) renames the install folder manually<br />
+      3) or steps to a similar effect.<br />
+      Therefore, when using remove directory /r with your install path, the folder and everything in it will be deleted properly. Because this is potentially risky, given that the user takes to changing details which shouldn't matter a whole lot (usually appropriate naming prevents needs to rename, and messing with the registry is never a good idea unless one knows exactly what they want) you can use the preferred NSIS method of deleting all files within a folder, and then removing the directory without the '/r' parameter. The reason I don't use this, is because users are much more likely to add or subtract files from the INSTDIR than do any other changes, and also when there are updates, certain files will be added which may become part of the application while not becoming part of the uninstaller, which will by default only remove the files it knows should be there. Leaving you with a not-quite-uninstalled application.</font><br />
+      <br />
+      ---------------------<br />
+      <br />
+      And that's all :)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">AaronLS</span><br />
+      <span class="post-time small text-muted">14th April 2008 23:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Here are some guidelines I follow:<br />
+      Include a version number of your installer in the registry. You may find it invaluable when writing future upgrades or hotfixes that can perform special logic for certain versions.<br />
+      <br />
+      Use "SetCompress off" at the beginning of your installer while debugging, simply to speed up execution and compilation of the installer. Useful during phases of rapid testing and updates.<br />
+      <br />
+      If you have a suite of products or components, divide them up into seperate *.nsh files so that you are not overwhelmed by a large amount of irrelevant code when working on one particular product. Each product is divided into macros such as ProductName_Section and ProductName_Oninit that can be placed in the master *.nsi where appropriate. This also allows for easy reordering of sections by only copying/pasting !insertmacro statements rather than entire sections.<br />
+      <br />
+      Use ifndef headers in all *.nsh files to avoid multiple includes:<br /></p>
+      <pre>
+<code><br />!ifdef MYUTILITIES_NSH_USAGE<br />;=========Usage Example========<br /><br /><br />!endif<br />!ifndef MYUTILITIES_NSH<br />  !define MYUTILITIES_NSH<br />;code here   <br /><br />!endif<br /></code>
+</pre><br />
+      <br />
+      Name global vars with a leading _ underscore followed by the nsh filename if they are used only internally to the nsh script. Name global vars intended for access outside of the nsh script the same way but without the leading underscore:<br />
+      <br />
+      _MyUtilities_SomethingInternal<br />
+      MyUtilities_SomethingAvailableToPublic<br />
+      <br />
+      Use the same convention for function names and macros to avoid conflicts with other's *.nsh files. However, macro parameters do not have to be named this way.<br />
+      <br />
+      Use GetTempFileName to place a name in a variable and File /oname=$TempFileVar for all temporary files! It may seem painful at first, but if you don't and try to make up some output filename in a random location, then you may really feel the pain when your users start running into problems because you are overwriting existing files, or trying to write/execute in a location they don't have permissions to.<br />
+      <br />
+      Avoid repetitive hard coded strings. Use defines or registers. If you have some "magic value" as a string or number and it is used in more than one place, put it in a define so that typos don't cause problems, maintenance is easy, and readability is improved:<br />
+      !define ProductVersion "1.01"<br />
+      <br />
+      Organize your directory structure of files you plan to deploy into a structure similar to that which they will be deployed to the user's machine. I often have one of these "structures" in a seperate subdirectory for every Section. I will further divide these up into files which are blatantly copied, and files which are only copied if not existing, and then ini files which are to be merged.<br />
+      <br />
+      I then make use of the File /r command to allow me to include large numbers of files with very little code. Experiment thoroughly with the /r option to make sure you understand how it works.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">hungryOrb</span><br />
+      <span class="post-time small text-muted">15th April 2008 10:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Oh :D So useful, thankyou!</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

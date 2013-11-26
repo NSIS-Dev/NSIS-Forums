@@ -1,0 +1,138 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SelectFolderDialog without 'Create new folder'?" />
+
+  <title>SelectFolderDialog without 'Create new folder'? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">SelectFolderDialog without 'Create new folder'?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=321689">SelectFolderDialog without 'Create new folder'?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Netsurfer24</span><br />
+      <span class="post-time small text-muted">15th August 2010 16:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>SelectFolderDialog without 'Create new folder'?</strong><br />
+      Hi,<br />
+      <br />
+      I wonder if it is possible to have a nsDialogs::SelectFolderDialog without the 'create new folder' button? Or at least to disbale this button?<br />
+      <br />
+      I use this on a custom page where the user should be able to select as many <b>existing</b> folders as desired. Therefor creating a new folder is not wanted/ makes no sense in this case.<br />
+      <br />
+      If it could be done by the FindWindow and GetDlgItem method - does anybody know the correct parameters?<br />
+      <br />
+      Thanks,<br />
+      <br />
+      Gunther</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">15th August 2010 21:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">'fraid there's no such luck - once the dialog opens, code execution is locked.<br />
+      <br />
+      You can always create the folder browse dialog yourself, of course:<br /></p>
+      <pre>
+<code><br />!include "nsDialogs.nsh"<br />!include "LogicLib.nsh"<br /><br />OutFile "$%temp%\temp.exe"<br /><br /><br />; See also: http://msdn.microsoft.com/en-us/library/bb762115%28VS.85%29.aspx<br />!define BIF_RETURNONLYFSDIRS 0x00000001<br />Section<br />        ; Buffer to hold a display name output, not actively used.<br />        System::Call '*(&amp;t260) i.r0'<br />        ; Struct to handle the select folder dialog.  You'd probably only care about the text at the top.<br />    System::Call "*(i$HWNDPARENT, i, ir0, t'Text at top', i${BIF_RETURNONLYFSDIRS}, i, i, i) i.r1"<br />    ; The actual call<br />        System::Call "shell32::SHBrowseForFolder(i r1) i.r2"<br />        <br />        ; Some logic checking on its output<br />        ${If} $2 == 0<br />            MessageBox MB_OK "User canceled browsing."<br />        ${Else}<br />            ; Get the actual path from the pidl<br />            System::Call "shell32::SHGetPathFromIDList(i r2, t.r3)"<br />            ; and display<br />                MessageBox MB_OK "User selected folder: $3"<br />        ${EndIf}<br />        <br />        ; Clean up the structs<br />        System::Free $0<br />        System::Free $1<br />SectionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Netsurfer24</span><br />
+      <span class="post-time small text-muted">15th August 2010 23:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Animaether,<br /></p>
+
+      <blockquote>
+        <small>Originally posted by Animaether</small><br />
+        'fraid there's no such luck - once the dialog opens, code execution is locked.<br />
+        <br />
+        You can always create the folder browse dialog yourself, of course:
+      </blockquote>Of course ...! :p<br />
+      But really - I'd prefer if this would be available by nsDialogs (maybe differenced by a parameter).<br />
+
+      <blockquote>
+        <pre>
+<code><br />!include "nsDialogs.nsh"<br />!include "LogicLib.nsh"<br /></code>
+</pre>
+      </blockquote>&lt;smartypants&gt;<br />
+      BTW: It is not necessary to include LogicLib when using nsDialogs as it already includes<br />
+      LogicLib as well as WinMessages.<br />
+      &lt;/smartypants&gt;<br />
+      <br />
+      Thanks for code example, but I have already added hundred of lines of code to my script just to make same small changes to the standard behaviour of NSIS :hang: - so in this case I leave it to the user ...!<br />
+      <br />
+      Thanks again for your really helpful answer,<br />
+      <br />
+      Gunther
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">16th August 2010 00:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by Netsurfer24</small><br />
+        But really - I'd prefer if this would be available by nsDialogs (maybe differenced by a parameter).
+      </blockquote>Sure - but that'll need a change to the plugin itself; you'd have to officially log it as a wish list item :)<br />
+      <br />
+
+      <blockquote>
+        <small>Originally posted by Netsurfer24</small><br />
+        BTW: It is not necessary to include LogicLib when using nsDialogs as it already includes<br />
+        LogicLib as well as WinMessages.
+      </blockquote>True - but whenever I use functionality from a library explicitly, I like including that library myself (near-ish the top of the file) so that anybody reviewing the code can see the dependency. Say somebody else takes over my project and ditches nsDialogs for InstallOpensEx for whatever reason. They remove the "!include nsDialogs.nsh" and *boink* goes the compiled as soon as it hits the ${If}-etc. bits :)<br />
+      <br />
+      <br />
+
+      <blockquote>
+        <small>Originally posted by Netsurfer24</small><br />
+        Thanks for code example, but I have already added hundred of lines of code to my script just to make same small changes to the standard behaviour of NSIS
+      </blockquote>Well, then what's 10 more? ;)<br />
+      <br />
+
+      <blockquote>
+        <small>Originally posted by Netsurfer24</small><br />
+        Thanks again for your really helpful answer
+      </blockquote>No problem - if nothing else, others who might have been wondering about this will be helped as well.. yay forums :)<br />
+      (presuming they search :x)
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

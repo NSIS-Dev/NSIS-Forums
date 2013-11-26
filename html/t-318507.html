@@ -1,0 +1,497 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="user from $PROFILE" />
+
+  <title>user from $PROFILE - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">user from $PROFILE</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=318507">user from $PROFILE</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">19th April 2010 12:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>user from $PROFILE</strong><br />
+      With only one registry uninstall key, I include an xml file that has uninstall information for, for example, MyApp #2, #3, #4, etc -- copies, that have had registry entries overwritten by the current (most recent) copy. #2, #3, #4 can be uninstalled by reading the xml file.<br />
+      <br />
+      &lt;?xml version="1.0" encoding="utf-8" standalone="no" ?&gt;<br />
+      &lt;!-- do not modify --&gt;<br />
+      &lt;AppOptions&gt;<br />
+      &lt;AppPath&gt;C:\Gallery&lt;/AppPath&gt;<br />
+      &lt;DeskTopIcon&gt;0&lt;/DeskTopIcon&gt;<br />
+      &lt;InstallType&gt;1&lt;/InstallType&gt;<br />
+      &lt;Language&gt;1033&lt;/Language&gt;<br />
+      &lt;StartMenuDir&gt;TIG&lt;/StartMenuDir&gt;<br />
+      &lt;SubFolder&gt;0&lt;/SubFolder&gt;<br />
+      &lt;TimeStamp&gt;19042010055212&lt;/TimeStamp&gt;<br />
+      &lt;UserLogon&gt;6&lt;/UserLogon&gt;<br />
+      &lt;XML&gt;1&lt;/XML&gt;<br />
+      &lt;/AppOptions&gt;<br />
+      <br />
+      Using the UAC plugin, Administrator copies can't be uninstalled by Users. To not allow one user to uninstall someone else's, another user's copy, though, I thought of getting the current user's name from $PROFILE. Is there a recommended way of determining who the current user is?<br />
+      <br />
+      C:\Documents and Settings\Foo<br />
+      <br />
+      Who is Foo?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">19th April 2010 13:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by bnicer</small><br />
+        With only one registry uninstall key
+      </blockquote>Stop right there! If that key is in HKLM you are doing a all users/machine install and only admins can uninstall. If it is HKCU you are doing a single user install in $[local]appdata and only that user can uninstall
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">19th April 2010 13:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Alternative to installing in an all-users-accessible location for per-user applications, perhaps you should install to a user-specific location?<br />
+      <br />
+      Just to answer your question, though.. one of the System plugin examples shows how to get the user name:<br /></p>
+      <pre>
+<code>System</code><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"advapi32::GetUserName(t.r0,*i${NSIS_MAX_STRLEN}r1)i.r2"<br /></span><span style="color: #0000BB">MessageBoxMB_OK</span><span style="color: #DD0000">"Username:$0|Numberofcharacters:$1|Returnvalue(OKifnon-zero):$2"
+</span>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">19th April 2010 14:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I forgot to mention that my RequestExecutionLevel is set to user. I also goofed on UAC plugin; its actually the UserInfo plugin. UserInfo::GetOriginalAccountType + UserInfo::GetAccountType<br />
+      <br />
+      You can still do an Admin installation. Run as administrator. The uninstaller RequestExecutionLevel is always set to user. What might happen is that someone who is not an Admn could run the uninstaller file. As a precaution, UserInfo should return Admin as a condition for uninstalling. Also, the uninstall string is under HKLM. The unevelevated user would look for the string under HKCU. It isn't there and uninstall aborts.<br />
+      <br />
+      But what if I allow multiple instances of MyApp to be installed? The registry uninstall string would be incorrect, causing an uninstaller to abort, if old copies #2, #3, #4 are in different paths than the currently registered copy. To allow these old copies to be unistalled, I put the uninstall information into uninst.xml. Users are as always unable to uninstall Admin copies. They would be able to uninstall copies from other users, simply by going to C:\Gallery\bin\uninst.exe and clicking the file.<br />
+      <br />
+      A user-specific location, Animaether? The only locations off-limits to users (Vista and later) are Admin folders, Program Files, ...<br />
+      <br />
+      Assuming an admin installs to C:\Gallery, the xml file contains the profile information of the user who originally installed MyApp to bar other users (except for administrators?) from running uninst.exe.<br />
+      <br />
+      That's the only solution I can think of, anyway. XML. I haven't tried it yet. Before I had the xml file, old copies were uninstallable, had to be deleted manually. Enabling old copies to be uninstalled is preferable -- files that were installed to other paths are removed.<br />
+      <br />
+      Thanks for the System::Call. I'll give that a try.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">19th April 2010 17:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I think you may be a bit confused as to how user accounts work (unless the admin did some very strange things).<br />
+      <br />
+      Basically if you have the following users:<br />
+      - Administrator<br />
+      - Standard User A<br />
+      - Standard User B<br />
+      <br />
+      Then the Admin can access both his/her own account, folders (c:\documents and settings\Username\ or c:\users\Username\), registry keys (HKEY_USERS\), etc. as well as those of users A and B.<br />
+      <br />
+      But A can't access Admin nor B's stuff, and B can't access Admin nor A's stuff.<br />
+      <br />
+      I.e. if you are user B, you can open Windows Explorer on e.g. Vista, browse to Computer &gt; C: &gt; Users &gt; A and all you'll get is a "You don't currently have permission to access this folder."<br />
+      Similarly, if a program you're running accesses HKCU (Current user), it's accessing -your- registry... it won't touch user A's registry.<br />
+      <br />
+      Hence.. if you install to any user-specific location - say $LOCALAPPDATA (Google Chrome installs there, for example), store the uninstaller file and directives there, and write to HKCU to store the uninstall registry strings (which then point to the user's $LOCALAPPDATA location for the uninstaller), you should be good to go.<br />
+      <br />
+      For this, you don't even need to know the user's account name.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">19th April 2010 20:37 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">There is an aspect of installing to $LOCALAPPDATA which is difficult.<br />
+      <br />
+      I install PDF files with links that point to an absolute path, in this case C:\Gallery. The PDF files can be viewed embedded in a browser. The links are to HTML pages, so that is useful. There is a version of the PDF files that uses a relative linking path. The end-user has a choice of where to install. If another location is selected, the PDFs with relative links are installed. However, the problem is, in some browsers, IE 8 notably, but other browsers that cache locally are affected too, relative links won't open. The HTML page that hosts the PDFs informs the user of the issues and recommends re-installing to C:\Gallery to get an absolute linking location.<br />
+      <br />
+      One point does confuse me in Vista. An Admin's ability to uninstall from the (HKEY_USERS\)registry. Running an uninstaller that is set with <u>RequestExecutionLevel user</u> as an administrator does this: The first place the Admin attempts to access the registry is HKLM.<br />
+      <br />
+      NSIS does not automatically go to the registry to uninstall. You have to tell it to read the right uninstall registry entry. Without knowing that User A or B installed the package, the Admin goes to HKLM. That would be correct if Admin installed the software.<br />
+      <br />
+      Are you sure an Admin can access registry keys (HKEY_USERS\) of users A and B?<br />
+      <br />
+      If the Admin elevated from User A, User B's copy of software is registered under (HKEY_USERS\) of User B. Can Admin (User A) go there?<br />
+      <br />
+      In that example knowing a user's account name does help.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">19th April 2010 21:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yes, admins can usually (probably not true in domains) load and read the registry hive of other users. But it does require some extra work: <a href="http://nsis.sourceforge.net/EnumUsersReg" target="_blank">http://nsis.sourceforge.net/EnumUsersReg</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">19th April 2010 21:37 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by bnicer</small><br />
+        I install PDF files with links that point to an absolute path, in this case C:\Gallery. The PDF files can be viewed embedded in a browser. The links are to HTML pages, so that is useful. There is a version of the PDF files that uses a relative linking path. The end-user has a choice of where to install. If another location is selected, the PDFs with relative links are installed. However, the problem is, in some browsers, IE 8 notably, but other browsers that cache locally are affected too, relative links won't open. The HTML page that hosts the PDFs informs the user of the issues and recommends re-installing to C:\Gallery to get an absolute linking location.
+      </blockquote>Sounds to me like the main problem is trying to use PDFs for something they weren't meant for (then again, Adobe seems to think it's meant for just about anything, these days).<br />
+      You could try and see if the PDF links can take symbols (i.e. %localappdata% or something similar) in order to refer to the user's profile. But it sounds like you've got quite a tangled web going on regardless.<br />
+      <br />
+      A lot of your troubles hinge on this issue.. I can't help but think that it is this that you should try to address if at all possible, rather than trying to beat Account administration into submission.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">19th April 2010 22:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">PDF linking is limited, because -- you're right -- PDFs aren't meant for locally embedding in your browser. Online is another story. You can do Web-links (absolute) and File-links (relative). Both work (I think) on the Web, where addresses are permanent.<br />
+      <br />
+      In print and on screen PDF looks sharper than HTML. That's why I use it. I always thought offline, PDF would be ideal, because the main drawback online is the file size compared to HTML. I suspect IE 8 (XP SP3, Vista and later) disabled embedded linking locally since it was a perceived vulnerability.<br />
+      <br />
+      Disabling all links to external files, or just living with the fact that the links don't work when the documents are embedded (when they're not embedded, relative and absolute links work fine; they open HTML document in the browser) might be the only other option. In light of the lengths you have to go to, to protect the installation from being uninstalled by mistake, it might be worth it. I'm going to seriously think about it.<br />
+      <br />
+      Good advice.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">20th April 2010 01:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">A way to kill two birds with one stone with RequestExecutionLevel user is to set the default installation path $LOCALAPPDATA\Gallery (relative). An administrator could run the setup to install to C:\Program Files\Gallery (absolute), also default, if needed. (Vista or later.)<br />
+      <br />
+      I would specify 'Program Files' at some stage. In local language versions of Windows $PROGRAMFILES is sometimes something else.<br />
+      <br />
+      A very useful discussion. Thanks, Animaether.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">20th April 2010 02:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by bnicer</small><br />
+        I would specify 'Program Files' at some stage. In local language versions of Windows $PROGRAMFILES is sometimes something else.
+      </blockquote>I think it's always "Program Files" (Short of a user getting crafty with low-level Windows bits)... athough I wouldn't know for sure. The Dutch editions of XP and Win7 at least present the localized versions through e.g. Windows Explorer, but the underlying path names are still the same as in English versions.<br />
+      <br />
+      Also keep in mind that even in the en-US locale it -can- change because of 32bit vs 64bit difference; If you're installing on a 64bit Windows but aren't writing to $PROGRAMFILES64 specifically, then you end up writing to (default) "c:\Program Files (x86)\". If paths are hardcoded to "c:\Program Files\" in the PDFs, they would once again fail.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">20th April 2010 06:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by Animaether</small><br />
+        I think it's always "Program Files" (Short of a user getting crafty with low-level Windows bits)... athough I wouldn't know for sure. The Dutch editions of XP and Win7 at least present the localized versions through e.g. Windows Explorer, but the underlying path names are still the same as in English versions.
+      </blockquote>That's only for Win Vista and up, as far as I know. At least, in earlier versions, Program Files WILL be named differently.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">20th April 2010 06:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by MSG</small><br />
+        That's only for Win Vista and up, as far as I know. At least, in earlier versions, Program Files WILL be named differently.
+      </blockquote>Well, like I said.. I can't be 100% sure about it - especially since Dutch is a special case anyway.<br />
+      <br />
+      That said.. just double-checked and the XP machine definitely reads "Program Files" and "Documents and Settings" as the original names.. even in Windows Explorer.. It's only the user special folders that appear localized (i.e. My Documents -&gt; Mijn Documenten).<br />
+      <br />
+      Hard-coded paths have issues any way you look at it, is the message to take home :D
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">22nd April 2010 01:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm left a little worried that I might be taking a shortcut when there's a better/safer route.<br />
+      <br />
+      GetUserName system call:<br />
+      <br />
+      function GetUser<br />
+      System::Call "advapi32::GetUserName(t .r0, *i ${NSIS_MAX_STRLEN} r1) i.r2"<br />
+      StrCmp $2 "0" 0 +2<br />
+      StrCpy $0 "0" #<br />
+      Exch $0<br />
+      FunctionEnd<br />
+      <br />
+      Using that call, I note the '32' in advapi32. So my question, out of inexperience, will it work on 64-bit systems? I googled it and found nothing to the contrary, but I wasn't exactly encouraged either. advapi32.dll seems to be very much a 32-bit Windows library.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">22nd April 2010 05:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by bnicer</small><br />
+        System::Call "advapi32::GetUserName(t .r0, *i ${NSIS_MAX_STRLEN} r1) i.r2"
+      </blockquote>This will work just fine on x64 windows versions. In any case, NSIS is a 32 bits application, so I doubt it'd even be able to call 64 bits API functions...
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">22nd April 2010 06:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Cool! :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">22nd April 2010 09:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Here is a schematic. uninst.xml removes old installations. I think it's safe. I have yet to test it thoroughly.<br />
+      <br />
+      ; Accounts and Profiles<br />
+      ; WIN_V 0 = 9X (HKLM, user icons)<br />
+      ; WIN_V 1 = NT, ME (HKLM, user icons)<br />
+      ; WIN_V 2 = NT, ME (HKCU, user icons)<br />
+      ; WIN_V 3 = 2000, 2003, XP (HKLM, user/all icons selected)<br />
+      ; WIN_V 4 = 2000, 2003, XP (HKCU, user icons)<br />
+      ; WIN_V 5 = Vista (HKCU, user icons)<br />
+      ; WIN_V 6 = Vista (HKLM, run as admin - all icons)<br />
+      ; WIN_V 7 = (Guest or other), error - abort<br />
+      ; ACCOUNT 1 = Admin (HKLM)<br />
+      ; ACCOUNT 0 = User (HKCU)<br />
+      ; USER 1 = common icons<br />
+      ; USER 0 = user icons<br />
+      <br />
+      ; ACCOUNT 1 / USER 1 goto plug &gt;&gt;&gt; v_3a, v_6<br />
+      ; ACCOUNT 1 / USER 0 / R0 = $MY_PROFILE goto plug &gt;&gt;&gt; v_0, v_1, v_3b<br />
+      ; ACCOUNT 1 / USER 0 / R0 ! $MY_PROFILE goto abort (USER message)<br />
+      ; ACCOUNT 0 / USER 1 goto abort (UAC message)<br />
+      ; ACCOUNT 0 / USER 0 / RO = $MY_PROFILE goto plug &gt;&gt;&gt; v_2, v_4, v_5<br />
+      ; ACCOUNT 0 / USER 0 / RO ! $MY_PROFILE goto abort (USER message)<br />
+      <br />
+      * WIN_V 3 lets the user choose to install icons for all users.<br />
+      ** R0 ($R0) stores the user name from the old copy, comparing it to $MY_PROFILE, the current user name.<br />
+      *** goto plug, e.g.: uninstall.<br />
+      <br />
+      I hope this makes sense, sort of.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">23rd April 2010 23:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The xml file is a messy fix for a messy problem. Would there be some way to include the uninstall information more discreetly, tucked away, in the uninstaller itself, so that it can self-uninstall old installed copies without accessing the registry? Not an external file.<br />
+      <br />
+      The uninstall information is just a bunch of strings as far as I'm concerned. It would be neat, if you could save it to the uninstaller to read internally.<br />
+      <br />
+      I know it's a long shot. Before I delete the code, reverting to the installer without the xml file, and xml plugin, I thought I'd ask.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">23rd April 2010 23:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><a href="http://nsis.sourceforge.net/ReadCustomerData" target="_blank">http://nsis.sourceforge.net/ReadCustomerData</a> trick can be used on uninstaller also</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">24th April 2010 00:53 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The first step which isn't described is writing the data (strings) into the uninstaller. It certainly is something to play with for a few days. It could work. :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wizou</span><br />
+      <span class="post-time small text-muted">25th April 2010 19:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by bnicer</small><br />
+        I'm left a little worried that I might be taking a shortcut when there's a better/safer route.<br />
+        <br />
+        GetUserName system call:<br />
+        <br />
+        function GetUser<br />
+        System::Call "advapi32::GetUserName(t .r0, *i ${NSIS_MAX_STRLEN} r1) i.r2"<br />
+        StrCmp $2 "0" 0 +2<br />
+        StrCpy $0 "0" #<br />
+        Exch $0<br />
+        FunctionEnd
+      </blockquote>I'm not sure if this is relevant for your problem, but another way of getting the UserName is to simply use ReadEnvStr $0 "USERNAME"
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">25th April 2010 21:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It's an improvement. Thank you. :confused:<br />
+      <br />
+      It wouldn't surprise me, if the environment variable saves processing resources. System::Call to advapi.dll added 5644 bytes to the file size.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wizou</span><br />
+      <span class="post-time small text-muted">26th April 2010 08:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">One drawback is that someone can set this environment variable to a wrong value before calling your installer. But in most cases, it can be considered OK.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">26th April 2010 09:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">And also: <a href="http://support.microsoft.com/kb/273633" target="_blank">http://support.microsoft.com/kb/273633</a><br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">26th April 2010 14:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Then there are three choices, each with a disadvantage. The $PROFILE constant is available unfortunately not on all Windows versions, Windows 2000 and above.<br />
+      <br />
+      Push $PROFILE<br />
+      Push "/"<br />
+      Call StrStrRight<br />
+      Pop $MY_PROFILE<br />
+      <br />
+      returns the username, provided there are no forward-slashes after the username. (How could there be?) StrStrRight is modified from StrStrLeft that was in the manual a few nsis releases back. <a href="http://forums.winamp.com/showthread.php?t=270514" target="_blank">http://forums.winamp.com/showthread.php?t=270514</a><br />
+      <br />
+      I didn't know cheating your domain logon was possible. Thanks.<br />
+      <br />
+      I think I'll combine choices B and C.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wizou</span><br />
+      <span class="post-time small text-muted">26th April 2010 14:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">To my knowledge, Windows can make many modifications to the name used to create the profile directory.<br />
+      For example: it tries C:\Users\UserName, then (if the directory already exists for some reason), C:\Users\UserName.Domain, or C:\Users\UserName-1 .. also it can modify some characters from your UserName to match the limit of the filesystem..<br />
+      So I wouldn't rely on the name of the profile folder to determine the username<br />
+      <br />
+      However, as pointed out by <a href="http://support.microsoft.com/kb/273633" target="_blank">http://support.microsoft.com/kb/273633</a> (thanks Afrow UK), you can use whoami.exe (and pipe the output to a file).<br />
+      But then I feel it's more direct to use System::Call "advapi32::GetUserName"</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">26th April 2010 16:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I ran Whoami in a command prompt window. The output was the domain backward-slash username -- in lower case.<br />
+      <br />
+      I don't know how to pipe. It might be interesting to learn. On the other hand, System::Call "advapi32::GetUserName" is guaranteed.<br />
+      <br />
+      Installing multiple copies in different paths or in the same path with different shortcut folders or the same shortcut folder, and/or installing without a desktop icon checked on top of a current copy with a desktop icon has given me a few new tasks.<br />
+      <br />
+      Maybe I'll try piping later.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">26th April 2010 16:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">to pipe, use one of the dos exec plugins or execute cmd.exe /c foo|bar (But using whoami is not a good idea, it was added to Vista and was only in the reskit for previous versions of NT)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">26th April 2010 20:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Also worth noting GetUserName gets the name of the user running the process which doesn't necessarily equate to the visibly logged in user (i.e. Run As). In most cases this isn't an issue though of course but just worth mentioning.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">26th April 2010 21:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks, Stu.<br />
+      <br />
+      Admin installations don't need a username; the uninstallation can be by any other Admin. In the situation when User B elevates to Admin A to install, for that matter, the username A is more appropriate than the username B. I hope that's the right interpretation. In practice, I haven't had any problems with those kinds of tests.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bnicer</span><br />
+      <span class="post-time small text-muted">28th April 2010 05:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I got into a serious mess on XP (where I had a checkbox to install All Users icons) I found, because my installer prompted to uninstall before an installation. It was bordering on schizophrenic to search for currently installed copies. Which should you be prompting to uninstall? And how would you know it was the copy that was being replaced, if the user ended up overwriting the other copy?<br />
+      <br />
+      My advice to any and all reading this thread is don't use a checkbox to install All Users icons.<br />
+      <br />
+      It doesn't work with re-installing and is incompatible with Vista. Install icons according to the user's account.<br />
+      <br />
+      Other than that, the uninstaller is OK now. Thanks for the valuable tips. :)</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

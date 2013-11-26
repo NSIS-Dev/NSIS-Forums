@@ -1,0 +1,326 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Calling a DLL" />
+
+  <title>Calling a DLL - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Calling a DLL</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=177808">Calling a DLL</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">b_avery@yahoo.c</span><br />
+      <span class="post-time small text-muted">24th April 2004 11:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Calling a DLL</strong><br />
+      Calling a DLL from within NSIS:<br />
+      <br />
+      Why is this not working?<br />
+      <br />
+      ==============================<br />
+      SetPluginUnload alwaysoff<br />
+      <br />
+      Function loadDll<br />
+      <br />
+      SetOutPath $TEMP<br />
+      File XmlToIni.dll ; copy dll<br />
+      StrCpy $0 '$TEMP\file.ini'<br />
+      System::Call 'XmlToIni::SaveIniToFile(t) l(r0) r1'<br />
+      <br />
+      SetPluginUnload manual<br />
+      System::Free 0<br />
+      <br />
+      FunctionEnd<br />
+      ==============================<br />
+      <br />
+      The interface within the DLL to call is:<br />
+      <br />
+      long SaveIniToFile(char* szFileName)<br />
+      <br />
+      And returns back a long.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joel</span><br />
+      <span class="post-time small text-muted">24th April 2004 15:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Some notes:<br />
+      1. <b>SetOutPath $TEMP</b>. Outputing to the users Temp. dir., right?<br />
+      2. <b>System::Call 'XmlToIni::SaveIniToFile(t) l(r0) r1'</b>. System, mostly, call the functions from DLLs APIs inside $SYSDIR folder.<br />
+      3. <b>System::Free 0</b>. You should use:<br /></p>
+      <pre>
+<code><br />System::Free $0<br /></code>
+</pre><br />
+      Recommendation:<br />
+      Try to call directly your DLL, avoiding the system plugin. See web archive about examples of plugins.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">24th April 2004 15:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">System::Free 0 is right, there is no need to change it. You can however remove SetPluginUnload alwaysoff, SetPluginUnload manual and System::Free 0 because it's not really needed when you can System.dll just one time.<br />
+      <br />
+      You are missing a dot before r1, the result will never go into $1. To figure out what's wrong, more details are needed. Most importantly, what exactly isn't working.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">b_avery@yahoo.c</span><br />
+      <span class="post-time small text-muted">25th April 2004 09:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK getting a message back in $1, which is error, which is a good start.<br />
+      <br />
+      But the DLL is not running as it should create a file called file.ini in the temp area.<br />
+      <br />
+      SetOutPath $SYSDIR ; create temp directory<br />
+      File XmlToIni.dll ; copy dll there<br />
+      StrCpy $0 '$TEMP\file.ini'<br />
+      System::Call 'XmlToIni::SaveIniToFile(t) l(r0) .r1'</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">fredtheman</span><br />
+      <span class="post-time small text-muted">25th April 2004 11:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Lobo &gt;&gt; System, mostly, call the functions from DLLs APIs inside $SYSDIR folder.<br />
+      <br />
+      What do you mean? Does it mean that we should always append the directory where a given DLL is located?<br />
+      <br />
+      &gt;&gt; System::Free $0<br />
+      <br />
+      What is this System::Free used for, really? I'm confused about why I need SetPluginUnload alwaysoff + SetPluginUnload manual + System::Free. Could you tell us why we need those three statements when using the System plug-in?<br />
+      <br />
+      &gt;&gt; Try to call directly your DLL, avoiding the system plugin. See web archive about examples of plugins.<br />
+      <br />
+      What do you mean with "call directly"? What other way is there to call a DLL from NSIS besides the System plug-in?<br />
+      <br />
+      b_avery &gt;&gt; But the DLL is not running as it should create a file called file.ini in the temp area.<br />
+      <br />
+      Not sure this is the cause, but is there a space between "l" and "(r0)"? I know there's a space missing in the documentation on the System plug-in. Try this instead:<br />
+      <br /></p>
+      <pre>
+<code><br />System::Call 'XmlToIni::SaveIniToFile(t) l (r0) .r1'<br />                                          ^ here, a space<br /></code>
+</pre><br />
+      <br />
+      Thank you :-)<br />
+      Fred.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">b_avery@yahoo.c</span><br />
+      <span class="post-time small text-muted">25th April 2004 12:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Nope, still an error :-(</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deguix</span><br />
+      <span class="post-time small text-muted">25th April 2004 14:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I don't know, but generally the error return is an integer (i), unless it's specified.<br />
+      <br />
+      And about the input, see the documentation if the input is <i>A pointer to buffer or variable</i> where you have to add a pointer, and <i>A pointer to string</i> where you don't.<br />
+      <br />
+      So I suggest:<br />
+      <br /></p>
+      <pre>
+<code>System</code><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">'XmlToIni::SaveIniToFile(t)i(r0).r1'
+</span>
+</pre>OR<br />
+      <br />
+      <pre>
+<code>System</code><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">'XmlToIni::SaveIniToFile(t)i(*r0).r1'
+</span>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">b_avery@yahoo.c</span><br />
+      <span class="post-time small text-muted">25th April 2004 15:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">No still the same.<br />
+      <br />
+      Yes the routine does come back with a Long<br />
+      <br />
+      Here is the call details:<br />
+      <br />
+      long SaveIniToFile(char* szFileName)<br />
+      <br />
+      <br />
+      if this will not connect I could try:<br />
+      <br />
+      long SaveIniToFile(LPCSTR szFileName)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joel</span><br />
+      <span class="post-time small text-muted">25th April 2004 15:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        What do you mean? Does it mean that we should always append the directory where a given DLL is located?
+      </blockquote>That the DLL, called by system plugin, must be in the $SYSDIR for easy location and execution.<br />
+
+      <blockquote>
+        What is this System::Free used for, really?
+      </blockquote>Release or free the resources use by the functon called by the system plugin. We don't want memory leaks...<br />
+
+      <blockquote>
+        I'm confused about why I need SetPluginUnload alwaysoff + SetPluginUnload manual + System::Free. Could you tell us why we need those three statements when using the System plug-in?
+      </blockquote>I don't use them, but in the DOCs you might find the awnser. As my way, I don't really need them.<br />
+
+      <blockquote>
+        What do you mean with "call directly"? What other way is there to call a DLL from NSIS besides the System plug-in?
+      </blockquote>Well... an example of calling directly is the system plugin. Maybe you could find a way to use your plugin without using the system plugin.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">b_avery@yahoo.c</span><br />
+      <span class="post-time small text-muted">25th April 2004 19:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">My DLL is still not working from NSIS :-(</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">25th April 2004 19:23 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Some corrections:</p>
+
+      <blockquote>
+        That the DLL, called by system plug-in, must be in the $SYSDIR for easy location and execution.
+      </blockquote>It doesn't have to be in $SYSDIR. On the contrary, it looks in the current directory first.
+
+      <blockquote>
+        Release or free the resources use by the function called by the system plug-in. We don't want memory leaks...
+      </blockquote>System::Free doesn't free resources used by the System plug-in. It frees resources allocated using the System plug-in using System::Alloc or the special System::Call syntax. If you pass $0 to it, it will try to free the memory pointed to by $0 which is a bad idea unless you've saved an address of some allocated memory in it. If you use System::Free 0 it will simply do nothing. Why this is needed will be clear once you read about SetPluginsUnload.
+
+      <blockquote>
+        Well... an example of calling directly is the system plug-in. Maybe you could find a way to use your plug-in without using the system plug-in.
+      </blockquote>You can only call specifically designed DLLs directly from the NSIS script using the DLLName::FuncName syntax. See Contrib\ExDLL for a skeleton of such a DLL.<br />
+      <br />
+      As for the thread starter's problem, some details are still missing... The exact error returned, whether or not the DLL is called (put a message box on the top of the function, don't rely on file creation to find out) and the new line used to call the function.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">b_avery@yahoo.c</span><br />
+      <span class="post-time small text-muted">25th April 2004 19:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I have looked all over for "Contrib\ExDLL for a skeleton of such a DLL" but can't find where you are refering to. Please can you help me?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joel</span><br />
+      <span class="post-time small text-muted">26th April 2004 15:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">How can we help if we don't know the type of error.<br />
+      Maybe you can attach your script will be helpfull.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joost Verburg</span><br />
+      <span class="post-time small text-muted">26th April 2004 16:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Contrib\ExDLL contains header file that allow to create a NSIS plug-in.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">fredtheman</span><br />
+      <span class="post-time small text-muted">26th April 2004 16:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">&gt;&gt; I have looked all over for "Contrib\ExDLL for a skeleton of such a DLL" but can't find where you are refering to<br />
+      <br />
+      It means that you should look in the directory where you installed NSIS. There are a bunch of sub-directories, one of them being Contrib. You'll find a sub-sub-directory called ExDLL... which only contains source code, no documentation, so I doubt it'll help you much in solving your problem :-)<br />
+      <br />
+      Personally, I'm more concerned about this :<br />
+      <br />
+      &gt;&gt; You can only call specifically designed DLLs directly from the NSIS script using the DLLName::FuncName syntax<br />
+      <br />
+      Does it mean that we cannot call any DLL we want using the System plug-in? What is the issue?<br />
+      <br />
+      And if someone has successfully called a COM control through the System plug-in, I'm still interested in an example :-)<br />
+      <br />
+      Thx<br />
+      Fred.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joost Verburg</span><br />
+      <span class="post-time small text-muted">26th April 2004 16:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You can call any DLL using the System DLL. That quote refers to a direct call without the System plug-in.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">fredtheman</span><br />
+      <span class="post-time small text-muted">26th April 2004 17:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ah ok. I didn't know there was another way to call a DLL besides using the System plug-in.<br />
+      <br />
+      How do I do this, and what are the avantages/disadvantages?<br />
+      <br />
+      Thx<br />
+      Fred.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joost Verburg</span><br />
+      <span class="post-time small text-muted">26th April 2004 18:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">These DLLs are NSIS plug-ins, which you can find in the Plugins folder.<br />
+      <br />
+      NSIS plug-ins can access the NSIS stack and registers and will automatically be extraced and removed by NSIS.<br />
+      <br />
+      Examples of plug-in are InstallOptions, NSISdl, LangDLL etc.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

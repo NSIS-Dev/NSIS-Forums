@@ -1,0 +1,273 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Extract file depending on language" />
+
+  <title>Extract file depending on language - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Extract file depending on language</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=138150">Extract file depending on language</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">matricen</span><br />
+      <span class="post-time small text-muted">7th June 2003 03:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Extract file depending on language</strong><br />
+      Here is a little newbie question. Is it possible to extract files with my Modern NSIS installer depenping on which language the user has choosen? - If, then how would it look like?<br />
+      <br />
+      (My installer includes to different languages)<br />
+      <br />
+      e.g.<br />
+      <br />
+      SetOutPath "$INSTDIR\"<br />
+      File "language1.txt"<br />
+      File "language2.txt"<br />
+      <br />
+      If user has chosen language1, then I only want the language1.txt to be extracted and not language2.txt. (Same thing other way around)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Sunjammer</span><br />
+      <span class="post-time small text-muted">7th June 2003 09:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">$LANGUAGE gets set to the language name so you could do: (not tested)</p>
+      <pre>
+<code>File "$LANGUAGE.txt"</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">7th June 2003 11:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">As $LANGUAGE is a runtime variable this will not work. You should use something like this:<br />
+      <br /></p>
+      <pre>
+<code>StrCmp $LANGUAGE ${LANG_ENGLISH} 0 notEnglish<br />  File "english file.txt"<br />notEnglish: StrCmp $LANGUAGE ${LANG_FRENCH} 0 notFrench<br />  File "french file.txt"<br />notFrench:</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joel</span><br />
+      <span class="post-time small text-muted">7th June 2003 17:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">and...<br />
+      Is there a way to detect the user's PC language?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MoNKi</span><br />
+      <span class="post-time small text-muted">7th June 2003 18:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Lobo Lunar, I think that I found a way to detect the user language, please, test it with other languages, i only tested it with the spanish language.<br />
+      <br /></p>
+      <pre>
+<code>OutFile "AutoLanguage.exe"<br /><br />LoadLanguageFile "${NSISDIR}\Contrib\Language files\English.nlf"<br />Name "AutoLanguage English"<br />LoadLanguageFile "${NSISDIR}\Contrib\Language files\Spanish.nlf"<br />Name "AutoLanguage Spanish"<br /><br />; Puts in stack the user LANG_ID<br />Function GetUserLangId<br />        Push $R0<br />        System::Call 'Kernel32::GetUserDefaultLCID(v) i() .r10'<br />        IntOp $R0 $R0 &amp; "2047"<br />        Exch $R0<br />FunctionEnd     <br />        <br /><br />Function .onInit<br />        Call GetUserLangId<br />        Pop $R0<br />        MessageBox MB_OK "User LANG_ID = $R0"<br /><br />        StrCmp $R0 ${LANG_SPANISH} 0 notSpanish<br />                MessageBox MB_OK "Spanish"<br />                Goto finishLang<br />notSpanish:<br />                MessageBox MB_OK "English"    <br />finishLang:<br />        Abort<br /><br />FunctionEnd<br /><br />Section ""<br />SectionEnd</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joel</span><br />
+      <span class="post-time small text-muted">7th June 2003 19:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Display in my machine (Windows ME):<br /></p>
+      <pre>
+<code><br />User LANG_ID = 10<br />English<br /></code>
+</pre><br />
+      <br />
+      [edit]<br />
+      <pre>
+<code><br />OutFile "AutoLanguage.exe"<br />Name "DetectLanguage"<br /><br /><br />; Puts in stack the user LANG_ID<br />Function GetUserLangId<br />        Push $R0<br />System::Call 'Kernel32::GetSystemDefaultLangID(v) i() .r10'<br />        Exch $R0<br />FunctionEnd     <br />        <br /><br />Function .onInit<br />Call GetUserLangId<br />Pop $R0<br /><br />MessageBox MB_OK "$R0" <br />;here mine return: <br />2058=LANG_SPANISH|SUBLANG_SPANISH_MEXICAN<br />Quit    <br />FunctionEnd<br /><br />Section ""<br />SectionEnd<br /></code>
+</pre><br />
+      Now, must compare with the tool in "${NSISDIR}\bin\MakeLangID.exe"
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MoNKi</span><br />
+      <span class="post-time small text-muted">7th June 2003 19:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">In my windows xp it shows "User LANG_ID=1034" :(<br />
+      I'll read MSDN more carefully for another way.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MoNKi</span><br />
+      <span class="post-time small text-muted">7th June 2003 20:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I have read your edit now. Well, your way is better (but with GetUserDefaultLangID bacause a single user can change his default lang), now I get 3082 (SUBLANG_MODERN). We need to associate each SUBLANG with the "NORMAL". I think this can work:<br />
+      <br /></p>
+      <pre>
+<code>; Puts in stack the user LANG_ID<br />Function GetUserLangId<br />        Push $R0<br />        System::Call 'Kernel32::GetUserDefaultLangID(v) i() .r10'<br />        Exch $R0<br />FunctionEnd     <br /><br />Function ConvertLangIdToNeutral<br />        Exch $R0<br />        IntOp $R0 $R0 &amp; "1023"<br />        Exch $R0<br />FunctionEnd<br /><br />Function .onInit<br />        Call GetUserLangId<br />        Call ConvertLangIdToNeutral<br />        Pop $R0<br /><br />        MessageBox MB_OK "User NEUTRAL_LANG_ID = $R0"<br /><br />        Push ${LANG_SPANISH}<br />        Call ConvertLangIdToNeutral<br />        Pop $R1 <br />        StrCmp $R0 $R1 0 notSpanish<br />                MessageBox MB_OK "Spanish"<br />                Goto finishLang<br />notSpanish:<br />                MessageBox MB_OK "Default Language"   <br />finishLang:<br />        Abort<br /><br />FunctionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deguix</span><br />
+      <span class="post-time small text-muted">7th June 2003 20:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This convertion, MoNKi, give to me:<br />
+      <br />
+      The return of GetUserLangId:<br />
+      1046 | LANG_PORTUGUESE | SUBLANG_PORTUGUESE_BRAZILIAN<br />
+      <br />
+      The return of ConvertLangIdToNeutral:<br />
+      22 | LANG_PORTUGUESE | SUBLANG_NEUTRAL</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MoNKi</span><br />
+      <span class="post-time small text-muted">7th June 2003 20:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">:up: Works!<br />
+      <br />
+      Well if there is a .nlf for SUBLANG_PORTUGUESE_BRAZILIAN there is no need to use the function to convert it to neutral, but if there is no nlf file use it for a default portuguese file.<br />
+      <br />
+      First compare your LANGID with all sublangs that are translated and then use the ConvertLangIdToNeutral to use a default for all non translated sublangs.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joel</span><br />
+      <span class="post-time small text-muted">7th June 2003 20:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Language Neutral=10<br />
+      Spanish...seems to work :up: :)<br />
+      [edit]<br />
+      check this site of other countries codes:<br />
+      <a href="http://www.science.co.il/Language-Locale-Codes.asp?s=decimal" target="_blank">http://www.science.co.il/Language-Lo....asp?s=decimal</a><br />
+      [/edit]</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MoNKi</span><br />
+      <span class="post-time small text-muted">7th June 2003 21:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I have created a script that uses a macro, it should detect spanish, english, portuguese and portuguese_brazilian. Please deguix test it and tell me if it works with portuguese_brazilian. And if it works, can i upload to the archive the script or need somebody with admin rights?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MoNKi</span><br />
+      <span class="post-time small text-muted">7th June 2003 21:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Sorry, forgot the attach</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deguix</span><br />
+      <span class="post-time small text-muted">7th June 2003 22:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ok! Works!<br /></p>
+
+      <blockquote>
+        And if it works, can i upload to the archive the script or need somebody with admin rights?
+      </blockquote>You can upload, registering in the Archive (to be with your name) or like anonymous (but can be changed by everyone).
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Sunjammer</span><br />
+      <span class="post-time small text-muted">7th June 2003 23:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You cannot upload files unless you have admin rights but this doesn't affect your ability to create pages of text including scripts and anything else you might want to write about :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">8th June 2003 14:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The user's language is detected by NSIS, the closest language in the instsaller's language table is choosen and its ID is set in $LANGUAGE. If you want to get the language name use a LangString with the language's name as the value for each language. Example:<br />
+      <br /></p>
+      <pre>
+<code>LangString language_name ${LANG_ENGLISH} "English"<br />LangString language_name ${LANG_FRENCH} "French"<br /># ...</code>
+</pre><br />
+      <br />
+      If you want language names of languages that are not present in the installer use the code above.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MoNKi</span><br />
+      <span class="post-time small text-muted">8th June 2003 14:37 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Kichik are you sure? If i delete the onInit function of the language.nsi example (I not select a language) it not detect that I am using spanish.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">8th June 2003 14:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yes MoNKi, it should choose the current language the user is using. NSIS uses GetUserDefaultLangID. If it can't find a perfect match for both the main language and the sublanguage it looks for match in the main language alone. If it can't find a match there either it takes the first language - "the default language".</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MoNKi</span><br />
+      <span class="post-time small text-muted">8th June 2003 14:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">NSIS says that my langid is 1033 (LANG_ENGLISH, SUBLANG_ENGLISH_US), Spanish is 1034, and i'm using SUBLANG_SPANISH_MODERN (3082).<br />
+      <br />
+      I'm loading all language files, including spanish, and it don't works.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">8th June 2003 15:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Fixed in latest CVS version. It was broken since Ui.c version 1.14 and we are now at 1.149...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MoNKi</span><br />
+      <span class="post-time small text-muted">8th June 2003 15:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ok now works, thanks kichik. No need of complicated scripts.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Hidden Section gets &quot;deselected&quot;" />
+
+  <title>Hidden Section gets "deselected" - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Hidden Section gets "deselected"</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=314225">Hidden Section gets "deselected"</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">xbarns</span><br />
+      <span class="post-time small text-muted">28th October 2009 19:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Hidden Section gets "deselected"</strong><br />
+      Hi everyone,<br />
+      <br />
+      i have a hidden section,<br />
+      <br /></p>
+      <pre>
+<code><br />Section -FirstToExecute SEC_FIRSTTOEXECUTE<br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      and a couple more sections (one more hidden, about 20 or so regular).<br />
+      <br />
+      Now in some cases that section does not get executed, i could narrow it down to this happening when i change something in the component selection (select an additional section). The Setup can be used to install (previously not installed) components when called a second time, to accomodate this i use a macro that i have "derived" from the "SELECT_UNSECTION" macro from the examples.<br />
+      <br />
+      <pre>
+<code><br />!macro DISABLE_SECTION SECTION_NAME SECTION_ID<br />    Push $R0<br />    ReadRegStr $R0 HKLM "${REGKEY}\Components" "${SECTION_NAME}"<br />    StrCmp $R0 1 0 next${SECTION_ID}<br />    !insertmacro SetSectionFlag "${SECTION_ID}" ${SF_RO}<br />        !insertmacro ClearSectionFlag "${SECTION_ID}" ${SF_SELECTED}<br />next${SECTION_ID}:<br />    Pop $R0<br />!macroend<br /></code>
+</pre><br />
+      <br />
+      That macro is called from<br />
+      <pre>
+<code><br />!define MUI_PAGE_CUSTOMFUNCTION_PRE "PRE_PAGE_COMPONENTS"<br /></code>
+</pre><br />
+      <br />
+      <pre>
+<code><br />Function PRE_PAGE_COMPONENTS<br /><br />        !insertmacro DISABLE_SECTION "Business Logic (required)" ${SEC_FRAMEWORK}<br />        !insertmacro DISABLE_SECTION "Backup Server" ${SEC_BACKUPSERVER}<br />        !insertmacro DISABLE_SECTION "Deployment Service" ${SEC_DEPLOYMENTSERVICE}<br />.<br />.<br />.<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      I put<br />
+      <pre>
+<code><br />Function .onSelChange<br />        <br />SectionGetFlags ${SEC_FIRSTTOEXECUTE} $0<br />IntOp $0 $0 | ${SF_SELECTED}<br />SectionSetFlags ${SEC_FIRSTTOEXECUTE} $0<br />        <br />!insertmacro StartRadioButtons $1<br />!insertmacro RadioButton ${SEC_FIREBIRDSERVER2}<br />!insertmacro RadioButton ${SEC_FIREBIRDSERVER264}<br />!insertmacro EndRadioButtons<br />FunctionEnd<br /><br /></code>
+</pre><br />
+      in (the code is an example from the manual) but it does not help, the section is not executed.<br />
+      <br />
+      I checked if i accidentally "uncheck" the section "SEC_FIRSTTOEXECUTE" but i don't, i also do not loop through the sections to do anything to them (i have seen you can do that).<br />
+      <br />
+      Any ideas?<br />
+      <br />
+      Your help is much appreciated.<br />
+      Thanks.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">xbarns</span><br />
+      <span class="post-time small text-muted">28th October 2009 22:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well the problem seems to be the RadioButton macros in .onSelChange, if i remark that block everything works wonderful. I have looked at the macros in section.nsh but i have no clue why it would behave like that.<br />
+      <br />
+      <br /></p>
+      <pre>
+<code><br />!insertmacro StartRadioButtons $1<br />!insertmacro RadioButton ${SEC_FIREBIRDSERVER2}<br />!insertmacro RadioButton ${SEC_FIREBIRDSERVER264}<br />!insertmacro EndRadioButtons<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">xbarns</span><br />
+      <span class="post-time small text-muted">28th October 2009 22:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">*sigh*<br />
+      <br />
+      i also tried changing the variables in the "keep always selected" part of .onSelChange so it looks like this:<br />
+      <br /></p>
+      <pre>
+<code><br />SectionGetFlags ${SEC_FIRSTTOEXECUTE} $R9<br />IntOp $R9 $R9 | ${SF_SELECTED}<br />SectionSetFlags ${SEC_FIRSTTOEXECUTE} $R9<br /></code>
+</pre><br />
+      <br />
+      but no :(
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">ChocJunkie</span><br />
+      <span class="post-time small text-muted">29th October 2009 08:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">For unselecting a selected section you can use:</p>
+      <pre>
+<code>SectionGetFlags ${SectionIndex} $R0<br />IntOp $R0 $R0 &amp; ${SECTION_OFF}<br />SectionSetFlags ${SectionIndex} $R0</code>
+</pre><br />
+      <br />
+      For selecting a unselected section the code is:
+      <pre>
+<code>SectionGetFlags ${SectionIndex} $R0<br />IntOp $R0 $R0 ^ ${SF_SELECTED}<br />SectionSetFlags ${SectionIndex} $R0</code>
+</pre><br />
+      <br />
+      I hope it helps you.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jpderuiter</span><br />
+      <span class="post-time small text-muted">29th October 2009 10:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Actually for selecting any section (selected or unselected) use:</p>
+      <pre>
+<code>SectionGetFlags ${SectionIndex} $R0<br />IntOp $R0 $R0 | ${SF_SELECTED}<br />SectionSetFlags ${SectionIndex} $R0</code>
+</pre>For unselecting any section use:
+      <pre>
+<code>SectionGetFlags ${SectionIndex} $R0<br />Intop $R1 ${SF_SELECTED} ~<br />IntOp $R0 $R0 &amp; $R1<br />SectionSetFlags ${SectionIndex} $R0</code>
+</pre>To toggle any section use:
+      <pre>
+<code>SectionGetFlags ${SectionIndex} $R0<br />IntOp $R0 $R0 ^ ${SF_SELECTED}<br />SectionSetFlags ${SectionIndex} $R0</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">xbarns</span><br />
+      <span class="post-time small text-muted">29th October 2009 10:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">jpderuiter:<br />
+      <br />
+      your example for selecting a section (selected or unselected) is what i need, and its what i got from the manuals, but it doesn't work reliable for me :(<br />
+      <br />
+      Is there another way to get that "RadioButton" functionality into the components tree, without using the macros?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jpderuiter</span><br />
+      <span class="post-time small text-muted">29th October 2009 11:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi xbarns,<br />
+      <br />
+      I just wanted to correct the post from ChocJunkie.<br />
+      <br />
+      I don't know another method, as far as I can see you are doing nothing wrong.<br />
+      Strange that even forcing the selected state in .OnSelChange does not work.<br />
+      Can you check if that peace of code is actually called (with a messagebox or something)?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">xbarns</span><br />
+      <span class="post-time small text-muted">29th October 2009 12:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi jpderuiter,<br />
+      <br />
+      oh :)<br />
+      <br />
+      I did the Messagebox thingy already it is called :(</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">29th October 2009 13:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Are you sure you're not using $1 anywhere else? If you are, change the radiobuttons variable to something you don't use.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">xbarns</span><br />
+      <span class="post-time small text-muted">29th October 2009 13:53 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">MSG,<br />
+      <br />
+      well $1 is used quite frequently during that setup (its a rather large setup).<br />
+      <br />
+      But i have already tried setting a unique variable for this, same result sadly....<br />
+      <br />
+      Btw. i am using the unicode (2.45) Version of NSIS (i forgot to mention this earlier).</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

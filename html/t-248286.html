@@ -1,0 +1,161 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="A few registry questions" />
+
+  <title>A few registry questions - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">A few registry questions</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=248286">A few registry questions</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jrolling</span><br />
+      <span class="post-time small text-muted">9th June 2006 15:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>A few registry questions</strong><br />
+      Hi,<br />
+      <br />
+      I would like my end users to be able to install many instances of my application.<br />
+      <br />
+      For example they might want to have the same application at 3 different locations.<br />
+      <br />
+      1: C:\application1\app.exe<br />
+      2: C:\application2\app.exe<br />
+      3: C:\application3\app.exe<br />
+      <br />
+      My problem is that application2 is writing over application1 in the registry and so forth. Also, the uninstaller is removing all sections from the registry, even if its not supposed to.<br />
+      <br />
+      What is the best way to increment entries in the registry? Or increment uninstall entries in the registry? How do I approach finding out which entry is the correct one to remove during the uninstallation?<br />
+      <br />
+      Thanks,</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">9th June 2006 16:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">you could keep a refrence count and only delete the entries if it is less than 1, or if they should not share settings, store with a hash of the path maybe (HKCU\Software\Company\Appname\%HASH%\)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">fluidz91</span><br />
+      <span class="post-time small text-muted">21st June 2006 15:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hello,<br />
+      <br />
+      I have the same need as jrolling but don't know how to do it even with Anders' response.<br />
+      Installer name is the same (so registry markers are the same according to the wizard) but install directory is different and i have different installoptions parameters for each install.<br />
+      When the uninstaller is launched is it possible to have a page that lists installed components to uninstall (checkboxes)?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jrolling</span><br />
+      <span class="post-time small text-muted">21st June 2006 16:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You need to figure out a way to make the registry entries unique. One very simple thing to do is to have something<br />
+      <br />
+      WriteRegStr HKLM "${REGKEY}\$INSTDIR\Components" Common 1<br />
+      <br />
+      This way you know which entry to delete during uninstall and you can have. I would only recommend this for short time use until you come up with something better.<br />
+      <br />
+      You can make a custom uninstall page and during the un.init you can read your registry entry to find out which components are installed for that particular installation. Take a look at custom pages if you haven't already.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">fluidz91</span><br />
+      <span class="post-time small text-muted">22nd June 2006 10:40 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I manage to have unique registry entries for installed components (ServiceName$nbpavi) and the number of installed components (InstalledPavi) by doing :<br />
+      <br /></p>
+      <pre>
+<code><br />ReadRegStr $nbpavi HKLM "${REGKEY}\Components" "InstalledPavi"<br />    Strcmp $nbpavi "" NoPavi OneMorePavi<br />    NoPavi:<br />        StrCpy $nbpavi 1<br />        WriteRegStr HKLM "${REGKEY}\Components" "InstalledPavi" 1<br />        goto EndPavi<br />    OneMorePavi:<br />        IntOp $nbpavi $nbpavi + 1<br />        WriteRegStr HKLM "${REGKEY}\Components" "InstalledPavi" $nbpavi<br />    EndPavi:<br />    <br />    WriteRegStr HKLM "${REGKEY}\Components" "ServiceName$nbpavi" $0<br /></code>
+</pre><br />
+      <br />
+      I also manage to add a components page to the uninstall :<br />
+      <br />
+      <pre>
+<code><br />!insertmacro MUI_UNPAGE_COMPONENTS<br /></code>
+</pre><br />
+      <br />
+      For exemple, when running the installer twice i can have :<br />
+      <br />
+      c:\Program Files\Pavi1<br />
+      c:\Program Files\Pavi2<br />
+      <br />
+      registry :<br />
+      "InstalledPavi" "2"<br />
+      "ServiceName1" "PAVI1"<br />
+      "ServiceName2" "PAVI2"<br />
+      <br />
+      My problem now is to know how to set "ServiceNameX" as uninstall sections in order to uninstall only selected services.<br />
+      If anyone as a clue.<br />
+      Thanks
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">fluidz91</span><br />
+      <span class="post-time small text-muted">22nd June 2006 15:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i changed some things :<br />
+      <br />
+      i use<br /></p>
+      <pre>
+<code><br />UninstPage custom un.CustomPageB<br /></code>
+</pre><br />
+      instead of<br />
+      <pre>
+<code><br />!insertmacro MUI_UNPAGE_COMPONENTS<br /></code>
+</pre><br />
+      <br />
+      Then on un.onInit i use<br />
+      <pre>
+<code><br />!insertmacro MUI_INSTALLOPTIONS_EXTRACT "unsetup.ini"<br />ReadRegStr $nbpavi HKLM "${REGKEY}\Components" "InstalledPavi"<br />StrCpy $0 0<br />StrCpy $2 ""<br /></code>
+</pre><br />
+      <br />
+      unsetup.ini contains a droplist that will be filled in function un.CustomPageB by looping values in the registry.<br />
+      <br />
+      <pre>
+<code><br />Function un.CustomPageB<br />  loop:<br />    IntCmp $0 $nbpavi done_loop 0 done_loop<br />    IntOp $0 $0 + 1<br />    ReadRegStr $1 HKLM "${REGKEY}\Components" "ServiceName$0"<br />    Strcpy $2 "$2|$1"<br />  Goto loop<br />  done_loop:<br />  !insertmacro MUI_INSTALLOPTIONS_WRITE "unsetup_pavi.ini" "Field 1" "ListItems" "$2|Tous"<br />  !insertmacro MUI_HEADER_TEXT "$(TEXT_IO_TITLE)" "$(TEXT_IO_SUBTITLE)"<br />  !insertmacro MUI_INSTALLOPTIONS_DISPLAY "unsetup_pavi.ini"<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      i know i could use push and pop but i m not very comfortable with these...<br />
+      I have not finished yet but hope this is a good way to solve my need.
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

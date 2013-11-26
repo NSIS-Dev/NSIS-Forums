@@ -1,0 +1,338 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Windows 2003 Server; Unable to add registry entries?" />
+
+  <title>Windows 2003 Server; Unable to add registry entries? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Windows 2003 Server; Unable to add registry entries?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=193421">Windows 2003 Server; Unable to add registry entries?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zimsms</span><br />
+      <span class="post-time small text-muted">13th September 2004 14:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Windows 2003 Server; Unable to add registry entries?</strong><br />
+      Hello All,<br />
+      <br />
+      I'm running into an issue with my installer on Windows 2003 Server; in regards to the registry. I', an admin user and therefore have complete privileges. If I use regedit i can add a key no probblem, however, if I use the installer which works on all the other windows operating systems, it fails to add any of the registry keys. I'm using a pretty simple macro to do this:<br />
+      <br /></p>
+      <pre>
+<code><br />  !macro CreateRegVarIfNotExist UPDATE TYPE ROOT KEY NAME VALUE<br />  ; Update: 1= Yes, 0 = No<br />  ; Type One of: STRING, STRINGEX, DWORD, HEX<br />    push $R0<br />    !define Index 'Line${__LINE__}'<br />    !insertmacro IfKeyExists "${ROOT}" "${KEY}" "${NAME}"<br />    Pop $R0<br />    ;$R0 contains 0 (not present) or 1 (present)<br /><br />    IntCmp "$R0" "1" "${Index}-Exists" 0<br />    StrCmp "${TYPE}" "STRING" 0 +3<br />      WriteRegStr "${ROOT}" "${KEY}" "${NAME}" "${VALUE}"<br />      Goto "${Index}-Done"<br />    StrCmp "${TYPE}" "STRINGEX" 0 +3<br />      WriteRegExpandStr "${ROOT}" "${KEY}" "${NAME}" "${VALUE}"<br />      Goto "${Index}-Done"<br />    StrCmp "${TYPE}" "DWORD" 0 +3<br />      WriteRegDWord "${ROOT}" "${KEY}" "${NAME}" "${VALUE}"<br />      Goto "${Index}-Done"<br />!ifdef _HEXED_<br />    StrCmp "${TYPE}" "HEX" 0 +3<br />      WriteRegBin "${ROOT}" "${KEY}" "${NAME}" "${VALUE}"<br />      Goto "${Index}-Done"<br />!endif<br /><br />    "${Index}-Exists:"<br />    ; update?<br />    IntCmp "${UPDATE}" "0" "${Index}-Done" 0<br />    StrCmp "${TYPE}" "STRING" 0 +3<br />      WriteRegStr "${ROOT}" "${KEY}" "${NAME}" "${VALUE}"<br />      Goto "${Index}-Done"<br />    StrCmp "${TYPE}" "STRINGEX" 0 +3<br />      WriteRegExpandStr "${ROOT}" "${KEY}" "${NAME}" "${VALUE}"<br />      Goto "${Index}-Done"<br />    StrCmp "${TYPE}" "DWORD" 0 +3<br />      WriteRegDWord "${ROOT}" "${KEY}" "${NAME}" "${VALUE}"<br />      Goto "${Index}-Done"<br />!ifdef _HEXED_<br />    StrCmp "${TYPE}" "HEX" 0 +3<br />      WriteRegBin "${ROOT}" "${KEY}" "${NAME}" "${VALUE}"<br />      Goto "${Index}-Done"<br />!endif<br /><br />    "${Index}-Done:"<br />    !undef Index<br />    pop $R0<br /> !macroend<br /><br /> !macro IfKeyExists ROOT MAIN_KEY KEY<br />   push $R0<br />   push $R1<br /><br />   !define IKEIndex 'Line${__LINE__}'<br /><br />   StrCpy $R1 "0"<br /><br />   "${IKEIndex}-Loop:"<br />   ; Check for Key<br />   EnumRegKey $R0 ${ROOT} "${MAIN_KEY}" "$R1"<br />   StrCmp $R0 "" "${IKEIndex}-False"<br />     IntOp $R1 $R1 + 1<br />     StrCmp $R0 "${KEY}" "${IKEIndex}-True" "${IKEIndex}-Loop"<br /><br />   "${IKEIndex}-True:"<br />   ;Return 1 if found<br />   push "1"<br />   goto "${IKEIndex}-End"<br /><br />   "${IKEIndex}-False:"<br />   ;Return 0 if not found<br />   push "0"<br />   goto "${IKEIndex}-End"<br /><br />   "${IKEIndex}-End:"<br />   !undef IKEIndex<br />   exch 2<br />   pop $R0<br />   pop $R1<br /> !macroend<br /></code>
+</pre><br />
+      Which you'd call like:<br />
+      <pre>
+<code><br />    ; ODBC Driver<br />    !insertmacro CreateRegVarIfNotExist 1 "STRING" HKLM "Software\ODBC\ODBCINST.INI\ODBC Drivers" "$(DESC_ODBC_DRIVER)"  "Installed"<br />    !insertmacro CreateRegVarIfNotExist 1 "STRING" HKLM "Software\ODBC\ODBCINST.INI\$(DESC_ODBC_DRIVER)" "CPTimeout" "&lt;not pooled&gt;"<br />    !insertmacro CreateRegVarIfNotExist 1 "STRING" HKLM "Software\ODBC\ODBCINST.INI\$(DESC_ODBC_DRIVER)" "Driver" "$INSTDIR\myodbc.dll"<br />    !insertmacro CreateRegVarIfNotExist 1 "STRING" HKLM "Software\ODBC\ODBCINST.INI\$(DESC_ODBC_DRIVER)" "Setup" "$INSTDIR\myodbc.dll"<br /></code>
+</pre><br />
+      <br />
+      Anyone have any ideas as to why I'm unable to add registry keys?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Davion</span><br />
+      <span class="post-time small text-muted">13th September 2004 14:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">if it's urgent try to work around the Problem with regfiles which you copy into a tmp folder, execute the reg files and the delete them... no other Idea... but I try to test it on our win2003 machine within the next days<br />
+      <br />
+      greetz Dave</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zimsms</span><br />
+      <span class="post-time small text-muted">13th September 2004 17:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I believe WriteRegStr is broken on Windows Server 2003. No matter what I try to add to the registry via this command it fails to be added. I am logged on as the administrator. Any ideas?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">13th September 2004 18:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Are you sure it's not some scripting error? Have you tested it with just WriteRegStr?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zimsms</span><br />
+      <span class="post-time small text-muted">13th September 2004 18:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Kichik, the following script will demonstrate the error. It's a modified Basic.nsi that copies no files, but does try to create 4 registry entries, two under HKCU and two under HKLM. The ones under HKCU get created, the ones under HKLM do not. I am the administrator, is there something special I need to do or is this a bug?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">13th September 2004 18:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Can you compile it with logging enabled and attach the log?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zimsms</span><br />
+      <span class="post-time small text-muted">13th September 2004 18:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">yeah ok, where is config.h kept? I modified modifiedbasic.nsi to contain the "LogSet on" command, but where is this config.h I have to put the define in?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">13th September 2004 18:53 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Source\exehead\config.h.<br />
+      <br />
+      You can also download a prebuilt makensis with logging from the download page.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zimsms</span><br />
+      <span class="post-time small text-muted">13th September 2004 19:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Here are the complete contents of the install.log file as requested. I placed the LogSet around the main install section.<br />
+      <br /></p>
+      <pre>
+<code><br />WriteRegStr: set -2147483647\Software\Modern UI Test\ to C:\Program Files (x86)\Modern UI Test<br />WriteRegStr: set -2147483647\Software\Modern UI Test\Bacon to Bits<br />WriteRegStr: set -2147483646\Software\Modern UI Test\ to C:\Program Files (x86)\Modern UI Test<br />WriteRegStr: set -2147483646\Software\Modern UI Test\Bacon to Bits<br />created uninstaller: 863, "C:\Program Files (x86)\Modern UI Test\Uninstall.exe"<br />settings logging to 0<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">13th September 2004 19:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Is the error flag set?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zimsms</span><br />
+      <span class="post-time small text-muted">13th September 2004 19:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">No the error flag was not set.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">13th September 2004 20:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">That's weird... According to all the information you've provided, the string is written successfully. Maybe it writes it to some special registry just like the program files folder is located in C:\Program Files (x86)\ and not C:\Program Files\. Did you try adding a ReadRegStr line to see if at least the installer itself can read those values?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zimsms</span><br />
+      <span class="post-time small text-muted">13th September 2004 21:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yeah, unfortunately it doesn't find them.<br />
+      <br />
+      Perhaps the call in the NSIS source is 32bit only and not 64bit, and therefore doesn't function the same? Just an idea. The files, shortcuts and everything else get placed and created properly, just the HKLM registry items seem to be missing in action.<br />
+      <br />
+      That or perhaps HKLM entries need an extra security permission applied.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">13th September 2004 21:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I have to go, I'll be back tomorrow. The code is in Source\exehead\exec.c line 1160 (case EW_WRITEREG: //write registry value). Mind doing some tests with it? A few things I can think of:</p>
+
+      <ul>
+        <li>RegCreateKey-&gt;RegCreateKeyEx</li>
+
+        <li>SetLastError and GetLastError around RegSetValueEx to see if there is some error even if the return value says there isn't</li>
+
+        <li>Use RegQueryValueEx with the open HKEY</li>
+
+        <li>Replace RegSetValueEx with RegSetValueExW</li>
+
+        <li>Add a few NULLs to data/buf2</li>
+
+        <li>RegFlushKey</li>
+      </ul>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zimsms</span><br />
+      <span class="post-time small text-muted">14th September 2004 13:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I just got your message, I'll try a few things here.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zimsms</span><br />
+      <span class="post-time small text-muted">14th September 2004 14:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">hmm, Most of the existing functions in that code are labeled as obsolete, and are only provided for 16 bit apps. Ouch. It needs a good rewrite. It's too bad really, M$ made something so easy extremely painful by incorporating all the new security stuff into it. Not only will the user have to do it twice (security based on pre XP SP2, but for SP2 as well).</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zimsms</span><br />
+      <span class="post-time small text-muted">14th September 2004 17:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Here's a pseudo markup of the new additions that will have to be made to the registry functions. I'm not sure if these are backwards compatible. Unfortunately that's all the time I had to spare. The class is not complete and is not functional. It basically demonstrates how security is done when creating a registry key. Anyways, hope it speeds up a fix, for someone that has time to spare.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">14th September 2004 20:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Obsolete doesn't mean it shouldn't work. If it's provided for compatibility it should still work.<br />
+      <br />
+      Have you tried replacing RegOpenKey with RegOpenKeyEx and made sure it worked? It's not clear from your message if you got it working or just found that some deprecated APIs are used (on purpose, by the way).</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zimsms</span><br />
+      <span class="post-time small text-muted">15th September 2004 15:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I tried to change the source you specified to use the new format, however, that implies adding all the security information as well; as I stated in a previous post. I did not have the time to make the modifications to your source. All of the functions appear to work properly except for Key creation. The key creation will require modifying the NSIS source to support RegCreateKeyEX using the security attributes structure, as specified in the RegCreateKeyEx documentation. Until this has been done registry keys will appear to be created, (since no errors are reported), but the keys never get created when using the WriteReg* functions.<br />
+      <br />
+      Microsoft states:<br /></p>
+
+      <blockquote>
+        Obsolete Functions<br />
+        <br />
+        These functions are provided ONLY for compatibility with 16-bit versions of Windows:<br />
+        <br />
+        RegCreateKey<br />
+        RegEnumKey<br />
+        RegOpenKey<br />
+        RegQueryValue<br />
+        RegSetValue
+      </blockquote>It looks like they are no longer supported when running against a 32 or 64 bit OS, as of the release of the Windows 2003 Product Family.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">15th September 2004 16:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You can simply specify NULL for lpSecurityAttributes.</p>
+
+      <blockquote>
+        If lpSecurityAttributes is NULL, the key gets a default security descriptor. The ACLs in a default security descriptor for a key are inherited from its direct parent key.
+      </blockquote>You can see how RegCreateKeyEx is used in all the other registry instructions.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zimsms</span><br />
+      <span class="post-time small text-muted">15th September 2004 16:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">hmmm, interesting....</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">15th September 2004 23:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i'm using win2003 myself, and i doubt it's an issue with the OS, never had problems writing regkeys in nsis..</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JeronimoColon</span><br />
+      <span class="post-time small text-muted">24th September 2004 16:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yathosho,<br />
+      Have you tried zimsms sample script? - Just curious...<br />
+      <br />
+      zimsms,<br />
+      What version of WS2K3 are you using?<br />
+      Also, I read a technote about some weirdness with WS2K3 and registry permision if you have TS install. I believe it doesn't matter whether or not your actually using TS at the time your writing to the registry. If this turns out to be the source of the problem I believe M$ has issued a patch - by direct request of coarse...<br />
+      <br />
+      Either way I'll try it this weekend. I'll log-in with each default security group i.e. User, Power User, Admin, etc. and report my findings.<br />
+      <br />
+      jc3</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">24th September 2004 19:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i have just tested it, works perfectly.<br />
+      <br />
+      talking on icq with kichik, we came to the conclusion, that this appears to be an issue with the "Program Files (x86)" directory in the 64bit version.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JeronimoColon</span><br />
+      <span class="post-time small text-muted">25th September 2004 06:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm just curious and want to understand this a little further...<br />
+      What's the correlation between "Program Files (x86)" directory and zimsms registry problem? :confused:<br />
+      <br />
+      Thanks,<br />
+      <br />
+      jc3</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">25th September 2004 09:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">sorry, i just figured what bullshit i was typing there. it was of course not related to the name of that directory, we just talked about it, to spot whether it might be an 64-bit issue. at least a hint.<br />
+      <br />
+      i guess you have to wait for kichik's word on that, since i havn't followed the problem since.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Rawk</span><br />
+      <span class="post-time small text-muted">24th May 2005 18:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">If you are running Windows Server 2003 64 bit, then yes entries into the registry by a 32 bit program are redirected in the same way as 32 bit programs accessing /system32 or /program files are redirected.<br />
+      <br />
+      <a href="http://msdn.microsoft.com/library/default.asp?url=/library/en-us/win64/win64/registry_redirector.asp" target="_blank">http://msdn.microsoft.com/library/de...redirector.asp</a><br />
+      <br />
+      HTH</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

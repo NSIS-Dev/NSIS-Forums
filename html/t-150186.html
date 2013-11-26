@@ -1,0 +1,170 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Another Problem with NAME" />
+
+  <title>Another Problem with NAME - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Another Problem with NAME</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=150186">Another Problem with NAME</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jaschulz</span><br />
+      <span class="post-time small text-muted">23rd September 2003 18:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Another Problem with NAME</strong><br />
+      This code crashes when it is run:<br />
+      <br />
+      ;General<br />
+      Name "My App"<br />
+      !define VERSION "v. 1.0"<br />
+      Caption "$(^NAME) ${VERSION}"<br />
+      OutFile "MyApp.exe"<br />
+      <br />
+      ;Folder selection page<br />
+      InstallDir "$PROGRAMFILES\MyFirm\$(^NAME)"<br />
+      <br />
+      ;Get install folder from registry if available<br />
+      InstallDirRegKey HKCU "Software\MyFirm\$(^NAME)" ""<br />
+      <br />
+      But this runs fine:<br />
+      <br />
+      ;General<br />
+      Name "My App"<br />
+      !define VERSION "v. 1.0"<br />
+      Caption "$(^NAME) ${VERSION}"<br />
+      OutFile "MyApp.exe"<br />
+      <br />
+      ;Folder selection page<br />
+      InstallDir "$PROGRAMFILES\MyFirm\$(^NAME)"<br />
+      <br />
+      ;Get install folder from registry if available<br />
+      InstallDirRegKey HKCU "Software\MyFirm\My App" ""<br />
+      <br />
+      Obviously, the only difference is in the last line, so why does the call to InstallDirRegKey fail when $(^NAME) is used?<br />
+      <br />
+      JAS</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">23rd September 2003 19:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It's actually InstallDir that uses the language string when the language tables have not yet been initalized. If you want the folder name to be localized you'd have to copy the translation into $INSTDIR after the language have been chosen (.onGUIInit for example). I will address the crash, but I won't make it fill $INSTDIR after .onInit because usually .onInit is a place to test and set $INSTDIR.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jaschulz</span><br />
+      <span class="post-time small text-muted">23rd September 2003 19:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I am sorry, but I don't understand. The code I showed is modeled directly on the WelcomeFinish.nsi example. All the lines I quoted are from the Configuration section of the script. I don't see how onInit or onGUIinit are relevant.<br />
+      <br />
+      JAS</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">23rd September 2003 19:37 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Because $(^Name) will only have the value you want it to have after .onInit. See the manual for more information about how the language is selected, that should clear it up.<br />
+      <br />
+      Back to your question, set $INSTDIR on .onGUIInit with the LangString and it should work.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jaschulz</span><br />
+      <span class="post-time small text-muted">23rd September 2003 19:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I am beginning to understand. If I customize onInit, can I us $(^Name) in my custom code, like this:<br />
+      <br />
+      ;--------------------------------<br />
+      ;Installer Functions<br />
+      <br />
+      Function .onInit<br />
+      check:<br />
+      ReadRegStr $1 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$(^NAME)" "UninstallString"<br />
+      StrCmp $1 "" done cont<br />
+      cont:<br />
+      HideWindow<br />
+      MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "'$(^NAME)' is already installed.$\n$\r$\n$\r \<br />
+      Click 'OK' to remove the previous version or 'Cancel' to abandon this upgrade." IDOK uninst<br />
+      Abort<br />
+      uninst:<br />
+      ClearErrors<br />
+      ExecWait '$1'<br />
+      IfErrors cont<br />
+      uninst_wait:<br />
+      Sleep 500<br />
+      FindWindow $0 "" "$(^NAME) Uninstall"<br />
+      IsWindow $0 uninst_wait ""<br />
+      done:<br />
+      BringToFront<br />
+      FunctionEnd<br />
+      <br />
+      Or would I have to move this code to onGUIinit?<br />
+      <br />
+      JAS</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">23rd September 2003 20:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Oh, that last piece of code was what you changed it too. As the InstallDirRegKey strings are not processed, LangStrings can be used in them. The crash still resulted from $(^Name) in InstallDir, but that has already been fixed in the latest CVS version.<br />
+      <br />
+      You know what... I have seem to have taken this question a bit out of propertion. You don't want the key to depend on the language, otherwise you would have used Name with a LangString.<br />
+      <br />
+      Simply add a define such as:<br />
+      <br />
+      !define PRODUCT "My App"<br />
+      <br />
+      and use it where needed, just like the old script. $(^Name) is only needed if you want it to be multilingual and to depend on the language used.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jaschulz</span><br />
+      <span class="post-time small text-muted">23rd September 2003 20:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yes, that makes sense. Thanks.<br />
+      <br />
+      JAS</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

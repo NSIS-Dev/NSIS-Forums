@@ -1,0 +1,165 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="page navigation buttons slow GUI update" />
+
+  <title>page navigation buttons slow GUI update - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">page navigation buttons slow GUI update</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=220554">page navigation buttons slow GUI update</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stb</span><br />
+      <span class="post-time small text-muted">3rd July 2005 16:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>page navigation buttons slow GUI update</strong><br />
+      Buttons sometimes get updated too early or too late. If the computer is slow you can see enabled buttons for some seconds which should not be there (or should be disabled).<br />
+      <br />
+      I see this sometimes, if I skip pages using the page functions (pre). Maybe the order is suboptimal. The buttons should be enabled after a page is really displayes (just before going idle and waiting for user input) and disabled before code continues. After each enabled/disabled state change the GUI should be updated.<br />
+      <br />
+      One problem was that the user sees "Continue" button (enabled) but can't click it due to functions running. If the installer goes idle (waiting for user input) the button has changed to "Install" (INSTALLFILES page). So the user wants to click on "Continue" but in fact could accidently click on "Install". I think "Continue" should be disabled after clicking (with screen refresh) BEFORE running code. So the user can see that he already clicked and the installer got this event.<br />
+      <br />
+      I couldn't reproduce this 100% using the Sleep function. But some aspects are here, too:<br />
+      <br />
+      Outfile "text.exe"<br />
+      <br />
+      !include "MUI.nsh"<br />
+      <br />
+      !insertmacro MUI_PAGE_WELCOME<br />
+      <br />
+      !define MUI_PAGE_CUSTOMFUNCTION_PRE Pre<br />
+      !insertmacro MUI_PAGE_WELCOME<br />
+      <br />
+      !define MUI_PAGE_CUSTOMFUNCTION_LEAVE Leave<br />
+      !define MUI_PAGE_CUSTOMFUNCTION_SHOW Show<br />
+      !insertmacro MUI_PAGE_LICENSE "test.nsi"<br />
+      <br />
+      !insertmacro MUI_PAGE_INSTFILES<br />
+      !insertmacro MUI_PAGE_FINISH<br />
+      <br />
+      !insertmacro MUI_LANGUAGE "English"<br />
+      <br />
+      Section bla<br />
+      SectionEnd<br />
+      <br />
+      Function Pre<br />
+      Sleep 2000<br />
+      Abort<br />
+      FunctionEnd<br />
+      <br />
+      Function Show<br />
+      Sleep 2000<br />
+      FunctionEnd<br />
+      <br />
+      Function Leave<br />
+      Sleep 2000<br />
+      FunctionEnd</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">8th July 2005 16:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Button states are changed before the pre function is called. They cannot be changed after it, because that won't work for custom pages. However, that's not before it goes idle and waits for user input. Until a page is shown, no user input is processed. The pre function, page creation and show function are all invoked while processing the same message (WM_NOTIFY_OUTER_NEXT). The user can't really click a button while the page is being replaced, only see the button.<br />
+      <br />
+      As I understand, you're talking about a situation where the pre function takes a while to execute. That shouldn't happen. As this function is called while processing a message, it shouldn't do lengthy operations.<br />
+      <br />
+      It's possible that I didn't understand exactly what you've meant. If you have clarifications, or suggestions how to confuse the user less, I'd like to hear them.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stb</span><br />
+      <span class="post-time small text-muted">8th July 2005 22:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I build a script to reproduce the same behaviour what I get with my real world installer. The Sleep-commands simulate some processing I do in Pre/Leave. Of course there aren't any Sleep's in the real code but executing that code can result in a similar delay.<br />
+      <br />
+      Issue 1: Next button changes BEFORE the next screen is displayed. :-(<br />
+      <br />
+      Issue 2: The button is active but the next screen is INSTFILES so the button gets deactivated. The user can see a active button for some time. :-(<br />
+      <br />
+      The combination of these two issues is very bad because the button changes, remains active (but isn't clickable) and then changes again (e.g. gets disabled). If the button does not change in text it is bad, too, because the user may think he didn't hit the button and tries again. If the new screen gets visible in the meantime the user may click on the button of the next screen but wanted to click again on the button of the previous screen.<br />
+      <br />
+      Suggestions:<br />
+      1. Why not disable the (all?) buttons after they got clicked ?<br />
+      <br />
+      2. Why is the button relabeled before the screen gets refreshed? Ok, could be some order problem, but couldn't customization be done in Show function?<br />
+      <br /></p>
+      <pre>
+<code><br />Outfile "test.exe"<br /><br />!include "MUI.nsh"<br /><br />!insertmacro MUI_PAGE_LICENSE "test.nsi"<br /><br />!define MUI_PAGE_CUSTOMFUNCTION_PRE Pre<br />!insertmacro MUI_PAGE_COMPONENTS<br /><br />!insertmacro MUI_PAGE_INSTFILES<br />!insertmacro MUI_PAGE_FINISH<br /><br />!insertmacro MUI_LANGUAGE "English"<br /><br />Section bla<br />  DetailPrint "installing 1..."<br />  Sleep 100<br />  DetailPrint "installing 2..."<br />  Sleep 100<br />  DetailPrint "installing 3..."<br />  Sleep 100<br />  DetailPrint "installing 4..."<br />  Sleep 100<br />  DetailPrint "installing 5..."<br />  Sleep 100<br />  DetailPrint "installing 6..."<br />  Sleep 100<br />  DetailPrint "installing 7..."<br />  Sleep 100<br />  DetailPrint "installing 8..."<br />  Sleep 100<br />  DetailPrint "installing 9..."<br />  Sleep 100<br />  DetailPrint "ready."<br />  Sleep 500<br />SectionEnd<br /><br />Function Pre<br />Sleep 1000<br />Abort<br />FunctionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">9th July 2005 14:40 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You're not supposed to perform lengthy operations in the page callback functions because it delays the UI. The buttons change text and enabled status before the pre function because that's where custom pages are created. Buttons are not disabled when clicked because, as they are instantly enabled again, that causes a flicker.<br />
+      <br />
+      It seems all of the problems you're talking about are caused by lengthy operations in the page callback functions. If you want to perform lengthy operations there, you can disable the buttons on your own using EnableWindow.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stb</span><br />
+      <span class="post-time small text-muted">9th July 2005 17:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ok, I now use EnableWindow function to disable the next button. Not really perfect but somewhat satisfying.<br />
+      <br />
+      Some other solution could be changing the workflow to run that operation in Leave (may be better than Pre) and/or to add an additional page. This isn't better for me.<br />
+      <br />
+      Thank you anyway.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">saivert</span><br />
+      <span class="post-time small text-muted">12th July 2005 11:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">An installer should never ever perform any real processing before the last step expcept gather user data. Only and I mean only when the user clicks Install button, the installer should start the lengthy operations and actually do the install. A user don't want to wait during configuration of the install.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stb</span><br />
+      <span class="post-time small text-muted">12th July 2005 14:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You're right. In fact my code does not need to be executed before Sections. I moved the code from the pre-function to a new section. There was is no user interaction between pre-function and sections anyway, because the page was skipped in case of code execution.<br />
+      <br />
+      Thanks for the hint.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

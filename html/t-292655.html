@@ -1,0 +1,80 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Using ${Locate} with SetFileAttributes" />
+
+  <title>Using ${Locate} with SetFileAttributes - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Using ${Locate} with SetFileAttributes</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=292655">Using ${Locate} with SetFileAttributes</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Retiarius</span><br />
+      <span class="post-time small text-muted">3rd June 2008 02:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Using ${Locate} with SetFileAttributes</strong><br />
+      Iâ€™m fairly new to NSIS, but Iâ€™ve managed to get it to do almost everything I want for this little installation script I wrote:<br />
+      <br /></p>
+      <pre>
+<code><br />; Holocron.nsi<br />; This script installs the Holocron of Star Wars Galaxies /notepad help files.<br />;--------------------------------<br />; Includes<br />!include "FileFunc.nsh"<br />!insertmacro Locate<br /><br />Name "The SWG Holocron" ; The name of the installer<br />OutFile "Holocron.exe" ; The file to write<br />InstallDir $INSTDIR ; The default installation directory<br />InstProgressFlags smooth colored<br />RequestExecutionLevel user ; Request application privileges for Windows Vista<br />;--------------------------------<br />; Pages<br />Page directory<br />Page instfiles<br />;--------------------------------<br />; Installation tasks<br />Section ""<br /><br />  ; Set output path to the installation directory.<br />  SetOutPath $INSTDIR<br /><br />  ; Put files there<br />  File /r Holo\*.*<br />        <br />  ; Set these files to read-only so that <br />  ; /notepad can't corrupt them or so they <br />  ; don't get changed accidentally.<br />  ${Locate} "$INSTDIR\*.*" "/L=F" "SetReadOnly"<br /><br />SectionEnd<br /><br />Function .onInit<br />  ReadRegStr $0 HKEY_LOCAL_MACHINE \<br />  "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\StarwarsGalaxies" \<br />  "Path"<br />StrCpy $INSTDIR $0\profiles\Holocron<br />FunctionEnd<br /><br />Function SetReadOnly<br />  SetFileAttributes $R9 READONLY<br />FunctionEnd</code>
+</pre><br />
+      Everything worksâ€”or at least, no error is generatedâ€”but the attribute flags on the installed files in any of the folders are not set to read-only. What am I missing?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">{_trueparuex^}</span><br />
+      <span class="post-time small text-muted">3rd June 2008 11:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Remove the mask from path. The mask is set with /M option and "*.*" mask is the default. And you should add "Push $0" in the SetReadOnly function or it wont loop. :)<br />
+      <br />
+      PaR</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Retiarius</span><br />
+      <span class="post-time small text-muted">3rd June 2008 16:23 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I bow to your superior wisdom. :) Going back to the ${locate} description and examples in the NSIS documentation, I see that these things were indeed true, and those two small changes fixed the code. Thank you.<br />
+      <br />
+      For the benefit of others who may come after me, this is the corrected code:<br /></p>
+      <pre>
+<code><br />; Holocron.nsi<br />; This script installs the Holocron of Star Wars Galaxies /notepad help files.<br />;--------------------------------<br />; Includes<br />!include "FileFunc.nsh"<br />!insertmacro Locate<br /><br />Name "The SWG Holocron" ; The name of the installer<br />OutFile "Holocron.exe" ; The file to write<br />InstallDir $INSTDIR ; The default installation directory<br />InstProgressFlags smooth colored<br />RequestExecutionLevel user ; Request application privileges for Windows Vista<br />;--------------------------------<br />; Pages<br />Page directory<br />Page instfiles<br />;--------------------------------<br />; Installation tasks<br />Section ""<br />  SetOutPath $INSTDIR<br />  File /r Holo\*.*<br />        <br />  ; Set these files to read-only so that<br />  ; /notepad can't corrupt them or so they<br />  ; don't get changed accidentally.<br />  ${Locate} "$INSTDIR" "/L=F" "SetReadOnly"<br /><br />SectionEnd ; end the section<br /><br />Function .onInit<br />  ReadRegStr $0 /<br />  HKEY_LOCAL_MACHINE /<br />  "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\StarwarsGalaxies" /<br />  "Path"<br />  StrCpy $INSTDIR $0\profiles\Holocron<br />FunctionEnd<br /><br />Function SetReadOnly<br />  SetFileAttributes $R9 READONLY<br />  Push $0 ; Required to make the code loop<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      I guess that'll teach me to code on too little sleep. :igor:
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

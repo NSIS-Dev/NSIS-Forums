@@ -1,0 +1,89 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Onname Filenames not null-terminated.Windows FindNext FindFirst Fails with zero files" />
+
+  <title>Onname Filenames not null-terminated.Windows FindNext FindFirst Fails with zero files - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Onname Filenames not null-terminated.Windows FindNext FindFirst Fails with zero files</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=299892">Onname Filenames not null-terminated.Windows FindNext FindFirst Fails with zero files</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Andrew Wallo</span><br />
+      <span class="post-time small text-muted">13th November 2008 19:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Onname Filenames not null-terminated.Windows FindNext FindFirst Fails with zero files</strong><br />
+      Potential bug in the File \onname feature of NSIS.<br />
+      <br />
+      The following code was used to create 2000 dummy emails for stress testing an email program. ( You would need to provide dummy email files to pass compile... ) I had four files, a clean pair and a dirty pair. ( not really important, just FYI when you read the code. ) odds became clean, even numbers dirty, in the loop.<br />
+      <br />
+      The problem was that the program that was being used to call the email filter ( out of scope but C++ gnu compiled. ) used WINAPI's FindFirst, FindNext functions to trigger its activies when a file arrives in the folder.<br />
+      <br />
+      I was running XP Pro and came upon this nusiance. There is a documented error with WINAPI FindFirst and FindNext such that it fails and returns a null set when the names in the directory are not null terminated properly.<br />
+      <br />
+      The trigger program was NOT finding these files when I dumped the files made by the following script into the spool.<br />
+      <br />
+      Renaming the files after they were created caused the trigger program to beable to grab the files.<br />
+      <br />
+      I altered the script to dump out the file without the /onname feature, and then renamed the file with Rename.<br />
+      <br />
+      The files were fully functional and worked with the other program without any problem.<br />
+      <br />
+      Therefour I humbly submit that the output of File /onname fails to add a \0 to the end of the string of the file names.... and it will cause problems when files created by it are scanned or listed or used by other c++ programs.<br />
+      <br />
+      <br />
+      Can someone please confirm this as a noted bug?<br />
+      <br />
+      Thanks,<br />
+      <br />
+      Andrew Wallo<br />
+      Avid NSIS developer.<br />
+      <br />
+      <br /></p>
+      <pre>
+<code>Function .onInit<br /><br />  Var /GLOBAL pathHandle<br /><br />  StrCpy $pathHandle "C:\FakeEmailFolder\"<br />  CreateDirectory $pathHandle <br /><br />  Var /GLOBAL counter<br />  Var /GLOBAL oddOrEven <br />  StrCpy $counter "21000"<br />  Var /GLOBAL dtafilename<br />  Var /GLOBAL ctlfilename<br />  <br />  SetoutPath $pathHandle<br />  ${while} $counter &lt; 22000<br /><br />   IntOp $oddOrEven $counter % 2<br />   StrCpy $dtafilename "0000$counter.dta"<br />   StrCpy $ctlfilename "0000$counter.ctl"<br /><br />   StrCmp $oddOrEven "1" 0 Doclean<br />    ; USING FILE ONNAME creates filenames without nullterminated filenames.<br />    ;File "/oname= $dtafilename" "DirtyDTAFile.dta"<br />    ; HAD TO WRITE OUT AND RENAME TO CREATE WORKAROUND.<br />    File "DirtyDTAFile.dta"<br />    Rename "DirtyDTAFile.dta" $dtafilename<br />    ;File "/oname= $ctlfilename" "DirtyCTLFile.ctl"<br />    File "DirtyCTLFile.ctl"<br />    Rename "DirtyCTLFile.ctl" $ctlfilename<br />    Goto LoopAgain<br />   Doclean:<br />    ;File "/oname= $dtafilename" "CleanDTAFile.dta"<br />    ;File "/oname= $ctlfilename" "CleanCTLFile.ctl"<br />        File "CleanDTAFile.dta"<br />    Rename "CleanDTAFile.dta" $dtafilename<br />    ;File "/oname= $ctlfilename" "DirtyCTLFile.ctl"<br />    File "CleanCTLFile.ctl"<br />    Rename "CleanCTLFile.ctl" $ctlfilename<br />    <br /><br />   LoopAgain:<br />    IntOp $counter $counter + 1<br />  ${endwhile} <br /><br />FunctionEnd</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">14th November 2008 08:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">We simply call CreateFile in either case. I can't see how that would work without a NULL terminator. Can you point me to the description of this FindNext bug?<br />
+      <br />
+      And even though it's probably not your monitoring program, I'll just add that using FindFirstChangeNotification is a way better method than checking the directory structure in a busy loop.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

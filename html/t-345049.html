@@ -1,0 +1,113 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SectionIsSelected not working ... Or is it me" />
+
+  <title>SectionIsSelected not working ... Or is it me - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">SectionIsSelected not working ... Or is it me</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=345049">SectionIsSelected not working ... Or is it me</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Squirre1</span><br />
+      <span class="post-time small text-muted">22nd May 2012 16:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>SectionIsSelected not working ... Or is it me</strong><br />
+      I have a Pre-Install Processing section that contains the following lines:<br />
+      <br /></p>
+      <pre>
+<code>    ${If} ${SectionIsSelected} 'Main'<br />      !insertmacro logme ${INSTLOG} "Extracting Files for x86 Installation ... Please be Patient" b<br />      SetOutPath $INSTDIR\${APP_NAME}\32bit<br />      File /r /x "*.svn" /x "*${APP_NAME}*.*" "${INSTALL_SOURCE}\${APP_NAME}\32bit\*.*"<br />      SetOutPath $INSTDIR\${APP_NAME}<br />    ${EndIf}<br /><br />    ${If} ${SectionIsSelected} 'Secondary'<br />      !insertmacro logme ${INSTLOG} "Extracting Files for x64 Installation ... Please be Patient" b<br />      SetOutPath $INSTDIR\${APP_NAME}\64bit<br />      File /r /x "*.svn" /x "*${APP_NAME}*.*" "${INSTALL_SOURCE}\${APP_NAME}\64bit\*.*"<br />      SetOutPath $INSTDIR\${APP_NAME}<br />    ${EndIf}</code>
+</pre><br />
+      <br />
+      It does not appear to be functioning. And don't let the if line throw you on context, I have tried each of the following:<br />
+      <pre>
+<code>${If} ${SectionIsSelected} 'Main'<br />${If} ${SectionIsSelected} Main<br />${If} ${SectionIsSelected} ${Main}<br />${If} ${SectionIsSelected} '${Main}'</code>
+</pre><br />
+      <br />
+      Am I missing something on how the context should be... Section Main and Secondary function exactly as they should, this is the only part not working... It is almost like it never checks if the SF_SELECTED is set..<br />
+      <br />
+      Thanks,<br />
+      <br />
+      Squirre1
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">22nd May 2012 18:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Just like SectionGetFlags etc. you give it the zero-based section index, which is optionally defined as a compile time constant if you specify one as the last parameter for Section.<br />
+      <br />
+      Look at the LogicLib.nsi example script.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">22nd May 2012 18:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Expanding upon the previous answer -<br />
+      Your code is checking section 0 (because Main and 'Main' are strings without any other numeric equivalent). ${Main} is a 'defined' constant which (could be) set as the section index if you used statements like</p>
+      <pre>
+<code>Section /o "The Main" Main<br />SectionEnd<br />Section /o "Another OS" Secondary<br />SectionEnd<br />...<br />Function blah<br />${If} ${SectionIsSelected} ${Main}<br /></code>
+</pre>. You have to be careful that the Section statement occurs before (ie, is compiled before) the Pre-Install processing code that tries to use the defined constant, otherwise the test will again be testing section 0.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Squirre1</span><br />
+      <span class="post-time small text-muted">22nd May 2012 18:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I had a long reply typed up and was just getting ready to submit when i caught the last part of your port demiller...<br />
+      <br />
+      In Layman's terms:<br />
+      Since I am trying to inquire on the status of ${Main}, it is referencing it prior to ${Main} being defined. At compile time it does not know how to reference it. Just as long as a I do the SectionIsSelected AFTER Section "" Main, it would not be an issue.. Since it is compiling in a linear fashion.<br />
+      <br />
+      That is what I am gathering... If that is the case I got ya.. Thanks...<br />
+      <br />
+      And yes Afrow, that is exactly what you said, just not so much as a Layman... LOL Thanks to you too... :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">marcins</span><br />
+      <span class="post-time small text-muted">29th October 2013 10:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">great! it's working as it should!<br />
+      thank you!</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

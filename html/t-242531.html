@@ -1,0 +1,269 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Need to add switches to installer" />
+
+  <title>Need to add switches to installer - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Need to add switches to installer</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=242531">Need to add switches to installer</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Pharaoh Atem</span><br />
+      <span class="post-time small text-muted">3rd April 2006 23:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Need to add switches to installer</strong><br />
+      I need to add a switch to an installer that will write a DIFFERENT INI setting instead of the normal one, using MUI.. How do I go about doing this? If it is easier to use InstallOptions to figure this out, then by all means do that!<br />
+      The switch I want is "--user"<br />
+      Code by default:<br /></p>
+      <pre>
+<code>WriteINIStr</code><span style="color: #DD0000">"$INSTDIR\\overrwdef.ini""System""OverWrite""0;IfenabledProgramwilluseoverwriteprofilesettingswhenrun"
+</span>
+</pre>Code I want optional:<br />
+      <pre>
+<code>WriteINIStr</code><span style="color: #DD0000">"$INSTDIR\\overrwdef.ini""System""OverWrite""1;IfenabledProgramwilluseoverwriteprofilesettingswhenrun"
+</span>
+</pre>The code is in a section during file installation process, if you want to give InstallOptions thing, then it should be able to change within the section...
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Comperio</span><br />
+      <span class="post-time small text-muted">4th April 2006 01:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Sorry I don't have time to create a better working example, but if I understood you correctly, something like this should get you started:<br />
+      <br />
+      1. First, define a variable (such as PARAMETER) in the first part of your script. Then, in the first line of your .onInit function, set it's value to zero.<br />
+      <br />
+      2. In Appendix E (Useful headers), you'll find two functions: GetOptions and GetParameters. Use one or both to read the paramater and then set $PARAMETER to 1 if "--user" is found as a parameter.<br />
+      <br />
+      3. Finally, check the value of $PARAMETER during your installation to decide what 'branch' of code you want to execute.<br />
+      <br />
+      Using your optional INI settings from above as an example:<br /></p>
+      <pre>
+<code><br />StrCmp $PARAMETER 1 JumpIfSet JumpIfNotSet<br /><br />JumpIfSet:<br />   WriteINIStr "$INSTDIR\overrwdef.ini" "System" "OverWrite" "1"<br />Goto JumpIfNotSet<br /><br />JumpIfNotSet:<br />; continue your code here<br /><br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Pharaoh Atem</span><br />
+      <span class="post-time small text-muted">4th April 2006 02:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Let me restate it: I want the perameter to be set by a switch.<br />
+      <br /></p>
+      <pre>
+<code>WriteINIStr</code><span style="color: #DD0000">"$INSTDIR\\overrwdef.ini""System""OverWrite""$PERAMETER;IfenabledProgramwilluseoverwriteprofilesettingswhenrun"
+</span>
+</pre>If --user is given in commandline, the $PERAMETER should be set to "1". Otherwise, it should be set to "0". I hope this helps... The solution given doesn't work in my script...
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JasonFriday13</span><br />
+      <span class="post-time small text-muted">4th April 2006 04:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">So what I understand is that you want to set a parameter depending on whether the '--user' switch is used or not. If so, use GetParameters described above, and do a strcmp on the result. This code should either be in a function or in a section.</p>
+      <pre>
+<code><br />;The getparameters function here and put the result in $0<br /><br />StrCmp $0 "--user" +1 DontOverwrite<br />WriteINIStr "$INSTDIR\overrwdef.ini" "System" "OverWrite" "1"<br />GoTo skip<br />DontOverwrite:<br />WriteINIStr "$INSTDIR\overrwdef.ini" "System" "OverWrite" "0"<br />skip:<br />;the rest of code here</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Pharaoh Atem</span><br />
+      <span class="post-time small text-muted">4th April 2006 12:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by JasonFriday13</i><br />
+        <b>So what I understand is that you want to set a parameter depending on whether the '--user' switch is used or not. If so, use GetParameters described above, and do a strcmp on the result. This code should either be in a function or in a section.</b>
+        <pre>
+<b><code><br />;The getparameters function here and put the result in $0<br /><br />StrCmp $0 "--user" +1 DontOverwrite<br />WriteINIStr "$INSTDIR\overrwdef.ini" "System" "OverWrite" "1"<br />GoTo skip<br />DontOverwrite:<br />WriteINIStr "$INSTDIR\overrwdef.ini" "System" "OverWrite" "0"<br />skip:<br />;the rest of code here</code></b>
+</pre>
+      </blockquote>How do I set the GetPeraters function, I'm using:<br />
+      PHP Code:
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #007700">${</span><span style="color: #0000BB">GetParameters</span><span style="color: #007700">}$</span><span style="color: #0000BB">0<br /></span></span> <!-- php buffer end -->
+      <hr />
+      When I use it before the INI settings, it saying the GetPerameters is invalid?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">4th April 2006 15:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Did you use the following at the top of your script?</p>
+      <pre>
+<code>!insertmacro GetParameters</code>
+</pre>See the <a href="http://nsis.sourceforge.net/Docs/AppendixE.html#E.1.1" target="_blank">documentation</a> for more information.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Pharaoh Atem</span><br />
+      <span class="post-time small text-muted">4th April 2006 22:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by kichik</i><br />
+        <b>Did you use the following at the top of your script?</b>
+        <pre>
+<b><code>!insertmacro GetParameters</code></b>
+</pre><b>See the <a href="http://nsis.sourceforge.net/Docs/AppendixE.html#E.1.1" target="_blank">documentation</a> for more information.</b>
+      </blockquote>Yeah, it says invalid macro!
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Comperio</span><br />
+      <span class="post-time small text-muted">4th April 2006 23:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Read the docs:<br />
+      You need to make sure you include the header file.<br />
+      <br />
+      From the docs:<br /></p>
+
+      <blockquote>
+        Include header:<br />
+        !include "FileFunc.nsh"
+      </blockquote>And make sure you are using the latest build of NSIS. The extra header files used for this function were not included until version 2.08 and some functions may have had a few updates/fixes since then.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Pharaoh Atem</span><br />
+      <span class="post-time small text-muted">4th April 2006 23:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I did, and I am using NSIS v2.15!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JasonFriday13</span><br />
+      <span class="post-time small text-muted">5th April 2006 01:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Alright then, post the script as an attachment, and we can tell you where you went wrong.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Pharaoh Atem</span><br />
+      <span class="post-time small text-muted">5th April 2006 01:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Alright, here is a script with all the parts in it...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JasonFriday13</span><br />
+      <span class="post-time small text-muted">5th April 2006 01:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Check your spelling:<br /></p>
+      <pre>
+<code>!insertmacro GetParameters</code>
+</pre><br />
+      Was: !insertmacro GetPerameters
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Pharaoh Atem</span><br />
+      <span class="post-time small text-muted">5th April 2006 01:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Changed it and it still was invalid! Is there a way to do this in a dialog instead? As in a dialog before the file transfer page...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JasonFriday13</span><br />
+      <span class="post-time small text-muted">5th April 2006 03:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I have fixed the script and attached it. I commented out all the stuff that was not needed for the script just so you could see that it does work. The only thing the installer does now is write the ini to the desktop. At the command prompt type: setup.exe --user and you will get an ini file with 1 in it instead of 0.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Pharaoh Atem</span><br />
+      <span class="post-time small text-muted">5th April 2006 04:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This looks like the EXACT same script as the one I attached earlier... Even my spelling error of GetPerameters is still there...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JasonFriday13</span><br />
+      <span class="post-time small text-muted">5th April 2006 04:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Alright then, just to prove it, I have uploaded a zip with the script and the .exe produced by it.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Pharaoh Atem</span><br />
+      <span class="post-time small text-muted">5th April 2006 13:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Alright, it is working! Thank you all...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">5th April 2006 16:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Pharaoh Atem, sounds like your internet cache needs clearing out. I suspect you're using IE?<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Pharaoh Atem</span><br />
+      <span class="post-time small text-muted">5th April 2006 22:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I was, I accidently used IE to view it last time... I switched to Firefox and saw the changes... Thanks</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JasonFriday13</span><br />
+      <span class="post-time small text-muted">5th April 2006 23:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thats what I like to hear.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

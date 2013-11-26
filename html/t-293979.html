@@ -1,0 +1,115 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Disable progress bar" />
+
+  <title>Disable progress bar - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Disable progress bar</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=293979">Disable progress bar</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">wheleph</span><br />
+      <span class="post-time small text-muted">4th July 2008 15:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Disable progress bar</strong><br />
+      Hello, guys.<br />
+      <br />
+      I wan't to disable progress bar in MUI_PAGE_INSTFILES windows. Any suggestions?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">11th July 2008 13:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hide it using ShowWindow.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">wheleph</span><br />
+      <span class="post-time small text-muted">11th July 2008 16:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">&gt; Hide it using ShowWindow<br />
+      kichik,<br />
+      I don't understand what do you mean. I don't need to hide the whole window I just don't want a progress bar to be displayed. Give some script snippet to clarify your idea.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">11th July 2008 20:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">"ShowWindow" is an unfortunately-named function in the Windows APIs that allow you to show/hide an UI element.. be that a window or a textbox, checkbox, progress bar, etc.<br />
+      <br />
+      NSIS keeps the same function name for code reasons.<br />
+      <br />
+      What kichik means is that you should hide the progressbar by using "ShowWindow &lt;progress bar control hwnd&gt; ${SW_HIDE}"<br />
+      <br />
+      That "${SW_HIDE}" is a code that is defined in one of the include files that comes with NSIS. Add "!include WinMessages.nsh" to the top of your script so that your installer will know what "SW_HIDE" means.<br />
+      <br />
+      You can get "&lt;progress bar control hwnd&gt;" from the inner dialog of the installer. The inner dialog you can find with:<br />
+      FindWindow $0 "#32770" "" $HWNDPARENT<br />
+      Basically this says "Inside $HWNDPARENT (the installer's hwnd), look for the control identified as class #32770 (a dialog) and put the result in $0".<br />
+      <br />
+      Then you need the ID of the control within that dialog. My suggestion is to download WinSpy++. Run that and drag the crosshairs over the progress bar when running an installer. It'll tell you the Control ID. In my case it's "3EC". This is a hexadecimal number, so if you refer to it, put "0x" in front.<br />
+      <br />
+      So to get the control's hwnd out of the dialog, you would use:<br />
+      "GetDlgItem $1 &lt;dialog_hwnd&gt; 0x3ec"<br />
+      Meaning "From &lt;dialog_hwnd&gt;, get the control with ID 0x3ec, and put that in $1".<br />
+      <br />
+      So now you have all the information you need to hide it.<br /></p>
+      <pre>
+<code><br />Section ""<br />FindWindow $0 "#32770" "" $HWNDPARENT<br />GetDlgItem $1 $0 0x3ec<br />ShowWindow $1 ${SW_HIDE}<br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      That "3ec" isn't likely to change - however, if you want to make your code a little more robust, you can also refer to the progress bar's class. Remember how we got the class "#32770" to get the inner dialog? We can use the same to get the progressbar out of the inner dialog. The progressbar's class is "msctls_progress32". So the new code would become:<br />
+      <br />
+      <pre>
+<code><br />FindWindow $0 "#32770" "" $HWNDPARENT<br />FindWindow $1 "msctls_progress32" "" $0<br />ShowWindow $1 ${SW_HIDE}<br /></code>
+</pre><br />
+      <br />
+      The code above should work fine in your installer (although you may wish to move the code outside of the Section code and inside a function that handles the dialog before any Sections), but I hope the above taught you something about FindWindow, ShowWindow, GetDlgItem and how to get a Control ID using WinSpy++ as well.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">wheleph</span><br />
+      <span class="post-time small text-muted">15th July 2008 09:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks, Animaether, for your great post. It gives a comprehensive answer to my question. I've used the second approach (with 'FindWindow $1 "msctls_progress32" "" $0') in my installer.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

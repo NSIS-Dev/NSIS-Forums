@@ -1,0 +1,330 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Disabling Next Btn on Custom Page" />
+
+  <title>Disabling Next Btn on Custom Page - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Disabling Next Btn on Custom Page</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=258644">Disabling Next Btn on Custom Page</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">RossW</span><br />
+      <span class="post-time small text-muted">31st October 2006 02:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Disabling Next Btn on Custom Page</strong><br />
+      I've searched the forum and found some generic info on hiding a button, but I cannot get it to work on a custom page:<br />
+      <br />
+      Page custom CustomPage<br />
+      .<br />
+      .<br />
+      .<br />
+      ReserveFile ${CustomPageINI}<br />
+      !insertmacro MUI_RESERVEFILE_INSTALLOPTIONS<br />
+      .<br />
+      .<br />
+      .<br />
+      Function CustomPage<br />
+      !insertmacro MUI_HEADER_TEXT "$(TEXT_IO_TITLE)" "$(TEXT_IO_SUBTITLE)"<br />
+      !insertmacro MUI_INSTALLOPTIONS_DISPLAY ${CustomPageINI}<br />
+      <br />
+      (some logic check here)<br />
+      GetDlgItem $0 $HWNDPARENT 1<br />
+      ShowWindow $0 ${SW_HIDE}<br />
+      <br />
+      EndFunction<br />
+      <br />
+      I know everything else work because the custom page does indeed display, but the Next button (nor any others I've tried) is hidden by the above code.<br />
+      <br />
+      Help!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deguix</span><br />
+      <span class="post-time small text-muted">31st October 2006 03:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Instead of the following line: "GetDlgItem $0 $HWNDPARENT 1", you should use the HWND key from the specific field found in the INI file using the ReadINIFile instruction as follows:<br />
+      <br /></p>
+      <pre>
+<code>ReadINIFile $out_var "ini_file.ini" "Field #" "HWND"</code>
+</pre><br />
+      <br />
+      Where "#" stands for the field number of the specific control.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">31st October 2006 08:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">deguix: is that new? In my version of installoptions, no such HWND value is written out, and I most certainly -do- have to pop the hwnd of the inner dialog after initializing the installoptions dialog, and then use "GetDialogItem $var $popped_hwnd index(1200+item-1)" to get at the control inside the installoptions dialog.<br />
+      <br />
+      RossW - do either as deguix said (if your stuff matches his), or read the installoptions docs carefully on customizing the dialogs and whatnot.<br />
+      <br />
+      The 'Next' button is actually outside of the InstallOptions inner dialog. You can hide it by using:<br /></p>
+      <pre>
+<code><br />  GetDlgItem $0 $HWNDPARENT 1<br />  ShowWindow $0 0<br /></code>
+</pre><br />
+      <br />
+      Before you initialize/show/create the installoptions dialog. Note that you can't hide it -after- the dialog is shown/created in the function that creates it. You can, of course, unhide the button again in the page's leave function.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">RossW</span><br />
+      <span class="post-time small text-muted">31st October 2006 13:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I tried<br />
+      <br />
+      ShowWindow $0 0<br />
+      <br />
+      but that didn't work, either. For standar pages, it appears you can use the above by defining MUI_PAGE_CUSTOMFUNCTION_PRE function, but what can I do for a custom page?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">31st October 2006 13:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">really no different.. sample files:<br />
+      <br />
+      <b>test.ini</b><br /></p>
+      <pre>
+<code><br />; Ini file generated by the HM NIS Edit IO designer.<br />[Settings]<br />NumFields=2<br /><br />[Field 1]<br />Type=Button<br />Text=This button to be disabled<br />Flags=NOTIFY<br />Left=80<br />Right=170<br />Top=17<br />Bottom=32<br /><br />[Field 2]<br />Type=Button<br />Text=Show Next button<br />Flags=NOTIFY<br />Left=92<br />Right=158<br />Top=33<br />Bottom=49<br /></code>
+</pre><br />
+      <br />
+      <b>.nsi file</b><br />
+      <pre>
+<code><br />!include "WinMessages.nsh"<br /><br />Name ""<br />OutFile "Setup.exe"<br /><br />var hwnd<br /><br />Page Custom ShowCustom LeaveCustom<br /><br />Page InstFiles<br /><br />Section "Test"<br /><br />SectionEnd<br /><br />Function .onInit<br />        InitPluginsDir<br />        File /oname=$PLUGINSDIR\test.ini test.ini<br />FunctionEnd<br /><br />Function ShowCustom<br />        GetDlgItem $0 $HWNDPARENT 1<br />        ShowWindow $0 0<br /><br />        InstallOptions::initDialog /NOUNLOAD "$PLUGINSDIR\test.ini"<br />        Pop $hwnd<br /><br />        GetDlgItem $0 $hwnd 1200<br />        EnableWindow $0 0<br /><br />        InstallOptions::show<br />        Pop $0<br />FunctionEnd<br /><br />Function LeaveCustom<br />        ReadINIStr $0 "$PLUGINSDIR\test.ini" "Settings" "State"<br /><br />        IntCmp $0 0 _next<br />        IntCmp $0 2 0 _abort<br />                GetDlgItem $0 $HWNDPARENT 1<br />                ShowWindow $0 1<br /><br />        _abort:<br />            Abort<br /><br />        _next:<br />FunctionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">RossW</span><br />
+      <span class="post-time small text-muted">31st October 2006 14:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">My .ini file doen't have a listing for the 'Next' button - I'm trying to disable/hide the standard one.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">31st October 2006 14:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">the source above doesn't have a "Next" button either - it hides/unhides the standard one.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">RossW</span><br />
+      <span class="post-time small text-muted">31st October 2006 15:40 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I guess I'm confused by your .ini file - what are those 2 fields for?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">31st October 2006 16:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">they're just examples.. the first button gets disabled by the script by..<br /></p>
+      <pre>
+<code><br />        GetDlgItem $0 $hwnd 1200<br />        EnableWindow $0 0<br /></code>
+</pre><br />
+      <br />
+      The Next button gets hidden before that by..<br />
+      <pre>
+<code><br />        GetDlgItem $0 $HWNDPARENT 1<br />        ShowWindow $0 0<br /></code>
+</pre><br />
+      <br />
+      Presumably, you'd want to make the Next button visible again at some point, depending either on user input, or a variable, or somesuch. The example does it by user input - namely clicking that second button..<br />
+      <pre>
+<code><br />        IntCmp $0 2 0 _abort<br />                GetDlgItem $0 $HWNDPARENT 1<br />                ShowWindow $0 1<br /></code>
+</pre><br />
+      <br />
+      If you just copy/paste them into files and compile it all, it'll make itself much clearer %)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">RossW</span><br />
+      <span class="post-time small text-muted">31st October 2006 16:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Do I need<br />
+      <br />
+      !include "WinMessages.nsh"<br />
+      <br />
+      in order to use ShowWindow? Maybe that was my problem ...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">31st October 2006 16:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Only if you're using the constants like ${SW_HIDE}. You're not so you don't need to include WinMessages.nsh<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">31st October 2006 17:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">yeah, sorry.. remnant from my template :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">RossW</span><br />
+      <span class="post-time small text-muted">31st October 2006 20:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Animaether - will your example work in MUI? I implemented my custom page based on the documentation in the Modern UI Readme and the ModernUI examples; it looks totally different than yours (e.g. ReserveFile ${CustomPageINI})</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">RossW</span><br />
+      <span class="post-time small text-muted">1st November 2006 01:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">For anyone who's interested, the order is important:<br />
+      <br />
+      ; This code hides the Next button<br />
+      GetDlgItem $0 $HWNDPARENT 1<br />
+      ShowWindow $0 0<br />
+      <br />
+      !insertmacro MUI_HEADER_TEXT "$(TEXT_IO_TITLE)" "$(TEXT_IO_SUBTITLE)"<br />
+      !insertmacro MUI_INSTALLOPTIONS_DISPLAY ${CustomPageINI}</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">RossW</span><br />
+      <span class="post-time small text-muted">1st November 2006 20:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">While testing I discovered that if I disable the Next button on my custom page (because th prerequisite check turned up a missing dependency), if I click the Back btn to return to the Welcome page the Next btn is still invisible! To get around this, I had to add a custom function to the Welcome page using MUI_PAGE_CUSTOMFUNCTION_SHOW that does this:<br />
+      <br />
+      GetDlgItem $0 $HWNDPARENT 1<br />
+      ShowWindow $0 1</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">1st November 2006 22:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yep.. the order is important, as noted before ;)<br />
+      <br /></p>
+
+      <blockquote>
+        Before you initialize/show/create the installoptions dialog. Note that you can't hide it -after- the dialog is shown/created in the function that creates it. You can, of course, unhide the button again in the page's leave function.
+      </blockquote>Your other point is a good one as well, and I'm glad you figured that out :) Happy NSIS'ing!
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">1st November 2006 22:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">There's no need to add code to the welcome page callback functions. The code after the InstallOptions call (MUI_INSTALLOPTIONS_DISPLAY) is always executed, even if the Back button was clicked. You can re-enable the button there.</p>
+      <pre>
+<code> GetDlgItem $0 $HWNDPARENT 1<br />ShowWindow $0 0<br /><br />!insertmacro MUI_HEADER_TEXT "$(TEXT_IO_TITLE)" "$(TEXT_IO_SUBTITLE)"<br />!insertmacro MUI_INSTALLOPTIONS_DISPLAY ${CustomPageINI}<br /><br />ShowWindow $0 8 # ${SW_SHOW}</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">3rd November 2006 13:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I think that's "there's no need ... in this case"? Basically what's happening there is that you're re-showing the Next button (8 is SW_SHOWNA?) -after- the dialog is displayed. So although it isn't currently shown, the next time the dialog is refreshed it'll be back.<br />
+      <br />
+      But should a user have code -on- that dialog that hides the Next button again (for whatever reason), and -then- clicks the Back button, the Next button will happily remain hidden. So in terms of coding practices, wouldn't it be best to make sure the button is visible on the welcome page by means of a pre-fuction for the welcome page?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">3rd November 2006 13:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">If you want the button to remain hidden even after the user goes back from the page into the welcome page, so be it. But I don't believe that's the case. And so, it'd be best if the code will be self-contained in the page. If it's on the welcome page, it won't work once you move the page to another location. If, for example, you add another page between the welcome page and this custom page, it won't have the Next button visible or enabled. The user will have to go back to the welcome page in order to get the Next button back.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">3rd November 2006 13:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm not quite sure I'm following you... but let's try with a few examples..<br />
+      <br />
+      Say I'm on the custom page, and I hide the Next button by means of some piece of code on that custom page's Leave function.<br />
+      Now I press the "Back" button. Whatever page I go back to that came before this Custom page will not not show the "Next" button.<br />
+      <br />
+      So in whatever page I would go "Back" to, I would have to make sure that the "Next" button does become visible.<br />
+      <br />
+      Now you mention that "what if there is a page in-between?". Sadly, -that- page would have to have that same "Next" button-showing code.<br />
+      <br />
+      You are right in that ideally the code to restore the "Next" button would be on the Custom page. Unfortunately, however, the "Back" button doesn't register in the Leave function - so it can't be done there.<br />
+      <br />
+      Thoughts?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">3rd November 2006 13:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Exactly, it can't be done in the leave function. That's why I suggested to put it in the custom page show function. Notice the code is located after MUI_INSTALLOPTIONS_DISPLAY. There's no reason to require other pages to be aware of the custom's page games with the Next button.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">3rd November 2006 14:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">err... I see now where I made an assumption I shouldn't have &gt;_&lt;<br />
+      <br />
+      I thought the following code would execute immediately:<br /></p>
+      <pre>
+<code><br />        MessageBox MB_OK "A"<br />        InstallOptions::dialog "$PLUGINSDIR\test.ini"<br />        MessageBox MB_OK "B"<br /></code>
+</pre><br />
+      While in reality, "B" messagebox doesn't get displayed until the custom dialog is closed (by means of Next, Back, etc.).<br />
+      <br />
+      My mistake. Now to go and take advantage of that.
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

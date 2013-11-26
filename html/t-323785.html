@@ -1,0 +1,135 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="System::Call crashing installer" />
+
+  <title>System::Call crashing installer - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">System::Call crashing installer</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=323785">System::Call crashing installer</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">BillK</span><br />
+      <span class="post-time small text-muted">5th November 2010 00:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>System::Call crashing installer</strong><br />
+      I'm not sure what I'm doing wrong here but it crashes the setup exe. I'm writing a new installer to do away with our ancient InstallShield scripts to install one of our products. I need to make a call to one of our dlls to check the device manager if certain hardware is installed. I'm calling W2kIsDeviceIdInstalledA in voysetupc6.dll and passing it two ansi strings "PCI" and "VEN_104C&amp;DEV_8025&amp;SUBSYS_702A14DB" it returns a 0 or 1 depending if it finds the driver or not.<br />
+      <br />
+      First here's how it works in the InstallShield script:<br />
+      prototype VoySetupC6.W2kIsDeviceIdInstalledA( string, string );<br />
+      string szQVI5MegHWId;<br />
+      szQVI5MegHWId = "VEN_104C&amp;DEV_8025&amp;SUBSYS_702A14DB";<br />
+      if ( W2kIsDeviceIdInstalledA("PCI", szQVI5MegHWId) &gt; 0 ) then<br />
+      <br />
+      <br />
+      Here's how I have coded it in the NSIS script which crashes the installer:<br />
+      !define VoySetupDll "voysetupc6.dll"<br />
+      !define PCI "PCI"<br />
+      !define szQVI5MegHWId "VEN_104C&amp;DEV_8025&amp;SUBSYS_702A14DB"<br />
+      <br />
+      InitPluginsDir<br />
+      ReserveFile "${VoySetupDll}"<br />
+      File "/ONAME=$PLUGINSDIR\voysetupc6.dll" "${VoySetupDll}"<br />
+      System::Call 'VoySetupc6::W2kIsDeviceIdInstalledA(${PCI}, ${szQVI5MegHWId}) i.r0'<br />
+      StrCmp $0 1 0 notfound<br />
+      MessageBox MB_OK|MB_ICONEXCLAMATION "Found" /SD IDOK<br />
+      notfound:<br />
+      MessageBox MB_OK|MB_ICONEXCLAMATION "Not found" /SD IDOK<br />
+      <br />
+      Any help would be appreciated I've wasted most of the day trying to get this to work.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">5th November 2010 03:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">you're forgetting to specify the data types in your System call, I think?<br />
+      <br />
+      i.e.<br /></p>
+      <pre>
+<code>System</code><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">'VoySetupc6::W2kIsDeviceIdInstalledA(${PCI},${szQVI5MegHWId})i.r0'
+</span>
+</pre>expands to...<br />
+      <pre>
+<code>System</code><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">'VoySetupc6::W2kIsDeviceIdInstalledA("PCI","VEN_104C&amp;DEV_8025&amp;SUBSYS_702A14DB")i.r0'
+</span>
+</pre>System doesn't know what datatype "PCI" is without you explicitly specifying it. Presuming the DLL needs ANSI strings, the type should be "m":<br />
+      <pre>
+<code>System</code><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">'VoySetupc6::W2kIsDeviceIdInstalledA(m"PCI",m"VEN_104C&amp;DEV_8025&amp;SUBSYS_702A14DB")i.r0'
+</span>
+</pre>( type "t" for 'text' is unicode-context-sensitive; within the Unicode build of NSIS, it passes unicode strings )<br />
+      <br />
+      So try again with the datatypes specified.. with any luck, that will have been it. Otherwise, double-check the function's prototype, and post again with whatever the new error might be if you're sure you're calling it correctly.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">BillK</span><br />
+      <span class="post-time small text-muted">5th November 2010 16:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Unforunately that didn't work with m or t. It's crashing with a code 5 STATUS_ACCESS_VIOLATION. Maybe I'm not calling it correctly. Here's the header of the method:<br />
+      <br />
+      BOOL WINAPI W2kIsDeviceIdInstalledA (LPCASTR pszPnpEnum, LPCASTR pszDeviceId)<br />
+      <br />
+      It takes two strings and returns true or false. Since it works fine in InstallShield I have to be doing something wrong in NSIS.<br />
+      <br />
+      Thanks for the help!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">BillK</span><br />
+      <span class="post-time small text-muted">5th November 2010 18:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Also if anybody has a solution that I can use that doesn't involve this dll that would be great too. I just need to look at the devices installed to see which drivers are installed based off the vendor ID. In the above code I'm looking to see that a Texas Instruments firewire driver is present.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">BillK</span><br />
+      <span class="post-time small text-muted">8th November 2010 15:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">No ideas?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">8th November 2010 16:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">not I.. the call looks like it should be correct - but the System plugin can be a bit of a beast.. which doesn't help when trying to eliminate that DLL.. looks like the SetupDi* functions ( <a href="http://msdn.microsoft.com/en-us/library/ff551072%28v=VS.85%29.aspx" target="_blank">http://msdn.microsoft.com/en-us/libr...=VS.85%29.aspx</a> ) are what you'd be looking at.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

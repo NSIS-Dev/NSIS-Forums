@@ -1,0 +1,154 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Copying 64-bit DLL to SYSDIR on W7-64" />
+
+  <title>Copying 64-bit DLL to SYSDIR on W7-64 - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Copying 64-bit DLL to SYSDIR on W7-64</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=315391">Copying 64-bit DLL to SYSDIR on W7-64</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">davo123</span><br />
+      <span class="post-time small text-muted">16th December 2009 17:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Copying 64-bit DLL to SYSDIR on W7-64</strong><br />
+      I'm trying to install both a Win32 and Win64 version of a DLL into SYSDIR on a Windows 7 64-bit machine. The 32-bit works, but the 64-bit doesn't.<br />
+      <br />
+      I'm using x64.nsh and the test code below (compiled on a 32-bit XP machine). The file MyDLL64.dll is NOT installed even though it displays as being copied and no error is detected. The file MyDLL32.dll shows up in both C:\Windows\System32 and in C:\Windows\SysWOW64, but seems to be the same file because if you delete one, the other goes too (as expected). A complete search of the system shows no MyDLL64.dll file anywhere at all.<br />
+      <br />
+      This is a simple DLL with no registration required, so simple file copy is sufficient. I don't need the complexity of InstallLib (I've tried that - it gives the same behaviour anyway).<br />
+      <br />
+      Any suggestions as to what I'm doing wrong, or a workaround?<br />
+      <br /></p>
+      <pre>
+<code><br />!include x64.nsh<br />outfile testwin64dll.exe<br />RequestExecutionLevel admin<br />Section Test<br />        ${If} ${RunningX64}<br />                MessageBox MB_OK "Running on X64"<br />        ${Else} <br />                MessageBox MB_OK "Running on (32-bit) x86"<br />        ${EndIf}<br />        DetailPrint "${__TIMESTAMP__}"<br />        <br />        SetOutPath $SYSDIR<br />        <br />        ; 32-bit install:<br />        ${EnableX64FSRedirection}<br />        File MyDLL32.dll  # extracts to C:\Windows\SysWOW64 -- OK<br />        IfErrors 0 +2<br />                DetailPrint "Failed to copy MyDLL32.dll"<br />        <br />        ; 64-bit install:<br />        ${DisableX64FSRedirection}<br />        File MyDLL64.dll  # extracts to C:\Windows\System32 -- NO IT DOESN'T!<br />        IfErrors 0 +2<br />                DetailPrint "Failed to copy MyDLL64.dll"<br />        <br />SectionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">redxii</span><br />
+      <span class="post-time small text-muted">16th December 2009 22:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Strange, I compiled the code and it copied MyDLL32.dll to syswow64 and MyDLL64.dll to system32 with no copies. Using 2.46.<br />
+      <br />
+      Though a couple of things.. NSIS has built-in to throw an error message if the file can't be copied. So that part is probably not needed.<br />
+      <br />
+      You ${EnableX64FSRedirection} after ${DisableX64FSRedirection}, because the installers are 32-bit they go into the 32-bit folders already (Program Files (x86), SysWOW64, etc) unless you have 64-bit files you need to disable redirection and enable it again when you're done.<br />
+      <br />
+      SetOutPath "$SYSDIR"<br />
+      <br />
+      ${If} ${RunningX64}<br />
+      &amp;nbsp;&amp;nbsp;${DisableX64FSRedirection}<br />
+      &amp;nbsp;&amp;nbsp;File MyDLL64.dll<br />
+      &amp;nbsp;&amp;nbsp;${EnableX64FSRedirection}<br />
+      ${EndIf}</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">davo123</span><br />
+      <span class="post-time small text-muted">17th December 2009 14:53 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I tried your simpler example and the same thing happened - it said it had copied, didn't throw an error, but the file wasn't there.<br />
+      <br />
+      However, the first time I did it I forgot the SetOutPath $SYSDIR line and it copied MyDLL64.dll into C:\, so the problem must be with System32 itself.<br />
+      <br />
+      Is there some protection setting in W7 that stops DLL's being copied into System32? Something like Windows File Protection in reverse.<br />
+      <br />
+      It's a brand new W7 system straight out of the box with UAC at default level.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">davo123</span><br />
+      <span class="post-time small text-muted">17th December 2009 16:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">A bit more research and what do we find: the Wow64EnableWow64FsRedirection Function used by x64.nsh has problems and "may not work reliably when there are nested calls. Therefore, this function has been replaced by the Wow64DisableWow64FsRedirection and Wow64RevertWow64FsRedirection functions." See MSDN ref aa365744(VS.85).aspx<br />
+      <br />
+      <a href="http://msdn.microsoft.com/en-us/library/aa365744%28VS.85%29.aspx" target="_blank">http://msdn.microsoft.com/en-us/libr...8VS.85%29.aspx</a><br />
+      <br />
+      Perhaps x64.nsh may need a little touch up. I'll experiment with it tomorrow if I can find the time.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">redxii</span><br />
+      <span class="post-time small text-muted">17th December 2009 20:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm not sure about that, but I have noticed odd things about file manipulation in Win 7. Like un/installers or regular programs being unable to remove/overwrite files. Like if I uninstall Qt it leaves phantom files behind, can't be deleted no matter what. Or I am unable to install Steam because it couldn't overwrite files.<br />
+      <br />
+      All MS had to tell me was a canned "you might have a virus" reply.<br />
+      <br />
+      I also have a DX redist installer and as far I could tell there were no problems with 64-bit files.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">davo123</span><br />
+      <span class="post-time small text-muted">18th December 2009 01:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Still no luck. I've tried two further experiments (code below) and I've tried turning off UAC, and rebooting between calls.<br />
+      <br />
+      The first experiment is to check the return value from Wow64EnableWow64FsRedirection (it should be true)<br />
+      <br /></p>
+      <pre>
+<code><br />!include x64.nsh<br />outfile testwin64dllraw-old.exe<br />RequestExecutionLevel admin<br />Section Test<br />        DetailPrint "${__TIMESTAMP__}"<br />        <br />        SetOutPath "$SYSDIR"<br />        <br />        ${If} ${RunningX64}<br />                StrCpy $0 0<br />                StrCpy $1 0<br />                System::Call kernel32::Wow64EnableWow64FsRedirection(i0) i.r1<br />                DetailPrint "Enable(FALSE) returns $1"<br />                File MyDLL64.dll<br />                System::Call kernel32::Wow64EnableWow64FsRedirection(i1) i.r1<br />                DetailPrint "Enable(TRUE) returns $1"<br />        ${EndIf}<br /><br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      Both calls return false indicating that the call failed (or I've got the System::Call syntax wrong!). But NSIS thinks it's copied the file OK.<br />
+      <br />
+      Likewise, this code using the new recommended functions also returns false in both cases.<br />
+      <br />
+      <pre>
+<code><br />!include x64.nsh<br />outfile testwin64dllraw.exe<br />RequestExecutionLevel admin<br />Section Test<br />        DetailPrint "${__TIMESTAMP__}"<br />        <br />        SetOutPath "$SYSDIR"<br />        <br />        ${If} ${RunningX64}<br />                StrCpy $0 0<br />                StrCpy $1 0<br />                System::Call kernel32::Wow64DisableWow64FsRedirection(*i.r0) i.r1<br />                DetailPrint "Disable returns $1"<br />                DetailPrint "OldValue=$0"<br />                File MyDLL64.dll<br />                System::Call kernel32::Wow64RevertWow64FsRedirection(i.r0) i.r1<br />                DetailPrint "Revert returns $1"<br />        ${EndIf}<br /><br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      If the calls are failing then it could explain the behaviour of NSIS appearing to copy the 64-bit DLL to System32 but Windows is actually sending it of to NUL-land.<br />
+      <br />
+      The paranoid might suspect yet another ploy to encourage us to migrate to their bl*sted Windows Installer. If I've made a mistake in the System::Call syntax or if someone would like to suggest another test, I'd be happy to try it.<br />
+      <br />
+      Meanwhile I'll try and work out some weasel words for my app documentation for X64 users.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">davo123</span><br />
+      <span class="post-time small text-muted">23rd December 2009 09:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Mmm, yes, it was working after all. A lesson learnt: if you really hate the useless Windows Explorer that comes with W7, then don't use a _32-bit_ explorer substitute or file-search program. These don't "see" the proper Windows\System32 directory. They are re-directed automatically by WoW64 to the 32-bit view, Hence the duplicate behaviour described above and the apparent lack of copying.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Prevent Multiple Instances with UMUI" />
+
+  <title>Prevent Multiple Instances with UMUI - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Prevent Multiple Instances with UMUI</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=315674">Prevent Multiple Instances with UMUI</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">HSorgYves</span><br />
+      <span class="post-time small text-muted">24th December 2009 22:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Bug in macro UMUI_FUNCTION_MULTILANGUAGEPAGE in UMUI</strong><br />
+      The following code finds a running instance on language change:<br /></p>
+      <pre>
+<code>NameTest
+<br />OutFileTest</code><span style="color: #007700">.</span><span style="color: #0000BB">exe
+<br /><br /></span><span style="color: #007700">!include</span><span style="color: #0000BB">UMUI</span><span style="color: #007700">.</span><span style="color: #0000BB">nsh
+<br /><br /></span><span style="color: #007700">!</span><span style="color: #0000BB">insertmacroUMUI_PAGE_MULTILANGUAGE
+<br /></span><span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_WELCOME
+<br /><br /></span><span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_LANGUAGEEnglish
+<br /></span><span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_LANGUAGEGerman
+<br /><br />SectionInstall
+<br />SectionEnd
+<br /><br /></span><span style="color: #007700">Function.</span><span style="color: #0000BB">onInit
+<br />System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">'kernel32::CreateMutexA(i0,i0,t"myMutex")i.r1?e'
+<br /></span><span style="color: #0000BB">Pop$R0
+<br />StrCmp$R00</span><span style="color: #007700">+</span><span style="color: #0000BB">3
+<br />MessageBoxMB_OK</span><span style="color: #007700">|</span><span style="color: #0000BB">MB_ICONEXCLAMATION</span><span style="color: #DD0000">"Theinstallerisalreadyrunning."
+<br /></span><span style="color: #0000BB">Abort
+<br /></span><span style="color: #007700">!</span><span style="color: #0000BB">insertmacroUMUI_MULTILANG_GET
+<br />FunctionEnd
+<br /></span>
+
+<!-- php buffer end -->
+                
+                
+                
+</pre>
+      <hr />
+      <pre>
+        
+This is due to a bug in the macro UMUI_FUNCTION_MULTILANGUAGEPAGE where ExecWait is used instead of Exec. Change lines 5212-5216 to:<br />
+        PHP Code:
+        
+                
+</pre>
+      <hr />
+      <pre>
+                <code style="white-space:nowrap">
+                
+                        <!-- php buffer start --></code><span style="color: #000000">
+<span style="color: #007700">!</span><span style="color: #0000BB">ifndefMUI_UNINSTALLER
+<br />Exec</span><span style="color: #DD0000">"$R0$R1/L=$LANGUAGE/NCRC"
+<br /></span><span style="color: #007700">!else
+<br /></span><span style="color: #0000BB">Exec</span><span style="color: #DD0000">"$R0$R1/L=$LANGUAGE_?=$INSTDIR"
+<br /></span><span style="color: #007700">!endif
+</span></span>
+</pre>Best Regards,<br />
+      Yves
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">SuperPat</span><br />
+      <span class="post-time small text-muted">24th December 2009 23:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">ExecWait was used because the Exec function break the NSIS UAC plugin:<br />
+      <br />
+      Quote:</p>
+      <hr />
+      You may be use this code:<br />
+      <br />
+      <pre>
+<code><br />Name Test<br />OutFile Test.exe<br /><br />!include UMUI.nsh<br /><br />!insertmacro UMUI_PAGE_MULTILANGUAGE<br />!insertmacro MUI_PAGE_WELCOME<br /><br />!insertmacro MUI_LANGUAGE English<br />!insertmacro MUI_LANGUAGE German<br /><br />Section Install<br />SectionEnd<br /><br />Function .onInit<br /><br />;This macro set the UMUI_LANGISSET install flag if a langid if it is passed in the commandline<br />  !insertmacro UMUI_MULTILANG_GET<br /><br />;If the langid is not passeed in the command line<br />!insertmacro UMUI_IF_INSTALLFLAG_ISNOT ${UMUI_LANGISSET}<br /><br />  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "myMutex") i .r1 ?e'<br />  Pop $R0<br />  StrCmp $R0 0 +3<br />    MessageBox MB_OK|MB_ICONEXCLAMATION "The installer is already running."<br />    Abort<br /><br />!insertmacro UMUI_ENDIF_INSTALLFLAG<br /><br />FunctionEnd<br /></code>
+</pre>
+
+      <table cellpadding="6" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td class="alt2">
+            <hr />
+            <i>Originally posted by LoRd_MuldeR</i><br />
+            <b>I noticed a serious problem with UMUI and the UAC plugin: The UAC plugin will create two processes. The "outer" process is running with user privileges, the "inner" one with elevated rights. The "inner" process is the actual installer, but whenever it needs to do something as the normal user (e.g. launch an application that we don't want elevated) it will ask to the "outer" process to do that. So far this works fine and fixed my problems.<br />
+            <br />
+            Now the UMUI problem: When UMUI changes the language, it will re-start the installer. When using UAC this means: The "inner" process will terminate (and re-start), the "outer" process will terminate after the "inner" has terminated. Now only the "inner" process (the new instance created by UMUI after language switch) is running, but the "outer" process is missing. Consequently all actions that needed the "outer" process will fail (do nothing in fact).<br />
+            <br />
+            How can I workaround that problem? Thanks in advance :)</b>
+            <hr />
+          </td>
+        </tr>
+      </table><br />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">HSorgYves</span><br />
+        <span class="post-time small text-muted">25th December 2009 00:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">Thanks for your quick answer. But this means that if someone is calling the installer with the language flag set (s)he can call it as often as (s)he likes... it's not 100% but it is working.<br />
+        <br />
+        Isn't there a way to check that the "new" installer is run depending on the "old" one?<br />
+        <br />
+        Best Regards,<br />
+        Yves</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">SuperPat</span><br />
+        <span class="post-time small text-muted">25th December 2009 11:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">You can use two mutex to prevent the execution:<br />
+        <br /></p>
+        <pre>
+<code><br />Name Test<br />OutFile Test.exe<br /><br />!include UMUI.nsh<br /><br />!insertmacro UMUI_PAGE_MULTILANGUAGE<br />!insertmacro MUI_PAGE_WELCOME<br /><br />!insertmacro MUI_LANGUAGE English<br />!insertmacro MUI_LANGUAGE German<br /><br />Section Install<br />SectionEnd<br /><br />Function .onInit<br /><br />;This macro set the UMUI_LANGISSET install flag if a langid if it is passed in the commandline<br />  !insertmacro UMUI_MULTILANG_GET<br /><br />;If the langid is not passeed in the command line<br />!insertmacro UMUI_IF_INSTALLFLAG_IS ${UMUI_LANGISSET}<br /><br />  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "myMutex1") i .r1 ?e'<br />  Pop $R0<br />  StrCmp $R0 0 +3<br />    MessageBox MB_OK|MB_ICONEXCLAMATION "The installer is already running."<br />    Abort<br /><br />!insertmacro UMUI_ENDIF_INSTALLFLAG<br />!insertmacro UMUI_IF_INSTALLFLAG_ISNOT ${UMUI_LANGISSET}<br /><br />  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "myMutex2") i .r1 ?e'<br />  Pop $R0<br />  StrCmp $R0 0 +3<br />    MessageBox MB_OK|MB_ICONEXCLAMATION "The installer is already running."<br />    Abort<br /><br />!insertmacro UMUI_ENDIF_INSTALLFLAG<br /><br />FunctionEnd<br /></code>
+</pre>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">HSorgYves</span><br />
+        <span class="post-time small text-muted">25th December 2009 17:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">Thanks for your quick suggestion.<br />
+        <br />
+        This works 99,99%; however I can still run a maximum of 2 installers, one with default language and one with language flag set on start.<br />
+        <br />
+        Isn't there a way to check that the one executed from within the installer is dependant on the installer? This would be 100%... ;-)<br />
+        <br />
+        Best Regards,<br />
+        Yves</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">SuperPat</span><br />
+        <span class="post-time small text-muted">26th December 2009 11:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">A little improvement with the two mutex methods to prevent the execution:<br />
+        <br /></p>
+        <pre>
+<code><br />Name Test<br />OutFile Test.exe<br /><br />!include UMUI.nsh<br /><br />!insertmacro UMUI_PAGE_MULTILANGUAGE<br />!insertmacro MUI_PAGE_WELCOME<br /><br />!insertmacro MUI_LANGUAGE English<br />!insertmacro MUI_LANGUAGE German<br /><br />Section Install<br />SectionEnd<br /><br />Function .onInit<br /><br />;This macro set the UMUI_LANGISSET install flag if a langid if it is passed in the commandline<br />  !insertmacro UMUI_MULTILANG_GET<br /><br />;If the langid is not passeed in the command line<br />!insertmacro UMUI_IF_INSTALLFLAG_IS ${UMUI_LANGISSET}<br /><br />  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "myMutex1") i .r1 ?e'<br />  Pop $R0<br />  StrCmp $R0 0 +3<br />    MessageBox MB_OK|MB_ICONEXCLAMATION "The installer is already running."<br />    Abort<br /><br />; create the second mutex to prevent the instalelr to be relaunch without the /L parameter<br />  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "myMutex2") i .r1 ?e'<br />  Pop $R0<br /><br />!insertmacro UMUI_ENDIF_INSTALLFLAG<br />!insertmacro UMUI_IF_INSTALLFLAG_ISNOT ${UMUI_LANGISSET}<br /><br />  System::Call 'kernel32::CreateMutexA(i 0, i 0, t "myMutex2") i .r1 ?e'<br />  Pop $R0<br />  StrCmp $R0 0 +3<br />    MessageBox MB_OK|MB_ICONEXCLAMATION "The installer is already running."<br />    Abort<br /><br />!insertmacro UMUI_ENDIF_INSTALLFLAG<br /><br />FunctionEnd<br /></code>
+</pre>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">HSorgYves</span><br />
+        <span class="post-time small text-muted">26th December 2009 22:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">I have finally managed to program what i described/asked for. The following .onInit function will check if the newly launched installer (if mutex fails) is a subprocess (the language has been chosen in UMUI) or if it is a new process (another instance of the installer has been launched).<br />
+        PHP Code:</p>
+        <hr />
+        <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #007700">Function.</span><span style="color: #0000BB">onInit<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroUMUI_MULTILANG_GET<br />
+        System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">'kernel32::CreateMutexA(i0,i0,t"MutexA")?e'<br /></span> <span style="color: #0000BB">Pop$R0<br /></span> <span style="color: #007700">${</span><span style="color: #0000BB">IfNot</span><span style="color: #007700">}</span><span style="color: #0000BB">0</span><span style="color: #007700">=</span><span style="color: #0000BB">$R0<br /></span> <span style="color: #FF8000">#MutexAalreadyexists!<br />
+        #Nowthechoicehastobemade:<br />
+        #1)anotherinstallerlauch(newprocess)<br />
+        #2)languageselectioninUMUI(subprocess)<br />
+        #Firstgettheprocessidofthecurrentprocessandstoreitin$R0<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"kernel32::GetCurrentProcessId()i.R0"<br /></span> <span style="color: #FF8000">#Thencreateasnapshotofallrunningprocesses<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"kernel32::CreateToolhelp32Snapshot(i0x00000002,i0)i.r0"<br /></span> <span style="color: #FF8000">#AndpreparethePROCESSENTRY32structure<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"*(i,i,i,i,i,i,i,i,i,&amp;t1024)i.r1"<br /></span> <span style="color: #FF8000">#GetthesizeofthePROCESSENTRY32structure<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"*$1(_,&amp;l0.r2)"<br /></span> <span style="color: #FF8000">#SetthesizeofthePROCESSENTRY32structureinitsfirstmember(asrequired)<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"*$1(ir2,i,i,i,i,i,i,i,i,&amp;t1024)"<br /></span> <span style="color: #FF8000">#Retrievetheinformationaboutthefirstprocess<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"kernel32::Process32First(ir0,ir1)i.r2"<br /></span> <span style="color: #FF8000">#Loopaslongasthecallissuccessful(TRUE)<br /></span> <span style="color: #007700">${</span><span style="color: #0000BB">DoWhile</span><span style="color: #007700">}</span><span style="color: #0000BB">1</span><span style="color: #007700">=$</span><span style="color: #0000BB">2<br /></span> <span style="color: #FF8000">#Retrievethemembers"processid"in$R1and"parentprocessid"in$R2<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"*$1(i,i,i.R1,i,i,i,i.R2,i,i,&amp;t1024)"<br /></span> <span style="color: #FF8000">#Checkifthecurrentprocessandtheonejustlookingatinthesnapshothavethesameid<br /></span> <span style="color: #007700">${If}</span><span style="color: #0000BB">$R0</span><span style="color: #007700">=</span><span style="color: #0000BB">$R1<br /></span> <span style="color: #FF8000">#Iftheysoexittheloop<br /></span> <span style="color: #007700">${Break}<br />
+        ${EndIf}<br /></span> <span style="color: #FF8000">#Iftheydonotretrievetheinformationaboutthenextprocess<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"kernel32::Process32Next(ir0,ir1)i.r2"<br /></span> <span style="color: #007700">${</span><span style="color: #0000BB">Loop</span><span style="color: #007700">}<br /></span> <span style="color: #FF8000">#Freethecreatedstructure<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Free</span><span style="color: #007700">$</span><span style="color: #0000BB">1<br /></span> <span style="color: #FF8000">#Releasethesnapshot<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"kernel32::CloseHandle(ir0)"<br />
+        <br /></span> <span style="color: #FF8000">#Nowwehavestored:<br />
+        #$R0:thecurrentprocessid<br />
+        #$R1:theprocessidoftheprocesswelastlookedatinthesnapshot<br />
+        #$R2:theparentprocessidoftheprocesswelastlookedatinthesnapshot<br />
+        #If$R0=$R1(whatwehopefor)than$R2istheprocessidoftheparentprocessofthecurrentone<br />
+        <br />
+        #Inistialisations<br /></span> <span style="color: #0000BB">StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">00<br />
+        StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">10<br /></span> <span style="color: #FF8000">#Loopuntilwefindsomeexistconditionintheloopcode<br /></span> <span style="color: #007700">${Do}<br /></span> <span style="color: #FF8000">#Getthefirst/nextNSISwindowhandle<br /></span> <span style="color: #0000BB">FindWindow</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"#32770"""</span><span style="color: #0000BB">0</span><span style="color: #007700">$</span><span style="color: #0000BB">0<br /></span> <span style="color: #FF8000">#Ifthefoundhandleis0orif$R0!=$R1wehavetoabort<br /></span> <span style="color: #007700">${If}</span><span style="color: #0000BB">0</span><span style="color: #007700">=$</span><span style="color: #0000BB">0<br /></span> <span style="color: #007700">${</span><span style="color: #0000BB">OrIfNot</span><span style="color: #007700">}</span><span style="color: #0000BB">$R0</span><span style="color: #007700">=</span><span style="color: #0000BB">$R1<br /></span> <span style="color: #FF8000">#Ifwedidn'tfindthemaininstallerwindow,weshowanerrormessage<br /></span> <span style="color: #007700">${If}</span><span style="color: #0000BB">0</span><span style="color: #007700">=$</span><span style="color: #0000BB">1<br />
+        MessageBoxMB_OK</span><span style="color: #007700">|</span><span style="color: #0000BB">MB_ICONEXCLAMATION</span><span style="color: #DD0000">"Theinstallerisalreadyrunning!"<br /></span> <span style="color: #FF8000">#Ifwedidfindthemaininstallerwindow,wemakeittheforegroundwindow<br /></span> <span style="color: #007700">${Else}<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"user32::ShowWindow(ir1,i9)"<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"user32::SetForegroundWindow(ir1)"<br /></span> <span style="color: #007700">${EndIf}<br /></span> <span style="color: #0000BB">Abort<br /></span> <span style="color: #FF8000">#WefoundanNSISinstaller<br /></span> <span style="color: #007700">${Else}<br /></span> <span style="color: #FF8000">#Wegetitswindowtitle<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"user32::GetWindowText(ir0,t.r2,i1024)i.r3"<br /></span> <span style="color: #FF8000">#WestriptheNULLcharacterattheend<br /></span> <span style="color: #0000BB">IntOp</span><span style="color: #007700">$</span><span style="color: #0000BB">3</span><span style="color: #007700">$</span><span style="color: #0000BB">3</span><span style="color: #007700">-</span><span style="color: #0000BB">1<br />
+        StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">2</span><span style="color: #007700">$</span><span style="color: #0000BB">2</span><span style="color: #007700">$</span><span style="color: #0000BB">3<br /></span> <span style="color: #FF8000">#Ifitisthesameastheoneofthisinstaller,wemighthavefoundtheparent<br />
+        #orwediscoveritsanewone<br />
+        #Hereyouneedtochange"$(^Name)Setup"ifyouchangedthecaptionoftheinstaller<br /></span> <span style="color: #007700">${If}</span><span style="color: #DD0000">"$(^Name)Setup"</span><span style="color: #007700">==$</span><span style="color: #0000BB">2<br /></span> <span style="color: #FF8000">#Gettheprocessidfromthewindowhandle<br /></span> <span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">"user32::GetWindowThreadProcessId(ir0,*i.r2)"<br /></span> <span style="color: #FF8000">#Ifitisthesameastheoneofourparent,thanthelanguagewaschosenandwebreaktheloop<br /></span> <span style="color: #007700">${If}$</span><span style="color: #0000BB">2</span><span style="color: #007700">=</span><span style="color: #0000BB">$R2<br /></span> <span style="color: #007700">${Break}<br /></span> <span style="color: #FF8000">#Ifitisnotthesame,thanwestorethewindowhandle(ofthefirstonediscovered;<br />
+        #normallythereisonlyone)tobeusedlaterontosetthatwindowtotheforeground<br /></span> <span style="color: #007700">${ElseIf}</span><span style="color: #0000BB">0</span><span style="color: #007700">=$</span><span style="color: #0000BB">1<br />
+        StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">1</span><span style="color: #007700">$</span><span style="color: #0000BB">0<br /></span> <span style="color: #007700">${EndIf}<br />
+        ${EndIf}<br />
+        ${EndIf}<br />
+        ${</span><span style="color: #0000BB">Loop</span><span style="color: #007700">}<br />
+        ${EndIf}<br /></span> <span style="color: #0000BB">FunctionEnd<br /></span></span> <!-- php buffer end -->
+        <hr />
+        Best Regards,<br />
+        Yves
+      </div>
+      <hr />
+
+      <div class="footer">
+        <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+      </div>
+    </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script> <script type="text/javascript">
+//<![CDATA[
+    hljs.initHighlightingOnLoad();
+    //]]>
+    </script>
+  </div>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Finish page not showing when custom page aborted" />
+
+  <title>Finish page not showing when custom page aborted - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Finish page not showing when custom page aborted</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=298779">Finish page not showing when custom page aborted</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">niallk</span><br />
+      <span class="post-time small text-muted">16th October 2008 17:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Finish page not showing when custom page aborted</strong><br />
+      Hi<br />
+      <br />
+      I'm a newbie so hopefully this is an easy one to answer.<br />
+      If I abort a custom page because I do not want to display it (normally based on a condition), the installation carries on as expected but the Finish page does not appear.<br />
+      If I "show" the custom form then the Finish Page appears.<br />
+      <br />
+      Thanks<br />
+      Niall<br />
+      <br />
+      Here's a simple example...<br />
+      (MakeNSIS v2.34)<br />
+      <br />
+      !include "MUI2.nsh"<br />
+      <br />
+      Name "test"<br />
+      XPStyle on<br />
+      <br />
+      OutFile "test.exe"<br />
+      <br />
+      Var Dialog<br />
+      <br />
+      !insertmacro MUI_PAGE_WELCOME<br />
+      Page custom nsDialogsPage<br />
+      !insertmacro MUI_PAGE_INSTFILES<br />
+      !insertmacro MUI_PAGE_FINISH<br />
+      !insertmacro MUI_LANGUAGE "English"<br />
+      <br />
+      ; The stuff to install<br />
+      Section Test Section1<br />
+      MessageBox MB_OK "Section 1"<br />
+      Sectionend<br />
+      <br />
+      Function nsDialogsPage<br />
+      <br />
+      nsDialogs::Create /NOUNLOAD 1018<br />
+      Pop $Dialog<br />
+      <br />
+      ${If} $Dialog == error<br />
+      abort<br />
+      ${EndIf}<br />
+      <br />
+      ; Don't want to display this so...<br />
+      abort<br />
+      ;nsDialogs::Show<br />
+      <br />
+      FunctionEnd<br />
+      __________________</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Comperio</span><br />
+      <span class="post-time small text-muted">16th October 2008 17:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Your method seems odd to me...<br />
+      In your example, you go to all the trouble of creating the page and then use abort to bail out.<br />
+      <br />
+      Wouldn't it make more sense to just skip over all the page creation stuff if you wanted to abort?<br />
+      Like maybe try this:</p>
+      <pre>
+<code> Function nsDialogsPage<br />; skip now if you want:<br />${If} [some condition]<br />   Return<br />${EndIf}<br /><br />nsDialogs::Create /NOUNLOAD 1018<br />Pop $Dialog<br /><br />${If} $Dialog == error<br />abort<br />${EndIf}<br /><br />nsDialogs::Show<br /><br />FunctionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">niallk</span><br />
+      <span class="post-time small text-muted">16th October 2008 20:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hello<br />
+      <br />
+      You're absolutely right. I was too busy looking for a technical solution to see my approach was dumb anyway.<br />
+      <br />
+      Out of interest, is there an explanation as to why an abort would stop the Final page?<br />
+      <br />
+      Thanks for your help<br />
+      Niall</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">LoRd_MuldeR</span><br />
+      <span class="post-time small text-muted">16th October 2008 23:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">As far as I understand calling "Abort" only has a special purpose in the Callback-Functions for <i>built-in</i> pages (pre_function, show_function, leave_function). In those Callback-Functions "Abort" will either prevent the page from being displayed (pre_function) or will force the user to stay on the current page (leave_function). But when calling "Abort" in your custom page function (here "nsDialogsPage"), then "Abort" will have it's <i>normal</i> effect. And that is: Setup has failed, stop execution of script, abort setup! Hence the Finish page won't be displayed...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">niallk</span><br />
+      <span class="post-time small text-muted">17th October 2008 08:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi<br />
+      <br />
+      From the example I worked on, it would appear that the Abort did not stop MUI_PAGE_INSTFILES and the Sections code from executing, in fact removing the Abort altogether had no effect either way i.e. the display of the final page depended on whether nsDialogs::Show was called or not.<br />
+      Anyway, I guess it's academic, the best solution would appear to be to include the "Condidion" before the nsDialogs::Create.<br />
+      <br />
+      Thanks again to all<br />
+      Niall</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">LoRd_MuldeR</span><br />
+      <span class="post-time small text-muted">17th October 2008 14:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Read the docs. It clearly says what "Abort" does, it stops the execution of the script. There are some Callback-Functions where "Abort" has a special purpose and these functions are also mentioned in the docs. Unless explicitly stated, calling the "Abort" instruction will terminated your installer. I don't see any statement like "Calling 'Abort' in your custom page 'creator_function' will skip that page" in the docs. Do you ???</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">niallk</span><br />
+      <span class="post-time small text-muted">17th October 2008 14:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">In my last post, I was making the observation that, in my example, "Abort [in the custom page] did not stop [the subsequent] MUI_PAGE_INSTFILES and the Sections code from executing" - behaviour which can be observed by running the code I included.<br />
+      <br />
+      I subsequently realised that this behaviour is caused by the absense of "nsDialogs::Show".<br />
+      <br />
+      Calling nsDialogs::Show and then Abort produces the documented behaviour; so the lesson is, don't use "Create" without "Show"!</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

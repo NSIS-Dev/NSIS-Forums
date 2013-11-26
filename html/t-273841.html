@@ -1,0 +1,112 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SetOverwrite not working (urgent!)" />
+
+  <title>SetOverwrite not working (urgent!) - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">SetOverwrite not working (urgent!)</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=273841">SetOverwrite not working (urgent!)</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">theblazingangel</span><br />
+      <span class="post-time small text-muted">4th July 2007 05:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>SetOverwrite not working (urgent!)</strong><br />
+      i've got a problem with SetOverwrite. i need to control SetOverwrite with a command line parameter, this means wrapping a SetOverwrite command in an ${If} check, but it's not working... it's as if the ${If} check doesn't exist, i've also tried StrCpm and that doesn't have any effect either!<br />
+      <br />
+      in the below example it should always overwrite an existing file, unless the switch is set in which case it should only do it if it has a newer copy. however what actually happens is that it always does the if-newer check...<br />
+      <br />
+      example code that doesn't work:<br />
+      <br /></p>
+      <pre>
+<code>!include 'MUI.nsh'<br />!include 'LogicLib.nsh'<br /><br />Name 'test'<br />InstallDir "C:\test\"<br />OutFile "test.exe"<br /><br />!insertmacro MUI_PAGE_DIRECTORY<br />!insertmacro MUI_PAGE_INSTFILES<br /><br />!insertmacro MUI_LANGUAGE 'English'<br /><br />Var /GLOBAL switch_test<br /><br />Section 'Installation'<br /><br />        SetOutPath $INSTDIR<br /><br />        StrCpy $switch_test '0'<br /><br />        ${If} $switch_test == '1'<br />            SetOverwrite ifnewer<br />        ${EndIf}<br /><br />        File test.txt<br /><br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      what am i doing wrong?<br />
+      <br />
+      i'd appreciate a speedy response if possible, i'm already late delivering the software i'm packing due to other delays.<br />
+      thank you :)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">theblazingangel</span><br />
+      <span class="post-time small text-muted">4th July 2007 06:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">damn it, found the answer here: <a href="http://forums.winamp.com/showthread.php?postid=2183260" target="_blank">http://forums.winamp.com/showthread.php?postid=2183260</a><br />
+      <br />
+      i've also now found the note in the 'compiler command' section of the docs. perhaps it could be made clearer, perhaps even just a note could be added that ${If} and StrCmp have no effect, because i think it's pretty important that we know that!!!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">4th July 2007 18:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Compiler flags now states:</p>
+
+      <blockquote>
+        The following commands affect how the compiler generates code and compresses data. Unless otherwise noted, these commands are valid anywhere in the script, and effect every line below where each one is placed (until overridden by another command). They cannot be jumped over using flow control insutrctions.<br />
+        <br />
+        For example, in the following script, blah.dat will never be overwritten.
+        <pre>
+<code>${If} $0 == 0<br />  SetOverwrite on<br />${Else}<br />  SetOverwrite off<br />${EndIf}<br />File blah.dat # overwrite is always off here!</code>
+</pre>Instead, the following should be used.
+        <pre>
+<code>${If} $0 == 0<br />  SetOverwrite on<br />  File blah.dat<br />${Else}<br />  SetOverwrite off<br />  File blah.dat<br />${EndIf}</code>
+</pre>
+      </blockquote>What do you think?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">theblazingangel</span><br />
+      <span class="post-time small text-muted">4th July 2007 19:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">that looks great, thanks :)<br />
+      <br />
+      the only gripe i now have is that when compiling a release using the /nonfatal switch on the file command, warnings for missing items are now listed twice, and it seems to process all of the files to include twice.<br />
+      i wish it didn't do that...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">4th July 2007 19:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well, those are different errors. You might even have a !system command in between those two that generates the file so the second File might not fail.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

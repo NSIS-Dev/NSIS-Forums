@@ -1,0 +1,364 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="I dont understand why my if statement is failing" />
+
+  <title>I dont understand why my if statement is failing - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">I dont understand why my if statement is failing</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=246821">I dont understand why my if statement is failing</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shaunb</span><br />
+      <span class="post-time small text-muted">23rd May 2006 12:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>I dont understand why my if statement is failing</strong><br />
+      I just dont get it anymore, my text file written from the CF script merely produces 'failed' or 'success' but the if comparison must fail, because the messagebox never gets shown. I thought it might be an "\r\n" on the end of the string in the text file, but its not.<br />
+      <br />
+      I have no idea why its happening any more, and also looping around this custom page is making me combust.<br />
+      <br />
+      thanks<br />
+      <br />
+      <br />
+      Function exitGetCFPassPage<br />
+      !insertmacro MUI_INSTALLOPTIONS_READ $CFPASS "getCFPass.ini" "Field 2" "State"<br />
+      MessageBox MB_OK "$$CFPASS == $CFPASS"<br />
+      # check its not empty at least<br />
+      #${If} $CFPASS == ""<br />
+      # # empty password, prompt for a valid password again<br />
+      # MessageBox MB_ICONEXCLAMATION|MB_OK "Please enter a valid ColdFusion admin password."<br />
+      # abort<br />
+      #${endIf}<br />
+      # we forget all the items are extracted here already due to this page coming after the instfiles page<br />
+      # we can just perform a simple wget on the testlogin script, and read the contents of c:\adminapi.log<br />
+      # to see if it produced true or false for a valid login, then we can validate in here until we get a<br />
+      # valid password!<br />
+      NSExec::exec "$TEMP\${gossTemp}\wget\wget.exe <a href="http://localhost/icm/adminAPI/testlogin.cfm?password=" target="_blank">http://localhost/icm/adminAPI/testlogin.cfm?password=</a>$CFPASS"<br />
+      # this returns a file c:\adminapi.log with true or false in, which we can use<br />
+      # read the file, decide what to do etc, what about exceptions if its not there?<br />
+      FileOpen $4 "c:\adminapi.log" r<br />
+      # we read until the end of line (including carriage return and new line) and save it to $1<br />
+      FileRead $4 $1<br />
+      # close the file<br />
+      FileClose $4<br />
+      # debug the result<br />
+      MessageBox MB_OK $1<br />
+      ${If} $1 == "failed"<br />
+      MessageBox MB_OK "failed login!"<br />
+      abort<br />
+      ${endIf}<br />
+      # then it carries on anyway, why? it should abort<br />
+      FunctionEnd</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">23rd May 2006 12:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">some quick notes:<br />
+      -stop the execution before open adminapi.log<br />
+      -verify that this file exists, is accessible and readble<br />
+      -you said it returns true or false, though you're checking for failed!<br />
+      -when you pop up that message with $1, does $1 contains "failed"?<br />
+      -finally try the nsExec::ExecToLog and/or nsExec::ExecToStack</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shaunb</span><br />
+      <span class="post-time small text-muted">23rd May 2006 13:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I believe its something to do with a carriage return, on the end of the text in the file I created with CF, and trying to read in NSIS.<br />
+      <br />
+      hah, it says failed because I've been playing with it to get it to check right, tried 0 or 1, etc, nothing works.<br />
+      <br />
+      by stopping the execution I dont get how you do that exactly.<br />
+      <br />
+      the file exists for sure, and is readable etc,<br />
+      <br />
+      yes, the messagebox just contains success/failed, true or false etc, theres no extra text after (except maybe a carriage return I can't see), so this is why I dont get why the if statement underneath would fail.<br />
+      <br />
+      I am trying to work out the carriage return character so basically i can include that in my if statement too.. like so (where "#" is the CR)<br />
+      <br />
+      # we need to check on the carriage return too.. but how?<br />
+      ${If} $1 == "failed#"<br />
+      MessageBox MB_OK "failed login!"<br />
+      abort<br />
+      ${endIf}<br />
+      <br />
+      hope this helps, a little, I've been trying for a couple hours now to no avail. gah</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shaunb</span><br />
+      <span class="post-time small text-muted">23rd May 2006 13:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">its this for sure, when I open the file in a word processor and turn on 'show extra formatting' it shows the CR/LF symbol.<br />
+      <br />
+      also, theres 7 bytes in the text file "success" but the actual file size is 9 bytes.<br />
+      <br />
+      I could do a sort of 'substr' on the string to find 'success' in 'success\r\n' I guess, but its a bit of a bodge</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">23rd May 2006 13:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Then try wordfunc/textfunc to grab the string.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">23rd May 2006 13:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK this will make the job:<br />
+      strcpy $1 $1 '-2'<br />
+      ${If} $1 == "failed"<br />
+      MessageBox MB_OK "failed login!"<br />
+      abort<br />
+      ${endIf}</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">23rd May 2006 13:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well, create a text file, name it read.txt, write in this file failed press enter (add a CR) and save it in $exedir.<br />
+      Now compile and execute the following script:<br />
+      <br />
+      outfile test.exe<br />
+      <br />
+      function .onInit<br />
+      FileOpen $4 $EXEDIR\read.txt r<br />
+      FileRead $4 $1<br />
+      FileClose $4<br />
+      messagebox mb_ok '$1 contains a CR'<br />
+      strcpy $1 $1 '-2'<br />
+      strcmp $1 'failed' +1 +3<br />
+      messagebox mb_ok '$1 without CR'<br />
+      abort<br />
+      messagebox mb_ok 'Error!'<br />
+      functionend<br />
+      <br />
+      section -<br />
+      sectionend</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shaunb</span><br />
+      <span class="post-time small text-muted">23rd May 2006 13:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">thats exactly what i'm trying now, chopping two bytes from the end! will let you know how it goes.<br />
+      <br />
+      edit: works fantastically. now.. what about changing the focus back from the next button, to the texbox and clearing the value of the wrong password?<br />
+      <br />
+      thanks, I owe you a lot, the help this community gives is great.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">23rd May 2006 13:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        thanks, I owe you a lot, the help this community gives is great.
+      </blockquote>You welcome :-) we all owe to NSIS development team.<br />
+      <br />
+      <br />
+
+      <blockquote>
+        what about changing the focus back from the next button, to the texbox and clearing the value of the wrong password?
+      </blockquote>Abort on a custom page leave function means that you stay in the page because validation has failed.<br />
+      To clear the pwd field use SendMessage e.g.<br />
+      !include WinMessages.nsh ;up along with other includes<br />
+      !insertmacro MUI_INSTALLOPTIONS_READ $0 "getCFPass.ini" "Field 2" "HWND"<br />
+      SendMessage $0 ${WM_SETTEXT} 1 "STR:"
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shaunb</span><br />
+      <span class="post-time small text-muted">23rd May 2006 14:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">that works great too, just need to set the focus now , I tried the obvious WM_SETFOCUS but meh. didnt work<br />
+      <br />
+      I'll work this one out though .. hehe</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">23rd May 2006 17:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">SendMessage $0 ${WM_SETFOCUS} 1 0</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shaunb</span><br />
+      <span class="post-time small text-muted">23rd May 2006 19:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I was close! just missing the end bits, I'll try it tomorrow! thanks muchly</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">23rd May 2006 19:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Use TrimNewLines function in the documentation under Useful Scripts. It's not always guaranteed that the file will use carriage returns followed by new line breaks and a -2 chop may remove more characters than you want it to.<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shaunb</span><br />
+      <span class="post-time small text-muted">24th May 2006 09:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hmm, thats the only time i need to read from a text file thankfully.<br />
+      <br />
+      The setfocus code, it sets the focus back to the textbox as I can see the cursor re-appear in the textbox after a wrong password, however, when I try to type I realise the focus is still actually on the next button, odd, strange how it appears the textbox is in focus. I still have to click in the textbox to edit however.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zeeh3</span><br />
+      <span class="post-time small text-muted">24th May 2006 19:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by Red Wine</i><br />
+        <b>SendMessage $0 ${WM_SETFOCUS} 1 0</b>
+      </blockquote>Use instead: System::Call "user32::SetFocus(i r0, i 0x0007, i,i)i"
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">24th May 2006 19:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        Use instead: System::Call "user32::SetFocus(i r0, i 0x0007, i,i)i"
+      </blockquote>Did you use that your self?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">24th May 2006 19:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm not sure why you have those extra parameters zeeh3, unless I'm missing something.<br />
+      <br />
+      user32::SetFocus only takes one parameter and that is the window handle of the control to set keyboard focus on.<br />
+      <br />
+      <a href="http://msdn.microsoft.com/library/default.asp?url=/library/en-us/winui/winui/windowsuserinterface/userinput/keyboardinput/keyboardinputreference/keyboardinputfunctions/setfocus.asp" target="_blank">http://msdn.microsoft.com/library/de...s/setfocus.asp</a><br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zeeh3</span><br />
+      <span class="post-time small text-muted">24th May 2006 19:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Oops... System::Call "user32::SetFocus(i r0)i"</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shaunb</span><br />
+      <span class="post-time small text-muted">24th May 2006 20:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">thanks guys, will give it a go tomorrow.<br />
+      <br />
+      edit: just checking, is "r0" supposed to be $R0 ?<br />
+      <br />
+      :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">24th May 2006 20:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">r0 == $0</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zeeh3</span><br />
+      <span class="post-time small text-muted">24th May 2006 20:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by shaunb</i><br />
+        <b>thanks guys, will give it a go tomorrow.<br />
+        <br />
+        edit: just checking, is "r0" supposed to be $R0 ?<br />
+        <br />
+        :)</b>
+      </blockquote>No, read system plugin documentation:<br />
+      r0 through r9 = $0 through $9<br />
+      r10 through r19 (or R0 through R9) = $R0 through $R9, respectively.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shaunb</span><br />
+      <span class="post-time small text-muted">25th May 2006 10:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by zeeh3</i><br />
+        <b>Oops... System::Call "user32::SetFocus(i r0)i"</b>
+      </blockquote>works perfect, thanks very much<br />
+      <br />
+      I understand the registers better I think now, too.
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

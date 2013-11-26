@@ -1,0 +1,164 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="How to Parse a File of a Listing of Files and Directories. Distinguishing Importance" />
+
+  <title>How to Parse a File of a Listing of Files and Directories. Distinguishing Importance - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">How to Parse a File of a Listing of Files and Directories. Distinguishing Importance</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=212673">How to Parse a File of a Listing of Files and Directories. Distinguishing Importance</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vbgunz</span><br />
+      <span class="post-time small text-muted">9th April 2005 07:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>How to Parse a File of a Listing of Files and Directories. Distinguishing Importance</strong><br />
+      I am trying to parse a file that looks like the following...</p>
+      <pre>
+<code><font color="red">Extracting  Directory</font><br /><font color="red">Extracting  Directory.dir</font><br />Extracting  Directory.dir\File<br />Extracting  Directory.dir\file.txt<br />Extracting  Directory\File<br />Extracting  Directory\file.txt<br />Extracting  File<br />Extracting  file.txt</code>
+</pre>into a NSH file that should look like the following...
+      <pre>
+<code><font color="red">Delete /REBOOTOK '$EXEDIR\Directory'</font><br /><font color="red">Delete /REBOOTOK '$EXEDIR\Directory.dir'</font><br />Delete /REBOOTOK '$EXEDIR\Directory.dir\File'<br />Delete /REBOOTOK '$EXEDIR\Directory.dir\file.txt'<br />Delete /REBOOTOK '$EXEDIR\Directory\File'<br />Delete /REBOOTOK '$EXEDIR\Directory\file.txt'<br />Delete /REBOOTOK '$EXEDIR\File'<br />Delete /REBOOTOK '$EXEDIR\file.txt'</code>
+</pre>BUT I am faced with two problems.<br />
+      <br />
+      1. The two lines in red above are directories. Considering they're placed at the very top of the list, and considering I am using "Delete /REBOOTOK" they will simply not be removed. This is problem number 1.<br />
+      <br />
+      2. I can pretty much parse the file but cannot or have not figured out a way to append the closing quote for every line. This is problem number 2.<br />
+      <br />
+      This is as far as I've gotten
+      <pre>
+<code><font color="red">Delete /REBOOTOK '$EXEDIR\Directory</font><br /><font color="red">Delete /REBOOTOK '$EXEDIR\Directory.dir</font><br />Delete /REBOOTOK '$EXEDIR\Directory.dir\File<br />Delete /REBOOTOK '$EXEDIR\Directory.dir\file.txt<br />Delete /REBOOTOK '$EXEDIR\Directory\File<br />Delete /REBOOTOK '$EXEDIR\Directory\file.txt<br />Delete /REBOOTOK '$EXEDIR\File<br />Delete /REBOOTOK '$EXEDIR\file.txt</code>
+</pre>Now, this NSH file is useless because I cannot close the strings with the closing quotes. Even if I did close the strings I can end up with many directories in which should've been removed.<br />
+      <br />
+      I was thinking of the following so to solve the directory problem. Create a copy of the list and simply parse and run the second list with RMDir for every item. I then thought this would probably be a waste of processing power and theres got to be a smarter method.<br />
+      <br />
+      <font color="blue">Please note how a directory above has an extension. Folders of this type exist. Also note how a file included in the above installation has no extension. This I believe can turn problem number 2 into a headache.</font><br />
+      <br />
+      I need help in solving these two problems. Can anyone please offer me some advice, some pointers or something positive. Thanks for looking this over!
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">glory_man</span><br />
+      <span class="post-time small text-muted">9th April 2005 11:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">1. You must use RMDir to remove directories.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stb</span><br />
+      <span class="post-time small text-muted">9th April 2005 11:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I think, the additional quote can be added with something like<br />
+      StrCpy $0 "$0'"<br />
+      <br />
+      I would reverse the list order. Think about a loop doing this<br />
+      <br />
+      StrCpy $1 ""<br />
+      for each $0 in list ; pseudo code<br />
+      StrCpy $1 "$0$\n$1" ; \n or $\n is linebreak (?)<br />
+      next<br />
+      <br />
+      now you have a string with $\n as separator between items<br />
+      <br />
+      Attention: this will not work well with NSIS because string length is limited to 1024 (8192 in special build). As each path may have 260 characters this will probably be an issue.<br />
+      <br />
+      If you only require a quick&amp;dirty solution you can make such a loop (pseudo code)<br />
+      <br />
+      $2 = &lt;count of list items&gt; ; counter<br />
+      for each $0 in list<br />
+      WriteRegStr ... $2 $0<br />
+      IntOp $2 $2 - 1<br />
+      next<br />
+      <br />
+      $2 = &lt;count of list items&gt;<br />
+      for $1 = 1 to $2<br />
+      ReadRegStr $0 ... $1<br />
+      WriteToFile .nsh ...<br />
+      next</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br />
+      <span class="post-time small text-muted">9th April 2005 11:53 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">If first file is installation log, good idea is to parse it from the end (to delete files first). Some discussion was in this thread <a href="http://forums.winamp.com/showthread.php?threadid=211188" target="_blank">http://forums.winamp.com/showthread.php?threadid=211188</a> .<br />
+      To get dir attribute of the path use one of disk/file samples from archive <a href="http://nsis.sourceforge.net/archive/nsisweb.php?page=211&amp;instances=0,11" target="_blank">http://nsis.sourceforge.net/archive/...instances=0,11</a> This is my variant <a href="http://nsis.sourceforge.net/archive/nsisweb.php?page=672&amp;instances=0,11,211" target="_blank">http://nsis.sourceforge.net/archive/...ances=0,11,211</a> , but it is also possible using FindFirst/Next without System plug-in. Use RMDir if path defines a folder.<br />
+      You can also simply add 2 lines for every path - Delete and RMDir.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">9th April 2005 12:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">To check if it's a folder, do IfFileExists "path\*.*"<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vbgunz</span><br />
+      <span class="post-time small text-muted">9th April 2005 19:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thank you to everyone! Your advice has enlightened me. Thanks again. I took another approach at this task and believe I've come up with something much easier to tackle. At least for those of you itching to spit out possible solutions :)<br />
+      <br />
+      First, I had two ways to create the listing. the first listing found in my first post consisted of a weak verbosity. It left me in the dark as to what was a directory and what was a file. I've now decided this issue would probably be best approached with increased verbosity.<br />
+      <br />
+      Here is the same exact listing in my first post but with more detail.</p>
+      <pre>
+<code>   Date      Time    Attr         Size   Compressed  Name<br />------------------- ----- ------------ ------------  ------------<br />2005-04-09 01:45:34 D....            0            0  Directory<br />2005-04-09 01:45:36 D....            0            0  Directory.dir<br />2005-04-09 01:45:15 ....A            0            0  Directory.dir\File<br />2005-04-09 01:45:15 ....A            0            0  Directory.dir\file.txt<br />2005-04-09 01:45:15 ....A            0            0  Directory\File<br />2005-04-09 01:45:15 ....A            0            0  Directory\file.txt<br />2005-04-09 01:45:15 ....A            0            0  File<br />2005-04-09 01:45:15 ....A            0            0  file.txt<br />------------------- ----- ------------ ------------  ------------<br />                                     0            0  8 files</code>
+</pre>The magic begins with the 21st character. If it's a D it's a directory. If it is anything else it is a file. If it is a D, I need to replace the first 53 characters on that line to read "RMDir '$EXEDIR\". If the 21st character reads to be anything but a D, I will need to replace the first 53 characters with "Delete /REBOOTOK '". Regardless of whether it is a file OR a directory, I still need to close the string with a quote. So I'll need to also write to the end of every line.<br />
+      <br />
+      Takhir, major thanks for the Read a File in reverse post. I've accomplished reading and writing back to the file in reverse so now directories are almost guarenteed to be removed. The only problem I have left over is understanding how to loop through every line.<br />
+      <br />
+      I pretty much know how to StrCmp but I fail to understand how to loop through all lines once until the file is finished. Also, how do you finish enclosing the string with the final quote?<br />
+      <br />
+      Any more help on this is absolutely appreciated! Thank you all again for your time and energy!
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vbgunz</span><br />
+      <span class="post-time small text-muted">12th April 2005 19:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I just wish to say major thanks to Instructor and Jnuw for helping me out on something that pertained to this issue. If you follow this <a href="http://forums.winamp.com/showthread.php?postid=1639948#post1639948" target="_blank">link</a>, with links above thanks to Takhir, you'll see how I did it!<br />
+      <br />
+      Thanks again fellas!</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

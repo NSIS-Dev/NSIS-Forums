@@ -1,0 +1,153 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="System::Call 'netapi32::NetUserEnum'" />
+
+  <title>System::Call 'netapi32::NetUserEnum' - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">System::Call 'netapi32::NetUserEnum'</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=313439">System::Call 'netapi32::NetUserEnum'</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">intruder1980</span><br />
+      <span class="post-time small text-muted">6th October 2009 09:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>System::Call 'netapi32::NetUserEnum'</strong><br />
+      Hey,<br />
+      <br />
+      I have some trouble using the System::Call 'netapi32::NetUserEnum'!<br />
+      <br />
+      I need a way to get a list of the local users.<br />
+      Some months ago "Anders" adviced me to use the System-Plugin:<br />
+      <br />
+      http://forums.winamp.com/showthread.php?s=&amp;threadid=304642&amp;highlight=exec<br />
+      <br />
+      I am using the functions written by "CancerFace". This worked fine for a while but once in a while I am running into some kind of memory-leak?!?!<br />
+      I found the Thread about it:<br />
+      <br />
+      http://forums.winamp.com/showthread.php?s=&amp;threadid=243303&amp;highlight=EnumerateUsers<br />
+      <br />
+      I wrote for testing a small installer with a loop. When I set the number of iterations high the error always appears. Is there something I am doing wrong? I am really thankful for any help that you guys can give me.<br />
+      <br />
+      This is my test-installer:<br />
+      <br />
+      !include "Sections.nsh"<br />
+      !include "LogicLib.nsh"<br />
+      ;--------------------------------<br />
+      <br />
+      Name "One Section"<br />
+      OutFile "one-section.exe"<br />
+      <br />
+      ;--------------------------------<br />
+      Var i<br />
+      Var j<br />
+      <br />
+      !macro EnumerateUsers SERVER_NAME<br />
+      messagebox mb_ok|mb_iconexclamation 'Start'<br />
+      !define Index "Line${__LINE__}"<br />
+      StrCpy $j 0<br />
+      Loop:<br />
+      IntOp $j $j + 1<br />
+      <br />
+      <br />
+      System::Call 'netapi32::NetUserEnum(w "${SERVER_NAME}",i 0,i 2,*i .R0,i -1, \<br />
+      *i .R1,*i .R2,*i .r1)i .r2'<br />
+      StrCpy $R8 $R0<br />
+      StrCpy $9 0<br />
+      ${Index}-loop:<br />
+      StrCmp $9 $R2 ${Index}-stop +1<br />
+      ;messagebox mb_ok|mb_iconexclamation 'BEFORE CALL! R0:[$R0]'<br />
+      System::Call "*$R0(w .R9)"<br />
+      IntOp $i $9 + 1<br />
+      IntOp $R0 $R0 + 4<br />
+      IntOp $9 $9 + 1<br />
+      Goto ${Index}-loop<br />
+      ${Index}-stop:<br />
+      System::Call 'netapi32.dll::NetApiBufferFree(i R8)i .R1'<br />
+      <br />
+      ${If} $j &lt; "1000"<br />
+      goto Loop<br />
+      ${EndIf}<br />
+      !undef Index<br />
+      messagebox mb_ok|mb_iconexclamation 'Stop'<br />
+      !macroend<br />
+      <br />
+      ;--------------------------------<br />
+      <br />
+      ; Sections<br />
+      Section !Required<br />
+      !insertmacro EnumerateUsers "\\127.0.0.1"<br />
+      SectionEnd</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">6th October 2009 15:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+      <pre>
+<code>System::Call 'netapi32::NetUserEnum(w "${SERVER_NAME}",i 0,i 2,*i .R0,i -1, \<br />*i .R1,*i .R2,*i .r1)i .r2'<br />System::Call 'netapi32.dll::NetApiBufferFree(i R0)i .R1'</code>
+</pre>in a loop does not leak<br />
+      <br />
+      comment out System::Call "*$R0(w .R9)" and the problem seems to go away(Looking at private bytes in process explorer), not sure why<br />
+      <br />
+      ...but your usage of the resume handle seems wrong, you should do StrCpy $1 0 before the loop and use *i r1 r1 in the function call, not *i .r1<br />
+      <br />
+      also, $R1 has the count of items you got, not $R2
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">6th October 2009 15:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">here is the complete code i'm testing:</p>
+      <pre>
+<code><br />Var i<br />Var j<br /><br />!macro EnumerateUsers SERVER_NAME<br />messagebox mb_topmost 'Start'<br />!define Index "Line${__LINE__}"<br />StrCpy $j 0<br />StrCpy $1 0<br />Loop:<br />IntOp $j $j + 1<br /><br />System::Call 'netapi32::NetUserEnum(w "${SERVER_NAME}",i 0,i 2,*i .R0,i -1, \<br />*i .R1,*i .R2,*i r1 r1)i .r2'<br />StrCpy $R8 $R0<br />StrCpy $9 0<br /><br />${Index}-loop:<br />StrCmp $9 $R1 ${Index}-stop 0<br />#System::Call "*$R0(w.R9)" ;uncomment this for leak...<br />IntOp $i $9 + 1<br />IntOp $9 $9 + 1<br />IntOp $R0 $R0 + 4<br />#DetailPrint "$9==$R1:$R9&lt;&lt;$R0"<br />Goto ${Index}-loop<br />${Index}-stop:<br /><br />System::Call 'netapi32.dll::NetApiBufferFree(i R8)i .R1'<br /><br /><br /><br />${If} $j &lt; "1000"<br />goto Loop<br />${EndIf}<br />!undef Index<br />messagebox mb_ok|mb_iconexclamation 'Stop'<br />!macroend<br />Section !Required<br />!insertmacro EnumerateUsers "\\127.0.0.1"<br />SectionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">intruder1980</span><br />
+      <span class="post-time small text-muted">8th October 2009 12:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hey Anders,<br />
+      <br />
+      thanks again for looking into it. Really appreciate the fast support in this forum.<br />
+      I am still looking for a solution.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="ExecToLog and MUI_INSTALLOPTIONS_READ" />
+
+  <title>ExecToLog and MUI_INSTALLOPTIONS_READ - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">ExecToLog and MUI_INSTALLOPTIONS_READ</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=286283">ExecToLog and MUI_INSTALLOPTIONS_READ</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Leanid</span><br />
+      <span class="post-time small text-muted">4th February 2008 18:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>ExecToLog and MUI_INSTALLOPTIONS_READ</strong><br />
+      I have problem with using these two directives together.<br />
+      <br />
+      for example code like this:<br />
+      Var MY_DB_VALUE<br />
+      <br />
+      !insertmacro MUI_INSTALLOPTIONS_READ $MY_DB_VALUE "cleandir.ini" "Field 10" "State"<br />
+      MessageBox MB_OK "DBRUN1: $MY_DB_VALUE"<br />
+      <br />
+      ReadEnvStr $R0 COMSPEC<br />
+      nsExec::ExecToLog '"$R0" /C "$INSTDIR\dbpromo\dbauto\dbauto.exe"'<br />
+      <br />
+      !insertmacro MUI_INSTALLOPTIONS_READ $MY_DB_VALUE "cleandir.ini" "Field 10" "State"<br />
+      MessageBox MB_OK "DBRUN2: $MY_DB_VALUE"<br />
+      <br />
+      <br />
+      When I execute first block works and I get message:<br />
+      DBRUN1: 1<br />
+      Then ExecToLog executed, but after ExecToLog all calls to MUI_INSTALLOPTIONS_READ macro do not return values, so I always got message:<br />
+      DBRUN2:<br />
+      <br />
+      If I comment out ExecToLog second call to MUI_INSTALLOPTIONS_READ starting to work and I get message DBRUN2: 1<br />
+      <br />
+      what am I missing? Should I do some POP, PUSH around ExecToLog or something?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">4th February 2008 19:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Any chance your application clears the temporary folder?<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Leanid</span><br />
+      <span class="post-time small text-muted">4th February 2008 20:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I found problem. That was very deep and only appeared in Silent mode installation.<br />
+      <br />
+      In short I dynamically generate .ini file by calling WriteIni function in Custom dialog. But Custom dialog does not get called in silent mode, so I detect silent mode and call WriteIni in .onInit.<br />
+      <br />
+      Problem here that I missed call to:<br />
+      !insertmacro MUI_INSTALLOPTIONS_EXTRACT "my.ini"<br />
+      in my SilentInstall function.<br />
+      <br />
+      Now the weird part. If I don't have this call in my silent mode WriteInit function in silent mode create my.ini in root C:\. And it works. But as soon as I call ExecToLog in creates temporary directory to put nsExec.dll. From that moment MUI_INSTALLOPTIONS_READ stops reading from C:\my.ini but trying to find it in Temp/nscxxx/my.ini<br />
+      <br />
+      I think MUI_INSTALLOPTIONS_READ first look if temporary ditrectory has been created if not it looks for ini file in ROOT, but if in the middle some other function created temporary directory MUI_INSTALLOPTIONS_READ starting to look there and failing to find .ini file.<br />
+      <br />
+      Calling !insertmacro MUI_INSTALLOPTIONS_EXTRACT "my.ini" guaranteed creating of temporary directory and it all works fine.<br />
+      <br />
+      there is part of my .nsi file:<br />
+      <br />
+      Var MY_DB_VALUE<br />
+      <br />
+      !insertmacro MUI_PAGE_COMPONENTS<br />
+      !insertmacro MUI_PAGE_DIRECTORY<br />
+      Page custom CleanDirPage<br />
+      !insertmacro MUI_PAGE_INSTFILES<br />
+      <br />
+      Function .onInit<br />
+      <br />
+      call SilentInstall<br />
+      FunctionEnd<br />
+      <br />
+      Function SilentInstall<br />
+      ;run only for silent mode<br />
+      <br />
+      IfSilent 0 end<br />
+      ;if I uncoment next line it all starting to work<br />
+      ;!insertmacro MUI_INSTALLOPTIONS_EXTRACT "my.ini"<br />
+      call WriteIni<br />
+      end:<br />
+      FunctionEnd<br />
+      <br />
+      Section "Test ExecToLog"<br />
+      <br />
+      SetOutPath $INSTDIR\dev<br />
+      File TestExecToLog.nsi<br />
+      <br />
+      !insertmacro MUI_INSTALLOPTIONS_READ $MY_DB_VALUE "my.ini" "Field 1" "State"<br />
+      MessageBox MB_OK "DBRUN1: $MY_DB_VALUE"<br />
+      <br />
+      ReadEnvStr $R0 COMSPEC<br />
+      nsExec::ExecToLog '"$R0" /C "dir"'<br />
+      <br />
+      !insertmacro MUI_INSTALLOPTIONS_READ $MY_DB_VALUE "my.ini" "Field 1" "State"<br />
+      MessageBox MB_OK "DBRUN2: $MY_DB_VALUE"<br />
+      SectionEnd<br />
+      <br />
+      Function CleanDirPage<br />
+      !insertmacro MUI_INSTALLOPTIONS_EXTRACT "my.ini"<br />
+      call WriteIni<br />
+      <br />
+      !insertmacro MUI_HEADER_TEXT "Installation of $MY_INST_TYPE environment configuration" "Select installation and deployment options"<br />
+      !insertmacro MUI_INSTALLOPTIONS_DISPLAY "my.ini"<br />
+      <br />
+      FunctionEnd<br />
+      <br />
+      function WriteIni<br />
+      !insertmacro MUI_INSTALLOPTIONS_WRITE 'my.ini' 'Settings' 'NumFields' '1'<br />
+      !insertmacro MUI_INSTALLOPTIONS_WRITE 'my.ini' 'Field 1' 'Type' 'Checkbox'<br />
+      !insertmacro MUI_INSTALLOPTIONS_WRITE 'my.ini' 'Field 1' 'Left' '10'<br />
+      !insertmacro MUI_INSTALLOPTIONS_WRITE 'my.ini' 'Field 1' 'Top' '125'<br />
+      !insertmacro MUI_INSTALLOPTIONS_WRITE 'my.ini' 'Field 1' 'Right' '-40'<br />
+      !insertmacro MUI_INSTALLOPTIONS_WRITE 'my.ini' 'Field 1' 'Bottom' '135'<br />
+      !insertmacro MUI_INSTALLOPTIONS_WRITE 'my.ini' 'Field 1' 'Text' 'Run DB promotion'<br />
+      !insertmacro MUI_INSTALLOPTIONS_WRITE 'my.ini' 'Field 1' 'State' 1<br />
+      FunctionEnd</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

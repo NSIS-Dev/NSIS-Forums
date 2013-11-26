@@ -1,0 +1,140 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="InstFiles window doesn't paint propertly in .onInstFailed" />
+
+  <title>InstFiles window doesn't paint propertly in .onInstFailed - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">InstFiles window doesn't paint propertly in .onInstFailed</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=138000">InstFiles window doesn't paint propertly in .onInstFailed</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">iceman_k</span><br />
+      <span class="post-time small text-muted">5th June 2003 20:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>InstFiles window doesn't paint propertly in .onInstFailed</strong><br />
+      I am writing a fairly large and complicated installer.<br />
+      When the installation fails, I roll back installed components in the .onInstFailed callback function.<br />
+      The problems I am seeing are:<br />
+      a) DetailPrint no longer prints to the Listbox but only to the Status bar.<br />
+      b) NSIS seems to stops painting its window, i.e., the NSIS window turns gray, except for the Status bar message, which keeps getting updated.<br />
+      <br />
+      What have others here done for rolling back incomplete/failed installations? Have you also seen these problems?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">5th June 2003 21:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">.onInstFailed was not created for this purpose. It's just for showing a simple message box or writing to a log, but it's not for huge operations. It's called within the message loop and therefor the window doesn't redraw and DetailPrint doesn't work as expected.<br />
+      <br />
+      Aside from using another instfiles page to do the roll-back operation I have no other ideas at the moment. This idea will not work when the user aborts the installation if a file can be overwritten but you can remove the cancel button with the new AllowSkipFiles command.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">iceman_k</span><br />
+      <span class="post-time small text-muted">5th June 2003 21:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Oh, so there's nothing preventing me from creating another Instfiles page?<br />
+      Cool- I'll try that.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">iceman_k</span><br />
+      <span class="post-time small text-muted">5th June 2003 21:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hmmm... not as easy as I thought.<br />
+      Are there any examples out there of multiple InstFiles pages?<br />
+      I see it is on the "ToDo" list.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">5th June 2003 21:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I think I wrote one once, but I can't find it right now. I'll just give you the basic idea for your task. In case you need to abort set a variable to a certain value. On the pre function of the second instfiles page read the variable and if it's not set skip the page. If you haven't skipped the page loop through all sections and disable all of them and enable just the rollback function:<br />
+      <br /></p>
+      <pre>
+<code>Section /o "" rollbackSection<br />SectionEnd<br /><br />#...<br /><br />StrCpy $0 0<br />loop:<br />  SectionSetFlags $0 0<br />  IntOp $0 $0 + 1<br />  IfErrors 0 loop<br /><br />SectionSetFlags ${rollbackSection} ${SF_SELECTED}</code>
+</pre><br />
+      <br />
+      This will cause nothing but the rollback section to execute. In case you need the other sections' flags to remain so you can know what to rollback you should convert their SF_SELECTED flag to something that's not used such as 4096 (a safe distance from the last flag).
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">iceman_k</span><br />
+      <span class="post-time small text-muted">5th June 2003 21:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yes, that's essentially how I was thinking of implementing it.<br />
+      I was just hoping there was an easier way, e.g., maybe have a Section called Rollback the way we have a Section called Uninstaller, which can be automatically invoked by the installer if the installation fails.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">5th June 2003 21:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Not yet :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">iceman_k</span><br />
+      <span class="post-time small text-muted">6th June 2003 18:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Looks like the second InstFiles page method isn't going to work after all.<br />
+      Here are the problems I found:<br />
+      On the first InstFiles page, if an error occurs and I call Abort, the "Back" &amp; "Next" buttons get disabled and the "Cancel" button gets enabled. Clicking the Cancel button closes the installer.<br />
+      Not good. :(<br />
+      <br />
+      So, I changed it. Now, if an error occurs, i don't call Abort but set a flag instead. However, now nsis thinks that setup succeeded, so it shows a message saying "Setup Complete" and the Next button label changes to "Install". When I click "Install", its label changes to "Next". When I click "Next", the second InstFiles page starts. Now the Rollback section gets called OK but the problem is that the progress bar is maxed to 100% and doesn't move any more.<br />
+      Even worse. :cry:<br />
+      <br />
+      I'm still open to ideas on how to implement installation rollback. :confused:</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">7th June 2003 10:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Aside from the progress bar maxing out very quickly (which is a bug that have already been fixed in the latest CVS version of now :)) the attached file does exactly what you want.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

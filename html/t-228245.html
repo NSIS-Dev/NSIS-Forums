@@ -1,0 +1,270 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Default language" />
+
+  <title>Default language - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Default language</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=228245">Default language</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">12th October 2005 14:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Default language</strong><br />
+      According to <a href="http://sourceforge.net/tracker/?func=detail&amp;atid=373085&amp;aid=1324734&amp;group_id=22049" target="_blank">bug report #1324734</a>, we should be using the UI's language as the default language. There's no technical difficulty involved and the suggested behavior is feasible. However, I'm not so sure that's the right thing to do.<br />
+      <br />
+      As far as I can tell, most users use the English UI, but set their locale to their local language. In this, they might appreciate the installer automatically choosing their local language. However, the bug report does bring up a valid point, saying that the installer should, at least by default, follow the rest of the UI.<br />
+      <br />
+      So, what do you think?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">iceman_k</span><br />
+      <span class="post-time small text-muted">12th October 2005 15:53 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">However, the UI behavior is not necessarily consistent.<br />
+      Case in point- change the locale to German (Germany) and then open the Calendar applet. The UI is in English but the months are displayed in German.<br />
+      So which is correct?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">apmolyneux</span><br />
+      <span class="post-time small text-muted">12th October 2005 16:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I was the original submitter of that bug, and just in case anybody is interested (other than myself and a few of my customers) here's the workaround script I wrote. Sorry it's a bit of a mess - I've just got out of the "get it working" phase and haven't got around to tidying it up yet:<br />
+      <br /></p>
+      <pre>
+<code><br />!define sysOSVERSIONINFO '(i, i, i, i, i, &amp;t128) i'<br />!define sysGetVersionEx 'kernel32::GetVersionExA(i) i'<br />!define sysVER_PLATFORM_WIN32_NT 2<br />!macro SetUILanguage UN<br />Function ${UN}SetUILanguage<br />  Push $R0<br />  Push $R1<br />  Push $R2<br />  ; Call GetUserDefaultUILanguage (if available)<br />  ; $R0 = GetUserDefaultUILanguage()<br />  System::Call 'kernel32::GetUserDefaultUILanguage() i.r10'<br />  StrCmp $R0 "error" OldFashionedWay Finish<br />OldFashionedWay:<br />  ; Check the Windows version<br />  ; $R0 = new OSVERSIONINFO(148, 0, 0, 0, 0, "")<br />  System::Call '*${sysOSVERSIONINFO}(148,0,0,0,0,"") .r10'<br />  ; GetVersionEx($R0)<br />  System::Call '${sysGetVersionEx}(r10)'<br />  ; $R1 = $R0-&gt;dwPlatformId<br />  System::Call "*$R0(i ., i ., i ., i ., i .r11)"<br />  ; delete $R0<br />  System::Free $R0<br />  IntCmp $R1 ${sysVER_PLATFORM_WIN32_NT} PlatformIsNT<br />  ; We're running on DOS-based Windows<br />  StrCpy $R0 "Control Panel\desktop\ResourceLocale"<br />  StrCpy $R1 ""<br />  GoTo GetLCIDFromHKCU<br />PlatformIsNT:<br />  ; We're running on Windows NT<br />  StrCpy $R0 ".DEFAULT\Control Panel\International"<br />  StrCpy $R1 "Locale"<br />GetLCIDFromHKU:<br />  ReadRegStr $R2 HKU $R0 $R1<br />  GoTo GetLangIDFromLCID<br />GetLCIDFromHKCU:<br />  ReadRegStr $R2 HKCU $R0 $R1<br />GetLangIDFromLCID:<br />  StrCpy $R2 "0x$R2"<br />  IntOp $R0 $R2 &amp; 0xffff<br />Finish:<br />  StrCpy $LANGUAGE $R0<br />  Pop $R2<br />  Pop $R1<br />  Pop $R0<br />FunctionEnd<br />!macroend<br />!insertmacro SetUILanguage ""<br />!insertmacro SetUILanguage "un."<br /></code>
+</pre><br />
+      <br />
+      To see this in action, call SetUILanguage from .onInit, and un.SetUILanguage from un.onInit.<br />
+      <br />
+      Basically, it just tries to call GetUserDefaultUILanguage() (available on Windows ME, Windows 2000 and later). If that doesn't work, it does some Registry trawling to find the same information.<br />
+      <br />
+      Comments welcome!<br />
+      <br />
+      Cheers,<br />
+      <br />
+      Andrew
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">15th October 2005 14:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Can you please create a <a href="http://nsis.sourceforge.net/wiki/" target="_blank">Wiki</a> page for this code?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">apmolyneux</span><br />
+      <span class="post-time small text-muted">17th October 2005 13:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by kichik</i><br />
+        <b>Can you please create a <a href="http://nsis.sourceforge.net/wiki/" target="_blank">Wiki</a> page for this code?</b>
+      </blockquote>Done - it's <a href="http://nsis.sourceforge.net/wiki/Language_Detection_From_Windows_UI_Language" target="_blank">here</a>.<br />
+      <br />
+      That version of the code is slightly updated. The code I posted here sets $LANGUAGE based on the whole language identifier. The code on the Wiki trims off the sublanguage identifier, because that seemed to cause NSIS to get it wrong. I'm working on a bug report for that one.<br />
+      <br />
+      Cheers,<br />
+      <br />
+      Andrew
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">onad</span><br />
+      <span class="post-time small text-muted">18th October 2005 10:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Why not implement both options and let the NSIS scriptwriter decide what he/she thinks is best?<br />
+      <br />
+      Personally I set the language to the language of the OS GUI.<br />
+      <br />
+      The idea is simple:<br />
+      <br />
+      "If the user can use the PC he sure can read the OS GUI language in some form... thus also an installer in this language."<br />
+      <br />
+      Well, since one of my installers was used by total +300.000 people in GB, FR, ES, NL, TK, DE without any install language complaint... While mostly really using XP in French, Spanish, English and German<br />
+      <br />
+      NOTE:<br />
+      Why bother the installer user whith language questions if not needed. One of the goals of NSIS is to make installation simple, preventing un-neccesairy questions.<br />
+      <br />
+      BTW:<br />
+      If this language is not available embededed in the installer I set to English with an option for the installation user to choose.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">apmolyneux</span><br />
+      <span class="post-time small text-muted">18th October 2005 11:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by onad</i><br />
+        <b>Personally I set the language to the language of the OS GUI.<br /></b>
+      </blockquote>You mean you use a script workaround like I do? If so, I'd be interested to know if your solution is similar to mine.<br />
+      <br />
+      Cheers,<br />
+      <br />
+      Andrew
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">onad</span><br />
+      <span class="post-time small text-muted">18th October 2005 20:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yep, I do, actually at a given point I needed a solution NOW, so I started of my venture in writing a plugin.<br />
+      <br />
+      Happy as I was what I created, I thought: I'm surlely not the only one so posted the solution incl. examples on the Wiki:<br />
+      <br />
+      Your solution is nice, thanks! But take care accessin the registry directly, I prefer API calls of an OS, You know MS might decide to change the registry names at will.. (Windows Vista?)<br />
+      <br />
+      I'm sure you could alter your code doing the same as my plugin.<br />
+      <br />
+      Wiki MoreInfo Multilanguage and OS GUI language here.<br />
+      <br />
+      <a href="http://nsis.sourceforge.net/wiki/MoreInfo_plug-in" target="_blank">http://nsis.sourceforge.net/wiki/MoreInfo_plug-in</a><br />
+      <br />
+      FYI: Next month Vista Beta 2 I will do a Windows Vista compatibility test.<br />
+      <br />
+      For now, my heavy task is still getting makensis to work under FreeBSD (POSIX) so I can automet my builds.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">apmolyneux</span><br />
+      <span class="post-time small text-muted">19th October 2005 12:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by onad</i><br />
+        <b>Your solution is nice, thanks! But take care accessin the registry directly, I prefer API calls of an OS, You know MS might decide to change the registry names at will.. (Windows Vista?)</b>
+      </blockquote>My code should work fine on Vista. It tries to call the API function first - the Registry-based solution is only used if the API function isn't available (e.g. on Windows 95/98 and NT 4.0). So long as MS don't decide to <b>remove</b> the GetUserDefaultUILanguage() API function in Vista, it should be OK.<br />
+      As far as I know, there's no other way to get the UI language on "legacy" Windows versions. I'll take a look at your code to see how you do it.<br />
+      <br />
+      Cheers,<br />
+      <br />
+      Andrew
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">apmolyneux</span><br />
+      <span class="post-time small text-muted">19th October 2005 12:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">onad:<br />
+      <br />
+      I just took a look at your code. I see you're getting the language of USER.EXE, which is good thinking and will work for legacy Windows versions.<br />
+      <br />
+      <b>However</b>, it won't work properly for users who are running the MUI (Multilingual User Interface) version of Windows 2000 or XP. USER.EXE is always "English (US)" in a MUI environment. I'm told the Enterprise and Ultimate versions of Vista will also be MUI.<br />
+      <br />
+      You should modify your code to try calling GetUserDefaultUILanguage first, and use the USER.EXE method as the fallback for old Windows versions.<br />
+      <br />
+      Documentation for GetUserDefaultUILanguage is here:<br />
+      <a href="http://msdn.microsoft.com/library/default.asp?url=/library/en-us/intl/nls_5c85.asp" target="_blank">http://msdn.microsoft.com/library/de...l/nls_5c85.asp</a><br />
+      <br />
+      Cheers,<br />
+      <br />
+      Andrew</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">onad</span><br />
+      <span class="post-time small text-muted">9th November 2005 00:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Good tip, I will adjust my plugin as soon as I find the time.<br />
+      <br />
+      Thanks!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bhaelochon</span><br />
+      <span class="post-time small text-muted">17th November 2005 21:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by iceman_k</i><br />
+        <b>However, the UI behavior is not necessarily consistent.<br />
+        Case in point- change the locale to German (Germany) and then open the Calendar applet. The UI is in English but the months are displayed in German.<br />
+        So which is correct?</b>
+      </blockquote>The UI behavior <i>is</i> consistent, though. No labels, menus, or message boxes--collectively, the "UI"--are modified at all. The selection only affects numbers, currencies, times, dates, and input locales; i.e. the other items in the Regional Options CP applet; i.e. the key areas of Windows that, when changed, make it possible to use an English version in a non-English environment.<br />
+      <br />
+
+      <blockquote>
+        <i>Originally posted by kichik</i><br />
+        <b>However, the bug report does bring up a valid point, saying that the installer should, at least by default, follow the rest of the UI.</b>
+      </blockquote>And it's that point that clinches my decision to vote to use the UI language as the default. Word, Excel, IE, If we want our users to be able to use the locale language, we should utilize the LangDLL plug-in.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">20th November 2005 18:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Just to keep you all up-to-date on this one, I plan to implement it for 2.12.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">onad</span><br />
+      <span class="post-time small text-muted">21st November 2005 10:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Great,<br />
+      <br />
+      Then my Moreinfo Plugin will be obsolete for the language part, good. Maybe you can reuse some of the moreinfo text of the wikipage.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">30th December 2005 15:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Not in time for 2.12, but the change has finally been made. It'll be available in 2.13 and the next <a href="http://nsis.sourceforge.net/nightly/nsis.zip" target="_blank">nightly build</a>.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

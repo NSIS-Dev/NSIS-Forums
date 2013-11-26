@@ -1,0 +1,153 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PleaseWait plugin" />
+
+  <title>PleaseWait plugin - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">PleaseWait plugin</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=335700">PleaseWait plugin</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">T.Slappy</span><br />
+      <span class="post-time small text-muted">7th October 2011 13:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>PleaseWait plugin</strong><br />
+      Hi.<br />
+      I am creating new plug-in called <b>PleaseWait</b> which shows small modeless window (see attachment) with label and gif animation.<br />
+      <br />
+      The goal is to create popup message for user that some action is being performed in background so he needs to wait.<br />
+      It is suitable especially for long run tasks like downloading files, writing/reading, database operations and so on when nothing is happening/refreshing in GUI.<br />
+      <br />
+      Plug-in runs in a separate thread, it is top most window [above all other windows - see attachment] so there is possible to show it over several pages even in .onGUIInit!<br />
+      <br />
+      Showing window is simple, but I have problem with closing it.<br />
+      This is my source:<br /></p>
+      <pre>
+<span style="color: #FF8000">#Showdialogwithgiffileandcaption,dimensionsandlabelcolor
+<br /></span><span style="color: #0000BB">PleaseWait</span><span style="color: #007700">::</span><span style="color: #0000BB">ShowDialog</span><span style="color: #007700">/</span><span style="color: #0000BB">NOUNLOAD</span><span style="color: #DD0000">"D:\Projects\PleaseWait\loading.gif"
+<br />"Windowtitle"</span><span style="color: #0000BB">200120</span><span style="color: #DD0000">"Loadingdata...""0x0000ff"</span><span style="color: #0000BB">0
+<br /><br /></span><span style="color: #FF8000">#Thisisimportant!
+<br /></span><span style="color: #0000BB">MessageBoxMB_OK</span><span style="color: #DD0000">"AfterPleaseWait::ShowDialog"
+</span>
+</pre>And this is C++ code I use: [shortened]<br />
+      <pre>
+<code>__declspec</code><span style="color: #007700">(</span><span style="color: #0000BB">dllexport</span><span style="color: #007700">)</span><span style="color: #0000BB">voidShowDialog</span><span style="color: #007700">(</span><span style="color: #0000BB">HWNDhwndParent</span><span style="color: #007700">,</span><span style="color: #0000BB">intstring_size</span><span style="color: #007700">,
+<br /></span><span style="color: #0000BB">char</span><span style="color: #007700">*</span><span style="color: #0000BB">variables</span><span style="color: #007700">,</span><span style="color: #0000BB">stack_t</span><span style="color: #007700">**</span><span style="color: #0000BB">stacktop</span><span style="color: #007700">,</span><span style="color: #0000BB">extra_parameters</span><span style="color: #007700">*</span><span style="color: #0000BB">extra</span><span style="color: #007700">)
+<br />{
+<br /></span><span style="color: #FF8000">//getNSISparameters
+<br /></span><span style="color: #007700">.......
+<br /></span><span style="color: #FF8000">//Runmainthread
+<br /></span><span style="color: #0000BB">unsigneduThreadID</span><span style="color: #007700">=</span><span style="color: #0000BB">0</span><span style="color: #007700">;
+<br /></span><span style="color: #0000BB">HANDLEhThread</span><span style="color: #007700">=(</span><span style="color: #0000BB">HANDLE</span><span style="color: #007700">)</span><span style="color: #0000BB">_beginthreadex</span><span style="color: #007700">(</span><span style="color: #0000BB">NULL</span><span style="color: #007700">,</span><span style="color: #0000BB">0</span><span style="color: #007700">,</span><span style="color: #0000BB">ThreadProc</span><span style="color: #007700">,&amp;</span><span style="color: #0000BB">g_ThreadParam</span><span style="color: #007700">,</span><span style="color: #0000BB">0</span><span style="color: #007700">,&amp;</span><span style="color: #0000BB">uThreadID</span><span style="color: #007700">);
+<br />}
+<br /><br /></span><span style="color: #FF8000">//ThisismainThreadprocedure
+<br /></span><span style="color: #0000BB">unsigned__stdcallThreadProc</span><span style="color: #007700">(</span><span style="color: #0000BB">void</span><span style="color: #007700">*</span><span style="color: #0000BB">param</span><span style="color: #007700">)
+<br />{
+<br /></span><span style="color: #0000BB">THREADPARAM</span><span style="color: #007700">*</span><span style="color: #0000BB">pThreadParam</span><span style="color: #007700">=(</span><span style="color: #0000BB">THREADPARAM</span><span style="color: #007700">*)</span><span style="color: #0000BB">param</span><span style="color: #007700">;
+<br /><br />.......
+<br /></span><span style="color: #0000BB">RegisterClassEx</span><span style="color: #007700">(&amp;</span><span style="color: #0000BB">wc</span><span style="color: #007700">)</span><span style="color: #0000BB">etc
+<br /><br /></span><span style="color: #FF8000">//CreatetheWindow
+<br /></span><span style="color: #0000BB">hwnd</span><span style="color: #007700">=</span><span style="color: #0000BB">CreateWindowEx</span><span style="color: #007700">(...)
+<br /><br /></span><span style="color: #FF8000">//Showwindowandredrawit
+<br /></span><span style="color: #0000BB">ShowWindow</span><span style="color: #007700">(</span><span style="color: #0000BB">hwnd</span><span style="color: #007700">,</span><span style="color: #0000BB">SW_SHOW</span><span style="color: #007700">);
+<br /></span><span style="color: #0000BB">UpdateWindow</span><span style="color: #007700">(</span><span style="color: #0000BB">hwnd</span><span style="color: #007700">);
+<br /><br /></span><span style="color: #FF8000">//Startanimation
+<br /></span><span style="color: #0000BB">PlayAnimation</span><span style="color: #007700">(</span><span style="color: #0000BB">hwnd</span><span style="color: #007700">,</span><span style="color: #0000BB">pThreadParam</span><span style="color: #007700">-&gt;</span><span style="color: #0000BB">szFilename</span><span style="color: #007700">,....);
+<br /><br /></span><span style="color: #FF8000">//TheMessageLoop
+<br /></span><span style="color: #007700">while(</span><span style="color: #0000BB">GetMessage</span><span style="color: #007700">(&amp;</span><span style="color: #0000BB">Msg</span><span style="color: #007700">,</span><span style="color: #0000BB">NULL</span><span style="color: #007700">,</span><span style="color: #0000BB">0</span><span style="color: #007700">,</span><span style="color: #0000BB">0</span><span style="color: #007700">)&gt;</span><span style="color: #0000BB">0</span><span style="color: #007700">)
+<br />{
+<br /></span><span style="color: #0000BB">TranslateMessage</span><span style="color: #007700">(&amp;</span><span style="color: #0000BB">Msg</span><span style="color: #007700">);
+<br /></span><span style="color: #0000BB">DispatchMessage</span><span style="color: #007700">(&amp;</span><span style="color: #0000BB">Msg</span><span style="color: #007700">);
+<br />}
+<br />return</span><span style="color: #0000BB">0</span><span style="color: #007700">;
+<br />}
+</span>
+</pre>This is window procedure for window created above:<br />
+      <pre>
+<code>LRESULTCALLBACKWndProc</code><span style="color: #007700">(</span><span style="color: #0000BB">HWNDhwnd</span><span style="color: #007700">,</span><span style="color: #0000BB">UINTmsg</span><span style="color: #007700">,</span><span style="color: #0000BB">WPARAMwParam</span><span style="color: #007700">,</span><span style="color: #0000BB">LPARAMlParam</span><span style="color: #007700">)
+<br />{
+<br />switch(</span><span style="color: #0000BB">msg</span><span style="color: #007700">)
+<br />{
+<br />.......
+<br />case</span><span style="color: #0000BB">WM_PAINT</span><span style="color: #007700">:
+<br /></span><span style="color: #FF8000">//Drawimage
+<br /></span><span style="color: #0000BB">pe</span><span style="color: #007700">-&gt;</span><span style="color: #0000BB">OnPaint</span><span style="color: #007700">();
+<br />.......
+<br />default:
+<br />return</span><span style="color: #0000BB">DefWindowProc</span><span style="color: #007700">(</span><span style="color: #0000BB">hwnd</span><span style="color: #007700">,</span><span style="color: #0000BB">msg</span><span style="color: #007700">,</span><span style="color: #0000BB">wParam</span><span style="color: #007700">,</span><span style="color: #0000BB">lParam</span><span style="color: #007700">);
+<br />}
+<br />return</span><span style="color: #0000BB">0</span><span style="color: #007700">;
+<br />}
+</span>
+</pre>I want anytime to close this window from NSIS script with <b>PleaseWait::EndDialog</b> which is:<br />
+      <br />
+      <pre>
+<code>__declspec</code><span style="color: #007700">(</span><span style="color: #0000BB">dllexport</span><span style="color: #007700">)</span><span style="color: #0000BB">voidEndDialog</span><span style="color: #007700">(</span><span style="color: #0000BB">HWNDhwndParent</span><span style="color: #007700">,</span><span style="color: #0000BB">intstring_size</span><span style="color: #007700">,
+<br /></span><span style="color: #0000BB">char</span><span style="color: #007700">*</span><span style="color: #0000BB">variables</span><span style="color: #007700">,</span><span style="color: #0000BB">stack_t</span><span style="color: #007700">**</span><span style="color: #0000BB">stacktop</span><span style="color: #007700">,</span><span style="color: #0000BB">extra_parameters</span><span style="color: #007700">*</span><span style="color: #0000BB">extra</span><span style="color: #007700">)
+<br />{
+<br /></span><span style="color: #0000BB">g_bStopImmediately</span><span style="color: #007700">=</span><span style="color: #0000BB">true</span><span style="color: #007700">;
+<br />}
+</span>
+</pre>The problem is that immediately when I call PleaseWait::EndDialog I got Unhandled exception. I have breakpoint exactly on line EndDialog(...) also inside and this function is never called, the program crashes *before* entering into it.<br />
+      <br />
+      I am not sure - what is wrong there? Why cannot I call EndDialog directly?<br />
+      NSIS advanced to next line because I can see "After PleaseWait::ShowDialog" message box but calling EndDialog later causes the installer to crash.<br />
+      <br />
+      ThreadProc is still running - separated thread but I need some way how to interrupt it from NSIS as I do not know how long the dialog will be shown.<br />
+      <br />
+      Thanks for any ideas :)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">9th October 2011 18:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I can't really say without having the full code. How about running the installer through the debugger? Rather than using a boolean flag you really aught to use an event (i.e. CreateEvent/SetEvent). Also as I said before (<a href="http://forums.winamp.com/showpost.php?p=2807709&amp;postcount=16" target="_blank">http://forums.winamp.com/showpost.ph...9&amp;postcount=16</a>), you should really avoid using CRT. However if you really must use CRT you should clearly state this on your plug-in page as your plug-in WILL crash the installer on machines without the necessary CRT.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">LoRd_MuldeR</span><br />
+      <span class="post-time small text-muted">9th October 2011 18:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Just a side note: If you want to use CRT functions, but do not want your DLL to depend on a separate CRT DLL, you can set "Ignore All Default Libraries" to <i>Yes</i> and then explicitly link against the VC <i>6.0</i> CRT import library. This way your DLL will use MSVCRT.DLL (note: no version number in the name!), which, in contrast to newer MSVCRT versions, is an integral part of the operating system (since Win2k, I think) and thus does not need a separate install. Many system components, like Explorer.exe and stuff, also use the "legacy" MSVCRT.DLL that ships with Windows. Only drawback: Some newer CRT functions, like the strcpy<b>_s</b> &amp; friends, were not available in VC 6.0 yet...<br />
+      <br />
+      (Side-side note: If you get linker errors regarding the "___CxxFrameHandler" symbol with VS2010 and the VC 6.0 CRT, then simply disable C++ exception handling. Of course, you better don't throw any exceptions in your code then - it still works but can have bad side effects)</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

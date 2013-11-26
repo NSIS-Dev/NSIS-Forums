@@ -1,0 +1,168 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Variables and userinput (Arrays)" />
+
+  <title>Variables and userinput (Arrays) - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Variables and userinput (Arrays)</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=251614">Variables and userinput (Arrays)</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">The Glimmerman</span><br />
+      <span class="post-time small text-muted">21st July 2006 10:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Variables and userinput (Arrays)</strong><br />
+      :igor: noob warning :D<br />
+      <br />
+      Hi there.<br />
+      <br />
+      I'm a little bit confused here. :)<br />
+      I have a custompage with +/- 15 userinput boxes and checkboxes. After filling in the info and clicking next the info must be checked and executed. (username,computername, password etc etc) I now have a lot of<br /></p>
+      <pre>
+<code><br />ReadINIStr $var1<br />ReadINIStr $var2<br />ReadINIStr $var3<br /></code>
+</pre><br />
+      and a lot of functions when de variables are declared. I've read something about arrays (NSISArray.dll). But i try to understand (the logica)how it works. Is it even possible to get all the userinput (state) in on array and how to implement it with the variables and functions.<br />
+      I hope someone will and can explain me how it works<br />
+      <br />
+      Thanks in advance
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">CancerFace</span><br />
+      <span class="post-time small text-muted">21st July 2006 12:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Create an array (using the <a href="http://nsis.sourceforge.net/Array_plug-in" target="_blank">Array Plugin</a>) then read each value from your INI file to the NSIS stack and feed the value to the array, for example using a macro:</p>
+      <pre>
+<code>!macro ReadINIValues ARRAY NUMBER_OF_VALUES<br />  !define Index "Line${__LINE__}"<br />  NSISArray::New /NOUNLOAD ${ARRAY} ${NUMBER_OF_VALUES} 2<br />  StrCpy $0 1<br />  StrCpy $9 ${NUMBER_OF_VALUES}<br />  IntOp $9 $9 + 1<br /><br /> ${Index}_Start:<br />  StrCmp $0 $9 ${Index}_End<br />  ReadINIStr $1 "&lt;your_ini_file&gt;" "&lt;your_section&gt;" "&lt;your_field_$0&gt;"<br />  NSISArray::Write /NOUNLOAD ${ARRAY} $0 "$1"<br />  IntOp $0 $0 + 1<br />  Goto ${Index}_Start<br /><br /> ${Index}_End:<br />  NSISArray::FreeUnusedMem /NOUNLOAD<br />  !undef Index<br />!macroEnd</code>
+</pre><br />
+      Call the macro using for example
+      <pre>
+<code>!insertmacro ReadINIValues UserValues 10</code>
+</pre>in order to feed values to the array.<br />
+      To read values from the array, use their index number. For example
+      <pre>
+<code>NSISArray::Read /NOUNLOAD UserValues 5<br />Pop $0</code>
+</pre>will read the 5th value from the array and place it in $0. You can then use the value in any of your other functions/sections.<br />
+      <br />
+      Don't forget to delete the array object when you're done:
+      <pre>
+<code>NSISArray:: Delete /NOUNLOAD UserValues</code>
+</pre><br />
+      <br />
+      Hope this helps<br />
+      <br />
+      CF
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">The Glimmerman</span><br />
+      <span class="post-time small text-muted">21st July 2006 14:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanx CF<br />
+      <br />
+      I hope you or someone else can help me with one thing.<br />
+      I got this<br />
+      <br /></p>
+      <pre>
+<code><br />ReadINIStr $1 "test.ini" "State" "Field $0"<br /></code>
+</pre><br />
+      <br />
+      and then this to test<br />
+      <br />
+      <pre>
+<code><br />!insertmacro ReadINIValues UserValues 10<br /><br />NSISArray::Debug /NOUNLOAD UserValues<br /><br />NSISArray::Read /NOUNLOAD UserValues 1<br />Pop $0<br />MessageBox MB_OK "$0"<br />NSISArray::Read /NOUNLOAD UserValues 2<br />Pop $1<br />MessageBox MB_OK "$1"<br /></code>
+</pre><br />
+      <br />
+      The last code is in a function (leave)<br />
+      But there is nothing in the array.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">CancerFace</span><br />
+      <span class="post-time small text-muted">21st July 2006 14:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Your ReadINIStr syntax is wrong. Should be</p>
+      <pre>
+<code>ReadINIStr $1 "test.ini" "Field $0" "State"</code>
+</pre><br />
+      CF
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">The Glimmerman</span><br />
+      <span class="post-time small text-muted">21st July 2006 16:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">:o<br />
+      Last time I hope.<br />
+      <br />
+      What am I doing wrong<br />
+      <br /></p>
+      <pre>
+<code><br />!include "LogicLib.nsh"<br />!include "MUI.nsh"<br /><br />OutFile "Test.exe"<br /><br />  Var FieldName<br /><br />  !insertmacro MUI_LANGUAGE "English"<br />  !insertmacro MUI_RESERVEFILE_INSTALLOPTIONS<br /><br />!macro ReadINIValues ARRAY NUMBER_OF_VALUES<br />  !define Index "Line${__LINE__}"<br />  NSISArray::New /NOUNLOAD ${ARRAY} ${NUMBER_OF_VALUES} 2<br />  StrCpy $0 1<br />  StrCpy $9 ${NUMBER_OF_VALUES}<br />  IntOp $9 $9 + 1<br /><br /> ${Index}_Start:<br />  StrCmp $0 $9 ${Index}_End<br />  ReadINIStr $1 "$PLUGINSDIR\test.ini" "Field $0" "State"<br />  NSISArray::Write /NOUNLOAD ${ARRAY} $0 "$1"<br />;  MessageBox MB_OK "$1"<br />  IntOp $0 $0 + 1<br />  Goto ${Index}_Start<br /><br />  ${Index}_End:<br />  NSISArray::FreeUnusedMem /NOUNLOAD<br />  !undef Index<br />!macroEnd<br /><br />  Page custom GetSettings SetSettings<br /><br />  Function .onInit<br />InitPluginsDir<br />!insertmacro MUI_INSTALLOPTIONS_EXTRACT "test.ini"<br />FunctionEnd<br /><br />Section "-hidden section"<br />SectionEnd<br /><br />Function GetSettings<br />InstallOptionsEx::initDialog /NOUNLOAD "$PLUGINSDIR\test.ini"<br />InstallOptionsEx::Show<br />FunctionEnd<br /><br />Function SetSettings<br />!insertmacro ReadINIValues UserValues 5<br />NSISArray::Read /NOUNLOAD UserValues 3<br />Pop $0<br />Strcpy $FieldName $0<br />MessageBox MB_OK "$FieldName or $0"<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      I attached the files
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">CancerFace</span><br />
+      <span class="post-time small text-muted">21st July 2006 18:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Actually, my bad: We feed data to the array starting at Index 1 but we should start at Index 0. This should work:</p>
+      <pre>
+<code>!include "LogicLib.nsh"<br />!include "MUI.nsh"<br /><br />OutFile "Test.exe"<br /><br />  Var FieldName<br /><br />  !insertmacro MUI_LANGUAGE "English"<br />  !insertmacro MUI_RESERVEFILE_INSTALLOPTIONS<br /><br />!macro ReadINIValues ARRAY NUMBER_OF_VALUES<br />!define Index "Line${__LINE__}"<br />NSISArray::New /NOUNLOAD "${ARRAY}" ${NUMBER_OF_VALUES} 2<br />StrCpy $0 1<br />StrCpy $2 0<br />StrCpy $9 ${NUMBER_OF_VALUES}<br />IntOp $9 $9 + 1<br /><br />${Index}_Start:<br />StrCmp $0 $9 ${Index}_End<br />ReadINIStr $1 "$PLUGINSDIR\test.ini" "Field $0" "State"<br />NSISArray::Write /NOUNLOAD ${ARRAY} $2 "$1"<br />IntOp $0 $0 + 1<br />IntOp $2 $2 + 1<br />Goto ${Index}_Start<br /><br />${Index}_End:<br />NSISArray::FreeUnusedMem /NOUNLOAD<br />!undef Index<br />!macroend<br /><br />  Page custom GetSettings SetSettings<br /><br />Function .onInit<br />InitPluginsDir<br />!insertmacro MUI_INSTALLOPTIONS_EXTRACT "test.ini"<br />FunctionEnd<br /><br />Section "-hidden section"<br />SectionEnd<br /><br />Function GetSettings<br />InstallOptionsEx::initDialog /NOUNLOAD "$PLUGINSDIR\test.ini"<br />InstallOptionsEx::Show<br />FunctionEnd<br /><br />Function SetSettings<br />!insertmacro ReadINIValues "UserValues" "5"<br />NSISArray::Read /NOUNLOAD UserValues 3<br />Pop $0<br />Strcpy $FieldName $0<br />MessageBox MB_OK "$FieldName or $0"<br />FunctionEnd</code>
+</pre><br />
+      <br />
+      CF
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">The Glimmerman</span><br />
+      <span class="post-time small text-muted">21st July 2006 19:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">:up:<br />
+      <br />
+      It worked. Thx CF.<br />
+      <br />
+      I'm gonna implement this in my script.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

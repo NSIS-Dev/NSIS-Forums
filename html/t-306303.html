@@ -1,0 +1,164 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Exec, elevation on Vista, and .msu files" />
+
+  <title>Exec, elevation on Vista, and .msu files - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Exec, elevation on Vista, and .msu files</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=306303">Exec, elevation on Vista, and .msu files</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Sigivald</span><br />
+      <span class="post-time small text-muted">12th May 2009 23:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Exec, elevation on Vista, and .msu files</strong><br />
+      So we have this installer. It wants to run on Vista and download and install Windows Installer 4.5 as a shiny .msu file.<br />
+      <br />
+      It does what's expected on XP (so I know the download works and the installer is basically correct).<br />
+      <br />
+      In Vista, the ExecWait on the .msu downloaded fails silently. Some flailing around eventually got it to admit it was failing because it wasn't running as Administrator.<br />
+      <br />
+      This is odd, since the installer itself elevates (prompt and everything) and can write to the Program Files directory.<br />
+      <br />
+      All the documentation I can *find* suggests that it should exec programs as Administrator... but evidently it isn't?<br />
+      <br />
+      I just spent a few hours trying to get the UAC addin to help; it did not. Running from the elevated UAC version of the installer produced the same result, as did explicitly setting UAC::RunElevated and/or using UAC::ShellExecWait.<br />
+      <br />
+      I've also tried explicitly Exec'ing and ShellExec'ing wusa.exe, with no difference.<br />
+      <br />
+      Has anyone else found and solved this? Is it some weird problem with .msu files?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">13th May 2009 00:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">forget about the uac plugin, it does the opposite of what you want.<br />
+      <br />
+      ExecWait should work, are you using /quiet ?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Sigivald</span><br />
+      <span class="post-time small text-muted">13th May 2009 03:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yeah, the bit about UAC was just to show that we've tried everything we can think of, even forcing/confirming elevation and the like.<br />
+      <br />
+      We are using /quiet (and /noreboot), yes.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Sigivald</span><br />
+      <span class="post-time small text-muted">13th May 2009 20:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Turns out using nsExec::ExecToLog and explicitly using cmd.exe fixed it.<br />
+      <br />
+      Why that should be so, while normal Exec doesn't work (but does for the other things we exec) is unclear. I blame some weird thing about the MSU or wusa.exe.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dipak_darji17</span><br />
+      <span class="post-time small text-muted">19th December 2009 09:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi Friends...<br />
+      Myself Dipak Darji.. From India (Vadodara)..<br />
+      This is my first post on this site..<br />
+      <br />
+      Let's talk about the issue..<br />
+      yes.. .MSU files are not allowed to run in anyways from NSIS.. except calling complicated api functions..<br />
+      I've another way to run .MSU file..<br />
+      <br />
+      Just create batch file (*.bat) in temp folder through nsis ..<br />
+      <br />
+      start "" wusa "&lt;MSU files full path with file name&gt;"<br />
+      <br />
+      .. Later on run this batch file when required as below,<br />
+      <br />
+      Execwait "$temp\&lt;batch file name&gt;"<br />
+      ..<br />
+      <br />
+      <br />
+      See below full code to write batch file and run the same..<br />
+      <br />
+      <br />
+      Push "$temp\RunMSU.Bat"<br />
+      Strcpy $strInstallPath "&lt;full path to msu file with file name&gt;"<br />
+      Strcpy $0 "$temp\RunMSU.Bat"<br />
+      FileOpen $0 $0 w #open file<br />
+      FileSeek $0 0 END #go to end<br />
+      FileWrite $0 "echo off"<br />
+      FileWriteByte $0 "13"<br />
+      FileWriteByte $0 "10"<br />
+      FileWrite $0 "start $\"$\" wusa $\"$strInstallPath$\""<br />
+      FileClose $0<br />
+      Execwait "$temp\RunMSU.bat"<br />
+      <br />
+      <br />
+      ..<br />
+      All the best.. :up:<br />
+      Hope this will resolve your problem..<br />
+      ;)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Squirre1</span><br />
+      <span class="post-time small text-muted">1st March 2011 20:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I just had to post on this... I was scowering all over the web for a solution... This is what I have identified above and beyond what everyone else has commented on regarding the use of wusa.exe (WUSA - Windows Update Standalone Installer).<br />
+      <br />
+      The errors and failures that everyone is receiving is in relation to the MUI or language pack not being available... The wusa.exe.mui is a dependency to wusa.exe and has to be located in the appropriate language folder off the root of the folder the EXE is located in, for example.<br />
+      <br />
+      Some_Root_Folder\wusa.exe<br />
+      Some_Root_Folder\en-US\wusa.exe.mui<br />
+      <br />
+      If you include the above in your package, there should not be any issues.. With just about any newly compiled Windows 7 / Vista command line exe, you can just about guarantee it will have a corresponding MUI that has a great chance of being a dependency. For example, netdom.exe requires the appropriate netdom.exe.mui as well.<br />
+      <br />
+      Please let me know if you try this method and continue to have issues.<br />
+      <br />
+      Thanks,<br />
+      <br />
+      Squirre1<br />
+      <br />
+      *Note* when included them in my package, it was:<br />
+      INSTALL_SOURCE\wusa.exe<br />
+      INSTALL_SOURCE\en-US\wusa.exe.mui</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

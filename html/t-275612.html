@@ -1,0 +1,474 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Calling Functions with arguments" />
+
+  <title>Calling Functions with arguments - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Calling Functions with arguments</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=275612">Calling Functions with arguments</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">9th August 2007 11:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Calling Functions with arguments</strong><br />
+      Hi<br />
+      <br />
+      I need to know how to achieve the following:<br />
+      <br />
+      Within a section I want to call a function and pass it a string that represents a file.<br />
+      <br />
+      The Function will then determine if that file exists, if it does then the function simply returns and we do nothing, else we copy the file to the relevant directory.<br />
+      <br />
+      Here is a first attempt:<br />
+      <br /></p>
+      <pre>
+<code><br />!include "LogicLib.nsh"<br /><br />OutFile "installer.exe"<br /><br />Section<br />Call fileExists someFileA.txt<br />Call fileExists someFileB.txt<br />Call fileExists someFileC.txt<br />SectionEnd<br /><br />Function fileExists file<br />  ${if} IfFileExists $SYSDIR\file<br />    return<br />  ${else}<br />    File /oname=$SYSDIR\file file<br />  ${EndIf<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      I realise this syntax in not correct but It's what I'm trying to achieve.<br />
+      <br />
+      Could someone help me out please.<br />
+      <br />
+      Thanks<br />
+      <br />
+      Paul
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">DrDan</span><br />
+      <span class="post-time small text-muted">9th August 2007 11:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>You need to use the stack</strong><br />
+      Functions don't take argument in NSIS.<br />
+      <br />
+      You would need to do something like this in your section:<br />
+      <br /></p>
+      <pre>
+<code><br />Section<br />  push someFileA.txt<br />  Call myFileExists<br />  <br />  push someFileB.txt<br />  Call myFileExists<br />  <br />  push someFileC.txt<br />  Call myFileExists<br />SectionEnd<br /><br />Function myFileExists<br />  exch $R0<br />  ${if} ${FileExists} $SYSDIR\$R0<br />    goto end<br />  ${else}<br />    File /oname=$SYSDIR\$R0 $R0<br />  ${EndIf}<br />  end:<br />  pop $R0<br />FunctionEnd<br /><br /></code>
+</pre><br />
+      <br />
+      If you want write code that looks like you are passing arguments, you can use a macro. You can wrap function calls in macros like this:<br />
+      <br />
+      <pre>
+<code><br />!macro myFileExists file<br />  push ${file}<br />  call myFileExists<br />!macroend<br /><br />Section<br />  !insertmacro myFileExists someFileA.txt<br />  !insertmacro myFileExists someFileB.txt<br />  !insertmacro myFileExists someFileC.txt<br />SectionEnd<br /><br />Function myFileExists<br />  exch $R0<br />  ${if} ${FileExists} $SYSDIR\$R0<br />    goto end<br />  ${else}<br />    File /oname=$SYSDIR\$R0 $R0<br />  ${EndIf}<br />  end:<br />  pop $R0<br />FunctionEnd<br /><br /></code>
+</pre><br />
+      <br />
+      Have a read of <a href="http://nsis.sourceforge.net/Macro_vs_Function" target="_blank">http://nsis.sourceforge.net/Macro_vs_Function</a> which is very useful for explaining all this.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">9th August 2007 11:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thank you very much.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">9th August 2007 12:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I am having problems with the line<br />
+      <br /></p>
+      <pre>
+<code><br />${if} ${FileExists} $SYSDIR\$R0<br /></code>
+</pre><br />
+      <br />
+      The error from the compiler is: Invalid command: ${if}<br />
+      <br />
+      Any ideas?<br />
+      <br />
+      Cheers<br />
+      <br />
+      Paul
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">9th August 2007 12:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">!include LogicLib.nsh<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">9th August 2007 12:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Oh man, school boy error.<br />
+      <br />
+      Thanks,<br />
+      <br />
+      Paul</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">9th August 2007 13:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Me again<br />
+      <br />
+      Have a look at this demo program taken from a reply above.<br />
+      <br /></p>
+      <pre>
+<code><br />!include LogicLib.nsh<br />OutFile "installer.exe"<br /><br />InstallDir $DESKTOP\install<br /><br />!macro myFileExists file<br />  push ${file}<br />  call myFileExists<br />!macroend<br /><br />Section<br />  SetOutPath $INSTDIR<br />  File someFileA.txt<br />SectionEnd<br /><br />Section<br />  !insertmacro myFileExists "someFileA.txt"<br />SectionEnd<br /><br />Function myFileExists<br />  exch $R0<br />  ${if} ${FileExists} $SYSDIR\$R0<br />    MessageBox MB_OK "$SYSDIR\$R0 exists"<br />    goto end<br />  ${else}<br />     MessageBox MB_OK "$SYSDIR\$R0 does not exists"<br />     File /oname=$SYSDIR\$R0 $R0<br />  ${EndIf}<br />  end:<br />  pop $R0<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      Providing the file I am looking for is not in $SYSDIR then I want to copy a file over to that directory. However, the following line:<br />
+      <br />
+      <pre>
+<code>File /oname=$SYSDIR\$R0 $R0</code>
+</pre><br />
+      <br />
+      Gives me an error saying:<br />
+      <br />
+      File: "$R0" -&gt; no files found.<br />
+      Usage: File [/nonfatal] [/a] ([/r] [/x filespec [...]] filespec [...] |<br />
+      /oname=outfile one_file_only)<br />
+      <br />
+      Any ideas would be appreciated,<br />
+      <br />
+      Cheers<br />
+      <br />
+      Paul
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">9th August 2007 13:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">File is compile time instruction, variables on the other hand are empty when compiling, they take action at run time.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">9th August 2007 14:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK, thanks for that. Do you have a solution? If not, could you point me in the right direction.<br />
+      <br />
+      Thanks,<br />
+      <br />
+      Paul</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">9th August 2007 14:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yep, use a definition.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">9th August 2007 14:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Use a definition? Great, what does that mean? Does it mean define something such as:<br />
+      <br /></p>
+      <pre>
+<code>!define SOMETHING "something"</code>
+</pre><br />
+      <br />
+      and then reference ${SOMETHING} later on in the script.<br />
+      <br />
+      I'm very new to NSIS and some code would be helpful.<br />
+      <br />
+      Thanks,<br />
+      <br />
+      Paul
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">9th August 2007 14:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This is simplified example, note that the code you've posted above is kinda improper.<br />
+      Also note that you're extracting the file on desktop\install and later you're searching for the file under $SYSDIR which means you'll never find it there.<br /></p>
+      <pre>
+<code>!define MY_FILE "someFileA.txt"<br />!include LogicLib.nsh<br /><br />OutFile "installer.exe"<br />InstallDir $DESKTOP\install<br /><br />Section<br />  SetOutPath $INSTDIR<br />  File "${MY_FILE}"<br />  call myFileExists<br />SectionEnd<br /><br />Function myFileExists<br />  ${if} ${FileExists} "$SYSDIR\${MY_FILE}"<br />    MessageBox MB_OK "$SYSDIR\${MY_FILE} exists"<br />   ${else}<br />     MessageBox MB_OK "$SYSDIR\${MY_FILE} does not exists"<br />     File /oname=$SYSDIR\${MY_FILE} ${MY_FILE}<br />  ${EndIf}<br />FunctionEnd</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">9th August 2007 14:37 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for that, I appreciate it a lot.<br />
+      <br />
+      However, it's rather hard coded. I want to be able to call this method 3 times with a different file on each call.<br />
+      <br />
+      Any ideas?<br />
+      <br />
+      Thanks<br />
+      <br />
+      Paul</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">9th August 2007 14:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">As I said it's simplified example.<br />
+      If you want to use it several times in your script you'd need to build a macro which calls the function as you did earlier.<br />
+      Taking a look at wiki's code examples would give you many ideas on how to do that properly.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">9th August 2007 15:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK, thanks for your help.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">9th August 2007 15:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You're welcome.<br />
+      <br />
+      One more thing, for my opinion a good way to learn about macros in deep, is to examine the included headers e.g. filefunc.nsh.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">9th August 2007 19:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I think you should be extracting your files to a temporary folder (I use $PLUGINSDIR\something) and then if the file does not exist in $SYSDIR you can use CopyFiles to copy it from the temporary folder to $SYSDIR.<br />
+      <br />
+      Using $PLUGINSDIR is handy because the extra copies will be deleted when the installer quits.<br />
+      <br />
+      Don</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">9th August 2007 19:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It seems to me wasting of time and unnecessary code because of unnecessary steps. 1st extract files in $PLUGINSDIR and 2nd use CopyFiles to put them in their correct location. I just can't catch the point.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">18th August 2007 22:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi<br />
+      <br />
+      I have written a macro that takes a "Path" and a "File". The macro determines if the file exists within the path, if it does we do nothing, otherwise we put it there.<br />
+      <br /></p>
+      <pre>
+<code><br />!include LogicLib.nsh<br />OutFile "installer.exe"<br /><br />!macro InstallFileTo Path File<br />  ${if} ${FileExists} ${Path}\${File}<br />      ; do nothing.<br />  ${else}<br />      SetOutPath ${Path}<br />      File ${File}<br />  ${endif}<br />!macroend<br /><br />Section "Install files"<br />  !insertmacro InstallFileTo "$SYSDIR" "FileA.txt"<br />  !insertmacro InstallFileTo "$SYSDIR" "FileB.txt"<br />  !insertmacro InstallFileTo "$SYSDIR" "FileC.txt"<br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      It works OK but I'm trying to make the macro smaller, I'm sure there is a better way.<br />
+      <br />
+      <br />
+      Any ideas?<br />
+      <br />
+      Cheers,<br />
+      <br />
+      Paul
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">18th August 2007 22:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Use 'SetOverwrite off' and you won't have to check if the file exists.<br />
+      <br /></p>
+      <pre>
+<code><br />!macro InstallFileTo Path File<br />  SetOutPath ${Path}<br />  File ${File}<br />!macroend<br /><br />Section "Install files"<br />  SetOverwrite off<br />  !insertmacro InstallFileTo "$SYSDIR" "FileA.txt"<br />  !insertmacro InstallFileTo "$SYSDIR" "FileB.txt"<br />  !insertmacro InstallFileTo "$SYSDIR" "FileC.txt"<br />SectionEnd</code>
+</pre><br />
+      Your example has the path all alike. In that case the macro doesn't save anything (and costs a little bit of space because it repeats the SetOutPath instruction each time).<br />
+      <br />
+      Don
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">19th August 2007 17:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for the reply,<br />
+      <br />
+      To avoid repeating SetOutPath would the code look like:<br />
+      <br /></p>
+      <pre>
+<code><br />!include LogicLib.nsh<br />OutFile "installer.exe"<br /><br />!define SYSTEM32 $SYSDIR<br /><br />!macro InstallFileTo File<br />  SetOutPath ${SYSTEM32}<br />  File ${File}<br />!macroend<br /><br />Section "Install files"<br />  SetOverwrite off<br />  !insertmacro InstallFileTo "FileA.txt"<br />  !insertmacro InstallFileTo "FileB.txt"<br />  !insertmacro InstallFileTo "FileC.txt"<br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      Also, I would like to keep a record of what files I have put in $SYSDIR, if any.<br />
+      <br />
+      Would the code look something like:<br />
+      <br />
+      <pre>
+<code><br />!include LogicLib.nsh<br />OutFile "installer.exe"<br /><br />!define SYSTEM32 $SYSDIR<br /><br />!macro InstallFileTo File Key<br />  SetOutPath ${SYSTEM32}<br />  File ${File}<br />  WriteRegStr   HKLM "Software\CompanyName\CompanyApp\" ${Key} ${File}<br />!macroend<br /><br />Section "Install files"<br />  SetOverwrite off<br />  !insertmacro InstallFileTo "FileA.txt" "FileInstalled_1"<br />  !insertmacro InstallFileTo "FileB.txt" "FileInstalled_2"<br />  !insertmacro InstallFileTo "FileC.txt" "FileInstalled_3"<br />SectionEnd<br /><br />Section "Uninstall"<br /><br />  ...<br /><br />  ReadRegStr $0 HKLM "Software\CompanyName\CompanyApp" "FileInstalled_1"<br />  StrLen $1 $0<br />   ${if} $1 &gt; '0'<br />    Delete "${Path}\${File}"<br />   ${EndIf}<br />   <br />   ... FileInstalled_2<br />   ... FileInstalled_3<br />   <br />   ...<br /><br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      Is this the best way to save something?<br />
+      <br />
+      I realise there will be some duplicate code in the Uninstall section which is not<br />
+      desirable. I suppose I would put that in a macro as well.<br />
+      <br />
+      Is the best solution to put both install/uninstall in a function and then wrap that<br />
+      with a macro. Therefore, we could call that on install and uninstall.<br />
+      <br />
+      Cheers,<br />
+      <br />
+      Paul
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">19th August 2007 18:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">No need to have SetOutPath in the macro then if you are always using System32.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">19th August 2007 18:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for the reply,<br />
+      <br />
+      Initially I thought it would be nice to keep the macro generic so any part of my script can use it. Then I got advised that using SetOutPath in the way that I was was not the best option because "the macro doesn't save anything", fair enough.<br />
+      <br />
+      So basically it's a trade off between how generic you want your code to be and efficiency.<br />
+      <br />
+      Cheers,<br />
+      <br />
+      Paul</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">19th August 2007 18:37 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I suppose you are saying it should be used like the following:<br />
+      <br /></p>
+      <pre>
+<code><br />!include LogicLib.nsh<br />OutFile "installer.exe"<br /><br />!macro InstallFileTo File<br />  File ${File}<br />!macroend<br /><br />Section "Install files"<br />  SetOutPath $SYSDIR<br />  SetOverwrite off<br />  !insertmacro InstallFileTo "FileA.txt"<br />  !insertmacro InstallFileTo "FileB.txt"<br />  !insertmacro InstallFileTo "FileC.txt"<br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      Cheers,<br />
+      <br />
+      Paul
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">19th August 2007 18:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yep :)<br />
+      But now you don't even need the macro because it only contains one instruction.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">19th August 2007 19:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ah man, I've got loads to learn. Thanks, my other earlier questions still stand though.<br />
+      <br />
+      Cheers,<br />
+      <br />
+      Paul</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">19th August 2007 19:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">When you insert a macro, you are copying its contents and placing it there - same as !include if you like. Any instruction with a ! in front of it is a compile time instruction and it is non existent in the built installer. Macros are useful mainly for clearing up repeated code and helps when one needs to modify some code without having to make the changes more than once. Using a macro that contains 10 lines of code 100 times will create 1000 lines of code on compile, whereas 10 lines in a function called 100 times will still be 10 lines of code being executed 100 times. Of course, 1000 lines of code will create a bigger installer overhead.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pgg1</span><br />
+      <span class="post-time small text-muted">19th August 2007 20:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks,<br />
+      <br />
+      Sorry I didn't make myself very clear. Just to reiterate I want to do the following:<br />
+      <br />
+      (1) Add 3 files to $SYSDIR providing there not there (Which we have already discussed).<br />
+      <br />
+      (2) If I write a file to $SYSDIR then I need to record that, so when I uninstall I can remove any files placed there. What is the best way to record stuff? To save, would it be:<br />
+      <br /></p>
+      <pre>
+<code><br />WriteRegStr   HKLM "Software\CompanyName\CompanyApp\" "some_key1" "FileA.txt"<br />WriteRegStr   HKLM "Software\CompanyName\CompanyApp\" "some_key2" "FileB.txt"<br />WriteRegStr   HKLM "Software\CompanyName\CompanyApp\" "some_key3" "FileC.txt"<br /></code>
+</pre><br />
+      <br />
+      To retrieve it on uninstall:<br />
+      <br />
+      <pre>
+<code><br />ReadRegStr $0 HKLM "Software\CompanyName\CompanyApp" "some_key1"<br />StrLen $1 $0<br />${if} $1 &gt; '0'<br />  Delete "${SYSDIR}\FileA.txt"<br />${EndIf}<br /></code>
+</pre><br />
+      <br />
+      Cheers,<br />
+      <br />
+      Paul
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

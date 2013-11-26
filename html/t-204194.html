@@ -1,0 +1,160 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="NSIS logging" />
+
+  <title>NSIS logging - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">NSIS logging</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=204194">NSIS logging</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dblock</span><br />
+      <span class="post-time small text-muted">7th January 2005 19:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>NSIS logging</strong><br />
+      Is there a way to log NSIS actions to a file?<br />
+      Similar to msiexec /l*v options.<br />
+      <br />
+      Thx<br />
+      dB.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Instructor</span><br />
+      <span class="post-time small text-muted">7th January 2005 22:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">nsExec::Exec '"${NSISDIR}\makensis.exe" /OFILE.LOG FILE.nsi'</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">7th January 2005 22:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I think dblock wants to log actions of an installer, not the makensis compiler.<br />
+      <br />
+      You need to download the Advanced Login build of NSIS from:<br />
+      <a href="http://nsis.sourceforge.net/download/specialbuilds/" target="_blank">http://nsis.sourceforge.net/download/specialbuilds/</a><br />
+      <br />
+      See this for LogSet and LogText usage:<br />
+      <a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.12" target="_blank">http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.12</a><br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dblock</span><br />
+      <span class="post-time small text-muted">10th January 2005 15:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You are right, that's more of what I am looking for. But I'd really like an automatic logger enabled through command line like msiexec has. Something that logs all standard actions without me having to add LogText in the code or enable logging for all installations.<br />
+      <br />
+      With an MSI you can do msiexec /l*v out.log /i installer.msi and you're on.<br />
+      <br />
+      Thx<br />
+      dB.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stb</span><br />
+      <span class="post-time small text-muted">10th January 2005 15:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Another solution (but somewhat less automatic). This solution is similar to LogText (you need to log every line explicitly). I needed logging before INSTDIR gets created. Here's my solution.<br />
+      <br />
+      First logging happens in TMP, after creating INSTDIR, logfile will be moved and continued there.<br />
+      <br /></p>
+      <pre>
+<code><br />; logging<br />Var MY_LOGFILE<br />!define MY_LOGFILENAME "MyInstall.log"<br />!macro _logline LINE<br />  ; Messagebox MB_OK "logline $MY_LOGFILE ${LINE}"<br />  StrCmp "$MY_LOGFILE" "" +10<br />  Push $R0<br />  Push $R1<br />  StrCpy $R1 "${LINE}"<br />  FileOpen $R0 "$MY_LOGFILE" a<br />  FileSeek $R0 0 END<br />  FileWrite $R0 "$R1$\r$\n"<br />  FileClose $R0<br />  Pop $R1<br />  Pop $R0<br />!macroend<br /><br />!macro LogToTmpDir<br />  StrCpy $MY_LOGFILE "$PLUGINSDIR\MyInstall.log"<br />!macroend<br /><br />!macro LogToInstDir<br />  IfFileExists "$MY_LOGFILE" 0 +3<br />  StrCmp "$MY_LOGFILE" "$INSTDIR\MyInstall.log" +3<br />  CopyFiles /SILENT "$MY_LOGFILE" "$INSTDIR\MyInstall.log"<br />  StrCpy $MY_LOGFILE "$INSTDIR\MyInstall.log"  <br />!macroend<br /><br />!macro LogDelete<br />  IfFileExists "$MY_LOGFILE" 0 +2<br />  Delete "$MY_LOGFILE"<br />  StrCpy $MY_LOGFILE ""<br />!macroend<br /><br />!define logline `!insertmacro _logline`<br /></code>
+</pre><br />
+      <br />
+      You have to call those macros in Functions or Sections:<br />
+      <br />
+      <pre>
+<code><br />Function .onInit<br />  InitPluginsDir<br />  !insertmacro LogToTmpDir<br />  ${logline} "log to tmp"<br />FunctionEnd<br /><br />Section SecTest<br />  SetOutPath "$INSTDIR"<br />  !insertmacro LogToInstDir  <br />  ${logline} "log to instdir"<br />SectionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">10th January 2005 20:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You can turn Logging on and off using LogSet on/off<br />
+      You can read command-line parameters using the GetParameters function in the NSIS docs. There are more functions on the archive for getting command-line switches and values etc. A search on there should help you.<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MrEyes</span><br />
+      <span class="post-time small text-muted">3rd November 2005 12:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by Afrow UK</i><br />
+        <b>I think dblock wants to log actions of an installer, not the makensis compiler.<br />
+        <br />
+        You need to download the Advanced Login build of NSIS from:<br />
+        <a href="http://nsis.sourceforge.net/download/specialbuilds/" target="_blank">http://nsis.sourceforge.net/download/specialbuilds/</a><br />
+        <br />
+        See this for LogSet and LogText usage:<br />
+        <a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.12" target="_blank">http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.12</a><br />
+        <br />
+        -Stu</b>
+      </blockquote>Apologies for resurecting and old thread but its better to keep everything in one place for future searchers<br />
+      <br />
+      The url given above for the Logging build points to an empty Wiki page. Does this build still exist somewhere?<br />
+      <br />
+      if it does exist how does it work, i.e. do you have to logging commands into the script (e.g. LogThis "My Log Entry") or does NSIS log what it is doing without explicit log commands.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">3rd November 2005 17:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The top page is now at:<br />
+      <a href="http://nsis.sourceforge.net/Special_Builds" target="_blank">http://nsis.sourceforge.net/Special_Builds</a><br />
+      <br />
+      As for the second question, check the second link.<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

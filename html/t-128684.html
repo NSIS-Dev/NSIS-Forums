@@ -1,0 +1,161 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Problem with DeleteINISec" />
+
+  <title>Problem with DeleteINISec - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Problem with DeleteINISec</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=128684">Problem with DeleteINISec</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">wossName</span><br />
+      <span class="post-time small text-muted">16th March 2003 22:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Problem with DeleteINISec</strong><br />
+      Hi,<br />
+      <br />
+      I seem to have a problem with <b>DeleteINISec</b>: I call that command in my function and then add the deleted section back in (with some modifications), at least that's the plan. But in reality, the INI file is empty on every other run of the installer, even though the details view shows $R0 having the correct value.<br />
+      <br />
+      I can't use the normal INI functions, because I'm modifying wininit.ini.<br />
+      <br />
+      If anyone can give me some hints, that would be very nice. Maybe I'm doing something obviously wrong, this is my first more complicated function for NSIS. (I'm using NSIS 2.0b2.)<br />
+      <br />
+      Here's the function:<br /></p>
+      <pre>
+<code><br />;<br />; AddToWininit - adds lines to the [Rename] section of wininit.ini<br />;<br />; Expects string with new lines on top of stack<br />; Returns nothing, error flag will be set on failure<br />;<br />; Make sure new lines end with "$\r$\n"<br />;<br />Function AddToWininit<br />        Exch $R0 ; lines<br />        Push $R1 ; file handle<br />        Push $R2 ; read buffer<br />        Push $R3 ; compare buffer<br /><br />        ClearErrors<br />        IfFileExists "$WINDIR\wininit.ini" 0 WRITE<br />        FileOpen $R1 "$WINDIR\wininit.ini" "r"<br />        IfErrors SAFE_RETURN<br />        <br />        SECTION_LOOP:<br />                FileRead $R1 $R2<br />                IfErrors READ_DONE<br />                Push $R2<br />                Call TrimNewlines<br />                Pop $R2<br />                StrCmp $R2 "[Rename]" 0 SECTION_LOOP          <br /><br />        READ_LOOP:<br />                FileRead $R1 $R2<br />                IfErrors READ_DONE<br />                Push $R2<br />                Call TrimNewlines<br />                Pop $R2<br />                StrCmp $R2 "" READ_LOOP<br />                StrCpy $R3 $R2 1<br />                StrCmp $R3 "[" READ_DONE<br />                StrCpy $R0 "$R0$R2$\r$\n"<br />                Goto READ_LOOP<br /><br />        READ_DONE:<br />                FileClose $R1<br />                DeleteINISec "$WINDIR\wininit.ini" "Rename"<br />                ClearErrors<br /><br />        WRITE:<br />                FileOpen $R1 "$WINDIR\wininit.ini" "a"<br />                IfErrors SAFE_RETURN<br />                FileSeek $R1 0 END<br />                FileWrite $R1 "$\r$\n[Rename]$\r$\n"<br />                DetailPrint $R0<br />                FileWrite $R1 $R0<br />                FileClose $R1<br /><br />        SAFE_RETURN:<br />                Pop $R3<br />                Pop $R2<br />                Pop $R1<br />                Exch $R0<br />FunctionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joel</span><br />
+      <span class="post-time small text-muted">17th March 2003 02:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+      <pre>
+<code><br />READ_DONE:<br />                FileClose $R1<br />                DeleteINISec "$WINDIR\wininit.ini" "Rename"<br />                ClearErrors<br /></code>
+</pre><br />
+      You close $R1 and you trying to read it again, maybe:<br />
+      <br />
+      <pre>
+<code><br />READ_DONE:<br />                DeleteINISec "$WINDIR\wininit.ini" "Rename"<br />                FileClose $R1<br />                ClearErrors<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deguix</span><br />
+      <span class="post-time small text-muted">17th March 2003 07:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+      <pre>
+<code>WRITE</code><span style="color: #007700">:
+<br /></span><span style="color: #0000BB">FileOpen$R1</span><span style="color: #DD0000">"$WINDIR\wininit.ini""a"
+<br /></span><span style="color: #0000BB">IfErrorsSAFE_RETURN
+<br />FileSeek$R10END
+<br /></span>
+</pre>Replace this above by this below:<br />
+      <br />
+      <pre>
+<code>WRITE</code><span style="color: #007700">:
+<br /></span><span style="color: #0000BB">FileOpen$R1</span><span style="color: #DD0000">"$WINDIR\wininit.ini""w"
+<br /></span><span style="color: #0000BB">IfErrorsSAFE_RETURN
+<br />FileSeek$R10END
+<br /></span>
+</pre>Because when you append is:<br />
+      <br />
+
+      <blockquote>
+        Quote from documentation (Chapter4.html)<br />
+        <br />
+        opened for both read and write, contents preserved
+      </blockquote>Contents preserved? So can only read, because the contents are preserved. So use the "w" for write.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">wossName</span><br />
+      <span class="post-time small text-muted">17th March 2003 09:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by Dark Boy</i><br />
+        You close $R1 and you trying to read it again, maybe:
+      </blockquote>DeleteINISec doesn't operate on my file handle, I'm pretty sure I <b>have</b> to close it so DeleteINISec can write to the file.<br />
+      <br />
+
+      <blockquote>
+        <i>Originally posted by deguix</i><br />
+        Contents preserved? So can only read, because the contents are preserved. So use the "w" for write.
+      </blockquote>No, I quote from the documentation: <i>"a" (append, meaning opened for both read and write, contents preserved)</i><br />
+      <br />
+      There's a slim chance that there are other sections in wininit.ini, that's why I can't just use mode "w", which would create an entirely new file.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">17th March 2003 13:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You are probably using Windows 9x which likes to turture people. Windows 9x (including ME) buffers INI file changes and doesn't commit them immediately. To flush the buffers use WriteINIStr inifile.ini "" "" "" on b2 or FlushINI inifile.ini in the latest CVS version. See this <a href="http://forums.winamp.com/showthread.php?s=&amp;threadid=111851&amp;highlight=flush" target="_blank">thread</a> for more information.<br />
+      <br />
+      BTW, why do you manually add entries to wininit.ini? NSIS does that for you when you use Delete /REBOOTOK or Rename /REBOOTOK and the file is in use. On Windows NT it just uses MoveFileEx.<br />
+      <br />
+      Please attach large scripts next time.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">wossName</span><br />
+      <span class="post-time small text-muted">17th March 2003 14:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ah, I wasn't aware of "Rename". I've been playing with NSIS only for a day or two, so I haven't memorized the reference yet. :)<br />
+      <br />
+      I was cursing "File" all the time for not having a /REBOOT switch. So I'll have to extract the files to temporary names, then call "Rename /REBOOTOK ...", right ? It's a bit more work, but if it does the trick...<br />
+      At least now I can drop this horrible function.<br />
+      <br />
+      Thanks !</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">17th March 2003 14:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yep, that's exactly how you do it :)</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

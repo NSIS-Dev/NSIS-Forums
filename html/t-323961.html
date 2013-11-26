@@ -1,0 +1,191 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="!system and quotes/spaces in the EXE path" />
+
+  <title>!system and quotes/spaces in the EXE path - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">!system and quotes/spaces in the EXE path</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=323961">!system and quotes/spaces in the EXE path</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">grahamk</span><br />
+      <span class="post-time small text-muted">11th November 2010 13:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>!system and quotes/spaces in the EXE path</strong><br />
+      I'm trying to have my NSIS script compress a file while building the installer. The script looks like this:<br />
+      <br /></p>
+      <pre>
+<code><br />!define GZIP "Q:\Third Party Tools\gzip.exe"<br /><br />!macro GZIPFILE SourceFile CompressedName<br />    !tempfile GZIPTEMP<br />    !system 'copy "${SourceFile}" "${GZIPTEMP}"' = 0<br />    !system '"${GZIP}" -9v "${GZIPTEMP}"' = 0<br />    File "/oname=${CompressedName}" "${GZIPTEMP}.gz"<br />    !delfile "${GZIPTEMP}.gz"<br />    !undef GZIPTEMP<br />!macroend<br /></code>
+</pre><br />
+      <br />
+      If I set "verbose 4", the relevant snippet of output from makensis is as follows:<br />
+      <br />
+      <pre>
+<code><br />!system: ""Q:\Third Party Tools\gzip.exe" -9v "C:\DOCUME~1\gknap\LOCALS~1\Temp\nst20C.tmp""<br />"Q:\Third: No such file or directory<br />Party: No such file or directory<br />Tools\gzip.exe": No such file or directory<br />C:\DOCUME~1\gknap\LOCALS~1\Temp\nst20C.tmp:      95.2% -- replaced with C:\DOCUME~1\gknap\LOCALS~1\Temp\nst20C.tmp.gz<br />!system: returned 1, aborting<br /></code>
+</pre><br />
+      <br />
+      This is weird for a few reasons. First, the path to gzip.exe is being split up even though it's enclosed in quotes. Then, gzip is actually being invoked successfully, but !system returns 1 even though I'm fairly certain that gzip is returning 0.<br />
+      <br />
+      Is there something wrong with my script, or does this look like an NSIS bug?<br />
+      <br />
+      I came up with the following workaround:<br />
+      <br />
+      <pre>
+<code><br />  !system 'start "gzip" /b /wait "${GZIP}" -9v "${GZIPTEMP}"' = 0<br /></code>
+</pre><br />
+      <br />
+      Now the output is:<br />
+      <br />
+      <pre>
+<code><br />!system: "start "gzip" /b /wait "Q:\Third Party Tools\gzip.exe" -9v "C:\DOCUME~1\gknap\LOCALS~1\Temp\nst170.tmp""<br />"Q:\Third: No such file or directory<br />Party: No such file or directory<br />Tools\gzip.exe": No such file or directory<br />C:\DOCUME~1\gknap\LOCALS~1\Temp\nst170.tmp:      95.2% -- replaced with C:\DOCUME~1\gknap\LOCALS~1\Temp\nst170.tmp.gz<br />!system: returned 0<br /></code>
+</pre><br />
+      <br />
+      The error messages still appear, but gzip runs to completion, and !system returns 0 as expected. I verified that gzip's return code is not lost by testing the following:<br />
+      <br />
+      <pre>
+<code><br />  !system 'start "gzip" /b /wait "${GZIP}" -9v "${GZIPTEMP}aaaaa"' = 0<br /></code>
+</pre><br />
+      <br />
+      Sure enough, gzip reports that it can't find "nstXXX.tmpaaaa", and !system returns 1.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">11th November 2010 14:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This is weird. What kind of setup is this? Win2000 or later I'm assuming. Do you have anything in &lt;HKLM|HKCU&gt;\SOFTWARE\Microsoft\Command Processor : AutoRun ? Do you have %comspec% set to something other than cmd.exe?<br />
+      <br /></p>
+      <pre>
+<code>!system 'set comspec'<br />!system 'md "c:\aaa bbb ccc"'<br />!system 'copy "%windir%\system32\cmd.exe" "c:\aaa bbb ccc\"'<br />!define GZIP "c:\aaa bbb ccc\cmd.exe"<br />!verbose 4<br />!system '"${GZIP}" /c exit 666' = 666<br />!system '"${GZIP}" /c if exist "${GZIP}" exit 667' = 667<br />!system '"${GZIP}" /c echo "${GZIP}"' = 0</code>
+</pre>on my XP machine this gives me
+      <pre>
+<code>!system: "set comspec"<br />ComSpec=C:\WINDOWS\system32\cmd.exe<br />!system: returned 0<br />!system: "md "c:\aaa bbb ccc""<br />!system: returned 0<br />!system: "copy "%windir%\system32\cmd.exe" "c:\aaa bbb ccc\""<br />        1 file(s) copied.<br />!system: returned 0<br />!define: "GZIP"="c:\aaa bbb ccc\cmd.exe"<br />!system: ""c:\aaa bbb ccc\cmd.exe" /c exit 666"<br />!system: returned 666<br />!system: ""c:\aaa bbb ccc\cmd.exe" /c if exist "c:\aaa bbb ccc\cmd.exe" exit 667"<br />!system: returned 667<br />!system: ""c:\aaa bbb ccc\cmd.exe" /c echo "c:\aaa bbb ccc\cmd.exe""<br />"c:\aaa bbb ccc\cmd.exe"<br />!system: returned 0<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Zinthose</span><br />
+      <span class="post-time small text-muted">11th November 2010 14:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm speculating here but I think it's because !system is executing under %COMSPEC%<br />
+      <br />
+      So all Double quotes need dubbed to escape them.<br />
+      <br />
+      Example:</p>
+      <pre>
+<span style="color: #007700">!</span><span style="color: #0000BB">system</span><span style="color: #DD0000">'""${GZIP}""-9v""${GZIPTEMP}""'
+</span>
+</pre>I havn't tried this yet myself but some branch in my cerebral cortex is compelling me to accept it as true.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">grahamk</span><br />
+      <span class="post-time small text-muted">11th November 2010 14:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">XP SP3.<br />
+      <br />
+      The Command Processor AutoRun value is nonexistent in HKCU, and empty in HKLM.<br />
+      <br />
+      ComSpec=C:\WINDOWS\system32\cmd.exe<br />
+      <br />
+      ... I actually can't reproduce the problem exactly as I described it. However, if you set a GZIP environment variable before launching makensis:<br />
+      <br />
+      set GZIP="Q:\Third Party Tools\gzip.exe"<br />
+      <br />
+      and then set the GZIP define inside the NSIS script as follows:<br />
+      <br />
+      !define GZIP `$%GZIP%`<br />
+      <br />
+      You might also have to whack the enclosing quotes:<br />
+      <br />
+      !searchreplace GZIP `${GZIP}` '"' ''<br />
+      <br />
+      Does that change anything?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">grahamk</span><br />
+      <span class="post-time small text-muted">11th November 2010 15:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I don't think the environment variable has anything to do with it. Instead, I think it's something weird happening with macros. Here's a standalone test script.<br />
+      <br /></p>
+      <pre>
+<code><br />!macro GZIPTEST<br />    !echo `GZIP is ${GZIP}`<br />    !tempfile GZIPTEMP<br />    !system 'copy "${__FILE__}" "${GZIPTEMP}"' = 0<br />    #!system '"${GZIP}" -9v "${GZIPTEMP}"' = 0<br />    !system 'start "gzip" /b /wait "${GZIP}" -9v "${GZIPTEMP}"' = 0<br />    !delfile "${GZIPTEMP}.gz"<br />    !undef GZIPTEMP<br />!macroend<br /><br />!define GZIP "Q:\Third Party Tools\gzip.exe"<br />!insertmacro GZIPTEST<br /><br />!undef GZIP<br />!searchreplace GZIP `$%GZIP%` '%GZIP%' ''<br /><br />!if `${GZIP}` == '$'<br />    !error "GZIP environment variable is not set"<br />!endif<br /><br />!searchreplace GZIP `${GZIP}` '"' ''<br />!insertmacro GZIPTEST<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">grahamk</span><br />
+      <span class="post-time small text-muted">11th November 2010 15:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It gets even more bizarre. If I change the above script as follows:<br />
+      <br /></p>
+      <pre>
+<code><br />!define GZIP "C:\Windows\gzip.exe"<br /></code>
+</pre><br />
+      <br />
+      When the GZIP environment variable is set as follows:<br />
+      <br />
+      <pre>
+<code><br />set GZIP="Q:\Third Party Tools\gzip.exe"<br /></code>
+</pre><br />
+      <br />
+      I get this result:<br />
+      <br />
+      <pre>
+<code><br />!system: ""C:\Windows\gzip.exe" -9v "C:\DOCUME~1\gknap\LOCALS~1\Temp\nst44C.tmp""<br />"Q:\Third: No such file or directory<br />Party: No such file or directory<br />Tools\gzip.exe": No such file or directory<br />C:\DOCUME~1\gknap\LOCALS~1\Temp\nst44C.tmp:      47.1% -- replaced with C:\DOCUME~1\gknap\LOCALS~1\Temp\nst44C.tmp.gz<br />!system: returned 1, aborting<br /></code>
+</pre><br />
+      <br />
+      I can't make any sense out of this. In this case, NSIS shouldn't even be looking at that environment variable -- and maybe it isn't; I'm curious to know whether anyone else can reproduce this, or whether it's an issue specific to my PC.<br />
+      <br />
+      Clearing the environment variable causes !system to return 0, but then, of course, the following test won't run because it requires the environment variable.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">grahamk</span><br />
+      <span class="post-time small text-muted">11th November 2010 15:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I fired up Process Monitor and found that the errors are indeed being generated by gzip, not NSIS. The reason is described in <a href="http://www.gnu.org/software/gzip/manual/gzip.html#Environment" target="_blank">the gzip documentation</a>.<br />
+      <br />
+      Renaming my "location of gzip.exe" environment variable (to, for example, GZIPEXE) solves the problem.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

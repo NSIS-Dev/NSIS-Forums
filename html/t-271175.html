@@ -1,0 +1,102 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Need another pair of eyes.." />
+
+  <title>Need another pair of eyes.. - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Need another pair of eyes..</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=271175">Need another pair of eyes..</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sbabineau</span><br />
+      <span class="post-time small text-muted">15th May 2007 04:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Need another pair of eyes..</strong><br />
+      I've been racking my brain for a couple days on this one function.<br />
+      <br />
+      The purpose is to read the file info strings from an executable (or dll, ocx, etc). Not all executables have them, but if you right-click on an executable, select Properties, then click the Version tab (if it's there) you will see the information I am trying to retrieve.<br />
+      <br />
+      Once fixed, I think it makes a good candidate for a NSIS Example wiki page..<br />
+      <br />
+      Anyway, I'm messing with the stack and the System plugin and it is wreaking havoc on my program throwing spurious "invalid opcode" and "Access denied" (while reading a memory address). Can someone else take a look at this with me and help me figure it out?<br />
+      <br />
+      I think the key to fixing the problem is near the "System::Call "*$4(&amp;t$5 .r7)"" line. When I comment that out all my problems seem to disappear. What am I doing wrong? :mad:<br />
+      <br /></p>
+      <pre>
+<code><br />Var PROGRAMINFO<br /><br />; Call like this: <br />; !insertmacro GetInfoFromExeHeader "ProductName" "c:\programs\myexecutable.exe"<br />!macro GetInfoFromExeHeader DataType ProgramExe<br />  Push ${DataType}<br />  Push ${ProgramExe}<br />  Call GetInfoFromExeHeader<br />  Pop $PROGRAMINFO<br />!macroend<br /><br />Function GetInfoFromExeHeader<br />; Valid Data Types:<br />;   ProductName<br />;   InternalName<br />;   ProductVersion<br />;   SpecialBuild<br />;   PrivateBuild<br />;   LegalCopyright<br />;   LegalTrademarks<br />;   Comments<br />;   CompanyName<br />;   FileVersion<br />;   FileDescription<br /><br />  Exch $R0 ; path to EXE<br />  IfFileExists $R0 +4 0<br />    MessageBox MB_OK "$R0 doesn't exist! Please correct this."<br />    Exch $R0 ; Put the path back on the stack<br />    Return<br /><br />  Exch<br />  Exch $R1 ; Data type<br />  <br />  Push $1<br />  Push $2<br />  Push $3<br />  Push $4<br />  Push $5<br />  Push $6<br />  Push $7<br /><br />  StrCpy $1 "0"<br />  StrCpy $3 "0"<br />  StrCpy $7 ""<br />  StrCpy $2 "0"<br />  <br />  System::Call "version::GetFileVersionInfoSize(t '$R0', t /NUL) i .r2" ;returns size of version block in header<br />  IntCmp $2 0 Done Done 0 ; $2 needs to be greater than 0<br />    System::Call "version::GetFileVersionInfo(t '$R0', i 0, i r2, *i .r3) i .r1" ; returns 1 or 0 with r3 being the fileinfo struct<br />    IntCmp $1 0 Done 0 0 ; $1 needs to be &lt;&gt; 0<br />      System::Call "version::VerQueryValue(*i r3, t '\StringFileInfo\040904E4\$R1', *i .r4, *i .r5) i .r6"<br />      IntCmp $6 0 Done 0 0 ; $6 needs to be &lt;&gt; 0<br />        IntCmp $5 0 Done Done 0<br />          ;IntOp $5 $5 + 1<br />          System::Call "*$4(&amp;t$5 .r7)"<br /><br />  Done:<br />    System::Free $R0<br />    System::Free $R1<br />    System::Free $1<br />    System::Free $2<br />    System::Free $3<br />    System::Free $4<br />    System::Free $5<br />    System::Free $6<br /><br />    ;SetPluginUnload "manual"<br />    Push $7<br />    <br />    Exch 9 ; put $7 on the bottom<br />    Pop $7<br />    Pop $6<br />    Pop $5<br />    Pop $4<br />    Pop $3<br />    Pop $2<br />    Pop $1<br />    Pop $R0<br />    Pop $R1<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      Documentation on the three version functions:<br />
+      <br />
+      GetFileVersionInfoSize: <a href="http://msdn2.microsoft.com/en-us/library/ms647005.aspx" target="_blank">http://msdn2.microsoft.com/en-us/library/ms647005.aspx</a><br />
+      <br />
+      GetFileVersionInfo: <a href="http://msdn2.microsoft.com/en-us/library/ms647003.aspx" target="_blank">http://msdn2.microsoft.com/en-us/library/ms647003.aspx</a><br />
+      <br />
+      VerQueryValue: <a href="http://msdn2.microsoft.com/en-us/library/ms647464.aspx" target="_blank">http://msdn2.microsoft.com/en-us/library/ms647464.aspx</a><br />
+      <br />
+      -Steve.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">15th May 2007 05:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Have you seen the MoreInfo plugin? It's so easy ;)<br />
+      <br />
+      <a href="http://nsis.sourceforge.net/MoreInfo_plug-in" target="_blank">http://nsis.sourceforge.net/MoreInfo_plug-in</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">15th May 2007 18:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <ol style="list-style-type: decimal">
+        <li>File path may contain quotes, so it's better to use R0 instead of '$R0' when passing it to System::Call.</li>
+
+        <li>/NUL is not a valid parameter. Either use n for NULL or pass a real pointer.</li>
+
+        <li>You <b>must</b> allocate a buffer for GetFileVersionInfo with System::Alloc. You just passed it pointer to an integer which it fills and then some. That's corrupting the heap.</li>
+      </ol>
+
+      <blockquote>
+        Once fixed, I think it makes a good candidate for a NSIS Example wiki page..
+      </blockquote>Everything makes a good candidate for that. Feel free to create Wiki pages with what you'd consider useful information.
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

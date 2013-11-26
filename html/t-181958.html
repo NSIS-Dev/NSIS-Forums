@@ -1,0 +1,123 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Can't run program with parameter" />
+
+  <title>Can't run program with parameter - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Can't run program with parameter</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=181958">Can't run program with parameter</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">brettg</span><br />
+      <span class="post-time small text-muted">1st June 2004 23:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Can't run program with parameter</strong><br />
+      Hello. I want to give the option of running the program with a command line param at the end of the install. So I define these macros.<br />
+      <br />
+      !define MUI_FINISHPAGE_RUN "$INSTDIR\SqlitePlus.exe"<br />
+      !define MUI_FINISHPAGE_RUN_PARAMETERS "$INSTDIR\Samples\Db\Northwind.db"<br />
+      <br />
+      The problem is, if there are any spaces in the INSTDIR (like "Program Files"), the parameter is not passed correctly. How can I make it work?<br />
+      <br />
+      thank you<br />
+      -brett</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deguix</span><br />
+      <span class="post-time small text-muted">2nd June 2004 03:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Use the command <i>GetFullPathName /SHORT</i>. It will convert a long path to its short path format.<br />
+      <br />
+      But as you can't do this at compile time, you can use this code, but I'm unsure if this will work because I didn't test it:<br />
+      <br /></p>
+      <pre>
+<code><br />  ;... other MUI_PAGE_FINISH defines<br />  !define MUI_PAGE_CUSTOMFUNCTION_LEAVE ShortenPath<br /><br />!insertmacro MUI_PAGE_FINISH<br /><br />Function ShortenPath<br /><br />  !undef MUI_FINISHPAGE_RUN_PARAMETERS<br /><br />  GetFullPathName /SHORT $0 "$INSTDIR\Samples\Db\Northwind.db"<br /><br />  !define MUI_FINISHPAGE_RUN_PARAMETERS $0<br /><br />FunctionEnd</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">brettg</span><br />
+      <span class="post-time small text-muted">2nd June 2004 04:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thank you. I will try it.<br />
+      <br />
+      While I have someones attention, I would very much like to know if there is a way to automatically handle usage counting for shared DLLs. As you must know, Windows has a mechanism to keep count of shared DLLs, so setup programs can know when to unregister and delete the shared DLL. I can't find any info on it.<br />
+      <br />
+      thanks in advance<br />
+      -brett</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">brettg</span><br />
+      <span class="post-time small text-muted">3rd June 2004 05:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I tried it but I can't get it to work. Why doesn't the MUI_FINISHPAGE_RUN_PARAMETERS macro just work? You should be using ShellExecute and you should just quote the parameter. Then it would work. Is there any chance of getting this fixed quicly?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deguix</span><br />
+      <span class="post-time small text-muted">4th June 2004 01:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This one I'm more certain that will work:<br />
+      <br /></p>
+      <pre>
+<code>  ;... other MUI_PAGE_FINISH defines<br />  !define MUI_PAGE_CUSTOMFUNCTION_LEAVE ShortenPath<br /><br />!insertmacro MUI_PAGE_FINISH<br /><br />Function ShortenPath<br /><br />  !insertmacro MUI_INSTALLOPTIONS_READ $0 "ioSpecial.ini" "Field 4" "State"<br /><br />  StrCmp $0 1 0 +4<br /><br />    GetFullPathName /SHORT $0 "${MUI_FINISHPAGE_RUN_PARAMETERS}"<br /><br />    Exec '"${MUI_FINISHPAGE_RUN}" "$0"'<br /><br />    Quit<br /><br />FunctionEnd</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br />
+      <span class="post-time small text-muted">4th June 2004 08:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Shared DLLs - Registry<br />
+      <br />
+      HKEY_LOCAL_MACHINE<br />
+      SOFTWARE<br />
+      Microsoft<br />
+      Windows<br />
+      CurrentVersion<br />
+      SharedDlls<br />
+      <br />
+      I found this in MSDN Platform SDK as "Usage counting"<br />
+      Use DLL path/file as value name in RegQueryValue() call.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

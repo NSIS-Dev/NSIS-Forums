@@ -1,0 +1,193 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="nsExec and PowerShell error" />
+
+  <title>nsExec and PowerShell error - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">nsExec and PowerShell error</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=305310">nsExec and PowerShell error</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JeronimoColon</span><br />
+      <span class="post-time small text-muted">13th April 2009 21:23 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>nsExec and PowerShell error</strong><br />
+      Hello all,<br />
+      <br />
+      I'm having trouble doing all the following in unison:<br />
+      1. Execute a PowerShell script.<br />
+      2. Have that script execute hidden (i.e., don't show the shell)<br />
+      3. Redirect the output to the NSIS log window.<br />
+      4. Have it wait until the script is finished before continuing.<br />
+      <br />
+      When I execute the following:<br />
+      nsExec::ExecToLog '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" "c:\testscripts\test.ps1"'<br />
+      <br />
+      I get "Access to the path is denied"<br />
+      <br />
+      I've tried all sorts of combinations with no success.<br />
+      <br />
+      Just as an FYI, running:<br />
+      nsExec::ExecToLog '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"' alone with no parameters will output powershell's banner to the log window and freeze - which is expected because it's waiting for user input which it will never get. This at least shows that it can execute powershell hidden, redirect output and wait for it to complete before continuing. It just doesn't seem to like parameters.<br />
+      <br />
+      Any help or alternate ideas will be greatly appreciated.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">13th April 2009 23:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">and "c:\testscripts\test.ps1" is also a valid path? try using Process Monitor to figure out where the problem path is</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JeronimoColon</span><br />
+      <span class="post-time small text-muted">14th April 2009 13:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yes, the path is valid. Also, if I cut and paste the entire line (minus the single quotes) into the Run prompt (off the start menu) it works perfectly.<br />
+      <br />
+      Just as an asside, I've used nsExec before for a different project.<br />
+      <br />
+      Thanks.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JeronimoColon</span><br />
+      <span class="post-time small text-muted">15th April 2009 10:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">As a workaround I tried to use the system plugin to call ShellExecuteEx with SEE_MASK_NOASYNC as the mask. This should block and effectively behave like ExecWait with the added bonus being able to control visibility (i.e., hide PowerShell).<br />
+      <br />
+      Everything seems to work correctly except that the call returns right away and doesn't "wait" for the application to end.<br />
+      <br />
+      Does the System plugin not honor blocking calls or am I doing something wrong?<br />
+      <br />
+      Thanks.<br />
+      <br />
+      jc3</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">15th April 2009 11:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">yes, you are doing something wrong. To wait for a _process_ (and only a process, not word documents etc.) you need to add the SEE_MASK_NOCLOSEPROCESSflag and after ShellExecuteEx returns, use WaitForSingleObject(sei.hProcess,INFINITE) and then CloseHandle<br />
+      <br />
+      BUT, ExecWait should work, it would be better if you used Process Monitor and tried to figure out the actual problem</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">DrStevens</span><br />
+      <span class="post-time small text-muted">10th July 2009 21:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I've run into the same problem. I have been unable to call powershell with any argument other than /? using nsExec:Exec or nsExec:ExecToLog. All result in "Access to the path is denied" error.<br />
+      <br />
+      See <a href="http://sourceforge.net/tracker/?func=detail&amp;aid=2785225&amp;group_id=22049&amp;atid=373085" target="_blank">http://sourceforge.net/tracker/?func...49&amp;atid=373085</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">ripper17</span><br />
+      <span class="post-time small text-muted">27th June 2011 17:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Did anyone ever make this work? I would love to use nsExec::ExecToStack in order to check for installed features in WinServer2008 R2</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">FlappingCrane</span><br />
+      <span class="post-time small text-muted">26th March 2012 19:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Same with SQLPS</strong><br />
+      Has anyone come up the reason why nsExec does not execute PowerShell scripts? I am attempting to run a PowerShell script using SQLPS.exe, with the need to hide the command window that pops up. All I receive is the error message, "Access to the path is denied."<br />
+      Running the same command using ExecWait yields no errors and the script finishes successfully, so I know the paths are correct.<br />
+      <br /></p>
+      <pre>
+<code><br />Function myFunction<br />    /* Execute 'sqlps.exe' with the PowerShell script as target.<br />       Wait for sqlps.exe process to end before continuing. */<br />    # Write to log file to indicate what's running:<br />    LogText "${SCRIPTNAME}: Running myScript.ps1"<br />    nsExec::ExecToStack `sqlps ".'$OUTDIR\myScript.ps1' xxxxxxxx"`<br />    <br />    # Read return value of top of stack and respond accordingly.<br />    Pop $2 ;Read the value off the top of the stack.<br />    Pop $3 ;Read the error message itself.<br />    # Value of "0" is successful exit for SQLPS. If "0", skip to MoreStuff.<br />    StrCmp $2 "0" MoreStuff 0<br />    LogText "${SCRIPTNAME} FAIL: An error occurred executing the SQL script."<br />    LogText "    Return value: $2"<br />    LogText "    Return msg  : $3"<br />    Quit<br /><br />    MoreStuff:<br />    ...<br />FunctionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">26th March 2012 21:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Where is sqlps located? How about giving nsExec a full path instead?<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">FlappingCrane</span><br />
+      <span class="post-time small text-muted">27th March 2012 20:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">sqlps.exe is located in the Tools directory under the SQL Server install. The directory is included in the PATH on the computer; but I added it to test, just for grins. It failed again, same "Access to the path is denied" error message.<br />
+      <br />
+      I found a workaround that does what I need, though. Hopefully it will help others.<br />
+      I wrapped the command in a batch file and called the batch file, instead. I created a batch file using "START /MIN /WAIT" to run the command so that the window would run minimized. Not hidden, but minimized works for my purposes. Contents of batch file:</p>
+
+      <blockquote>
+        START /MIN /WAIT sqlps ".'C:\path_to_batch_file\myScript.ps1' xxxxxxxx"
+      </blockquote>I added the new batch file to the NSIS project and changed my nsExec command to:
+
+      <blockquote>
+        nsExec::ExecToStack "$OUTDIR\myScript.bat"
+      </blockquote>This works without errors. I'm still interested to know why it doesn't work calling the PowerShell script directly from the NSIS script using nsExec. To what path is access denied? Curious.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">beth62</span><br />
+      <span class="post-time small text-muted">9th October 2013 19:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I solved the "Access to this path is denied" error when using nsExec::ExecToStack to launch a Powershell script. The solution is to add "-inputformat none" to the command line like the following:<br />
+      <br />
+      nsExec::ExecToStack 'Powershell.exe -inputformat none -noprofile "Get-Process xyz| Stop-Process -Force"'<br />
+      <br />
+      I got the idea for this fix from the bug report #572313 on Microsoft Connect:<br />
+      <br />
+      <br />
+      PowerShell.exe can hang if STDIN is redirected<br />
+      <a href="http://connect.microsoft.com/PowerShell/feedback/details/572313/powershell-exe-can-hang-if-stdin-is-redirected" target="_blank">http://connect.microsoft.com/PowerSh...-is-redirected</a><br />
+      <br />
+      Also, this bug does not occur with Powershell V3.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

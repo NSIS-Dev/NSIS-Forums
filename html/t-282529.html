@@ -1,0 +1,183 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SetShellVarContext in Vista" />
+
+  <title>SetShellVarContext in Vista - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">SetShellVarContext in Vista</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=282529">SetShellVarContext in Vista</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">ericpode</span><br />
+      <span class="post-time small text-muted">2nd December 2007 23:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>SetShellVarContext in Vista</strong><br />
+      I'm well confused about how SetShellVarContext works on Vista.<br />
+      <br />
+      I have an installation script which does NOT have a SetShellVarContext in the install section. I would have thought that this would install just for the current user, but it installs for all users, including a Start&gt;AllPrograms menu entry and a destop shortcut in all user accounts.<br />
+      <br />
+      Here's the section:<br />
+      <br /></p>
+
+      <blockquote>
+        Section "MainSection" SEC01<br />
+        SetOutPath "$INSTDIR"<br />
+        SetOverwrite ifnewer<br />
+        File "Myprog.exe"<br />
+        CreateDirectory "$SMPROGRAMS\Myprog"<br />
+        CreateShortCut "$SMPROGRAMS\Myprog\Myprog.lnk" "$INSTDIR\Myprog.exe"<br />
+        CreateShortCut "$DESKTOP\Myprog.lnk" "$INSTDIR\Myprog.exe"<br />
+        SectionEnd
+      </blockquote>Having unexpectedly got an installation in all user accounts I found that the only way to get the Start&gt;AllPrograms menu to be uninstalled/deleted in ALL of the user accounts was to have "SetShellVarContext all" in the uninstall section. BUT the desktop shortcuts were NOT deleted! The only way I could get the desktop shortcuts deleted was to put them in a separate unsinstall section which did NOT have a SetShellVarContext, like this:<br />
+      <br />
+
+      <blockquote>
+        Section un.desktop<br />
+        Delete "$DESKTOP\Myprog.lnk"<br />
+        SectionEnd<br />
+        <br />
+        Section Uninstall<br />
+        SetShellVarContext all<br />
+        Delete "$INSTDIR\${PRODUCT_NAME}.url"<br />
+        Delete "$INSTDIR\uninst.exe"<br />
+        Delete "$INSTDIR\Myprog.exe"<br />
+        <br />
+        Delete "$SMPROGRAMS\Myprog\Uninstall.lnk"<br />
+        Delete "$SMPROGRAMS\Myprog\Website.lnk"<br />
+        Delete "$SMPROGRAMS\Myprog\Myprog.lnk"<br />
+        <br />
+        RMDir "$SMPROGRAMS\Myprog"<br />
+        RMDir "$INSTDIR"<br />
+        <br />
+        DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"<br />
+        DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"<br />
+        SetAutoClose true<br />
+        SectionEnd
+      </blockquote>So the above was the only way I could get the desktop shortcuts and the Start&gt;AllPrograms menu to be removed for all users.<br />
+      <br />
+      This doesn't make sense. I would have expected no SetShellVarContext to cause install/uninstall only for the current user, and "SetShellVarContext all" to install/uninstall for all users.<br />
+      <br />
+      But the above seems to defy this logic.<br />
+      <br />
+      Can anyone explain what's going on here?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">ericpode</span><br />
+      <span class="post-time small text-muted">2nd December 2007 23:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">After a closer look, it seems that the install section is putting the "All Programs" menu entry into the all users area<br />
+      <br />
+      C:\ProgramData\Microsoft\Windows\Start Menu\Programs<br />
+      <br />
+      but it is putting the desktop shortcut into each user's own desktop area - e.g.<br />
+      <br />
+      C:\Users\John\Desktop<br />
+      <br />
+      That would explain why the uninstall sections need "SetShellVarContext all" to get rid of the All Programs menu, but doesn't need a SetShellVarContext to get rid of the desktop shortcut.<br />
+      <br />
+      The question is why did the install section choose to put the All Programs menu into the ALL users area without being told to; and why did the install section put a desktop link into the desktop of every user?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">3rd December 2007 07:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><a href="http://forums.winamp.com/showthread.php?postid=2064155#post2064155" target="_blank">http://forums.winamp.com/showthread....55#post2064155</a><br />
+      <br />
+      <a href="http://nsis.sourceforge.net/Shortcuts_removal_fails_on_Windows_Vista" target="_blank">http://nsis.sourceforge.net/Shortcut..._Windows_Vista</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">ericpode</span><br />
+      <span class="post-time small text-muted">3rd December 2007 11:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks. I removed all of the SetShellVarContext statements from my script and added a "RequestExecutionLevel admin" statement at the top of my script.<br />
+      <br />
+      I am logged in as an ordinary user and I run the installer - this cause the install to occur for the admin account. It doesn't get installed for the user I'm currently logged in as, or any other user - it only gets installed for the admin user.<br />
+      <br />
+      This make a stange sort of sense as I understand that the default SetShellVarContext setting is "current" (for the current user, but I guess the "RequestExecutionLevel admin" is causing the install to run as the admin user.<br />
+      <br />
+      But I can't imagine this situation being much use - a user will expect it to be installed either for the currently logged in user OR for all users.<br />
+      <br />
+      I then tried removing the "RequestExecutionLevel admin", and added a "SetShellVarContext all" to the install and uninstall sections. I also added a MessageBox statement to see what the pathnames were being expanded to. This seemed to successfully install for all users with the ALL USERS program menu and desktop pathnames being used ...... BUT the desktop path appeared as<br />
+      <br />
+      C:\Users\Public\Desktop<br />
+      <br />
+      but this folder does not seem to exist even when viewing hidden files! There is a<br />
+      <br />
+      C:\Users\Public\Public Desktop<br />
+      <br />
+      and if you type C:\Users\Public\Desktop into Widows explorer it ends up listing C:\Users\Public\Public Desktop. It's as if there is a link from one to the other, but I can't actually see the link.<br />
+      <br />
+      Shouldn't NSIS use the "Public Desktop" path as this is the one that is visible?<br />
+      <br />
+      Anyway, to summarise, "SetShellVarContext all" seems to give an all-users installation and uninstallation OK. But the "RequestExecutionLevel admin" seems to be no use as it will only install into the admin user account. So it seems there is no way of installing into the CURRENT user only.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">3rd December 2007 11:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">If you want to put shortcuts in the current users start menu, you must use "RequestExecutionLevel user" (This means you can NOT write to $programfiles or HKEY_LOCAL_MACHINE)<br />
+      <br />
+      IMHO, you have two kinds of installers:<br />
+      <br />
+      Current user (ONLY!):<br />
+      -RequestExecutionLevel user<br />
+      -SetShellVarContext current<br />
+      -Install in $LOCALAPPDATA<br />
+      -Uninstall reg info in HKCU<br />
+      <br />
+      All users:<br />
+      -RequestExecutionLevel admin<br />
+      -SetShellVarContext all<br />
+      -Install in $programfiles<br />
+      -Uninstall reg info in HKLM<br />
+      <br />
+      Most installers assume the user is admin and create a mixed type installer, Vista changed this with UAC (These problems have always been here, just most people run as admin on older NT systems)<br />
+      <br />
+      <br />
+      You also might wanna look into the UAC plugin<br />
+      <br />
+      <br />
+      As far as the Public Desktop path goes, NSIS uses the actual path on the file system provided by SHGetSpecialFolderLocation(and friends), explorer is playing games with shell exstensions/desktop.ini's/symlinks to make it "look good"</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

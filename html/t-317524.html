@@ -1,0 +1,422 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Crash with special build for 2.46" />
+
+  <title>Crash with special build for 2.46 - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Crash with special build for 2.46</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=317524">Crash with special build for 2.46</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">froesccn</span><br />
+      <span class="post-time small text-muted">5th March 2010 11:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Crash with special build for 2.46</strong><br />
+      I just tried updating an installer to 2.46 including<br />
+      the special build files for strlen 8192. Attempting to<br />
+      then build my installer caused an immediate crash.<br />
+      <br />
+      I then tried the 2.45 binaries and it worked fine,<br />
+      also 2.46 with standard string length was fine. So I<br />
+      wondered if there might be a problem with the<br />
+      nsis-2.46-strlen_8192.zip<br />
+      <br />
+      Did anyone else try this already?<br />
+      <br />
+      BTW, is the space saving so significant that it<br />
+      warrants using only 1024 in the default version?<br />
+      Considering that many installers attempt to modify<br />
+      the PATH variable it's a fine way to get into<br />
+      serious trouble. Customers get unhappy ;)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">5th March 2010 12:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You might want to provide a pastebin of the script, and some information on where it crashes.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">froesccn</span><br />
+      <span class="post-time small text-muted">5th March 2010 13:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Actually it doesn't work with 2.45 and strlen 8192<br />
+      after all: I was accidentally still using the strlen<br />
+      1024 binaries when attempting to crosscheck. Sorry.<br />
+      <br />
+      The problem seems to be with<br />
+      <br />
+      !verbose<br />
+      <br />
+      statements, they crash on me with strlen 8192.<br />
+      <br />
+      Did anyone else experience such a problem?<br />
+      <br />
+      Many of the standard includes use !verbose so<br />
+      either there is a problem on my side or noone<br />
+      else is using long strings ...<br />
+      <br />
+      Edit: Just saw the other reply. I'll try<br />
+      to reproduce this with a minimal script and<br />
+      post the results.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">froesccn</span><br />
+      <span class="post-time small text-muted">5th March 2010 14:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ok now I have a rather small test installer which<br />
+      crashes reliable. It is an inclusion of StrTok from<br />
+      StrFunc.nsh with a slightly odd construct I "inherited"<br />
+      from the EnvVarUpdate function:<br />
+      <br />
+      --------- test_inc2.nsh ------------------<br />
+      !include "StrFunc.nsh"<br />
+      <br />
+      !macro _IncludeStrFunction StrFuncName<br />
+      !ifndef ${StrFuncName}_INCLUDED<br />
+      ${${StrFuncName}}<br />
+      !endif<br />
+      !ifndef Un${StrFuncName}_INCLUDED<br />
+      ${Un${StrFuncName}}<br />
+      !endif<br />
+      !define un.${StrFuncName} "${Un${StrFuncName}}"<br />
+      !macroend<br />
+      <br />
+      !insertmacro _IncludeStrFunction StrTok<br />
+      -------------------------------------------<br />
+      <br />
+      However, the crash only occurs if this code is<br />
+      two levels deep in include nesting, so I also have<br />
+      <br />
+      --------- test.nsi ------------------------<br />
+      !include "test_inc.nsh"<br />
+      -------------------------------------------<br />
+      <br />
+      --------- test_inc.nsh --------------------<br />
+      !include "test_inc2.nsh"<br />
+      -------------------------------------------<br />
+      <br />
+      A zip file containing all three files is<br />
+      attached for convenience. Compiling test.nsi<br />
+      crashes reliable with 2.45 and strlen 8192.<br />
+      Most probably also with 2.46 as this was<br />
+      what I tested originally, but I didn't<br />
+      yet revert back to that version.<br />
+      <br />
+      The output from NSIS is as below, followed by<br />
+      the windows error "makensis has encountered a<br />
+      problem and needs to close".<br />
+      <br />
+      Command line:<br />
+      "C:\Program Files\NSIS\makensis.exe" /NOTIFYHWND 1311446 "H:\release\current\installer\test\test.nsi"<br />
+      <br />
+      MakeNSIS v2.45 - Copyright 1995-2009 Contributors<br />
+      See the file COPYING for license details.<br />
+      Credits can be found in the Users Manual.<br />
+      <br />
+      Processing config:<br />
+      Processing plugin dlls: "C:\Program Files\NSIS\Plugins\*.dll"<br />
+      - AdvSplash::show<br />
+      - Banner::destroy<br />
+      - Banner::getWindow<br />
+      - Banner::show<br />
+      - BgImage::AddImage<br />
+      - BgImage::AddText<br />
+      - BgImage::Clear<br />
+      - BgImage::Destroy<br />
+      - BgImage::Redraw<br />
+      - BgImage::SetBg<br />
+      - BgImage::SetReturn<br />
+      - BgImage::Sound<br />
+      - Dialer::AttemptConnect<br />
+      - Dialer::AutodialHangup<br />
+      - Dialer::AutodialOnline<br />
+      - Dialer::AutodialUnattended<br />
+      - Dialer::GetConnectedState<br />
+      - InstallOptions::dialog<br />
+      - InstallOptions::initDialog<br />
+      - InstallOptions::show<br />
+      - LangDLL::LangDialog<br />
+      - Math::Script<br />
+      - NSISdl::download<br />
+      - NSISdl::download_quiet<br />
+      - Splash::show<br />
+      - StartMenu::Init<br />
+      - StartMenu::Select<br />
+      - StartMenu::Show<br />
+      - System::Alloc<br />
+      - System::Call<br />
+      - System::Copy<br />
+      - System::Free<br />
+      - System::Get<br />
+      - System::Int64Op<br />
+      - System::Store<br />
+      - TypeLib::GetLibVersion<br />
+      - TypeLib::Register<br />
+      - TypeLib::UnRegister<br />
+      - UserInfo::GetAccountType<br />
+      - UserInfo::GetName<br />
+      - UserInfo::GetOriginalAccountType<br />
+      - VPatch::GetFileCRC32<br />
+      - VPatch::GetFileMD5<br />
+      - VPatch::vpatchfile<br />
+      - inetc::get<br />
+      - inetc::head<br />
+      - inetc::post<br />
+      - inetc::put<br />
+      - nsDialogs::Create<br />
+      - nsDialogs::CreateControl<br />
+      - nsDialogs::CreateItem<br />
+      - nsDialogs::CreateTimer<br />
+      - nsDialogs::GetUserData<br />
+      - nsDialogs::KillTimer<br />
+      - nsDialogs::OnBack<br />
+      - nsDialogs::OnChange<br />
+      - nsDialogs::OnClick<br />
+      - nsDialogs::OnNotify<br />
+      - nsDialogs::SelectFileDialog<br />
+      - nsDialogs::SelectFolderDialog<br />
+      - nsDialogs::SetRTL<br />
+      - nsDialogs::SetUserData<br />
+      - nsDialogs::Show<br />
+      - nsExec::Exec<br />
+      - nsExec::ExecToLog<br />
+      - nsExec::ExecToStack<br />
+      <br />
+      !define: "MUI_INSERT_NSISCONF"=""<br />
+      <br />
+      Changing directory to: "H:\release\current\installer\test"<br />
+      <br />
+      Processing script file: "H:\release\current\installer\test\test.nsi"<br />
+      !include: "test_inc.nsh"<br />
+      !include: "test_inc2.nsh"<br />
+      !include: "C:\Program Files\NSIS\Include\StrFunc.nsh"<br />
+      ----------------------------------------------------------------------<br />
+      <br />
+      NSIS String Functions Header File 1.09 - Copyright 2004 Diego Pedroso<br />
+      <br />
+      ----------------------------------------------------------------------<br />
+      <br />
+      (C:\Program Files\NSIS\Include\StrFunc.nsh:52)<br />
+      !include: closed: "C:\Program Files\NSIS\Include\StrFunc.nsh"<br />
+      !insertmacro: _IncludeStrFunction<br />
+      !insertmacro: FUNCTION_STRING_StrTok<br />
+      !insertmacro: STRFUNC_FUNC<br />
+      $ {StrTok} - Copyright 2004 Diego Pedroso - Based on functions by "bigmac666" (macro:STRFUNC_FUNC:11)<br />
+      !undef: "StrTok"<br />
+      !define: "StrTok"="!insertmacro FUNCTION_STRING_StrTok_Call"<br />
+      !define: "StrTok_INCLUDED"=""<br />
+      Function: "StrTok"<br />
+      !insertmacro: end of STRFUNC_FUNC<br />
+      Exch($0,0)<br />
+      Exch(st(1),0)<br />
+      Exch($1,0)<br />
+      Exch(st(1),0)<br />
+      Exch(st(2),0)<br />
+      Exch($2,0)<br />
+      Exch(st(2),0)<br />
+      Exch(st(3),0)<br />
+      Exch($3,0)<br />
+      Exch(st(3),0)<br />
+      Push: $4<br />
+      Push: $5<br />
+      Push: $6<br />
+      Push: $7<br />
+      Push: $8<br />
+      Push: $9<br />
+      Push: $R0<br />
+      !insertmacro: _IfThen<br />
+      !insertmacro: end of _IfThen<br />
+      !insertmacro: _IfThen<br />
+      !insertmacro: end of _IfThen<br />
+      !insertmacro: _IfThen<br />
+      !insertmacro: end of _IfThen<br />
+      StrLen $4 "$2"<br />
+      StrLen $5 "$3"<br />
+      StrCpy $6 "0" () ()<br />
+      StrCpy $8 "-1" () ()<br />
+      IntOp: $8=$8+1<br />
+      !insertmacro: _Do<br />
+      !insertmacro: end of _Do<br />
+      StrCpy $7 "$3" (1) ($6)<br />
+      !insertmacro: _If<br />
+      !insertmacro: end of _If<br />
+      !insertmacro: _If<br />
+      !insertmacro: end of _If<br />
+      !insertmacro: _Or<br />
+      !insertmacro: end of _Or<br />
+      StrCpy $3 "$3" ($6) ()<br />
+      !insertmacro: _Else<br />
+      !insertmacro: end of _Else<br />
+      StrCpy $3 "" () ()<br />
+      !insertmacro: _EndIf<br />
+      !insertmacro: end of _EndIf<br />
+      StrCpy $R0 "End" () ()<br />
+      !insertmacro: _Goto<br />
+      !insertmacro: end of _Goto<br />
+      !insertmacro: _EndIf<br />
+      !insertmacro: end of _EndIf<br />
+      StrCpy $R0 "0" () ()<br />
+      !insertmacro: _Do<br />
+      !insertmacro: end of _Do<br />
+      !insertmacro: _If<br />
+      !insertmacro: end of _If<br />
+      StrCpy $9 "$2" (1) ($R0)<br />
+      !insertmacro: _Else<br />
+      !insertmacro: end of _Else<br />
+      StrCpy $9 "$2" (1) ()<br />
+      !insertmacro: _EndIf<br />
+      !insertmacro: end of _EndIf<br />
+      !insertmacro: _IfThen<br />
+      !insertmacro: end of _IfThen<br />
+      !insertmacro: _If<br />
+      !insertmacro: end of _If<br />
+      StrCpy $7 "$3" ($6) ()<br />
+      !insertmacro: _If<br />
+      !insertmacro: end of _If<br />
+      !insertmacro: _And<br />
+      !insertmacro: end of _And<br />
+      IntOp: $6=$6+1<br />
+      StrCpy $3 "$3" () ($6)<br />
+      StrCpy $6 "0" () ()<br />
+      Goto: StrSearchLoop<br />
+      !insertmacro: _ElseIf<br />
+      !insertmacro: end of _ElseIf<br />
+      StrCpy $3 "$3" ($6) ()<br />
+      StrCpy $R0 "End" () ()<br />
+      !insertmacro: _Goto<br />
+      !insertmacro: end of _Goto<br />
+      !insertmacro: _EndIf<br />
+      !insertmacro: end of _EndIf<br />
+      IntOp: $6=$6+1<br />
+      StrCpy $3 "$3" () ($6)<br />
+      StrCpy $6 "0" () ()<br />
+      Goto: ResultPartLoop<br />
+      !insertmacro: _EndIf<br />
+      !insertmacro: end of _EndIf<br />
+      IntOp: $R0=$R0+1<br />
+      !insertmacro: _Loop<br />
+      !insertmacro: end of _Loop<br />
+      !insertmacro: _IfThen<br />
+      !insertmacro: end of _IfThen<br />
+      IntOp: $6=$6+1<br />
+      !insertmacro: _Loop<br />
+      !insertmacro: end of _Loop<br />
+      Pop: $R0<br />
+      Pop: $9<br />
+      Pop: $8<br />
+      Pop: $7<br />
+      Pop: $6<br />
+      Pop: $5<br />
+      Pop: $4<br />
+      Pop: $0<br />
+      Pop: $1<br />
+      Pop: $2<br />
+      Exch($3,0)<br />
+      FunctionEnd<br />
+      !insertmacro: end of FUNCTION_STRING_StrTok<br />
+      !insertmacro: FUNCTION_STRING_UnStrTok<br />
+      !undef: "UnStrTok"<br />
+      !insertmacro: FUNCTION_STRING_StrTok<br />
+      !insertmacro: STRFUNC_FUNC<br />
+      $ {UnStrTok} - Copyright 2004 Diego Pedroso - Based on functions by "bigmac666" (macro:STRFUNC_FUNC:5)<br />
+      !define: "UnStrTok"="!insertmacro FUNCTION_STRING_UnStrTok_Call"<br />
+      !define: "UnStrTok_INCLUDED"=""<br />
+      Function: "un.StrTok"<br />
+      !insertmacro: end of STRFUNC_FUNC<br />
+      Exch($0,0)<br />
+      Exch(st(1),0)<br />
+      Exch($1,0)<br />
+      Exch(st(1),0)<br />
+      Exch(st(2),0)<br />
+      Exch($2,0)<br />
+      Exch(st(2),0)<br />
+      Exch(st(3),0)<br />
+      Exch($3,0)<br />
+      Exch(st(3),0)<br />
+      Push: $4<br />
+      Push: $5<br />
+      Push: $6<br />
+      Push: $7<br />
+      Push: $8<br />
+      Push: $9<br />
+      Push: $R0<br />
+      !insertmacro: _IfThen</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">froesccn</span><br />
+      <span class="post-time small text-muted">5th March 2010 15:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Just wanted to add that modifying the include structure<br />
+      of my original installer so that the problematic piece of<br />
+      code is included one nesting level lower seems to be<br />
+      a robust workaround for the time being (phew).</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Marshall7a</span><br />
+      <span class="post-time small text-muted">2nd July 2010 10:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I too am getting this problem - special build crashes on Windows 7 32-bit.<br />
+      <br />
+      ...<br />
+      !insertmacro: SectionTextGetStored<br />
+      !insertmacro: SectionText<br />
+      !insertmacro: _Do<br />
+      !insertmacro: end of _Do<br />
+      !insertmacro: SectionText_Single<br />
+      !insertmacro: _If<br />
+      <br />
+      The If code is at the beginning of the macro:<br />
+      !macro SectionText_Single single section action io<br />
+      ;this bit is just for checking that the script-author hasn't tried to add too many sections<br />
+      ${If} $MAX_SECTION_COUNT = ""<br />
+      ${OrIf} ${single} &gt; $MAX_SECTION_COUNT<br />
+      StrCpy $MAX_SECTION_COUNT ${single}<br />
+      ${EndIf}<br />
+      <br />
+      MAX_SECTION_COUNT variable is defined.<br />
+      Code compiles and runs fine on non-special build.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

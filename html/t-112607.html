@@ -1,0 +1,243 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Calling Regedit. Which method is better?" />
+
+  <title>Calling Regedit. Which method is better? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Calling Regedit. Which method is better?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=112607">Calling Regedit. Which method is better?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Mottel</span><br />
+      <span class="post-time small text-muted">3rd November 2002 08:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Calling Regedit. Which method is better?</strong><br />
+      In thread "convert .reg file" Kitchik, responding to aarnado, suggests calling Regedit.exe to merge a large number of registry entries into the registry on the target PC.<br />
+      <br />
+      He suggests: (commenting is mine) (method 1)<br /></p>
+      <pre>
+<code><br />  GetTempFileName $R0<br />  File /oname=$R0 myreg.reg         ; copy myreg.reg to &lt;uniquefilename&gt; on target PC<br />  ExecWait 'Regedit.exe /S "$R0"'   ; merge the copied file into the registry (silently)<br />  Delete $R0                        ; delete the temporary file<br /></code>
+</pre><br />
+      And he also explains: (my paraphrasing, not a quote):<br />
+      /S tells Regedit to work silently: it won't ask the user "are you sure ...", won't report success, but reports errors.<br />
+      <br />
+      Thanks Kitchik for the tip about /s. It prompts the folowing questions:<br />
+      1) Are there any other command line switches for Regedit?<br />
+      2) Why, instead of the above code, can't we simply use (method 2):<br />
+      <pre>
+<code><br />  ExecWait 'Regedit.exe /s "$EXEDIR\myreg.reg"'  ; merge myreg.reg into target PC's registry<br /></code>
+</pre><br />
+      In other words, why not run the .reg file straight from the distribution media rather than first copy it to the target PC and later delete it.<br />
+      <br />
+      3) What do you think about the following alternative (method 3):<br />
+      <pre>
+<code><br />  ExecShell "" "$EXEDIR\myreg.reg"<br /></code>
+</pre><br />
+      Advantage: If Regedit.exe is not in the search path on the target PC (it might have been moved for security reasons), methods 1 and 2 will produce an error, but method 3 will still work provided the target PC has a file association set up for file-type .reg which correctly points to Regedit.exe.<br />
+      Disadvantage: There does not seem to be a way of using the /s switch with method 3.<br />
+      <br />
+      4) Is this correct, or is there some way of using /s with method 3 (shell-exec)?<br />
+      <br />
+      5) Alternatively, can the /s switch be put into the .reg file itself?<br />
+      (i.e. would Regedit recognise it as a command rather than a registry entry?) On reflection, I think not (but if anyone knows better, please say so). Experimentation on my Windows98.SE PC suggests that Regedit asks "are you sure…" before looking at the contents of myreg.reg. If myreg.reg is not of the expected format (e.g. if the header line "REGEDIT4" is missing or is in lower case), Regedit will still ask "are you sure…" and only then report an error. (On the other hand, it's worth noting that if you change the 4 to something else, it won't work, but Regedit falsely reports success!)<br />
+      <br />
+      6) There is a syntax problem using method 3 (at least on my Windows98.SE PC).<br />
+      Note that in the above example, no explicit action is specified; rather, an empty string ("") is used to specify the default action. I think that it is better to specify an explicit action for the ExecShell instruction, because specifying the default action relies on making assumptions about what the default action will be on the target PC. Since this is user-changeable, this is not a safe assumption. I have found that specifying "merge" as the action in this case doesn't work - despite the fact that there is a shell action called "merge" for Regedit, AND "merge" is the default action. Anyone know why?<br />
+      <br />
+      Hint: If you edit the "merge" action in the Windows GUI using Explorer's "Edit File Type" facility, the action name is spelled "mer&amp;ge", but in the main "Edit File Type" box, in the list of actions, it shows up as "merge". I don't know what the significance of this is - can anyone shed any light on it?<br />
+      <br />
+      Also, I noticed that in HKEY_CLASSES_ROOT\regfile\shell, there is an "open" action, but this action does not show up anywhere in the GUI - not in the right-click context menu for .reg files, and not in the list of actions shown in the "Edit File Type" box for file type "Registration Entries" (.reg). Anyone know why? I tried using "open" as the action for ExecShell and it worked (i.e. it did what you would expect "merge" to do), but can we assume that this will be true on any target PC?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">prodangle</span><br />
+      <span class="post-time small text-muted">3rd November 2002 16:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">If it works, don't fix it :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">3rd November 2002 16:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Using dselkirk's program is the best way. I will give you answers to all of the above question probably not later than tomorrow.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Mottel</span><br />
+      <span class="post-time small text-muted">4th November 2002 00:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>dselkirk's program???</strong><br />
+      What (and where) is dselkirks program?<br />
+      (Sorry, it sounds like something you might assume we should know of, but I'm relatively new to this forum.)<br />
+      <br />
+      Also, while you're at it, could you point me to some more detailed documentation (with sample code?) of how to use FindWindow, SendMessage and IsWindow. (BTW, I'm NOT familiar with Windows API calls.)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">prodangle</span><br />
+      <span class="post-time small text-muted">4th November 2002 00:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Re: dselkirk's program???</strong><br /></p>
+
+      <blockquote>
+        <i>Originally posted by Mottel</i><br />
+        <b>What (and where) is dselkirks program?<br /></b>
+      </blockquote>If you read <a href="http://forums.winamp.com/showthread.php?threadid=111379" target="_blank">this thread</a> you should be filled in better :)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Mottel</span><br />
+      <span class="post-time small text-muted">4th November 2002 01:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>dselkirk program doesn't work</strong><br />
+      Whoops -- just realised what you meant by <a href="http://forums.winamp.com/showthread.php?threadid=111379" target="_blank">dselkirk's program</a>. (Ini2reg.zip) Sorry, but it doesn't work! See the attachment .zip file for an example:<br />
+      <br />
+      MyReg.reg -------------- is the original Registry export file.<br />
+      MyReg-BAD.nsi -------- is the output from Ini2reg<br />
+      My-Reg-02.nsi ---------- is the cleaned up output (what Ini2reg SHOULD have produced.)<br />
+      <br />
+      It falls over so badly in so many places, I wouldn't trust it further than I could vet it.<br />
+      There are some cases where there is no alternative to using Regedit. I came across one when I was trying to write a large block of binary data (in hex). If it exceeds 2Kb, NSIS can't handle it.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Mottel</span><br />
+      <span class="post-time small text-muted">4th November 2002 01:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Attachment</strong><br />
+      Sorry, looks like the attachment got lost.<br />
+      Here it is again -- hope it shows up this time.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dselkirk</span><br />
+      <span class="post-time small text-muted">4th November 2002 01:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">ini2reg was a very basic converter. it does not support anything fancy. it was a quick solution to someones problem. If you would like somethink better let me know and I'll see what I can do.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dselkirk</span><br />
+      <span class="post-time small text-muted">4th November 2002 02:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Here is an updated version which can do a little more. It now supports bin and dword import. Quotation and backslash problems fixed. It also creates the uninstall section as well. There's still somethings it can't do but should be good for basic usage.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Mottel</span><br />
+      <span class="post-time small text-muted">4th November 2002 09:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>ini2reg upgrade: comments</strong><br />
+      Well, this one's a vast improvement on version 1. Pretty good going for a couple of hours' work! :up:<br />
+      <br />
+      Just one suggestion:<br />
+      <br />
+      Where you have taken to using single quotes (I use the plural to denote that they come in pairs) to overcome the problem of consecutive delimiters, I would suggest that you switch to using the backward single quote (on the tilde key) instead.<br />
+      <br />
+      This will eliminate problems like the one shown below. At the moment, version 2 still falls over on one line of the sample input (myreg.reg) that I uploaded earlier on this thread.<br />
+      <br />
+      If you do that, then, instead of a line like this, which produces an error:<br /></p>
+      <pre>
+<code><br />  WriteRegStr HKCR "xxx.Audio\shell\ListBookmark" "" 'Add to Winamp's &amp;Bookmark list'<br /></code>
+</pre><br />
+      you will get:<br />
+      <pre>
+<code><br />  WriteRegStr HKCR "xxx.Audio\shell\ListBookmark" "" `Add to Winamp's &amp;Bookmark list`<br /></code>
+</pre><br />
+      which is okay, since NSIS supports all three kinds of quotes.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dselkirk</span><br />
+      <span class="post-time small text-muted">4th November 2002 14:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thank you. Here is the update you've requested.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">4th November 2002 14:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Re: Calling Regedit. Which method is better?</strong><br /></p>
+
+      <blockquote>
+        1) Are there any other command line switches for Regedit?
+      </blockquote><a href="http://support.microsoft.com/default.aspx?scid=KB;EN-US;Q82821&amp;" target="_blank">http://support.microsoft.com/default...;EN-US;Q82821&amp;</a><br />
+      [quote]2) Why, instead of the above code, can't we simply use:<br />
+      <pre>
+<code>ExecWait 'Regedit.exe /s "$EXEDIR\myreg.reg"'</code>
+</pre><br />
+      In other words, why not run the .reg file straight from the distribution media rather than first copy it to the target PC and later delete it.[/qoute]<br />
+      You assume here that the installation media is a CD-ROM or something alike. Most users of NSIS use one installer that contains it all as far as I know.<br />
+
+      <blockquote>
+        4) Is this correct, or is there some way of using /s with method 3 (shell-exec)?
+      </blockquote>The command windows uses is regedit.exe too, it doesn't include the full path. Have a look at the registry (HCKR\regfile\shell\open\command).<br />
+      <br />
+
+      <blockquote>
+        5) Alternatively, can the /s switch be put into the .reg file itself?
+      </blockquote>You can't do that.<br />
+      <br />
+
+      <blockquote>
+        6) There is a syntax problem using method 3 (at least on my Windows98.SE PC).<br />
+        Note that in the above example, no explicit action is specified; rather, an empty string ("") is used to specify the default action. I think that it is better to specify an explicit action for the ExecShell instruction, because specifying the default action relies on making assumptions about what the default action will be on the target PC. Since this is user-changeable, this is not a safe assumption. I have found that specifying "merge" as the action in this case doesn't work - despite the fact that there is a shell action called "merge" for Regedit, AND "merge" is the default action. Anyone know why?
+      </blockquote>The action name is open, the action display name is Mer&amp;ge...
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Player 1</span><br />
+      <span class="post-time small text-muted">30th November 2002 12:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">and Mer&amp;ge looks like "Mer<u>g</u>e".<br />
+      pushing g will click that command.<br />
+      &amp;&amp; = "&amp;"</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

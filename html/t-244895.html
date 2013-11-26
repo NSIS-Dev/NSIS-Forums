@@ -1,0 +1,364 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="wansis and LoadImage problems" />
+
+  <title>wansis and LoadImage problems - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">wansis and LoadImage problems</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=244895">wansis and LoadImage problems</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">29th April 2006 03:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>wansis and LoadImage problems</strong><br />
+      i use this command to load images i need to display on my installer<br /></p>
+      <pre>
+<code>ReadINIStr $ctrlhandle "$PLUGINSDIR\select_skin.ini" "Field 2" "HWND"<br />   System::Call "user32::LoadImage(i 0, t '$R0', i 0, i 310, i 180, i ${LR_LOADFROMFILE}) i.s"<br />   Pop $bmphandle<br />   <br />   SendMessage $ctrlhandle 0x0172 "" "$bmphandle"</code>
+</pre><br />
+      the images are changed by a droplist event<br />
+      <br />
+      with wansis:<br />
+      if i change the images too fast with the mouse wheel .. then the installer simply quits<br />
+      it's enough to scroll up or down several items in the list by moving the mouse wheel relatively fast<br />
+      <br />
+      without wansis:<br />
+      if i scroll like crazy for about 30 seconds then the image dissapears and same thing happens to all the other images in the installer [i.e. on the welcome/finish screen]
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">29th April 2006 10:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It probably runs out of handles. You should close the image handle after you're done with it.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">29th April 2006 15:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">now i have this code for reading the size of the bitmap image<br />
+      <br /></p>
+      <pre>
+<code>    System::Alloc 24<br />    Pop $R3<br />    System::Call `user32::LoadImage(i 0, t "$R0", i 0, i 0, i 0, i ${LR_LOADFROMFILE}) i.R1`<br />    System::Call `gdi32::GetObject(i R1, i 24, i R3)`<br />    System::Call `*$R3(i, i .R1, i .R2, i, i, i, i)`<br />    System::Call `gdi32::DeleteObject(i R1)`<br />    System::Free $R3<br /></code>
+</pre><br />
+      <br />
+      and this code to put the image on screen<br />
+      <br />
+      <pre>
+<code><br />   ReadINIStr $ctrlhandle "$PLUGINSDIR\select_skin.ini" "Field 2" "HWND"<br />   System::Call "user32::LoadImage(i 0, t '$R0', i 0, i '$0', i '$1', i ${LR_LOADFROMFILE}) i.s"<br />   Pop $bmphandle<br />   SendMessage $ctrlhandle 0x0172 "" "$bmphandle"<br />   System::Call `gdi32::DeleteObject(i bmphandle)`<br />   System::Call `gdi32::DeleteObject(i ctrlhandle)`<br />   ; last plugin call must not have /NOUNLOAD so NSIS will be able to delete<br />   ; the temporary DLL<br />   SetPluginUnload manual<br />   ; do nothing (but let the installer unload the System dll)<br />   System::Free $bmphandle<br />   System::Free $ctrlhandle</code>
+</pre><br />
+      <br />
+      i have put the lines for $bmphandle and $ctrlhandle in an attempt to free the resource<br />
+      <br />
+      still exactly the same problems<br />
+      but after i have added the code to read the image pixel size the problems appear sooner [on scroll wheel select]
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">29th April 2006 15:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Not sure why you need the code to get the image size. You can just use 0 for the width and height when you want to use the original dimensions when using LoadImage (just like I have done in the code that you requested).<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">29th April 2006 16:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i need it because i need to resize the image to fit the window<br />
+      <br />
+      the image is from outside of the installer<br />
+      and it may have a different size than the size i can put in the installer 310x180<br />
+      so i need to display a scaled image in the installer, i don;t want a distorted one</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joel</span><br />
+      <span class="post-time small text-muted">29th April 2006 18:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I have on mu vault a script to get bitmap sizes...<br />
+      <br />
+      Converted to nsis...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">29th April 2006 20:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">:) thanx for the script<br />
+      but the problem is not the image size<br />
+      i have the image size and also have made the code to scale down the image to fit in 320x180 pixels because i will use images of any size<br />
+      <br />
+      but the problem is that the installer seems to have some problems when i change the image using a droplist event<br />
+      <br />
+      with or without wansis<br />
+      <br />
+      with wansis it's more dificult because the installer exits for no reason<br />
+      <br />
+      without wansis if i change the droplist [eachs change causes the image to change also]after a while all the images from the installer are gone [incl. those from welcome/finish pages]<br />
+      <br />
+      so i susspect there is a problem with my code<br />
+      maybe i have smth wrong with image handles ...<br />
+      <br />
+      i have posted the code because i am not sure i have the correct commands for closing the handle ..<br />
+      <br />
+      thanx in advance :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">29th April 2006 20:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Your delete object calls are missing a dollar sign for the bmphandle vriable. ctrlhandle shouldn't be closed.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">29th April 2006 20:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">ok i have this code now ...<br />
+      <br /></p>
+      <pre>
+<code>   ReadINIStr $ctrlhandle "$PLUGINSDIR\select_skin.ini" "Field 2" "HWND"<br />   System::Call "user32::LoadImage(i 0, t '$R0', i 0, i '$0', i '$1', i ${LR_LOADFROMFILE}) i.s"<br />   Pop $bmphandle<br />   SendMessage $ctrlhandle 0x0172 "" "$bmphandle"<br />   System::Call `gdi32::DeleteObject(i $bmphandle)`<br /></code>
+</pre><br />
+      <br />
+      now it's a little strange<br />
+      the images r dissapearing like before<br />
+      exept a few of them from the droplist [2 maybe 3]<br />
+      <br />
+      also .. no image appears at the first run [on page show]<br />
+      <br />
+      <br />
+      i have 40-60 items in the drolist so i have to read 40-60 different bitmap images<br />
+      images are read each time i change the droplist<br />
+      <br />
+      maybe i chenge too fast with the mouse wheel so the system diesn;t have time to do all the commands<br />
+      <br />
+      do you think it would be usefull to add a delay timer of about 100 miliseconds?<br />
+      like Sleep 100<br />
+      [to give time to the system to do the comands and close the handle aswell]
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">29th April 2006 21:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You should close the handle only after you change the picture. If you close the handle of an image being displayed, it'll disappear.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">29th April 2006 21:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">ah yes ... true<br />
+      but the image remains on the screen untill a another window gets over and then the image dissapears<br />
+      <br />
+      but i have observed that it seems my used memory increases during this operation [changing the droplist]<br />
+      but it gets nowhere near 50% ...<br />
+      <br />
+      on task manager i have the setup using abou 3-4 megs maximum<br />
+      <br />
+      but the page file usage increases a lot .. 100-200 megs maybe more</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">29th April 2006 21:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">oh, i have observed smth interesting<br />
+      <br />
+      at the first display of each of the bmp images, all is ok<br />
+      no increase in memory usage or page file usage [not even by a bit]<br />
+      <br />
+      but then on the second display it starts to increase pf usage<br />
+      third disply of the same picture same increase ... and so on<br />
+      <br />
+      so at some point the hard disk starts to roll and the images dissapear<br />
+      after 5-6 displays of all 60 pictures<br />
+      <br />
+      why is this happening</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">30th April 2006 11:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">now i have added the code<br />
+      System::Call `gdi32::DeleteObject(i $bmphandle)`<br />
+      just before changing the bitmap<br />
+      <br />
+      now i can change the images twice before the pagefile starts to load data<br />
+      <br />
+      is this a bug of LoadImage .. or is it me?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">1st May 2006 19:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It's you. You are probably not handling the handles correctly. If you can't find the problem, attach the entire script for a review.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">2nd May 2006 01:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i have posted reply by mistake to the other post, sorry<br />
+      <br />
+      i have simplified the code<br />
+      i have deleted some functions that were reading from some files [fileopen, file read, fileclose and a few loops], and read from registry<br />
+      <br />
+      now the pictures don't disappear, but after a few scrolls<br />
+      i get the size of the pictures x=0 y=o :-s<br />
+      <br />
+      please put some bmp's in the "pict" directory to test<br />
+      prefferably more than 20 with 500*300 pixels or bigger</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">2nd May 2006 12:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">In your code to get the bitmap size, you change $R1 which contains the bitmap handle. When you later call DeleteObject, it's deleting the wrong object.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">2nd May 2006 12:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i have tried that also<br />
+      same error :cry:</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">2nd May 2006 21:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">it woked :D<br />
+      soory, it was my fault<br />
+      well, i have adapted the code from Afrow UK<br />
+      it seems he made the same error in his code<br />
+      <br />
+      this is the code i have used to make it work<br />
+      <br /></p>
+      <pre>
+<code>    System::Alloc 24<br />    Pop $R3<br />    System::Call `user32::LoadImage(i 0, t "$R0", i 0, i 0, i 0, i ${LR_LOADFROMFILE}) i.R7`<br />    System::Call `gdi32::GetObject(i R7, i 24, i R3)`<br />    System::Call `*$R3(i, i .R1, i .R2, i, i, i, i)`<br />    System::Call `gdi32::DeleteObject(i $R7)`<br />    System::Free $R3</code>
+</pre><br />
+      <br />
+      but the problem with wansis still remains<br />
+      setup exits if i rapidly change the droplist<br />
+      <br />
+      wansis is not skining the droplist<br />
+      is this a wansis problem?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">2nd May 2006 22:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">here is the script i have used for testing<br />
+      quick scroll the droplist with ouse wheel and installer exits :-s<br />
+      <br />
+      do you recommend using skincrafter instead?<br />
+      <br />
+      personally i have chosen wansis because of the simplicity of the bmp files</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">2nd May 2006 22:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">sorry i forgot to attach the script</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">3rd May 2006 10:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I don't know why it crashes with wansis, but the rest works fine. The GDI handle count stays foot and so does the memory usage. You should contact the author of wansis.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dandaman32</span><br />
+      <span class="post-time small text-muted">3rd May 2006 20:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'va had a similar problem with wansis and droplist events in the ExperienceUI 1.1 beta 3 installer (i think). When I did the mouse wheel thing under Win2k it showed a "setup.exe has generated errors and will be closed by Windows" message. It didn't change a bitmap, just a couple of labels. There were only 4 options in the drop down list.<br />
+      <br />
+      -dandaman32</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">sorinoss</span><br />
+      <span class="post-time small text-muted">7th May 2006 23:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">have you solved the problem?<br />
+      or the only solution is to remove wansis...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">onad</span><br />
+      <span class="post-time small text-muted">8th May 2006 15:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">you could opt for a sleep of a few millisecs in the script.<br />
+      ( and forced message que refresh maybe)</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

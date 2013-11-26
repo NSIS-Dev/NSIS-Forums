@@ -1,0 +1,298 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="MUI_PAGE_DIRECTORY Read Only" />
+
+  <title>MUI_PAGE_DIRECTORY Read Only - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">MUI_PAGE_DIRECTORY Read Only</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=312932">MUI_PAGE_DIRECTORY Read Only</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">xbarns</span><br />
+      <span class="post-time small text-muted">24th September 2009 11:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>MUI_PAGE_DIRECTORY Read Only</strong><br />
+      Hi all,<br />
+      <br />
+      i am trying to get the MUI_PAGE_DIRECTORY Page to display the path "greyed out/read only" when it finds the Path Variable for that setup already set in the Registry.<br />
+      <br />
+      I am using !define MUI_PAGE_CUSTOMFUNCTION_PRE "PRE_PAGE_DIRECTORY" to determine the path and according to what it finds out would like to make the directory page read only.<br />
+      <br />
+      Any ideas how i could do that?<br />
+      <br />
+      Thanks<br />
+      xBarns</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">24th September 2009 11:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">From the MUI2 readme:<br /></p>
+
+      <blockquote>
+        In the show function, the window handles of all controls on the page can be retrieved from a Modern UI variable. A list of the variables names is not yet available. For now, refer to the source files of the Modern UI 2.0. The variable declarations can be found in the first lines of the header file for a certain page.
+      </blockquote>Find the HWND variable from the MUI2 DIRECTORY page header (NSIS\Contrib\Modern UI 2\Pages\Directory.nsh), then in the page's show function use enablewindow to disable the path control and browse button.<br />
+      <br />
+      <a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.14.4" target="_blank">http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.14.4</a>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">xbarns</span><br />
+      <span class="post-time small text-muted">24th September 2009 13:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I did actually read that but did not recognize it to be the solution to my problem.<br />
+      <br />
+      For those interested here is how it works.<br />
+      <br /></p>
+      <pre>
+<code><br />!define MUI_PAGE_CUSTOMFUNCTION_PRE "PRE_PAGE_DIRECTORY"<br />!define MUI_PAGE_CUSTOMFUNCTION_SHOW "SHOW_PAGE_DIRECTORY"<br />!insertmacro MUI_PAGE_DIRECTORY<br /><br />Function PRE_PAGE_DIRECTORY<br />  Var /GLOBAL DISABLEDIRECTOY<br />  ReadRegStr $0 HKLM "${REGKEY}" Path<br />  ${IF} $0 != '' <br />    StrCpy $DISABLEDIRECTOY 1<br />  ${ANDIF} $0 != $INSTDIR<br />    StrCpy $INSTDIR $0<br />  ${ENDIF}<br />FunctionEnd<br /><br />Function SHOW_PAGE_DIRECTORY<br />  ${IF} $DISABLEDIRECTOY == 1<br />    EnableWindow $mui.DirectoryPage.Directory 0<br />    EnableWindow $mui.DirectoryPage.BrowseButton 0<br />  ${ENDIF}<br />FunctionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">abcdgoldfish</span><br />
+      <span class="post-time small text-muted">25th September 2009 16:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm trying to do the same thing and have to say your timing was perfect. Thanks for the code. But, when I implemented it, the path was not grayed out.<br />
+      <br />
+      What I did was create a .nsh file called DetectDir.nsh containing the code you provided (with appropriate tweaks) and replaced my .nsi's !insertmacro MUI_PAGE_DIRECTORY statement with !insert DetectDir.nsh<br />
+      <br />
+      The code executes as I would expect - to prove it, I put a MessageBox under the line<br />
+      ${IF} $DISABLEDIRECTORY == 1<br />
+      so the EnableWindow statements are executed. Yet the directory field is still active. What am I missing?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">xbarns</span><br />
+      <span class="post-time small text-muted">25th September 2009 16:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">uh,<br />
+      <br />
+      i have no idea if<br />
+      <br /></p>
+
+      <blockquote>
+        What I did was create a .nsh file called DetectDir.nsh containing the code you provided (with appropriate tweaks) and replaced my .nsi's !insertmacro MUI_PAGE_DIRECTORY statement with !insert DetectDir.nsh
+      </blockquote>is the right way to do such a thing, what prevents you from doing it the way i did it?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">abcdgoldfish</span><br />
+      <span class="post-time small text-muted">25th September 2009 18:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm not sure what you're asking. The only thing I did was create a .nsh file containing your code with one line modified:<br />
+      <br />
+      ReadRegStr $0 HKLM "SOFTWARE\myCompany\myProduct" "aKeyWithPathInfo"<br />
+      <br />
+      I made this a .nsh file for now because my .nsi file is fairly large and this helped me isolate your code so I could study it more easily in action.<br />
+      <br />
+      Running this I learned that $0 got loaded with the value of Path. All the logic works. It's just that the directory entry isn't disabled by the EnableWindow statements.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">xbarns</span><br />
+      <span class="post-time small text-muted">25th September 2009 19:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I think you have to keep<br />
+      <br />
+      !insertmacro MUI_PAGE_DIRECTORY<br />
+      <br />
+      because if not the page will never be shown, or do you have the "!insertmacro MUI_PAGE_DIRECTORY" in your .nsh file?<br />
+      <br />
+      You can "export" the code to an .nsh file (the 2 functions) but you need to keep this:<br />
+      <br />
+      !define MUI_PAGE_CUSTOMFUNCTION_PRE "PRE_PAGE_DIRECTORY"<br />
+      !define MUI_PAGE_CUSTOMFUNCTION_SHOW "SHOW_PAGE_DIRECTORY"<br />
+      !insertmacro MUI_PAGE_DIRECTORY<br />
+      <br />
+      <br />
+      Or am i not getting something here?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">abcdgoldfish</span><br />
+      <span class="post-time small text-muted">25th September 2009 20:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I hope this isn't a double post. My browser keeps messing up my text. Anyway, thanks for taking the time to help me with this.<br />
+      <br />
+      MyFile.nsh file contains this:<br />
+      <br />
+      !define MUI_PAGE_CUSTOMFUNCTION_PRE "PRE_PAGE_DIRECTORY"<br />
+      !define MUI_PAGE_CUSTOMFUNCTION_SHOW "SHOW_PAGE_DIRECTORY"<br />
+      !insertmacro MUI_PAGE_DIRECTORY<br />
+      <br />
+      Function PRE_PAGE_DIRECTORY<br />
+      Var /GLOBAL DISABLEDIRECTORY<br />
+      ReadRegStr $0 HKLM "SOFTWARE\myCompany\myProduct" "PathToExe"<br />
+      ${IF} $0 != ''<br />
+      StrCpy $DISABLEDIRECTORY 1<br />
+      ${ANDIF} $0 != $INSTDIR<br />
+      StrCpy $INSTDIR $0<br />
+      ${ENDIF}<br />
+      <br />
+      FunctionEnd<br />
+      <br />
+      Function SHOW_PAGE_DIRECTORY<br />
+      ${IF} $DISABLEDIRECTORY == 1<br />
+      EnableWindow $mui.DirectoryPage.Directory 0<br />
+      EnableWindow $mui.DirectoryPage.BrowseButton 0<br />
+      ${ENDIF}<br />
+      FunctionEnd<br />
+      <br />
+      I commented out !insertmacro MUI_PAGE_DIRECTORY in the .nsi file and added !include myFile.nsh.<br />
+      <br />
+      When I run the code even without calling the two above functions from a section they still get invoked, due to the PRE prefix I figure. In any event, the directory page shows up with the path still editable.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">abcdgoldfish</span><br />
+      <span class="post-time small text-muted">25th September 2009 22:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Here's some relevant info. Looking at the log generated from the above code, I see this:<br />
+      <br />
+      Function: "SHOW_PAGE_DIRECTORY"<br />
+      !insertmacro: _If<br />
+      !insertmacro: end of _If<br />
+      <br />
+      warning: unknown variable/constant "mui.DirectoryPage.Directory" detected, ignoring (MyFile.nsh:23)<br />
+      EnableWindow: handle=$mui.DirectoryPage.Directory enable=0<br />
+      <br />
+      warning: unknown variable/constant "mui.DirectoryPage.BrowseButton" detected, ignoring (MyFile.nsh:24)<br />
+      EnableWindow: handle=$mui.DirectoryPage.BrowseButton enable=0<br />
+      <br />
+      !insertmacro: _EndIf<br />
+      !insertmacro: end of _EndIf<br />
+      FunctionEnd<br />
+      <br />
+      For some reason the compiler doesn't see the Directory or BrowseButton.<br />
+      <br />
+      Directory.nsh has this:<br />
+      <br />
+      !macro MUI_FUNCTION_DIRECTORYPAGE PRE SHOW LEAVE<br />
+      --snip--<br />
+      Function "${SHOW}"<br />
+      ;Get control handles<br />
+      FindWindow $mui.DirectoryPage "#32770" "" $HWNDPARENT<br />
+      GetDlgItem $mui.DirectoryPage.Text $mui.DirectoryPage 1006<br />
+      GetDlgItem $mui.DirectoryPage.DirectoryBox $mui.DirectoryPage 1020<br />
+      GetDlgItem $mui.DirectoryPage.Directory $mui.DirectoryPage 1019<br />
+      GetDlgItem $mui.DirectoryPage.BrowseButton $mui.DirectoryPage 1001<br />
+      <br />
+      --snip--<br />
+      !insertmacro MUI_PAGE_FUNCTION_CUSTOM SHOW<br />
+      FunctionEnd<br />
+      --snip--<br />
+      !macroend</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">26th September 2009 07:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You should not remove the page defines from your .nsi file. Remove them from the nsh and put them back in your real script, together with the other page commands/defines.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">abcdgoldfish</span><br />
+      <span class="post-time small text-muted">26th September 2009 16:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Why would that make a difference? Aren't .nsh files simply in-lined? Anyway, I went ahead and copied all of the .nsh code into the .nsi. I get the same result. The telling symptom is the complier warnings:<br />
+      <br />
+      unknown variable/constant "mui.DirectoryPage.Directory" detected, ignoring (myFile.nsi:162)<br />
+      unknown variable/constant "mui.DirectoryPage.BrowseButton" detected, ignoring (myFile.nsi:163)<br />
+      <br />
+      Any idea why they are undefined?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">27th September 2009 06:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by abcdgoldfish</i><br />
+        [B]Why would that make a difference? Aren't .nsh files simply in-lined?
+      </blockquote>They are, but on this end there's no way to know whether or not you include the nsh at the proper place. And since the order of page defines also determines the order of pages...<br />
+      <br />
+      Anyway, are you sure you're including mui2.nsh, and not mui.nsh?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">abcdgoldfish</span><br />
+      <span class="post-time small text-muted">27th September 2009 17:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Here is a snippet of my code:<br />
+      <br />
+      !include MUI2.nsh<br />
+      !insertmacro MUI_DEFAULT MUI_WELCOMEFINISHPAGE_BITMAP "${NSISDIR}\Contrib\Graphics\Wizard\main_left.bmp"<br />
+      !define MUI_ABORTWARNING<br />
+      !define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\myIcon.ico"<br />
+      !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\myUninstall.ico"<br />
+      !define MUI_WELCOMEPAGE_TITLE_3LINES<br />
+      !insertmacro MUI_PAGE_WELCOME<br />
+      !define MUI_LICENSEPAGE_CHECKBOX<br />
+      !insertmacro MUI_PAGE_LICENSE "my_eula.rtf"<br />
+      <br />
+      ; This is the macro I replace with the above code either directly or with the !include myFile.nsh.<br />
+      ;!insertmacro MUI_PAGE_DIRECTORY<br />
+      <br />
+      In one experiment, I tried including MUI.nsh In another I included neither MUI.nsh nor MUI2.nsh. In all three cases I got the same result, which is very surprising.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">abcdgoldfish</span><br />
+      <span class="post-time small text-muted">27th September 2009 22:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Okay, I found it. I had a myCode.nsi fiel and a myCode.nsh file. My build script was using the wrong file which indeed was calling !include MUI.nsh, not MUI2.nsh. When I call the right script it works as desired.<br />
+      <br />
+      Thanks for your help and patience.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

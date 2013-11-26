@@ -1,0 +1,195 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="RMdir /r followed by File /r generating random i/o errors" />
+
+  <title>RMdir /r followed by File /r generating random i/o errors - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">RMdir /r followed by File /r generating random i/o errors</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=336494">RMdir /r followed by File /r generating random i/o errors</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Ron.Stordahl</span><br />
+      <span class="post-time small text-muted">24th October 2011 22:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>RMdir /r followed by File /r generating random i/o errors</strong><br />
+      I have found that the following code:</p>
+      <pre>
+<code>RMDir</code><span style="color: #007700">/</span><span style="color: #0000BB">r</span><span style="color: #DD0000">"$INSTDIR\Documents"
+<br /></span><span style="color: #0000BB">SetOverwriteON
+<br />File</span><span style="color: #007700">/</span><span style="color: #0000BB">r</span><span style="color: #DD0000">"..\BPQ32\Files\Documents"
+</span>
+</pre>will generate random i/o failures thus:<br />
+      <br />
+      Error opening file for writing<br />
+      C:\Program Files (x86)\BPQ32\Documents\Thumbs.db<br />
+      <br />
+      Installer stops at<br />
+      Output folder: c:\Program Files (x86)\BPQ32\Documents.<br />
+      <br />
+      This i/o error (although it isn't always the same file name) has occurred on several Windows 7 machines and one XP machine. The occurance rate is low, perhaps one in 10 runs of the installer.<br />
+      <br />
+      To try to isolate this I placed a MessageBox immediately following the RMDir /r and with that I could never reproduce it. I then replaced the MessageBox with a Sleep 1000 and could never reproduce it. Removing the Sleep 1000 results in the error returning.<br />
+      <br />
+      I suspect that the RMDir /r operation is using proceed i/o (overlapped, Asynchronous) when it should be using wait i/o (Synchronous).<br />
+      <br />
+      The RMDir /r operation is apparently not yet completed when the write from the File operation is attempted.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">24th October 2011 22:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">How about adding <b>/x Thumbs.db</b> to your File instruction.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Ron.Stordahl</span><br />
+      <span class="post-time small text-muted">24th October 2011 23:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Since it is occurring at multiple places in my installer and for multiple files it would do not good to pick just one file. The filename can be any one of the potentially hundreds in the folders I am replacing. The documents folder contains 152 files and 6 folders, several deep. I can see that it is a bit time consuming for the system to completely delete it.<br />
+      <br />
+      When I insert a 1 second delay following the RMDir the error never occurs. I would guess 1 second is entirely too long, but it works so I am using it.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">24th October 2011 23:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">So it's not just Thumbs.db? I can see that file in particular causing problems as it's the thumbnail cache and it can still be in use by Windows. It also has hidden+system attributes which can prevent write access. Either way, you should exclude it from your installer as it will be adding extra size unnecessarily.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Ron.Stordahl</span><br />
+      <span class="post-time small text-muted">25th October 2011 02:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">No it is not for any particular file, rather it can be apparently any file that at that point is being allocated or written. Some that it has failed on are needed exe's for example. With 'sleep 1000' inserted after the rmdir /r the problem is gone. I have had to do this at several places in my code. Not an attractive work around, but it gets me by.<br />
+      <br />
+      My conclusion is that the rmdir should be using wait i/o.<br />
+      <br />
+      How can I get this issue to the attention of one of the NSIS developers?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">25th October 2011 07:40 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by Ron.Stordahl</small><br />
+        How can I get this issue to the attention of one of the NSIS developers?
+      </blockquote>You should file a bug report in the bug tracker, or submit a code page if you know the solution. You could also drop by in the IRC channel if you want to discuss it realtime.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">25th October 2011 14:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">NSIS does not do any async I/O IIRC, maybe antivirus or something like that is getting in the way?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Ron.Stordahl</span><br />
+      <span class="post-time small text-muted">25th October 2011 15:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ill file a report in the bug tracker, once I find where that is..perhaps you have a link?<br />
+      <br />
+      No it's not a virus issue, I just reproduced it on a new W7 laptop fresh out of the box. The occurrence rate is low, maybe 1 out of 20 runs, but unacceptable of course. And yes I know a workaround, put a 'sleep 1000' after every RMDir /r.<br />
+      <br />
+      Now to try to find the bug tracker page.....</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">25th October 2011 16:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">He didn't say virus issue, he said antivirus. Antivirus software locks all accessed files for a short while while it scans them, before any operation can be performed on them. You can test this by disabling your virusscanner, and checking whether that solves the problem.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Ron.Stordahl</span><br />
+      <span class="post-time small text-muted">25th October 2011 17:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Sorry...I misunderstood. Actually the Windows 7 Laptop I just tested this on, obtaining the failure after about 15 consecutive runs of the installer, was right out of the box and had no antivirus scanner on it...it keeps warning me that I need to get one! Perhaps Ill download MSE at some point, after I first do about a years worth of security updates.<br />
+      <br />
+      I still suspect the RMDir is not using wait i/o. I never see the issue if I add a 'sleep 1000' after each RMDir. Makes the installer kind of jerky, but gets me by for now.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">25th October 2011 18:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">If you don't pass /REBOOTOK we just use the plain Find*, RemoveDirectory and DeleteFile, none of them are async. (See util.c in exehead source)<br />
+      <br />
+      MSDN says "The DeleteFile function marks a file for deletion on close. Therefore, the file deletion does not occur until the last handle to the file is closed." This smells like a antivirus and/or indexer issue to me...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Ron.Stordahl</span><br />
+      <span class="post-time small text-muted">25th October 2011 19:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Since it occurs on machines with and w/o antivirus software I am dismissing that possibility. As to indexing...perhaps there is a command that can be invoked from within NSIS to turn off indexing, where and if it was on, then turn it on again when the installer finishes? If so I can try that.<br />
+      <br />
+      As I said I have 'resolved' the problem by inserting 'sleep 1000' after each RMdir, but that does not get to the root of the problem..it only masks it.<br />
+      <br />
+      When time allows I will post a bug report, when I find where that is done.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">25th October 2011 20:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It would really help if you could come up with a minimal sample script (and any required files) so I could try to reproduce this (Please come up with a sample that does not include Thumbs.db or other internal windows files)<br />
+      <br />
+      You report bugs on the NSIS sourceforge tracker (project page on SF)</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

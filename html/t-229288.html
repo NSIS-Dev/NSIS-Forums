@@ -1,0 +1,179 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Bug with GetFileTime under Win9x" />
+
+  <title>Bug with GetFileTime under Win9x - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Bug with GetFileTime under Win9x</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=229288">Bug with GetFileTime under Win9x</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">smatte</span><br />
+      <span class="post-time small text-muted">25th October 2005 15:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Bug with GetFileTime under Win9x</strong><br />
+      I used this code :<br />
+      -----------------------------------<br />
+      !define LOW1 $0<br />
+      !deinfe HIGH1 $1<br />
+      !define LOW2 $2<br />
+      !deinfe HIGH2 $3<br />
+      GetFileTime ${FILENAME} ${HIGH1} ${LOW1}<br />
+      GetFileTimeLocal "c:\program files\local file.dat" ${HIGH2} ${LOW2}<br />
+      IntCmpU ${HIGH1} ${HIGH2} 0 local_is_newer user_has_newer<br />
+      ; compare lows<br />
+      IntCmpU ${LOW1} ${LOW2} 0 local_is_newer user_has_newer<br />
+      ; files has the same time<br />
+      Return<br />
+      <br />
+      local_is_newer:<br />
+      ; user has an old file, install a newer version<br />
+      File /oname=${FILENAME} "localfile.dat"<br />
+      Return<br />
+      <br />
+      user_has_newer:<br />
+      ; user has a newer version<br />
+      MessageBox MB_OK "cheater!"<br />
+      ---------------------------------------<br />
+      <br />
+      But it didn't work under win9x because the low value isn't the same under this OS? Any patch or other way to compare local file and destination file?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">25th October 2005 15:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">How exactly didn't it work? And why not use SetOverwrite ifnewer?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">smatte</span><br />
+      <span class="post-time small text-muted">26th October 2005 13:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">What I need is Overwrite ifdiff. But anyway SetOverwrite ifdiff also have a bug under Win9x.<br />
+      <br />
+      Step to reproduce:<br />
+      -Install on a clean Win9x machine<br />
+      -Reinstall the same software(always using SetOverwrite ifdiff)<br />
+      <br />
+      Result: The file is replaced and if the file was locked, the error flag is set.<br />
+      Expected: The file is skiped because it is the same.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">27th October 2005 19:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The attached script works perfectly fine for me. Can you attach a complete script that shows the problem?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">smatte</span><br />
+      <span class="post-time small text-muted">27th October 2005 20:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Don't forgat that the error is only under win9x and ME but works well under WinXP.<br />
+      <br />
+      Your script is a very good example:<br />
+      Install for the first time.<br />
+      Reinstall without uninstalling before.<br />
+      The file is already present and is not suppose to be replaced. So on win98 you'll see in details window: Extract: Blah.nsi...100%<br />
+      But on winXP you'll have Skipped: Blah.nsi<br />
+      <br />
+      Got it? :confused:</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">27th October 2005 20:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I wrote and tested it on Windows 98. On the first time it was extracted, and on the second, it was skipped. If it's always extracted for you, you might have some program running on the background and altering the timestamps. Maybe an anti-virus or some automatic file scanner?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">smatte</span><br />
+      <span class="post-time small text-muted">27th October 2005 22:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK! now I know...you must compile on WinXp but execute on Win98. If you compile on Win98 you wont get the bug.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">28th October 2005 00:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Must be the FAT 2 seconds time resultion. I'll check it out tomorrow.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">smatte</span><br />
+      <span class="post-time small text-muted">28th October 2005 22:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This could help you...<br />
+      <a href="http://support.microsoft.com/default.aspx?scid=kb;en-us;127830" target="_blank">http://support.microsoft.com/default...b;en-us;127830</a><br />
+      but you seem to already know that.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">29th October 2005 00:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">There are a few things to think about:</p>
+
+      <ol style="list-style-type: decimal">
+        <li>Should GetLocalFileTime and GetFileTime be affected as well, or should the user implement this at wish?</li>
+
+        <li>Will it be enough to round the time only on the compiler's side? It will work, but it will break backward compatibility. Upgraded installers that already used ifdiff, will install the file once again, but only once. However, this is easier to implement, and can be tuned by some compiler directive.</li>
+
+        <li>Other things I forgot because it's late.</li>
+      </ol>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">5th November 2005 14:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Made it round the time on the compiler side. Improvements can be added later.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

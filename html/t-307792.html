@@ -1,0 +1,189 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Large temporary file with /solid compression" />
+
+  <title>Large temporary file with /solid compression - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Large temporary file with /solid compression</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=307792">Large temporary file with /solid compression</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">punkomat</span><br />
+      <span class="post-time small text-muted">29th June 2009 12:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Large temporary file with /solid compression</strong><br />
+      I have a relatively large installer, 1.3 GB uncompressed. You can imagine every little bit of extra compression helps, such as enabling solid compression: the end result with /solid lzma is a sweet 260MB.<br />
+      <br />
+      The problem I'm seeing now is that solid compression generates at run-time a <b>large temporary file</b>, as large as the whole uncompressed size. (Note: this should not be confused with the temporary file generated at build time; it's a similar issue though, that manifests at install time). The end result is that the user can't install if the space is less than 2.5 GB, and the Temp folder is on the same partition. The extra space required in Temp is also not accounted for in the "required space" calculation, so the user is allowed to continue, only to have the install crash midway.<br />
+      <br />
+      Is this the normal behaviour of /solid or is it a bug ? I see that solid archives can be uncompressed by 7zip without generating a large temporary file, so it's not a fundamental issue with the algorithm. At the very least, the free space calculation should be updated.<br />
+      <br />
+      I'm using 2.45</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">29th June 2009 12:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Normal behavior. Don't use solid compression for such large installers.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">punkomat</span><br />
+      <span class="post-time small text-muted">29th June 2009 13:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">That's a pity, the benefits of solid compression are most visible on large installers. Without /solid the installer comes out as 300MB, 14% larger.<br />
+      <br />
+      I'm pretty sure though that underestimating the required free space by a factor of two <b>is indeed a bug</b>.<br />
+      Can you please give more details about why the NSIS design requires this temp file ? If feasible, I'd like to go down in the source code and remove it, or at least fix the space computation.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">29th June 2009 13:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">There's an open bug for it in the bug tracker.<br />
+      <br />
+      It's built this way because NSIS doesn't have a specific order in which it extracts files. It just goes by what the script tells it to. Imagine the following script:</p>
+      <pre>
+<code>Function install<br />  File 2.dat<br />FunctionEnd<br /><br />Section<br />  File 1.dat<br />  Call install<br />SectionEnd</code>
+</pre>1.dat needs to be extracted first, but 2.dat will be compressed first. If there was no temporary file, it would have to decompress 2.dat twice. A simpler and probably more common example would be:
+      <pre>
+<code>File 1.dat<br />File 2.dat<br />File 1.dat</code>
+</pre>And it gets more complicated when you throw in plug-ins and callback functions.<br />
+      <br />
+      As for space requirements, the temporary file goes into the temporary directory which might not be on the same drive where the files are installed. So that adds even more fun to this.<br />
+      <br />
+      Let me know if you need more details.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">punkomat</span><br />
+      <span class="post-time small text-muted">29th June 2009 15:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Found the bug:<br />
+      <a href="http://sourceforge.net/tracker/index.php?func=detail&amp;aid=987385&amp;group_id=22049&amp;atid=373085" target="_blank">http://sourceforge.net/tracker/index...49&amp;atid=373085</a><br />
+      <br />
+      It's a complex issue, indeed. My suggested solution:<br />
+      <br />
+      :winamp: Installation starts with an empty installdir, and an empty temporary folder<br />
+      <br />
+      :winamp: Installation maintains a map data structure, that contains associations of the form: {internal path, extraction path}; this data structure starts out empty<br />
+      <br />
+      :winamp: Whenever a file is read, referred by it's internal path, it is first searched in the map:</p>
+
+      <ul>
+        <li>If the internal path does not exist in the map, the installer seeks ahead in the archive, extracting any files it finds in a temporary folder structure; the files are extracted individualy, not as a single file; for each extracted file, the map is updated; this continues until the required file is found</li>
+
+        <li>If the internal path exists in the map, the respective external file is used; ANDIF the operation is File, and the external file is in the temp folder, the file is MOVED to the new location, and the map updated to it's new location</li>
+      </ul><br />
+      For your first example, the install will first try to install File1, but will first bump into File2 and will extract it into the temporary folder. Finally when function "install" is called, File2 will be moved from Temp to it's install location.<br />
+      <br />
+      For your second example, no files will be extracted in temp. However, when File1 is requested for the second time, it's previous extract location is read from the map, and the file is copied from that location. (This fails if the install already deleted File1 before extracting it a second time; but it's quite an extreme case, I would say, enough to justify re-seeking trough the full installer when it happens)<br />
+      <br />
+      As you can see the the algorithm allows the files to exist only once, either in Temp or Installdir, so the 2x space problem is fixed. A speed optimization would be to try and create the temporary folder on the same partition that holds Installdir, for an instantaneous file move.<br />
+      <br />
+      The devil is in the details, though...
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">29th June 2009 15:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You can't trust files to be left unmodified after they're extracted. You'll need to maintain a CRC list as well and verify the CRC of each file before you copy/move it. That too would cause reseeking which could be a very expensive process, especially in your case of a 1.3GB installer.<br />
+      <br />
+      Plus, there's also the size issue. We try to avoid memory allocation and too much logic in the stub. But that's for later.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">punkomat</span><br />
+      <span class="post-time small text-muted">29th June 2009 16:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You are of course right about potential changed files, I figured it out only after posting :)<br />
+      The memory requirements can't be to large: if each element in the map requires no more than 256 bytes, it will use maybe a few MB for a typical installer.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">29th June 2009 16:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I was talking about the stub size, but memory could get problematic too for large installers. Memory allocation of lots of small blocks or using padding to store it as one big block would also waste more memory than should. An installer with 100,000 files could consume as much as 30mb on top of compression related buffers. It's not that bad, but not that nice either.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">gfm688</span><br />
+      <span class="post-time small text-muted">10th May 2012 04:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">If I just use NSIS to make a simple Self-Extractor that use best compression, is it possible to rebuilt NSIS to avoid the large temporary file?<br />
+      <br />
+      I follow this rule:<br />
+      don't use any plug-ins<br />
+      don't use File Command in the function which may be called more than once<br />
+      use ReserveFile to make a correct order like this:<br />
+      <br /></p>
+
+      <blockquote>
+        ReserveFile 1.dat<br />
+        <br />
+        Function install<br />
+        File 2.dat<br />
+        FunctionEnd<br />
+        <br />
+        Section<br />
+        File 1.dat<br />
+        Call install<br />
+        SectionEnd
+      </blockquote>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">gfm688</span><br />
+      <span class="post-time small text-muted">10th May 2012 05:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I like the best compression, but I hate the temporary file.<br />
+      <br />
+      I try to edit the fileform.c, but it seem to very hard, can anyone help?</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

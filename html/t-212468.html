@@ -1,0 +1,317 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="(Yet another) Uninstall before Install question." />
+
+  <title>(Yet another) Uninstall before Install question. - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">(Yet another) Uninstall before Install question.</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=212468">(Yet another) Uninstall before Install question.</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Arrby</span><br />
+      <span class="post-time small text-muted">6th April 2005 23:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>(Yet another) Uninstall before Install question.</strong><br />
+      NSIS Version 2.05:<br />
+      I have my installer doing the check for existing installation and doing uninstall first, essentially just as NSIS itself does (I stole the custom screen and functions right from makensis.nsi in the Examples folder).<br />
+      <br />
+      I have discovered the following problem (bug?).<br />
+      <br />
+      The code:<br /></p>
+      <pre>
+<code><br />  HideWindow<br />  ClearErrors<br />  ExecWait '$R1 _?=$INSTDIR'<br />     ...<br />     ...<br />  BringToFront<br /></code>
+</pre><br />
+      does what one expects / wants <b>If and Only If</b> the folder <i>"Program Files"</i> is included <b>somewhere</b> in the value of $INSTDIR, at the time the function is being executed. If $INSTDIR does <b>NOT</b> include <i>"Program Files"</i> in its value, the ExecWait <b>Does Not Wait!</b>.<br />
+      <br />
+      Note, it doesn't seem to matter what drive the installation was to, and $INSTDIR is the <b>correct</b> value of the "previous" installation, so the uninstall works correctly, it just doesn't wait, i.e the installer continues to run as if the ExecWait had been an Exec.<br />
+      <br />
+      Is there something I can add to the code to force it to wait when the "previous" installation was NOT to a folder underneath a "Program Files" folder?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">7th April 2005 11:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm thinking it has something more to do with a space being there. Try ExecWait '$R1 "_?=$INSTDIR"'</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">glory_man</span><br />
+      <span class="post-time small text-muted">7th April 2005 12:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I tried it but nothing happened. ExecWait does not wait even if $INSTDIR include "Program Files". But I'll try else.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">7th April 2005 12:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Here's your problem...<br />
+      ExecWait '$R1 _?=$INSTDIR'<br />
+      Need quotes around $R1 incase it contains spaces.<br />
+      ExecWait '"$R1" "_?=$INSTDIR"'<br />
+      <br />
+      Edit: If you've got Program Files in there, e.g.<br />
+      C:\Program Files\myApp\file.exe<br />
+      it will treat "C:\Program" as the program to execute, and "Files\myApp\file.exe" as a paramater.<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">glory_man</span><br />
+      <span class="post-time small text-muted">7th April 2005 13:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I modified basic.nsi from Examples-dir (see attachment). What's wrong? I don't understand.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">7th April 2005 16:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hmm you're right it doesn't wait whatever path it is. It doesn't even wait if I do not use the _?= param.<br />
+      I think the only solution at the moment, is to wait until some specific file is gone (so you know it's been uninstalled) before continuing with install...<br />
+      <br />
+      ExecWait '"$R1" "_?=$INSTDIR"'<br />
+      Sleep 1000<br />
+      IfFileExists "$INSTDIR\some_file.ext" -1<br />
+      <br />
+      Edit: Though if user cancels uninstall it will loop forever :cry:<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">7th April 2005 16:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ok, then you should get the Uninstall to create a temp file in un.onInit and delete it in un.onUninstSuccess, un.onUninstFailed, un.onUserAbort, and lastly un.onGUIEnd (if user does Ctrl+Alt+Del in some cases!)<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">glory_man</span><br />
+      <span class="post-time small text-muted">7th April 2005 17:37 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Using of</p>
+      <pre>
+<code>ExecWait '"$R1" _?=$INSTDIR'</code>
+</pre>solved this problem for me.<br />
+      <br />
+      ADD<br />
+      <br />
+      makensis.nsi must be edited.:)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">7th April 2005 17:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">makensis.nsi reads a string that is already quoted.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">glory_man</span><br />
+      <span class="post-time small text-muted">7th April 2005 18:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I understand that ExecWait don't wait if command without spaces and not in quotes.<br />
+      From documentation:<br /></p>
+
+      <blockquote>
+        Note, if the command could have spaces, you should put it in quotes to delimit it from parameters.<br />
+        ...<br />
+        If you don't put it in quotes it will not work on Windows 9x with or without parameters.
+      </blockquote>I use WinXP.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">7th April 2005 18:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">ExecWait may fail if the command isn't properly quoted. But it is properly quoted in makensis.nsi as $R1 contains the quotes.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">glory_man</span><br />
+      <span class="post-time small text-muted">7th April 2005 18:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I think if ExecWait failed than error flag must be set. In my example ExecWait exit without error flag seting.<br />
+      Is this normal?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">7th April 2005 18:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The error flag is set if CreateProcess fails. If the process was not created and the error flag was not set, it's not normal. I'd guess the process was created but exited before you noticed. Which exact example are you referring to? You said the last one worked.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">glory_man</span><br />
+      <span class="post-time small text-muted">8th April 2005 14:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">2 kichik<br />
+      Yes, if i use ExecWait '"$R1" _?=$INSTDIR' all works.<br />
+      I just try to say that command must be in quotes not only for Win98 or if the command has spaces. But even if WinXP and command has not spaces.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Arrby</span><br />
+      <span class="post-time small text-muted">8th April 2005 21:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks everyone. THANK YOU glory_man!:up:<br />
+      Putting the "" around $R1 did the trick.<br />
+      <br />
+      I must admit to being completely mystified as to why, though.<br />
+      Why does the uninst program (spawn nowait?)itself if $R1 in unquoted AND the $INSTDIR path does NOT contain any spaces, but either doesn't spawn itself or spawns itself WITH wait when $R1 is unquoted AND the $INSTDIR DOES contain at least one folder WITH spaces?<br />
+      <br />
+      Why does quoting R1, i.e. "$R1" cause the uninstall program<br />
+      to either not spawn itself or spawn WITH wait regardless of whether $INSTDIR contains a folder with spaces or not?<br />
+      <br />
+      Or why does it at least SEEM to work this way?:confused:</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">8th April 2005 23:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Why you need quotes around the path:<br /></p>
+
+      <blockquote>
+        If you've got 'Program Files' in there, e.g.<br />
+        C:\Program Files\myApp\file.exe<br />
+        it will treat "C:\Program" as the program to execute, and "Files\myApp\file.exe" as a paramater (when it should be the whole lot).
+      </blockquote>With the _?= switch, everything after it is passed into the $INSTDIR var. So, say if I were to do _?=C:\ /silent (what one might think are two seperate paramaters) would set $INSTDIR to "C:\ /silent"<br />
+      <br />
+      I'm not sure though why that should stop ExecWait from waiting. Perhaps the uninstaller trips on that error with the quotes around _?= and the value and ExecWait thinks it's aborted.<br />
+      I'm guessing if you use "_?=C:\" then $INSTDIR will be C:\" which is a bad path already (can't have double quotes in paths)!<br />
+      <br />
+      -Stu
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Arrby</span><br />
+      <span class="post-time small text-muted">9th April 2005 19:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Curiouser and Curiouser:<br />
+      <br />
+      Take glory_man's test script.<br />
+      Test with all 4 of the following variations:<br />
+      <br />
+      1: ExecWait '$R1 _?=$INSTDIR' ;taken from makensis.nsi<br />
+      2: ExecWait '$R1 "_?=$INSTDIR"'<br />
+      3: ExecWait '"$R1" "_?=$INSTDIR"'<br />
+      4: ExecWait '"$R1" _?=$INSTDIR'<br />
+      <br />
+      For your tests do the following:<br />
+      Initial install: choose a path with at least one<br />
+      folder in it that has embedded spaces, i.e I chose:<br />
+      <br />
+      E:\P F\ExecTest<br />
+      <br />
+      After the install, immediately run the installer again. Pay attention to the task bar as your running.<br />
+      After the UNINSTALL takes place, when you get to the directory page, modify the path to remove the spaces from ALL folders in the path. I.e. I changed it to:<br />
+      <br />
+      E:\PF\ExecTest<br />
+      <br />
+      Run the installer a third time, watch the task bar as you<br />
+      go thru the UNinstaller routine.<br />
+      <br />
+      Obviously options 3 or 4 are the options to use for desired behaviour. I am real curious as to WHY we would EVER want the uninstaller to behave as it does for options 1 and 2.<br />
+      <br />
+      Why is the uninstaller EVER spawning itself with a NOWAIT,<br />
+      and should it?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">9th April 2005 20:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Assuming $R1 doesn't already contain the quotes, the right method is:</p>
+      <pre>
+<code>ExecWait '"$R1" _?=$INSTDIR'</code>
+</pre>The others are wrong.<br />
+      <br />
+      The uninstaller spawns a copy of itself so it'll be able to delete itself.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Arrby</span><br />
+      <span class="post-time small text-muted">9th April 2005 21:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The last form you showed is the same one I chose, Thanks!<br />
+      <br />
+      One last word and I'll let this topic die.<br />
+      Based on the behaviour with Unquoted $R1 (when R1 itself is NOT a quoted string) when the paths do and dont contain embedded blanks (my last post makes the behaviour clear). Are you sure the current behaviour is NOT the OPPOSITE of what it should be? I.E. why does it WAIT when the unquoted $R1 var contains a non-quoted string with embedded blanks, but FAIL to WAIT when the unquoted $R1 var contains a non-quoted string WITHOUT embedded blanks. I am probably just completely confused, but it seems the second case should be the case in which the unistaller sees it is being executed from the SAME directory it is deleting (no embedded blanks in the path), and it should be the first case (embedded blanks) when it thinks its being run from a SEPERATE directory from the one it is deleting. Why does it need to spawn itself with NO_WAIT when it is running from a DIFFERENT path than it is deleting, but DOESNT need to spawn itself (or at least spawns itself with WAIT) when it is running from the SAME directory it is deleting.<br />
+      <br />
+      This is what has me so confused!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">9th April 2005 22:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Got me confused too so I'll just write down all the facts.</p>
+
+      <ul>
+        <li>Using Exec, ExecWait or ExecShell with an unquoted path is never a good idea. It doesn't have to do with waiting or not waiting, just the success of running the process itself. Windows might simply fail creating the process or it might execute a different executable.</li>
+
+        <li>When you execute an uninstaller without _?=, it copies itself to the temporary directory, runs the copy with _?=$EXEDIR and quits immediately.</li>
+
+        <li>When you pass an uninstaller _?=<i>path</i>, it sets $INSTDIR and $OUTDIR to <i>path</i> and starts doing its job.</li>
+      </ul>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

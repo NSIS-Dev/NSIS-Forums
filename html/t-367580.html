@@ -1,0 +1,173 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="NSIS is copying directory and strange files its not asked to" />
+
+  <title>NSIS is copying directory and strange files its not asked to - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">NSIS is copying directory and strange files its not asked to</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=367580">NSIS is copying directory and strange files its not asked to</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">nawfal</span><br />
+      <span class="post-time small text-muted">29th July 2013 21:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>NSIS is copying directory and strange files its not asked to</strong><br />
+      I have strange issue, and I'm not sure if its a bug in the compiler. Please help me with what I'm missing. I have created a simple installer to reproduce it.<br />
+      <br />
+      <b>My folder structure looks like this:</b><br />
+      <br /></p>
+      <pre>
+<code>installer script.nsi<br />bin (folder)       -&gt; main file.txt<br />                   -&gt; Installer (folder) -&gt; ShellUtil (folder) -&gt; ShellUtil.tlb<br />ShellUtil (folder) -&gt; ShellUtil.tlb</code>
+</pre><br />
+      <br />
+      It is this script I try to run. <b>What I try to do in the script is:</b><br />
+      <br />
+      1. Copy "main file.txt" in "bin" folder to install directory ($INSTDIR) - works fine<br />
+      <br />
+      2. Copy "ShellUtil.tlb" in "ShellUtil" folder to install directory ($INSTDIR) - works fine<br />
+      <br />
+      3. Copy whatever is in "ShellUtil" folder to "$INSTDIR\Installer" folder. <b>So in step 3, this should happen</b> after installation (assuming I install to "C:\Program Files\ABC\")<br />
+      <br />
+      <pre>
+<code>C:\Program Files\ABC -&gt; Installer (folder) -&gt; ShellUtil (folder) -&gt; ShellUtil.tlb<br /></code>
+</pre><br />
+      <br />
+      <b>But what I get is:</b><br />
+      <br />
+      <pre>
+<code>C:\Program Files\ABC -&gt; Installer (folder) -&gt; ShellUtil (folder) -&gt; ShellUtil.tlb #this line is fine<br />                                           -&gt; bin (folder) -&gt; Installer (folder) -&gt; ShellUtil (folder) -&gt; ShellUtil.tlb<br /></code>
+</pre><br />
+      <br />
+      That is additionally a "bin" folder is added to "C:\Program Files\ABC\Installer" and certain file goes into it. I do not know what has gone wrong there. <b>I did not ask NSIS to copy folder "Installer" in "bin" folder at the time of compiling.</b><br />
+      <br />
+      <b>This is my code:</b><br />
+      <br />
+      <br />
+      <pre>
+<code>Section "Install Core Files" Section1<br /><br />SectionIn RO <br /><br />SetShellVarContext all #important<br />!insertmacro MUI_HEADER_TEXT "Installation in progress " "Please wait"<br /><br />SetOutPath $INSTDIR<br />File "bin\main file.txt"<br /><br />SetOutPath $INSTDIR<br />File "ShellUtil\ShellUtil.tlb"<br /><br />;installer section<br />SetOutPath "$INSTDIR\Installer"<br />File /a /r "ShellUtil"<br /><br />SectionEnd</code>
+</pre><br />
+      <br />
+      For the complete test case, I have attached a trimmed setup which does exactly this :(
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">29th July 2013 23:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">According to the manual it is behaving correctly. You need to use "\*.*" after the ShellUtil in the third file command.</p>
+      <pre>
+<code>File /a /r ShellUtil\*.*</code>
+</pre><br />
+      <br />
+
+      <blockquote>
+        <b>File /r something</b><br />
+        will match the directory named something on the root directory, the file named something in the directory named dir and the directory named something in the directory named another. To match only the directory named something on the root directory, use the following:<br />
+        <br />
+        <b>File /r something\*.*</b>
+      </blockquote>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">nawfal</span><br />
+      <span class="post-time small text-muted">30th July 2013 00:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">@demiller9, even that wont work because I want whatever is in "ShellUtil" folder to get copied <b>including "ShellUtil" folder.</b><br />
+      <br />
+      <b>So this works</b>:<br />
+      <br /></p>
+      <pre>
+<code>SetOutPath "$INSTDIR\Installer\ShellUtil"<br /><br />File /a /r "ShellUtil\"</code>
+</pre><br />
+      <br />
+      1. As you see I have to write "ShellUtil" twice. Is there someway I can instruct NSIS to copy "ShellUtil" folder including that folder to some directory?<br />
+      <br />
+      2. An additional question: <b>This is what I got from documentation</b>:<br />
+      <br />
+
+      <blockquote>
+        If just one path segment is specified (e.g. File /r something), the current directory will be recursively searched. If more than one segment is specified (e.g. File /r something\*.*), the last path segment will be used as the matching condition and the rest for the directory to search recursively. <b>If a directory name matches, all of its contents is added recursively</b>. Directory structure is preserved.
+      </blockquote>In my case, the directory name matches since "ShellUtil" is a folder available in the root directory. <b>Why is it alone not copied recursively?</b>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">30th July 2013 02:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm not sure why you object to putting "ShellUtil" in both the SetOutPath and the File commands, but I found a solution that avoids that.<br />
+      <br />
+      First you'll have to change the input directory structure. Create any new directory (I called it CopyThis), and move the ShellUtil folder under that directory.<br />
+      <br />
+      Next, the second File command has to change because it was using ShellUtil (this seems like a mistake, as you have a separate ShellUtil.tlb under the bin folder). Change the "File ShellUtil\ShellUtil.tlb" to either <font color="green">File CopyThis\ShellUtil\ShellUtil.tlb</font> or <font color="green">File bin\Installer\ShellUtil\ShellUtil.tlb</font>.<br />
+      <br />
+      Last, change the third File command to <font color="green">File /a /r "CopyThis\ShellUtil"</font><br />
+      <br />
+      This works because it doesn't allow the bin folder to be searched, instead the recursive search starts in CopyThis and the ShellUtil folder is a match.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">30th July 2013 03:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by nawfal</small><br />
+        2. An additional question: <b>This is what I got from documentation</b>:<br />
+        <br />
+        In my case, the directory name matches since "ShellUtil" is a folder available in the root directory. <b>Why is it alone not copied recursively?</b>
+      </blockquote>The current directory is searched recursively, not just the folder that matched. The recursive search goes into bin and matches the ShellUtil inside there, so it duplicates that directory structure. The documentation said this would happen; the piece I quoted mentioned that 'something' would be copied three times because it matched that many times in the directory structure they listed for their example.<br />
+
+      <blockquote>
+        File /r something<br />
+        will match <font color="blue">the directory</font> named something <font color="blue">on the root directory</font>, <font color="blue">the file</font> named something <font color="blue">in the directory named dir</font> and <font color="blue">the directory</font> named something <font color="blue">in the directory named another</font>.
+      </blockquote>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">nawfal</span><br />
+      <span class="post-time small text-muted">30th July 2013 07:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">@demiller9<br />
+      <br />
+      Thanks, that was helpful. It was little annoying to see NSIS behaving this way. "File /r something" copying too many other things from the contained directory?? What would have been obvious would be if it copied just "something" or things within it.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Conditional nsisconf.nsh script settings" />
+
+  <title>Conditional nsisconf.nsh script settings - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Conditional nsisconf.nsh script settings</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=319161">Conditional nsisconf.nsh script settings</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Roger_wgnr</span><br />
+      <span class="post-time small text-muted">13th May 2010 21:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Conditional nsisconf.nsh script settings</strong><br />
+      Hey guys and gals, New to the forum but have been using NSIS for some time but have a new requirement that has me pulling my hair out (what little I have left).<br />
+      <br />
+      I have about 50 install scripts that I need to change the default install path in. Now all of them use a define in the nsisconf.nsh file to set the default root install path for all applications.<br />
+      <br />
+      !Define DEFAULT_APP_PATH "C:\Program Files\Company\....."<br />
+      <br />
+      The company was sold to a new parent company and now the default root isntall path would be.<br />
+      <br />
+      !Define DEFAULT_APP_PATH "C:\Program Files\NewCompany\....."<br />
+      <br />
+      The problem is that when new installs are ran they want the Old Default path used if the location had previous versions installed and the new path when the application was never installed. So what I am attempting to do is set a conditional check in the nsisconf.nsh file to check for the default root path. However, all my efforts have resulted in a compile error that the check is not valid outside of a section. How can I do something similar to the following within the nsisconf.nsh file<br />
+      <br /></p>
+      <pre>
+<code><br />${DirState} "D:\Program Files\Company\....." $0<br />   StrCmp $0 "-1" NoAppsInstalled 0<br />     !define DEFAULT_APP_PATH "C:\Program Files\Company\....."<br />     Goto DefaultPathSet<br />   NoAppsInstalled:<br />     !define DEFAULT_APP_PATH     "C:\Program Files\NewCompany\....."<br />   DefaultPathSet:</code>
+</pre><br />
+      Any Ideas?<br />
+      I have tried using functions and macros as well but still get the same error with a function the Call Function name generates the error.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">13th May 2010 23:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You're confusing run time with compile time. !define is compile time. StrCmp/Goto is run time.<br />
+      <br />
+      If your old installers saved the install directory in the registry you can get it using InstallDirRegKey. If not then you will have to add code to set $INSTDIR accordingly at run time.<br />
+      <br />
+      Also is nsisconf.nsh the root file you are talking about? You shouldn't really use that and create your own nsh instead and !include it when necessary.<br />
+      <br />
+      Edit: And why use DirState to check if a directory exists? Use IfFileExists [path]\*.* (or ${If} ${FileExists} [path]\*.*). Note *.* is valid because . and .. are valid children.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Roger_wgnr</span><br />
+      <span class="post-time small text-muted">13th May 2010 23:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The code block (in the Inital post) was just to indicate what I am trying to accomlish in an easy to understand form.<br />
+      <br />
+      And Yes, nsisconf.nsh is the root file, The company I work for modified it as a base for all installer setting company !defines thus creating my problem. They did this to ensure that all of the installers created would use specific settings.<br />
+      <br />
+      But part of the issue is that I need to set the !Define Default_App_Path value which is compile time in some manner that would allow it to be dynamic at run time.<br />
+      As I did not write all of the installers that I need to recompile I was hoping (probably in vain) that I could find a solution that would prevent my having to edit over 50 install scripts and only make one change.<br />
+      If that is not possible then I may have to just write a Macro and include it in all of the installers. But thought I would try here to see if someone had a better approach that will keep me from needing to edit 50+ files.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">14th May 2010 05:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by Roger_wgnr</small><br />
+        I need to set the !Define Default_App_Path value which is compile time in some manner that would allow it to be dynamic at run time.
+      </blockquote>This is not possible, unless you !define it to a $variable. In any case you'll need to edit all 50 scripts to do a registry search in either .onInit or a pre-Directory function.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Roger_wgnr</span><br />
+      <span class="post-time small text-muted">14th May 2010 17:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I was afraid of that. Well I will see what I can cook up.<br />
+      I was wondering if it is possible to use a Relative Path in a Define and if so is it related to the NSIS directory of the directory of the nsi script?<br />
+      For example I have the following structure<br /></p>
+      <pre>
+<code>Program<br />    Source<br />    Installer<br />    Resouces</code>
+</pre><br />
+      In the installer directory is the nsi and nsh scripts for the program but I need to load say an icon and some text files that are in the resources directory.<br />
+      <br />
+      could I do something like this<br />
+      !Define Resources '\..\Resources\'<br />
+      <br />
+      This is because the installers are part of the SVN repositorys and when developers pull the code and installers each one tends to use a different local path for the root of the repostiory structure. like for my example<br />
+      developer 1 uses C:\SVN\Program<br />
+      Developer 2 uses C:\SVN_Repository\Program<br />
+      Developer 3 uses D:\MYSVN\Program<br />
+      and so on.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">14th May 2010 17:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by Roger_wgnr</small><br />
+        I was wondering if it is possible to use a Relative Path in a Define and if so is it related to the NSIS directory of the directory of the nsi script?
+      </blockquote>Yes, this is possible, and No, it is related to NOTHING. A define is simply a way to replace "a long sentence that you don't want to type ten times" with ${AShortVersion}. During compilation, every ${define} is replaced, word for word, with what it was defined as. Therefore there is NO interpretation of its contents, at all. It's just replacing text (or script code, to be exact).
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">14th May 2010 18:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Compile time paths are relative to the script being compiled.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

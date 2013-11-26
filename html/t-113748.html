@@ -1,0 +1,176 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Reboot crash?" />
+
+  <title>Reboot crash? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Reboot crash?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=113748">Reboot crash?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jbm</span><br />
+      <span class="post-time small text-muted">11th November 2002 22:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Reboot crash?</strong><br />
+      Hi Everyone,<br />
+      <br />
+      Has anyone run into problems with the Reboot command in NSIS 1.98? I'm basically doing the following at the end of my Uninstall section for a product we'll be shipping soon:<br />
+      <br />
+      IfRebootFlag lbl_reboot lbl_noboot<br />
+      MessageBox MB_OK $0<br />
+      Return<br />
+      lbl_reboot:<br />
+      MessageBox MB_YESNO $0 IDNO lbl_noboot<br />
+      Reboot<br />
+      lbl_noboot:<br />
+      <br />
+      Thanks for any input, or maybe comments on side effects of other things I may be doing that would cause problems with this. I am using DLLs fairly extensively, but have not had any problems with them.<br />
+      <br />
+      Thanks,<br />
+      <br />
+      Jim</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jbm</span><br />
+      <span class="post-time small text-muted">11th November 2002 22:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>OpenProcessToken()</strong><br />
+      More details:<br />
+      <br />
+      I used the NSIS template generator and made a minimal uninstaller which does a Reboot at the end and it works fine, so it's something about my customization.<br />
+      <br />
+      I compiled up a debug version of NSIS with VC7 and am debugging the exehead of my generated uninstaller. I'm crashing in the EW_REBOOT switch of ExecuteEntry() at the indirected call to OpenProcessToken().<br />
+      <br />
+      I get an "ESP not restored" error. The args look good. More details coming if I find anything...<br />
+      <br />
+      Jim<br /></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jbm</span><br />
+      <span class="post-time small text-muted">11th November 2002 23:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>WINAPI</strong><br />
+      Okay, I appear to have fixed it with the following changes to exehead\exec.c, on or near line 928:<br />
+      <br /></p>
+      <pre>
+<code><br />          BOOL (*OPT)(HANDLE, DWORD,PHANDLE);<br />          BOOL (*LPV)(LPCTSTR,LPCTSTR,PLUID);<br />          BOOL (*ATP)(HANDLE,BOOL,PTOKEN_PRIVILEGES,DWORD,PTOKEN_PRIVILEGES,PDWORD);<br /></code>
+</pre><br />
+      those declarations get WINAPI added to them:<br />
+      <pre>
+<code><br />          BOOL (WINAPI *OPT)(HANDLE, DWORD,PHANDLE);<br />          BOOL (WINAPI *LPV)(LPCTSTR,LPCTSTR,PLUID);<br />          BOOL (WINAPI *ATP)(HANDLE,BOOL,PTOKEN_PRIVILEGES,DWORD,PTOKEN_PRIVILEGES,PDWORD);<br /></code>
+</pre><br />
+      I don't know why this isn't causing a problem all the time, maybe in the way the stack gets cleaned up in this particular context.<br />
+      <br />
+      VC7 will open and convert the .dsw file included in the 1.98 source just fine and build it with no problems, it flags the problem with a runtime check in the debugger.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jbm</span><br />
+      <span class="post-time small text-muted">12th November 2002 00:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Doh!</strong><br />
+      Okay, beat me with a wet noodle:<br />
+      <br />
+      <a href="http://sourceforge.net/tracker/index.php?func=detail&amp;aid=620014&amp;group_id=22049&amp;atid=373085" target="_blank">http://sourceforge.net/tracker/index...49&amp;atid=373085</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joost Verburg</span><br />
+      <span class="post-time small text-muted">12th November 2002 11:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Please check wheather the latest NSIS 2 development version gives the same problem.<br />
+      <br />
+      Another question:<br />
+      <br />
+      Can you try to compile the NSIS 2 using VC7 and check wheather the VC7 compiler can make the installer smaller?<br />
+      <br />
+      Thanks</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">12th November 2002 18:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Does this happen with the pre-built NSIS or only with a version built by VC7?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">12th November 2002 18:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hmm... Beat me with a wet noodle? It is __stdcall... =/<br />
+      That's weird... I was sure it was __cdecl... It does work when I add WINAPI which is __stdcall.<br />
+      <br />
+      I have changed this in the CVS, god knows why it worked up until now even though the default calling convention is __cdecl.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jbm</span><br />
+      <span class="post-time small text-muted">13th November 2002 07:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Confirmed</strong><br />
+      I'm not on 2.0 yet, we're pulling our hair out trying to get our next Beta release out the door, but I will soon after that, in the next few weeks.<br />
+      <br />
+      The crash I was seeing was with the pre-built, released version of 1.98, and reproduced after I compiled and built it in VC6. Originally, all I wanted was to turn logging on, but it got me comfortable with where things were, and so was able to track the problem down.<br />
+      <br />
+      It was working for me on '98 too, just not on '2K/XP, and I couldn't explain that. But I guess I'm always surprised by what things are strict/lenient on all the flavors of Windows. I pulled out VC7 because it has the easy interface to the remote/attached debugging, which helps with the way the uninstaller spawns itself.<br />
+      <br />
+      Thank you for all the work you've done on this installer, it's made our downloads leaner, and its transparency has made my life easier. I'll be looking to do the MUI update in 2.0 soon, and getting the updated DLL interface (I've got a half-dozen).<br />
+      <br />
+      Jim - <a href="http://www.cerience.com" target="_blank">http://www.cerience.com</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">13th November 2002 17:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        It was working for me on '98 too, just not on '2K/XP, and I couldn't explain that.
+      </blockquote>Windows 9x doesn't use those functions, that's why.
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

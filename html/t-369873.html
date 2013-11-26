@@ -1,0 +1,240 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="system plugin + GetPrivateProfileSectionNames crash" />
+
+  <title>system plugin + GetPrivateProfileSectionNames crash - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">system plugin + GetPrivateProfileSectionNames crash</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=369873">system plugin + GetPrivateProfileSectionNames crash</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shadowpoa</span><br />
+      <span class="post-time small text-muted">28th August 2013 21:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>system plugin + GetPrivateProfileSectionNames crash</strong><br />
+      Hi Everyone,<br />
+      <br />
+      I'm using a sample script to read ini files, especially to read section names, to determine if a section exist before try to delete it.<br />
+      <br />
+      The problem is that the installer crashes randomically, I could check that the size of section is always right, but when the error shows, it is at below call:<br />
+      <br /></p>
+
+      <blockquote>
+        System::Call `kernel32::lstrlen(i $pNextSection)i.r5`
+      </blockquote>$NOMESECTION is defined on another macro that calls this func, removing the callback gives the same error, so I choose put complete code here.<br />
+      <br />
+      I dont know much about pointers, but I think it is all ok with the calls.<br />
+      <br />
+      My function:<br />
+      <br />
+
+      <blockquote>
+        !define GSN_BufferSize 1024<br />
+        <br />
+        VAR /GLOBAL lpszReturnBuffer<br />
+        VAR /GLOBAL fncAddr<br />
+        VAR /GLOBAL nSize<br />
+        VAR /GLOBAL pNextSection<br />
+        VAR /GLOBAL IniPath<br />
+        VAR /GLOBAL iniSecSize<br />
+        VAR /GLOBAL PTR_FNC<br />
+        <br />
+        !define GetSectionNames `!insertmacro GetSectionNamesCall`<br />
+        <br />
+        !macro GetSectionNamesCall _FILE _FUNC<br />
+        StrCpy `$IniPath` `${_FILE}`<br />
+        GetFunctionAddress $fncAddr `${_FUNC}`<br />
+        Call GetSectionNames<br />
+        !macroend<br />
+        <br />
+        <br />
+        Function GetSectionNames<br />
+        <br />
+        System::Call `*(&amp;t${GSN_BufferSize})i.r2`<br />
+        StrCpy $PTR_FNC $2<br />
+        StrCpy $lpszReturnBuffer $2<br />
+        <br />
+        System::Call `kernel32::GetPrivateProfileSectionNames(i,i,t) ($lpszReturnBuffer, ${GSN_BufferSize}, '$IniPath')`<br />
+        StrCpy $pNextSection $lpszReturnBuffer<br />
+        <br />
+        ${Do}<br />
+        System::Call `kernel32::lstrlen(i $pNextSection)i.r5`<br />
+        StrCpy $iniSecSize $5<br />
+        <br />
+        System::Call `*$pNextSection(&amp;m${GSN_BufferSize} .r9)`<br />
+        Call $fncAddr<br />
+        <br />
+        ${If} $9 == 'StopGetSectionName'<br />
+        ${ExitDo}<br />
+        ${Endif}<br />
+        <br />
+        IntOp $pNextSection $pNextSection + $iniSecSize<br />
+        IntOp $pNextSection $pNextSection + 1<br />
+        <br />
+        System::Call `kernel32::lstrlen(i $pNextSection)i.r5`<br />
+        StrCpy $iniSecSize $5<br />
+        <br />
+        ${LoopWhile} $iniSecSize != 0<br />
+        <br />
+        System::Free $PTR_FNC<br />
+        <br />
+        FunctionEnd<br />
+        <br />
+        <br />
+        Function LISTASECTIONCALLBACK<br />
+        <br />
+        ${If} $9 == $NOMESECTION<br />
+        StrCpy $9 'StopGetSectionName'<br />
+        ${Endif}<br />
+        <br />
+        FunctionEnd
+      </blockquote>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">29th August 2013 13:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">If this is a unicode installer:<br />
+      <br />
+      System::Call `*$pNextSection(&amp;m${GSN_BufferSize} .r9)` should use t type.<br />
+      IntOp $pNextSection $pNextSection + 1 needs to be + 2</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shadowpoa</span><br />
+      <span class="post-time small text-muted">29th August 2013 15:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi Anders,<br />
+      <br />
+      I´m not using Unicode here, its not clear on MSDN if I'll need to call the function with A or W when not specific for one system or another, focus here is only pt-br, and using default chars (32-127).<br />
+      <br />
+      Is there any problem with these conditions?<br />
+      <br />
+      Anyway, I'll do some tests based on your post... I'll come back with the results.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shadowpoa</span><br />
+      <span class="post-time small text-muted">29th August 2013 17:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Test Results...</strong><br />
+      Changing + 1 to + 2 on "IntOp $pNextSection $pNextSection + 1" cuts the first letter from the second section name and so on...<br />
+      <br />
+      Calling GetPrivateProfileSectionNames or GetPrivateProfileSectionNamesA I have same result.<br />
+      <br />
+      Calling GetPrivateProfileSectionNamesW gives a empty result on lstrlen call, but Unicode is not the focus , I'll just ignore this.<br />
+      <br />
+      Changing "*$pNextSection(&amp;m" to "*$pNextSection(&amp;t" gives the same result, and the crashes (randomically) continues.<br />
+      <br />
+      I Forgot to tell, at the point the function is called, the stack is empty.<br />
+      <br />
+      The only thing I can tell is that the crash happens upon calling the line<br />
+      "System::Call `*$pNextSection(&amp;t${GSN_BufferSize} .r9)`"<br />
+      the last error I´d get has on 3rd section of ini file (total sections is 14 for test file).<br />
+      <br />
+      Hope this helps, many thanks in advance.<br />
+      <br />
+      Edit:<br />
+      Forgot to ask... is there any newer version os system plugin? cant find references on wiki... mine is from 5/12/2009 that come with nsis last nsis version.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">29th August 2013 17:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">"System::Call `*$pNextSection(&amp;t${GSN_BufferSize} .r9)`" is probably not OK if GSN_BufferSize is above 1024.<br />
+      <br />
+      Try <a href="http://nsis.sourceforge.net/IniGetSectionNames" target="_blank">my version</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shadowpoa</span><br />
+      <span class="post-time small text-muted">29th August 2013 18:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Everything ok</strong><br />
+      Anders,<br />
+      <br />
+      So far so good, everything ok.<br />
+      <br />
+      Can you explain what´s wrong with the other implementation?<br />
+      <br />
+      Í'll keep testing, but assume it is ok, tested a lot of times without crash.<br />
+      <br />
+      I dont understand some points on new code like the lines below.<br />
+      <br /></p>
+
+      <blockquote>
+        !ifdef IniGetSectionNames_StopEnum<br />
+        ${If} $3 == "$\n"<br />
+        System::Call '*$0(&amp;i${NSIS_CHAR_SIZE} 0)'<br />
+        ${EndIf}<br />
+        !endif<br />
+        Goto loop
+      </blockquote>This line is just to not test strlen = 1 for the 'newline' char?<br />
+      I dont get how this pointer Works...<br />
+      <br />
+      Thanks again, you have saved me a lot of time, and I think this function is useful to others on fórum... how we can update the wiki with this?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">29th August 2013 19:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The \n is not a valid section name so it is a good magic value, the system call just "ends" the string (In C this would be mystrptr[0] = '\0';) so lstrlen will return 0 and end the loop...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shadowpoa</span><br />
+      <span class="post-time small text-muted">29th August 2013 19:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Many thanks</strong><br />
+      Anders,<br />
+      <br />
+      I have imagined that 'magic value', but dunno how to put it in code.<br />
+      <br />
+      Many thanks for the big Help and enlightment about your solution approach.<br />
+      <br />
+      Moderator can mark this as solved if needed.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

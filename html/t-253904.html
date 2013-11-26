@@ -1,0 +1,176 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="IsUserAdmin?" />
+
+  <title>IsUserAdmin? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">IsUserAdmin?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=253904">IsUserAdmin?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">CancerFace</span><br />
+      <span class="post-time small text-muted">23rd August 2006 09:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>IsUserAdmin?</strong><br />
+      I have seen similar functionality in a plugin and I wanted to achieve the same using the system plugin, thus trimming down the size of my installer a bit. It turned out to be quite easy :)<br />
+      <br />
+      The following code uses the <a href="http://msdn.microsoft.com/library/default.asp?url=/library/en-us/secauthz/security/checktokenmembership.asp" target="_blank">CheckTokenMembership</a> function of advapi32.dll, works in NT/2k/XP etc and it returns 1 if the user belongs to the administrator's group, 0 if not and -1 if an error occurs:</p>
+      <pre>
+<code>!macro IsUserAdmin RESULT<br /> !define Index "Line${__LINE__}"<br />   StrCpy ${RESULT} 0<br />   System::Call '*(&amp;i1 0,&amp;i4 0,&amp;i1 5)i.r0'<br />   System::Call 'advapi32::AllocateAndInitializeSid(i r0,i 2,i 32,i 544,i 0,i 0,i 0,i 0,i 0,i 0,*i .R0)i.r5'<br />   System::Free $0<br />   System::Call 'advapi32::CheckTokenMembership(i n,i R0,*i .R1)i.r5'<br />   StrCmp $5 0 ${Index}_Error<br />   StrCpy ${RESULT} $R1<br />   Goto ${Index}_End<br /> ${Index}_Error:<br />   StrCpy ${RESULT} -1<br /> ${Index}_End:<br />   System::Call 'advapi32::FreeSid(i R0)i.r5'<br /> !undef Index<br />!macroend</code>
+</pre><br />
+      Usage:
+      <pre>
+<code>...<br />!insertmacro IsUserAdmin $1<br />; $1 = 1 true<br />; $1 = 0 false<br />; $1 = -1 there was an error<br />...</code>
+</pre><br />
+      I hope this is useful for others as well :)<br />
+      CF
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">25th August 2006 12:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">CheckTokenMembership is a nice little useful function, but sadly it's not available on NT. You should use a different method, if you intend to support NT.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">CancerFace</span><br />
+      <span class="post-time small text-muted">26th August 2006 12:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Good point kichik, thanks for pointing that out :o<br />
+      <br />
+      Using the IsAdministrator functionality from the <a href="http://nsis.sourceforge.net/XtInfoPlugin_plug-in" target="_blank">XtInfoPlugin</a> plugin I wrote the following code which uses the system plugin:</p>
+      <pre>
+<code>!define TOKEN_READ   0x00020008<br />!define TokenGroups  2<br /><br />!macro IsUserAdmin RESULT<br /> !define Index "Line${__LINE__}"<br /> StrCpy ${RESULT} 0<br /><br /> # Construct the SID for the Admin group - Should get S-1-5-32-544 for administrators (place it in $R4)<br />  System::Call "*(&amp;i1 0,&amp;i4 0,&amp;i1 5)i.r0"<br />  System::Call  "advapi32::AllocateAndInitializeSid(i r0,i 2,i 32,i 544,i 0,i 0,i 0,i 0,i 0,i 0,*i .R4)i.r5"<br />  System::Free $0<br /><br /> # Get a psuedo-handle of the current process and place it on R0<br />  System::Call 'kernel32::GetCurrentProcess()i.R0'<br /><br /> # Open the Token from the psuedo process and place the handle on R1<br />  System::Call 'advapi32::OpenProcessToken(i R0,i ${TOKEN_READ},*i .R1)i.R9'<br /><br /> # Get info from the token and place it in $R2 (the size goes to $R3)<br />  System::Call 'advapi32::GetTokenInformation(i R1,i ${TokenGroups},*i .R2,i 0,*i .R3)i.R9'<br />  System::Alloc $R3<br />   Pop $R2<br />  System::Call 'advapi32::GetTokenInformation(i R1,i ${TokenGroups},i R2,i $R3,*i .R3)i.R9'<br /><br /> # Check how many TOKEN_GROUPS elements are in $R2 (place the number in $R5)<br />  System::Call '*$R2(i.R5,i.R6)'<br /><br /> # Compare the SID structures<br />  StrCpy $1 0<br />        <br /> ${Index}_Start:<br />  StrCmp $1 $R5 ${Index}_Stop<br />  System::Call 'advapi32::EqualSid(i R4,i R6)i.R9'<br />  StrCmp $R9 "" ${Index}_Increment<br />  StrCmp $R9 0 +1 +3<br />  StrCpy ${RESULT} 0<br />   Goto ${Index}_Increment<br />  StrCpy ${RESULT} 1<br />  System::Call 'advapi32::FreeSid(i R6)i.R8'<br />   Goto ${Index}_Stop<br /> ${Index}_Increment:<br />  System::Call 'advapi32::GetLengthSid(i R6)i.R9'<br />  System::Call 'advapi32::FreeSid(i R6)i.R8'<br />  IntOp $R6 $R6 + $R9<br />  IntOp $1 $1 + 1<br />  Goto ${Index}_Start<br /><br /> ${Index}_Stop:<br /> # Close the token handle<br />  System::Call 'kernel32::CloseHandle(i R1)i.R9'<br /><br /> # cleanup<br />  System::Call 'advapi32::FreeSid(i R4)i.r5'<br />  System::Free $R2<br />  System::Free 0<br /><br /> !undef Index<br />!macroend</code>
+</pre><br />
+      It can be used as the previous macro:
+      <pre>
+<code>...<br />!insertmacro IsUserAdmin $1<br /> ; $1 = 1 true<br /> ; $1 = 0 false<br />...</code>
+</pre><br />
+      The above code should be compatible with NT as well.<br />
+      I didn't add any error checking though for this one ...<br />
+      CF
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vadzen</span><br />
+      <span class="post-time small text-muted">23rd October 2006 12:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi CancerFace,<br />
+      <br />
+      I tried use this macro, but I have as result blank value.<br />
+      Would you be able to check this code and give your advise.<br />
+      Thanks.<br />
+      <br />
+      Macro file is:<br /></p>
+      <pre>
+<code><br />!macro IsUserAdmin RESULT<br /> !define Index "Line${__LINE__}"<br />   StrCpy ${RESULT} 0<br />   System::Call '*(&amp;i1 0,&amp;i4 0,&amp;i1 5)i.r0'<br />   System::Call 'advapi32::AllocateAndInitializeSid(i r0,i 2,i 32,i 544,i 0,i 0,i 0,i 0,i 0, \<br />   i 0,*i .R0)i.r5'<br />   System::Free $0<br />   System::Call 'advapi32::CheckTokenMembership(i n,i R0,*i .R1)i.r5'<br />   StrCmp $5 0 ${Index}_Error<br />   StrCpy ${RESULT} $R1<br />   Goto ${Index}_End<br /> ${Index}_Error:<br />   StrCpy ${RESULT} -1<br /> ${Index}_End:<br />   System::Call 'advapi32::FreeSid(i R0)i.r5'<br /> !undef Index<br />!macroend<br /></code>
+</pre><br />
+      <br />
+      Script is:<br />
+      <pre>
+<code><br />var tmp1<br />!include folderpath\include\IsCurrentUserAdmin.nsh<br /><br /> !insertmacro WriteLog "Check current user permissions" "$log_name.log"<br /> StrCpy $tmp1 "-2"<br /> ClearErrors<br /> DetailPrint "current user permissions IS:  $tmp1"<br /> Sleep 2000<br /> !insertmacro WriteLog "current user permissions IS:  $tmp1" "$log_name.log"<br /> Sleep 2000<br />  <br /> !insertmacro IsUserAdmin $tmp1<br /> Pop $tmp1<br />;  ${If} $tmp1 = "1"<br />;  Goto CurrentUserIsAdmin<br />;  ${EndIf}<br />  !insertmacro WriteLog "current user permissions IS:  $tmp1" "$log_name.log"<br />  DetailPrint "current user permissions IS:  $tmp1"<br />  Sleep 2000<br /></code>
+</pre><br />
+      <br />
+      Result in log file is:<br />
+      <pre>
+<code><br />23/10/2006 (Monday) 11:53:31<br />Check current user permissions<br />23/10/2006 (Monday) 11:53:33<br />current user permissions IS:  -2<br />23/10/2006 (Monday) 11:53:35<br />current user permissions IS: <br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">CancerFace</span><br />
+      <span class="post-time small text-muted">23rd October 2006 12:40 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">No need to use <b>Pop $tmp1</b> after calling the macro...<br />
+      Could it be that your stack has -2 on the top and you are popping it into your variable?<br />
+      CF<br />
+      <br />
+      <br />
+      PS Looking at this again, you define <i>$tmp1</i> as -2, then you pass it to the macro (which should set $tmp1 to 0, 1 or -1, and then you Pop the top of the stack to <i>$tmp1</i> (not sure why you do that) ...<br />
+      <br />
+      Where are you defining $tmp1? Is your <i>var $tmp1</i> statement inside a function/section? If yes then you should either use <i>var /GLOBAL</i> or define it <u>before</u>your sections...<br />
+      <br />
+      Also I hope that you are running the above macro in Win2k/XP/2k3 and [u]not[/i] 9x/NT (check the rest of the thread)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">CancerFace</span><br />
+      <span class="post-time small text-muted">23rd October 2006 15:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I also forgot to mention that I have added a <a href="http://nsis.sourceforge.net/Check_if_the_current_user_is_an_Administrator" target="_blank">wiki</a> page for these macros ...<br />
+      CF</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vadzen</span><br />
+      <span class="post-time small text-muted">24th October 2006 10:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks a lot!<br />
+      <br />
+      I remarked Pop $tmp1 after !insertmacro and I had correct value for $tmp1.<br />
+      <br />
+      Would you be able to help check my logic?<br /></p>
+      <pre>
+<code><br /> !insertmacro IsUserAdmin $tmp1<br />; Pop $tmp1<br />;  ${If} $tmp1 = "1"<br />;  Goto CurrentUserIsAdmin<br />;  ${EndIf}<br />  !insertmacro WriteLog "current user permissions IS:  $tmp1" "$log_name.log"<br />  DetailPrint "current user permissions IS:  $tmp1"<br />  <br /> !if $tmp1 &lt; 0<br />  !insertmacro WriteLog "Can not check current user permissions" "$log_name.log"<br />  DetailPrint "Can not check current user permissions."<br />  Sleep 1000<br />!else <br /> !if  $tmp1 &gt; 0<br />  !insertmacro WriteLog "Current user has Administrator permissions" "$log_name.log"<br />  DetailPrint "Current user has Administrator permissions."<br />  Sleep 1000<br /> !else<br />  !insertmacro WriteLog "Current user has NOT Administrator permissions" "$log_name.log"<br />  DetailPrint "Current user has NOT Administrator permissions."<br />  Sleep 1000<br /> !endif<br />!endif<br /><br /> !insertmacro WriteLog "current user permissions IS:  $tmp1" "$log_name.log"<br /> Sleep 1000<br />    Quit<br /></code>
+</pre><br />
+      <br />
+      Log file is:<br />
+      <pre>
+<code><br />24/10/2006 (Tuesday) 10:20:51<br />current user permissions IS:  1<br />24/10/2006 (Tuesday) 10:20:51<br />Current user has NOT Administrator permissions<br />24/10/2006 (Tuesday) 10:20:53<br />current user permissions IS:  1<br /></code>
+</pre><br />
+      <br />
+      P.S. I found yours macro in NSIS wiki - THANKS.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vadzen</span><br />
+      <span class="post-time small text-muted">24th October 2006 19:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Sorry for question, I found logic solution:<br /></p>
+      <pre>
+<code><br />var tmp1<br />!include LogicLib.nsh<br /><br />!insertmacro IsUserAdmin $tmp1<br /><br />${If} $tmp1 == 1<br />  !insertmacro WriteLog "Current user has Administrator permissions" "$log_name.log"<br />  SetDetailsPrint textonly<br />  DetailPrint "Current user has Administrator permissions."<br />  Sleep 1000<br />${Else}<br />  ${If} $tmp1 == 0<br />  !insertmacro WriteLog "Current user has NOT Administrator permissions" "$log_name.log"<br />  SetDetailsPrint textonly<br />  DetailPrint "Current user has NOT Administrator permissions."<br />  Sleep 1000<br />  ${Else}<br />   !insertmacro WriteLog "Can not check current user permissions" "$log_name.log"<br />   Goto End_Failed<br />  ${EndIf}<br />${EndIf}<br /></code>
+</pre><br />
+      Thanks a lot
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

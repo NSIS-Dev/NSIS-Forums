@@ -1,0 +1,160 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="deleting all installed files and folders without RmDir /r" />
+
+  <title>deleting all installed files and folders without RmDir /r - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">deleting all installed files and folders without RmDir /r</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=341288">deleting all installed files and folders without RmDir /r</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">xlrotor</span><br />
+      <span class="post-time small text-muted">27th January 2012 07:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>deleting all installed files and folders without RmDir /r</strong><br />
+      I like to use /r when installing my application, but not when uninstalling since that will also delete files I did not install (as often recommended on this forum).<br />
+      <br />
+      After looking at AdvUninstLog2.nsh and UninstallLog.nsh I decided to take a different approach to deleting only my installed files and not anything else. Maybe this has been posted before, but I didn't come across it.<br />
+      <br />
+      Before compiling my NSIS script, I run the short Visual Basic program below to generate a nsh include file containing Delete and RmDir commands to remove everything from the user's computer.<br />
+      <br />
+      In my NSIS script I do the installing like as follows. Here I am installing into Program Files and to the user's APPDATA folder.<br />
+      SetOutPath "$INSTDIR"<br />
+      File /a "Files\*.*"<br />
+      SetOutPath "$INSTDIR\Network"<br />
+      File /a /r "Files\Network\*.*"<br />
+      SetShellVarContext all ;all means install for all users<br />
+      SetOutPath "$APPDATA\Xlrotor"<br />
+      File /a /r "Files\Xlrotor\*.*"<br />
+      <br />
+      The good part is that to uninstall all that is needed is:<br />
+      SetShellVarContext all<br />
+      !include "DeleteInstalledFiles.nsh"<br />
+      <br />
+      It doesn't win points for elegance, but it gets the the job done without much fuss. I run the visual basic program in Excel, but I it could be run from any Office application or in a VB6 or .Net program, too, I suppose. It only needs to be run once, or when the list of installed files changes.<br />
+      <br />
+      I hope somebody finds it useful.<br />
+      <br />
+      I wonder if a VB6 program could be run by the NSIS compiler when the script is compiled to update the include file before it is invoked later in the script. Can that be done?<br />
+      <br />
+      Cheers,<br />
+      <br />
+      Brian in Austin Texas<br />
+      <br />
+      Sub do_it()<br />
+      Close<br />
+      Open ThisWorkbook.path &amp; "\DeleteInstalledFiles.nsh" For Output As #1<br />
+      'I do the folders sort of in reverse order so the RmDir commands will delete subfolders before parent folders<br />
+      ListFolder ThisWorkbook.path &amp; "\Files\XLRotor", """$APPDATA", True<br />
+      ListFolder ThisWorkbook.path &amp; "\Files\Network", """$INSTDIR", False<br />
+      ListFolder ThisWorkbook.path &amp; "\Files", """$INSTDIR", False<br />
+      Close<br />
+      End Sub<br />
+      <br />
+      'If the folder structure is deeper than 2 levels, additional inner loops could be added.<br />
+      Sub ListFolder(path$, prefix$, Recurse As Boolean)<br />
+      Dim sFolderPath As String<br />
+      sFolderPath = path<br />
+      Dim FS As New FileSystemObject<br />
+      Dim FSfolder As Folder<br />
+      Dim subfolder As Folder<br />
+      Dim subsubfolder As Folder<br />
+      Dim xFiles As Files<br />
+      Dim oneFile As File<br />
+      Dim i As Integer<br />
+      <br />
+      Set FSfolder = FS.GetFolder(sFolderPath)<br />
+      For Each oneFile In FSfolder.Files<br />
+      Print #1, "Delete " &amp; prefix &amp; Mid(oneFile.path, InStr(oneFile.path, "\Files\") + 6) &amp; """"<br />
+      Next oneFile<br />
+      If Recurse Then<br />
+      For Each subfolder In FSfolder.SubFolders<br />
+      DoEvents<br />
+      i = i + 1<br />
+      For Each oneFile In subfolder.Files<br />
+      Print #1, "Delete " &amp; prefix &amp; Mid(oneFile.path, InStr(oneFile.path, "\Files\") + 6) &amp; """"<br />
+      Next<br />
+      For Each subsubfolder In subfolder.SubFolders<br />
+      DoEvents<br />
+      i = i + 1<br />
+      For Each oneFile In subsubfolder.Files<br />
+      Print #1, "Delete " &amp; prefix &amp; Mid(oneFile.path, InStr(oneFile.path, "\Files\") + 6) &amp; """"<br />
+      Next<br />
+      Print #1, "RmDir " &amp; prefix &amp; Mid(subsubfolder.path, InStr(subsubfolder.path, "\Files\") + 6) &amp; """"<br />
+      Next subsubfolder<br />
+      Print #1, "RmDir " &amp; prefix &amp; Mid(subfolder.path, InStr(subfolder.path, "\Files\") + 6) &amp; """"<br />
+      Next subfolder<br />
+      End If<br />
+      Print #1, "RmDir " &amp; prefix &amp; Mid(FSfolder.path, InStr(FSfolder.path, "\Files") + 6) &amp; """"<br />
+      End Sub</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">27th January 2012 10:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This is quite a common approach actually. You could in fact write a silent NSIS installer to generate the NSH too. To run it at build time, use !system or !execute using wscript.exe.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">xlrotor</span><br />
+      <span class="post-time small text-muted">28th January 2012 13:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for the tip about !system and !execute, Stu. Those will come in handy.<br />
+      <br />
+      I'm not surprised the VB approach is a common technique. But it didn't turn up in my searches in the forum, which is why I posted a note about it. Anyhow, on with the show.<br />
+      <br />
+      Cheers,<br />
+      <br />
+      Brian</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">28th January 2012 14:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I mean generally, not necessarily using VB (NSIS is used most commonly).<br />
+      <br />
+      <a href="http://nsis.sourceforge.net/Invoking_NSIS_run-time_commands_on_compile-time" target="_blank">http://nsis.sourceforge.net/Invoking...n_compile-time</a><br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

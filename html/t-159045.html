@@ -1,0 +1,259 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="How to correctly uninstall a PATH variable and value?" />
+
+  <title>How to correctly uninstall a PATH variable and value? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">How to correctly uninstall a PATH variable and value?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=159045">How to correctly uninstall a PATH variable and value?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vbgunz</span><br />
+      <span class="post-time small text-muted">9th December 2003 01:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>How to correctly uninstall a PATH variable and value?</strong><br />
+      Hello,<br />
+      <br />
+      I am trying to apply the path manipulation function but am only partially successful at getting it right.<br />
+      <b>Path Manipulation</b><br />
+      <a href="http://nsis.sourceforge.net/archive/viewpage.php?pageid=91" target="_blank">http://nsis.sourceforge.net/archive/....php?pageid=91</a><br />
+      <br />
+      I can write a single path or several without a problem. Here's the kicker. I noticed upon updating a test installer, the function would *not* check to see if the path already exist. It will simply append the path and it will keep doing it. e.g. If the following paths are defined during first installation...<br /></p>
+      <pre>
+<code>PATH: C:\alpha;C:\beta</code>
+</pre>These will simply get appended with the same path if I install again or update the installer...<br />
+      <pre>
+<code>PATH: C:\alpha;C:\beta;C:\alpha;C:\beta</code>
+</pre>Writing paths work like a charm but there is no check for duplicate paths. Is this how it is supposed to work?<br />
+      <br />
+      Another kicker is this. I believe I have the uninstall call correct. First I'll show my install path manipulation call, then my uninstall...<br />
+      <br />
+      <b>Installation</b><br />
+      <pre>
+<code>Section "alpha"<br />  Push "$INSTDIR\alpha"<br />  Call AddToPath<br />SectionEnd</code>
+</pre><br />
+      <b>Deinstallation</b><br />
+      <pre>
+<code>Section "Uninstall"<br />  Push "$INSTDIR\alpha"<br />  Call un.RemoveFromPath<br />SectionEnd</code>
+</pre><br />
+      <br />
+      Here's the catch with the above code. If a path variable does not exist on my system it is created "sweet". Upon Deinstallation the path value is removed but the path variable stays. In other words I have a variable "path" with no value. Is this ok?<br />
+      <br />
+      Remember I mentioned how an update will append the same value even though it might already exist? If e.g. C:\alpha;C:\alpha;C:\alpha; already exist but during uninstall I only call one instance of remove alpha then only one instance of the path is removed. Here is a scenario. If a user applies 3 updates, the paths keep getting appended. If the user decides to uninstall, 2 paths are left behind.<br />
+      <br />
+      The really big quirks with the function as a whole is...<br />
+      1. It doesn't check to see if a path already exist. It will append the path/s regardless.<br />
+      2. If the path variable doesn't already exist it will be created along with it's value *but* deinstallation will not remove the blank path variable.<br />
+      3. Uninstallation will only remove one instance and not all instances of the same path.<br />
+      <br />
+      I would really like to apply this function but would like to learn a little more about what's going on. Can someone help me apply this function correctly?<br />
+      <br />
+      I am WinXP.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">9th December 2003 13:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You have to check for the existence of your directory in the path variable yourself:<br />
+      <br />
+      ReadEnvStr $0 path<br />
+      Push "$0;"<br />
+      Push "$INSTDIR;"<br />
+      Call StrStr<br />
+      Pop $2<br />
+      IntCmp $2 -1 addPath addPath<br />
+      GetFullPathName /SHORT $1 $INSTDIR<br />
+      ReadEnvStr $0 path<br />
+      Push "$0;"<br />
+      Push "$1;"<br />
+      Call StrStr<br />
+      Pop $2<br />
+      IntCmp $2 -1 addPath addPath dontAdd<br />
+      <br />
+      If you want to delete the key if it's empty, read its value, compare to "" and delete if it is "".</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vbgunz</span><br />
+      <span class="post-time small text-muted">9th December 2003 13:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hello Kichik,<br />
+      <br />
+      Will you update the main script with the bit of a script you've given me here? Also, if the script in the archive is going to stay as is, would you mind if I ask why? I only ask because it seems it might already do as intended and without further modification to it.<br />
+      <br />
+      I thank you very much for your help and feedback whenever you have the time. I am curious if the script at the archive is going to stay as is or if it will be enhanced with the bit you've provided here.<br />
+      <br />
+      <br />
+      Thank you again Kichik</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">9th December 2003 13:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I have added a note about manual checking but the script itself is going to stay as is. I had a reason for not putting the check in it back when I wrote it, but I can't remember it now... :(<br />
+      <br />
+      You're welcome.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vbgunz</span><br />
+      <span class="post-time small text-muted">9th December 2003 13:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thank you Kichik, you're always much help and it is always appreciated.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vbgunz</span><br />
+      <span class="post-time small text-muted">12th December 2003 17:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hello Kichik,<br />
+      <br />
+      Sorry for the late breaking news. I am having trouble applying the loop to check if the path already exist. The compiler argued about "StrStr" so I've searched the archives, found the nsh and included it. Now it's choking over "addpath"...<br />
+      <br />
+      I cannot find the label "addpath" anywhere within nearly 1500 lines of code. I've searched both the forums and the archives since the last date I posted on this thread and since, I've put it to side. I am back hacking at the script and am stumped with addpath. Scarier is, right after addpath is dontAdd... Another label no where to be found.<br />
+      <br />
+      I found this thread which mentions something about an example but I cannot find one. On the NSIS archive page I find just the script but no example. Where does the loop check go? Where do I add the labels?<br />
+      <br />
+      Thank you for your time. It is greatly appreciated.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">12th December 2003 17:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You should use the StrStr function that comes with the path functions, it's not the same as the one in the documentation or the one in the archive. addPath and dontAdd are two labels you should define on your own. In addPath you should call AddPath and in dontPath you shouldn't. addPath will be jumped to if the directory is not already in the path and dontAdd will be called if it is.<br />
+      <br />
+      I'll update it to be a bit more specific...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vbgunz</span><br />
+      <span class="post-time small text-muted">12th December 2003 17:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hello Kichik,<br />
+      <br />
+      I've did exactly as you said and started adding labels before I made the post. Trouble is I am failing at getting it just right. I added "addpath:" to the very top of the little snippet and the compiler complained about dontadd. When I tried placing dontAdd at the very bottom of the snippet hoping it would exit, it took the installation into a loop. I had to kill it.<br />
+      <br />
+      I've downloaded and have included StrStr from the archives page. Do I need this include or not? Is this the StrStr the little snippet is referring too? I've included it but am still faced with the problem of not being able to get it to loop and see if the path already exist.<br />
+      <br />
+      I think to be honest, it would help many if you simply added such functionality direct into your script. I only say this because what good is the same path found twice. It only needs to be found once.<br />
+      <br />
+      Thank you Kichik, I am a little lost with this but hope you can help. Thank you again.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">12th December 2003 17:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I have made AddToPath check for the existence of the directory in the path variable before adding and made both functions set the reboot flag when needed. I haven't got to test it too much so please let me know if there are any problems with the new changes.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vbgunz</span><br />
+      <span class="post-time small text-muted">12th December 2003 18:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hello Kichik,<br />
+      <br />
+      So far so good, this is a worthy script right out of beta :) I've tested it with one install path so far (4 installs) and it works perfect.<br />
+      <br />
+      I will let you know of any odd behavior if adding any more paths to the script happen to make a conflict. This is truly appreciated and I am sure others will immediately find it as invaluable.<br />
+      <br />
+      Thank you very much Kichik</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vbgunz</span><br />
+      <span class="post-time small text-muted">12th December 2003 19:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hello Kichik,<br />
+      <br />
+      Quick update, I added several paths and tested re-installation several times. Everything is working great. Thank you again!<br />
+      <br />
+      I am on XP, latest CVS build.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">12th December 2003 23:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Great, thanks for helping me test.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vbgunz</span><br />
+      <span class="post-time small text-muted">13th December 2003 14:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hello Kichik,<br />
+      <br />
+      Just a side note, in order for a path to be registered, it must already exist. If the path does not exist it will not be added.<br />
+      <br />
+      During testing I noticed some paths were not being registered. Took me a while but that's the culprit. So dev's should know not to register a path before it is actually created on the target system.<br />
+      <br />
+      Just a side note :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">16th December 2003 15:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Path removal didn't work on NT. Updated.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">vbgunz</span><br />
+      <span class="post-time small text-muted">16th December 2003 17:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hello Kichik,<br />
+      <br />
+      Thanks for the update, I appreciate it!</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

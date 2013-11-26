@@ -1,0 +1,95 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DumpLog in Unicode script" />
+
+  <title>DumpLog in Unicode script - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">DumpLog in Unicode script</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=324077">DumpLog in Unicode script</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">taralex</span><br />
+      <span class="post-time small text-muted">15th November 2010 22:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>DumpLog in Unicode script</strong><br />
+      So I needed to save the log in my unicode in the same way I did in ANSI one. I used the code from nsis web site:<br />
+      <br /></p>
+      <pre>
+<code>FindWindow $0 "#32770" "" $HWNDPARENT<br />        GetDlgItem $0 $0 1016<br />        StrCmp $0 0 exit        <br />        SendMessage $0 ${LVM_GETITEMCOUNT} 0 0 $6<br />        DetailPrint "Item count: $6"<br />        DetailPrint ${NSIS_MAX_STRLEN}<br />        System::Alloc ${NSIS_MAX_STRLEN}<br />        Pop $3<br />        StrCpy $2 0<br />        System::Call "*(i, i, i, i, i, i, i, i, i) i \<br />        (0, 0, 0, 0, 0, r3, ${NSIS_MAX_STRLEN}) .r1"<br />loop: StrCmp $2 $6 done<br />        System::Call "User32::SendMessageA(i, i, i, i) i \<br />        ($0, ${LVM_GETITEMTEXT}, $2, r1)"<br />        System::Call "*$3(&amp;t${NSIS_MAX_STRLEN} .r4)"<br />        DetailPrint "Here's the string: $4"<br />        IntOp $2 $2 + 1<br />        Goto loop<br />done:   <br />        System::Free $1<br />        System::Free $3<br />exit:</code>
+</pre><br />
+      <br />
+      I edited it to the following:<br />
+      <pre>
+<code>FindWindow $0 "#32770" "" $HWNDPARENT<br />        GetDlgItem $0 $0 1016<br />        StrCmp $0 0 exit        <br />        SendMessage $0 ${LVM_GETITEMCOUNT} 0 0 $6<br />        DetailPrint "Item count: $6"<br />        DetailPrint ${NSIS_MAX_STRLEN}<br />        System::<b>Str</b>Alloc ${NSIS_MAX_STRLEN}<br />        Pop $3<br />        StrCpy $2 0<br />        System::Call "*(i, i, i, i, i, i, i, i, i) i \<br />        (0, 0, 0, 0, 0, r3, ${NSIS_MAX_STRLEN}) .r1"<br />loop: StrCmp $2 $6 done<br />        System::Call "User32::SendMessageA(i, i, i, i) i \<br />        ($0, ${LVM_GETITEMTEXT<b>W</b>}, $2, r1)"<br />        System::Call "*$3(&amp;<b>w</b>${NSIS_MAX_STRLEN} .r4)"<br />        DetailPrint "Here's the string: $4"<br />        IntOp $2 $2 + 1<br />        Goto loop<br />done:   <br />        System::Free $1<br />        System::Free $3<br />exit:</code>
+</pre><br />
+      <br />
+      Surprisingly, the code works. Surprisingly, because I have no idea why if I'm creating the szString member of the structure as type "i":<br />
+      <pre>
+<code>System::Call "*(i, i, i, i, i, <b>i</b>, i, i, i) i \<br />        (0, 0, 0, 0, 0, r3, ${NSIS_MAX_STRLEN}) .r1"</code>
+</pre><br />
+      the thing still works. My understanding was that the type should be 'w' or 't'. But alas, specifying any of these types doesn't work at all. Just an empty string is returned...<br />
+      Can anyone explain me why?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">15th November 2010 22:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Why are you using SendMessageA in the unicode code?<br />
+      <br />
+      i because t/m/w are special types used by the system plugin (It converts on the fly before calling the requested windows function). i (and p in 2.47) is used for pointers and the LVITEM struct needs a pointer to a string (LPTSTR winapi type)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">taralex</span><br />
+      <span class="post-time small text-muted">16th November 2010 13:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">oh, now I see, thank you! I was under the impression that 'i' stands for int and was therefore wondering.<br />
+      well the SendMessageA was initially in the code before I started converting to Unicode, it worked, so I never paid attention that it's actually an ANSI function, thanks for pointing out, I'll replace it with SendMessageW.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">16th November 2010 13:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It does stand for int, but pointers are the same size as an int (depending on the architecture mind).<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

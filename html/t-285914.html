@@ -1,0 +1,107 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Error Code 87 with CABSetup plugin" />
+
+  <title>Error Code 87 with CABSetup plugin - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Error Code 87 with CABSetup plugin</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=285914">Error Code 87 with CABSetup plugin</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Vercoln</span><br />
+      <span class="post-time small text-muted">29th January 2008 22:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Error Code 87 with CABSetup plugin</strong><br />
+      I am attempting to make a small NSIS script that will help me in the creation/extraction of cab files. Currently, I am playing around with the CABSetup sample files to learn more about how to use the plugin.<br />
+      <br />
+      I was successful in creating the cab file. Now, I wish to extract from the cab file. However, I get an error code 87 before anything happens. I'm wondering if anyone is able to help me figure out what's going on?<br />
+      <br />
+      A lot of the code is just copied from the sample, but here it is anyhow:<br />
+      <br /></p>
+      <pre>
+<code>Section ExtractCab<br />    CABSetup::Extract "C:\Installer\Test\MasterCab\Disk1\MASTER1.CAB" "/TARGET=C:\Installer\Test2" \<br />        /ALL "/reportfile=C:\Installer\Test\MasterCab\MASTER.RPT" \<br />        "/showrate" "/resume"<br />    Pop $R0<br /><br />    ; Quit if the extraction completed without error.<br />    ${IfThen} $R0 = 0 ${|} Goto Done ${|}<br /><br />    ; Handle case where extraction was cancelled.<br />    ${If} $R0 = 995<br />        DetailPrint "Extract process was cancelled"<br />        SetDetailsPrint None<br />        Goto Done<br />    ${EndIf}<br /><br />    DetailPrint "Extract failed with error code $R0"<br />    Done:<br />        <br />        DetailPrint 'Dumping install details log...'<br />        DumpLog::DumpLog 'test.log' .r0<br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      And here is the log output:<br />
+      <pre>
+<code>Extract failed with error code 87<br />Dumping install details log...<br /></code>
+</pre><br />
+      <br />
+      If anyone has any ideas, let me know! I could use the help. I have never worked with cab files before.<br />
+      <br />
+      Thanks!
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Vercoln</span><br />
+      <span class="post-time small text-muted">30th January 2008 13:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Awww, dang. I just figured out why it didn't work...<br />
+      <br /></p>
+      <pre>
+<code>CABSetup::Extract "C:\Installer\Test\MasterCab\Disk1\MASTER1.CAB" "/TARGET=C:\Installer\Test2" \<br />        /ALL "/reportfile=C:\Installer\Test\MasterCab\MASTER.RPT" \<br />        "/showrate" "/resume"</code>
+</pre><br />
+      <br />
+      is wrong and it SHOULD be<br />
+      <br />
+      <pre>
+<code>CABSetup::Extract "/SOURCE=C:\Installer\Test\MasterCab\Disk1\MASTER1.CAB" "/TARGET=C:\Installer\Test2" \<br />        /ALL "/reportfile=C:\Installer\Test\MasterCab\MASTER.RPT" \<br />        "/showrate" "/resume"</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Mr Inches</span><br />
+      <span class="post-time small text-muted">31st January 2008 14:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Any positive non-zero return code from the CABSetup functions will be a value that could be returned from the GetLastError Windows API function. The value -1 is returned if the normal error code could not be returned and should only happen if the system is extremely low on memory i.e. there is less than the length of an NSIS string free.<br />
+      <br />
+      Error 87 is as follows (from MSDN):<br />
+      <br />
+      ERROR_INVALID_PARAMETER<br />
+      87<br />
+      0x57<br />
+      <br />
+      The parameter is incorrect.<br />
+      <br />
+      As you correctly noticed, one of the parameters passed to the function was incorrect - trying to extract files without a valid source cabinet or target path currently counts as specifying invalid parameters for Extract.<br />
+      <br />
+      Sounds like it might be an idea to add 87 and its meaning to the commonly returned error codes for each function in CABSetup.txt; I will do this for the next update.<br />
+      <br />
+      Duncan</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

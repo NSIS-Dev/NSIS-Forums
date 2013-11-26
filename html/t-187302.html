@@ -1,0 +1,411 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Set focus to installer window" />
+
+  <title>Set focus to installer window - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Set focus to installer window</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=187302">Set focus to installer window</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kobus</span><br />
+      <span class="post-time small text-muted">21st July 2004 11:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Set focus to installer window</strong><br />
+      Hi,<br />
+      <br />
+      I'am trying to prevent user to run installer more then once at a time. (it works) :)<br />
+      <br />
+      In such a case I want to display message about it and set focus to already working installer winodw.<br />
+      <br />
+      my code:<br />
+      <br />
+      <br />
+      Function .onInit<br />
+      System::Call 'kernel32::CreateMutexA(i 0, i 0, t "myMutexS") i .r1 ?e'<br />
+      Pop $R0<br />
+      <br />
+      StrCmp $R0 0 ok<br />
+      MessageBox MB_OK|MB_ICONSTOP "Installer already working"<br />
+      FindWindow $1 "" "${PRODUCT_NAME}" 0 0<br />
+      SendMessage $1 0x00007 0 0 'send WM_SETFOCUS<br />
+      Abort<br />
+      ok:<br />
+      ...<br />
+      FunctionEnd<br />
+      <br />
+      why it didn't work ? Any idea ?<br />
+      with WM_CLOSE (0x00010) it works perfectly ...<br />
+      <br />
+      thanks in advance<br />
+      <br />
+      kobus</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deguix</span><br />
+      <span class="post-time small text-muted">21st July 2004 11:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You're calling it in <i>.onInit</i>, at this time the installer GUI wasn't loaded so it will never find a window and set focus to it. Use <i>.onGUIInit</i> instead.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kobus</span><br />
+      <span class="post-time small text-muted">21st July 2004 12:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by deguix</i><br />
+        <b>You're calling it in <i>.onInit</i>, at this time the installer GUI wasn't loaded so it will never find a window and set focus to it. Use <i>.onGUIInit</i> instead.</b>
+      </blockquote>The scenario is different.<br />
+      User run installer (instance no 1). Then run installer agian (instance no 2).<br />
+      And now instance no 2. should inform user that installer is already working, set focus to window with instance no 1 and close itself (instance no 2).<br />
+      <br />
+      anyway ... with .onGuiInit didn't work too. :(<br />
+      <br />
+      kobus
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">iceman_k</span><br />
+      <span class="post-time small text-muted">21st July 2004 14:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Interesting. The code seems to be good. Can you upload your script?<br />
+      <br />
+      [edit]<br />
+      OK, this works:<br />
+      <br /></p>
+      <pre>
+<code><br />Function .onInit<br />System::Call 'kernel32::CreateMutexA(i 0, i 0, t "myMutexS") i .r1 ?e'<br />Pop $R0<br /><br />StrCmp $R0 0 ok<br />MessageBox MB_OK|MB_ICONSTOP "Installer already working"<br />FindWindow $1 "" "${PRODUCT_NAME} ${PRODUCT_VERSION} Setup" 0 0<br />System::call "user32::SetWindowPos(i r1, i -1, i 0, i 0, i 0, i 0, i 0x02|0x01) i.r1"<br />Pop $1<br />Abort<br />ok:<br />...<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      When you issue the FindWindow instruction, make sure to specify the installer name followed by " Setup". In my case the installer name was "${PRODUCT_NAME} ${PRODUCT_VERSION}"<br />
+      [/edit]
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kobus</span><br />
+      <span class="post-time small text-muted">22nd July 2004 07:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        When you issue the FindWindow instruction, make sure to specify the installer name followed by " Setup". In my case the installer name was "${PRODUCT_NAME} ${PRODUCT_VERSION}"
+      </blockquote>I set title with caption for "${PRODUCT NAME}" so when I am trying to find window I use "${PRODUCT NAME}" as a title without "setup" word and it works ! - WM_CLOSE message close desired window. Only WM_SETFOCUS didn't work ...<br />
+      <br />
+      I attach the code (sorry the UI is in Polish ...)<br />
+      The problematic code is in onInit funcion<br />
+      <br />
+      thanks for spending time with my problems<br />
+      <br />
+      kobus
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">iceman_k</span><br />
+      <span class="post-time small text-muted">22nd July 2004 13:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Your attachment is missing.<br />
+      Anyway, did you try SetWindowPos as in my example:<br />
+      <br /></p>
+      <pre>
+<code><br />System::call "user32::SetWindowPos(i r1, i -1, i 0, i 0, i 0, i 0, i 0x02|0x01) i.r1"<br />Pop $1<br /></code>
+</pre><br />
+      <br />
+      This seems to work.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kobus</span><br />
+      <span class="post-time small text-muted">22nd July 2004 13:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yes, it's really works !!! :up:<br />
+      <br />
+      That's was my typo error :(<br />
+      <br />
+      thanks a lot<br />
+      kobus</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">externe</span><br />
+      <span class="post-time small text-muted">17th November 2004 00:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hello,<br />
+      I just saw this post and test the code above. But it won't work for me.<br />
+      <br />
+      I rewrite it here.<br /></p>
+      <pre>
+<code><br />!define PRODUCT_NAME "My application"<br />!define PRODUCT_VERSION "1.0"<br /><br />Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"<br />outfile "test.exe"<br /><br />Function .onInit<br />System::Call 'kernel32::CreateMutexA(i 0, i 0, t "myMutexS") i .r1 ?e'<br />Pop $R0<br /><br />StrCmp $R0 0 ok<br />MessageBox MB_OK|MB_ICONSTOP "Installer already working"<br />FindWindow $1 "" "${PRODUCT_NAME} ${PRODUCT_VERSION} Setup"<br />System::call "user32::SetWindowPos(i r1, i -1, i 0, i 0, i 0, i 0, i 0x02|0x01) i.r1"<br />Pop $1<br />Abort<br />ok:<br /><br />FunctionEnd<br /><br />section "Install"<br />sectionend<br /></code>
+</pre><br />
+      Can someone see why that doesn't work ?<br />
+      Thanks :)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">17th November 2004 14:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I found that it won't work for that example because once the installation has completed, the window title will become:<br />
+      ${PRODUCT_NAME} ${PRODUCT_VERSION} Setup: Completed<br />
+      <br />
+      If you change it to that (in FindWindow) then it works fine. This will be a problem though because the title is never going to be the same.<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Comm@nder21</span><br />
+      <span class="post-time small text-muted">17th November 2004 14:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">why didn't you try the usual way?<br /></p>
+      <pre>
+<code>FindWindow $1 "#32770"</code>
+</pre><br />
+      should work for every title ...
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">17th November 2004 15:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Doesn't work :p<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br />
+      <span class="post-time small text-muted">17th November 2004 18:23 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by externe<br />
+        <b>Can someone see why that doesn't work ?<br /></b></i>
+      </blockquote>Tested on Win98, NSIS 2.01 - works fine.<br />
+      BTW in one of my apps customer asked do not show second "already running" message box, but close 3-rd instance silently :(<br />
+      <br />
+      #32770 window class - few and not installer dialog windows may present on the desktop :)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">externe</span><br />
+      <span class="post-time small text-muted">17th November 2004 19:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hey thanks, I never seen that the titlebar name changed...<br />
+      <br />
+      Now it work ( code below )<br />
+      But the focus are <i>not really</i> doing. (The window is gray)<br />
+      Is it normal ?<br />
+      <br />
+      Thanks<br />
+      :)<br />
+      <br /></p>
+      <pre>
+<code><br />!define PRODUCT_NAME "My application"<br />!define PRODUCT_VERSION "1.0"<br /><br />Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"<br />outfile "test.exe"<br /><br />Function .onInit<br />System::Call 'kernel32::CreateMutexA(i 0, i 0, t "myMutexS") i .r1 ?e'<br />Pop $R0<br /><br />StrCmp $R0 0 ok<br />MessageBox MB_OK|MB_ICONSTOP "Installer already working"<br />FindWindow $1 "" "${PRODUCT_NAME} ${PRODUCT_VERSION} Setup"<br />System::call "user32::SetWindowPos(i r1, i -1, i 0, i 0, i 0, i 0, i 0x02|0x01) i.r1"<br />Pop $1<br />Abort<br />ok:<br /><br />FunctionEnd<br /><br />section "Install"<br />MessageBox MB_OK|MB_ICONSTOP "I'm running...                             Launch another instance for testing...                "<br />sectionend<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">17th November 2004 20:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It won't be working because the title will be "${PRODUCT_NAME} ${PRODUCT_VERSION} Setup: Installing Files" and so on.<br />
+      <br />
+      I'm going to have to modify that script...<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">17th November 2004 20:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+      <pre>
+<code><br />!define PRODUCT_NAME "My application"<br />!define PRODUCT_VERSION "1.0"<br /><br />Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"<br />outfile "test.exe"<br /><br />Function .onInit<br />System::Call 'kernel32::CreateMutexA(i 0, i 0, t "myMutexS") i .r1 ?e'<br />Pop $R0<br /><br />StrCmp $R0 0 ok<br />MessageBox MB_OK|MB_ICONSTOP "Installer already working"<br />FindWindow $1 "" "${PRODUCT_NAME} ${PRODUCT_VERSION} Setup"<br /> StrCmp $1 0 0 setFocus<br />FindWindow $1 "" "${PRODUCT_NAME} ${PRODUCT_VERSION} Setup: License Agreement"<br /> StrCmp $1 0 0 setFocus<br />FindWindow $1 "" "${PRODUCT_NAME} ${PRODUCT_VERSION} Setup: Installation Options"<br /> StrCmp $1 0 0 setFocus<br />FindWindow $1 "" "${PRODUCT_NAME} ${PRODUCT_VERSION} Setup: Directory"<br /> StrCmp $1 0 0 setFocus<br />FindWindow $1 "" "${PRODUCT_NAME} ${PRODUCT_VERSION} Setup: Installing Files"<br /> StrCmp $1 0 0 setFocus<br />FindWindow $1 "" "${PRODUCT_NAME} ${PRODUCT_VERSION} Setup: Completed"<br />setFocus:<br />System::call "user32::SetWindowPos(i r1, i -1, i 0, i 0, i 0, i 0, i 0x02|0x01) i.r1"<br />Pop $1<br />Abort<br />ok:<br /><br />FunctionEnd<br /><br />Section "Install"<br />...<br />SectionEnd</code>
+</pre><br />
+      <br />
+      This should work (might want to try it).<br />
+      <br />
+      -Stu
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">externe</span><br />
+      <span class="post-time small text-muted">18th November 2004 07:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Nice, Thanks Afrow UK. :)<br />
+      <br />
+      I understand the way well now :p<br />
+      <br />
+      Is it possible to list the windows ? I mean create a macro who's loop in the list of all window and search the words "${PRODUCT_NAME}" and "Setup".<br />
+      <br />
+      Nice idea no ?<br />
+      <br />
+      Bye.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br />
+      <span class="post-time small text-muted">18th November 2004 07:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Program can check all top level dialog windows - this should work with custom installer pages too.<br />
+      <br />
+      Function .onInit<br />
+      <br />
+      System::Call 'kernel32::CreateMutexA(i 0, i 0, t "myMutexS") i .r1 ?e'<br />
+      Pop $R0<br />
+      StrCmp $R0 0 ok<br />
+      MessageBox MB_OK|MB_ICONSTOP "Installer already working"<br />
+      <br />
+      StrLen $5 "${PRODUCT_NAME} ${PRODUCT_VERSION}"<br />
+      loop:<br />
+      FindWindow $0 '#32770' '' 0 $0<br />
+      IntCmp $0 0 ok<br />
+      StrCpy $3 ${NSIS_MAX_STRLEN}<br />
+      System::Call "user32.dll::GetWindowText(i r0, t r1, i r3) i.r4"<br />
+      StrCpy $6 $1 $5<br />
+      StrCmp $6 "${PRODUCT_NAME} ${PRODUCT_VERSION}" 0 loop<br />
+      System::call "user32::SetWindowPos(i r1, i -1, i 0, i 0, i 0, i 0, i 0x02|0x01) i.r1"<br />
+      Pop $1<br />
+      Abort<br />
+      ok:<br />
+      <br />
+      FunctionEnd</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">externe</span><br />
+      <span class="post-time small text-muted">18th November 2004 10:37 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well, sorry if i'm a few OT, but I want to understand what return exactly :<br />
+      <b>FindWindow $0 '#32770' '' 0 $0</b><br />
+      <br />
+      So I write this little test : A 10 loop wich open a messagebox with the return of FindWindow.<br /></p>
+      <pre>
+<code><br />outfile "test.exe"<br /><br />Section "Install"<br /><br />StrCpy $9 0<br /><br />loop:<br />FindWindow $0 '#32770' '' 0 $0<br />MessageBox MB_OK|MB_ICONSTOP $0<br /><br />IntOp $9 $9 + 1<br />StrCmp $9 10 0 loop<br /><br />SectionEnd<br /></code>
+</pre><br />
+      And that give me numbers : 918078, 66148, 66188, 1180982, 0, ...<br />
+      <br />
+      Can someone tell me what mean those numbers ?<br />
+      Thanks :)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br />
+      <span class="post-time small text-muted">18th November 2004 11:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This means that you have 4 dialog type windows (class #32770) on the desktop, and numbers are system window handles. Using handle program can read window caption (this case).</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">externe</span><br />
+      <span class="post-time small text-muted">18th November 2004 12:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ok,<br />
+      <b>#32770</b> mean <b>USER dialog boxes</b> thanks!<br />
+      I found info also here : <a href="http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msaa/msaapndx_6qlh.asp" target="_blank">MSDN</a><br />
+      <br />
+      You say : "Using handle program can read window caption".<br />
+      This is what the line System::Call "user32.dll::GetWindowText(i r0, t r1, i r3) i.r4" does ? Right ?<br />
+      Well I try this ( from reading your previous code )<br />
+      But that return nohing ( I try to have the caption in the messagebox )<br />
+      <br /></p>
+      <pre>
+<code><br />outfile "test.exe"<br /><br />Section "Install"<br /><br />StrCpy $9 0<br /><br />loop:<br />FindWindow $0 '#32770' '' 0 $0<br />System::Call "user32.dll::GetWindowText(i r0, t r1, i r3) i.r4"<br />StrCpy $6 $1<br /><br />MessageBox MB_OK|MB_ICONSTOP $6<br /><br />IntOp $9 $9 + 1<br />StrCmp $9 3 0 loop<br /><br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      Can you help me once again please ? :)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br />
+      <span class="post-time small text-muted">18th November 2004 13:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Caption text is second parameter, use $1 in the MessageBox.<br />
+      StrCpy copies from $1 to $6 first part of caption only ($5 is length).<br />
+      You have nothing because not defines buffer length (last parameter, MSDN please :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Comm@nder21</span><br />
+      <span class="post-time small text-muted">18th November 2004 16:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        #32770 window class - few and not installer dialog windows may present on the desktop
+      </blockquote>damn :)<br />
+      <br />
+      improved and shortened the code a bit:<br />
+      <pre>
+<code>        System::Call    'kernel32::CreateMutexA(i 0, i 0, t "$(^Name)") i .r0 ?e'<br />        Pop             $0<br />        StrCmp          $0  0  ok<br />        MessageBox      MB_OK|MB_ICONEXCLAMATION  "Installer already running."<br />        StrLen  $0  "$(^Name)"<br />        loop:<br />        FindWindow      $1  '#32770'  ''  0  $1<br />        IntCmp  $1  0  ok<br />        System::Call    "user32.dll::GetWindowText(i r1, t .r2, i ${NSIS_MAX_STRLEN}) i."<br />        StrCpy  $2  $1  $0<br />        StrCmp  $2  "$(^Name)"  0  loop<br />        System::call    "user32::SetWindowPos(i r1, i -1, i 0, i 0, i 0, i 0, i 0x02|0x01) i."<br />        Abort<br />        ok:</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">externe</span><br />
+      <span class="post-time small text-muted">18th November 2004 17:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well, I try <i>a lot</i> of time... But impossible to open MessageBox(s) with the name of the caption of each of window...<br />
+      :(</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

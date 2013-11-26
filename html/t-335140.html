@@ -1,0 +1,134 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Exit code on embedded installers" />
+
+  <title>Exit code on embedded installers - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Exit code on embedded installers</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=335140">Exit code on embedded installers</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">heldain</span><br />
+      <span class="post-time small text-muted">23rd September 2011 11:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Exit code on embedded installers</strong><br />
+      Bad topic title I know.<br />
+      <br />
+      I'm running an installer from my NSIS installer/script via the following:<br />
+      <br /></p>
+      <pre>
+<code>Section "app2" Section2<br />        <br />        ; Set Section properties<br />        SetOverwrite on<br />        SectionIn RO<br />        <br />        ;Set Section Files and Shortcuts<br />        SetOutPath "$INSTDIR\Install\"<br />        File "..\..\source\biginstaller\app2.exe"<br />        ExecWait "$INSTDIR\Install\app2.exe"<br />                <br />SectionEnd</code>
+</pre><br />
+      <br />
+      However I want to abort the whole script/installer if this installer fails to complete. I.e. if the exit code != 0.<br />
+      I did find a 'Useful Script' that mentions this, but I'm being intellectually challenged and cant find how to apply it, as the example seems to omit this section.<br />
+      <br />
+      <a href="http://nsis.sourceforge.net/Embedding_other_installers#Using_the_return_value_from_the_ExecWait" target="_blank">http://nsis.sourceforge.net/Embedding_other_installers#Using_the_return_value_from_the_ExecWait<br /></a>.<br />
+      <br />
+      Suggestions please?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">23rd September 2011 13:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">There is an optional parameter to capture the <a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.1.4" target="_blank">exit code</a>. The manual is your friend.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">heldain</span><br />
+      <span class="post-time small text-muted">23rd September 2011 13:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I saw that, however getting the exit code and handling it are different things. Its the handling that I'm struggling with.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">LoRd_MuldeR</span><br />
+      <span class="post-time small text-muted">23rd September 2011 13:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">First of all you need to figure out what ExitCode the installer you run will return in for what situation.<br />
+      <br />
+      This depends on the individual installer and may not be answered in general.<br />
+      <br />
+      Then simply use a "StrCmp $1 &lt;VAL&gt; &lt;GoIfEqual&gt; &lt;Otherwise&gt;" to decide where to jump, depending on the ExitCode.<br />
+      <br /></p>
+      <pre>
+<code>ExecWait '"$INSTDIR\Install\app2.exe"' $1<br />StrCmp $1 0 Success ; Jump to 'Success' if (and only if) ExitCode was '0'<br /><br />MessageBox MB_OK "Failed to install. Setup will exit!"<br />Quit<br /><br />Success:<br />MessageBox MB_OK "Installed correctly"</code>
+</pre><br />
+      <br />
+      For more complex things, you may want to have a look at ${switch} from LogicLib.nsh ;)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">23rd September 2011 13:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Or, preferably, use the logiclib and do:<br />
+      ${If} $1 == "&lt;VAL&gt;"<br />
+      ;stuff<br />
+      ${Else}<br />
+      ;other stuff<br />
+      ${EndIf}</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">23rd September 2011 13:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Include LogicLib.nsh and then</p>
+      <pre>
+<code>ExecWait "$INSTDIR\Install\app2.exe" $0<br />${If} $0 &lt;&gt; 0<br />; app2 has failed, must cleanup and stop<br />... <br />${EndIf}</code>
+</pre>or
+      <pre>
+<code>ExecWait "$INSTDIR\Install\app2.exe" $0<br />${If} $0 = 0<br />; app2 success, continue remaining operations<br />... <br />${EndIf}</code>
+</pre><br />
+      <br />
+      (Edit: overlapping posts - MSG and I are suggesting the same thing.)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">23rd September 2011 13:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">...wow, look at us being all helpful today. :P</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

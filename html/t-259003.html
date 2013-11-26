@@ -1,0 +1,197 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="System plugin and passing parameters to dll" />
+
+  <title>System plugin and passing parameters to dll - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">System plugin and passing parameters to dll</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=259003">System plugin and passing parameters to dll</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pps</span><br />
+      <span class="post-time small text-muted">6th November 2006 12:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>System plugin and passing parameters to dll</strong><br />
+      Hello.<br />
+      <br />
+      I've got problem with passing parameters to DLL.<br />
+      I need to pass something like char** (just like parameters table in regular c++), but after some tries I've given up.<br />
+      I'm sure that this is not correct way:<br /></p>
+      <pre>
+<code>  System::Call '*(t R3) i.R2'<br />  System::Call '*(i R2) i.R1'<br />  System::Call 'advapi32::StartServiceA(i r5, i $R4, i $R1) i.r6 ? e'<br />  System::Free $R1<br />  System::Free $R2<br />  Pop $0 ; error code<br /></code>
+</pre><br />
+      In StartServiceA:<br />
+      $R1 should be a pointer to table of pointers to null-terminated strings.<br />
+      $R4 should contain number of strings.<br />
+      <br />
+      How can I make structure like this and how can I count $R4 value (assuming I have only regular string with spaces in $R7)?<br />
+      <br />
+      And another question. Option '? e' pops an error code to stack. Is the order of 'Pop' and 'Free' important (in other words: does '::Call*(...)' and '? e' use the same stack)?<br />
+      <br />
+      Thanks,
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pps</span><br />
+      <span class="post-time small text-muted">6th November 2006 15:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Maybe this way:</p>
+      <pre>
+<code>  System::Call '*(t R3, n) i.R1'<br />  System::Call 'advapi32::StartServiceA(i r5, i $R4, i $R1) i.r6 ? e'<br />  System::Free $R1</code>
+</pre>$R3 contains first (and only one in this example) parameter.<br />
+      $R4 = 1<br />
+      <br />
+      If there will be more parameters, this will looks like:
+      <pre>
+<code>  System::Call '*(t R3, R6, R7, R8, n) i.R1'</code>
+</pre>Am I wrong?<br />
+      <br />
+      I've tried to start notepad as a service (successful), but the parameter is ignored. The idea was to run notepad with filename :
+      <pre>
+<code>  c:\windows\system32\notepad.exe c:\test.txt</code>
+</pre><br />
+      The notepad is starting just fine, but the file isn't opening (the parameter isn't recognized).<br />
+      <br />
+      Any ideas?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">6th November 2006 20:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Almost. You need to use specify a type for each member of the structure. Use `t` before R6, R7 and R8. There's also no need for that last `n`.</p>
+      <pre>
+<code>  System::Call '*(t R3, t R6, t R7, t R8) i.R1'</code>
+</pre>The order of System::Free and Pop is not important, even though they use the same stack. System::Free only pops on item from the stack, so it won't pop the error.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pps</span><br />
+      <span class="post-time small text-muted">7th November 2006 16:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for help :)<br />
+      <br />
+      And what about creating tables of structures?<br />
+      For example I want to create structure like this:<br /></p>
+      <pre>
+<code>typedef struct {<br />   int a;<br />   char t[10];<br />   __int64 b;<br />   double x;<br />   char *p;<br />} myStruct;</code>
+</pre><br />
+      Is the only way to do that this way (just 2-elements array):<br />
+      <pre>
+<code>System::Call '*(i 1, t&amp;10 "asdfb", l 100, ???, t* n, i 7, t&amp;10 "qwerty", l 1991, ???, t* r2) i.r1'</code>
+</pre><br />
+      And what about float numbers?<br />
+      <br />
+      I've successfully used this method to pass address of int[][] to dll, but is there any simplier method?<br />
+      <br />
+      2 weeks isn't enough to fully explore NSIS' capabilities... ;)<br />
+      <br />
+      Thanks again,
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Comm@nder21</span><br />
+      <span class="post-time small text-muted">7th November 2006 19:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        2 weeks isn't enough to fully explore NSIS' capabilities...
+      </blockquote>believe me: 2 years aren't either :D
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">7th November 2006 20:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It depends if you're defining an array of structs or struct pointers. If those are pointers, allocate each structure using the same method you allocate the array and allocate the array with all of the pointers. If it's just an array, the method you've shown should work. Just don't forget to mind alignments.<br />
+      <br />
+      Probably the easiest method of seeing where everything should be placed is writing a simple C program that'd print the offsets of every member.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pospec</span><br />
+      <span class="post-time small text-muted">12th May 2008 09:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK, and how can I System::Call with float parameter, please?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">12th May 2008 13:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You can't. It doesn't support floats. The Math plug-in, however, has support for floats.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pospec</span><br />
+      <span class="post-time small text-muted">12th May 2008 13:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">So there is no way how to System::Call my DLL exported 'float func(float x)' without writing some "wrapper"?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">12th May 2008 14:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">That's correct.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pospec</span><br />
+      <span class="post-time small text-muted">12th May 2008 14:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Sad but true. And why can't System plugin convert from string to float and pass it to function?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">12th May 2008 19:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Because it doesn't that functionality built-in. Floats are a pin to handle.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

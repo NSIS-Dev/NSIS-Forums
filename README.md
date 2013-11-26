@@ -1,11 +1,11 @@
-# Public Domain Mark 1.0
+### Public Domain Mark 1.0
 No Copyright
 
 This work has been **identified** as being free of known restrictions under copyright law, including all related and neighboring rights.
 
 You can copy, modify, distribute and perform the work, even for commercial purposes, all without asking permission. See **Other Information** below.
 
-## Other Information
+#### Other Information
 
 * The work may not be free of known copyright restrictions in all [jurisdictions](http://creativecommons.org/publicdomain/mark/1.0/).
 

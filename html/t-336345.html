@@ -1,0 +1,187 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="NSIS FileOpen in read mode is shared?" />
+
+  <title>NSIS FileOpen in read mode is shared? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">NSIS FileOpen in read mode is shared?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=336345">NSIS FileOpen in read mode is shared?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">SJSJ</span><br />
+      <span class="post-time small text-muted">21st October 2011 04:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>NSIS FileOpen in read mode is shared?</strong><br />
+      Hello,<br />
+      <br />
+      When I open a file in mode "r" - FileOpen "filename" r, does it lock the file for exclusive use? I believe, in "r" mode, the process shouldn't lock the resource.<br />
+      <br />
+      I have a common file which is written by a java program and read by NSIS. When NSIS opens the file in "r" mode and reads it, the java program throws an exception during its write with the message that the file is in use by another program.<br />
+      <br />
+      Is there a way in NSIS to open shared resource for reading without locking it?<br />
+      <br />
+      Thank you!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">LoRd_MuldeR</span><br />
+      <span class="post-time small text-muted">21st October 2011 14:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">When a file is open for reading, it usually is shared for reading (i.e. no exclusive lock), but not for writing.<br />
+      <br />
+      And it seems that is what NSIS does:<br /></p>
+      <pre>
+<code>HANDLENSISCALLmyOpenFile</code><span style="color: #007700">(const</span><span style="color: #0000BB">char</span><span style="color: #007700">*</span><span style="color: #0000BB">fn</span><span style="color: #007700">,</span><span style="color: #0000BB">DWORDda</span><span style="color: #007700">,</span><span style="color: #0000BB">DWORDcd</span><span style="color: #007700">)
+<br />{
+<br /></span><span style="color: #0000BB">intattr</span><span style="color: #007700">=</span><span style="color: #0000BB">GetFileAttributes</span><span style="color: #007700">(</span><span style="color: #0000BB">fn</span><span style="color: #007700">);
+<br />return</span><span style="color: #0000BB">CreateFile</span><span style="color: #007700">(
+<br /></span><span style="color: #0000BB">fn</span><span style="color: #007700">,
+<br /></span><span style="color: #0000BB">da</span><span style="color: #007700">,
+<br /></span><span style="color: #0000BB">FILE_SHARE_READ</span><span style="color: #007700">,
+<br /></span><span style="color: #0000BB">NULL</span><span style="color: #007700">,
+<br /></span><span style="color: #0000BB">cd</span><span style="color: #007700">,
+<br /></span><span style="color: #0000BB">attr</span><span style="color: #007700">==</span><span style="color: #0000BB">INVALID_FILE_ATTRIBUTES</span><span style="color: #007700">?</span><span style="color: #0000BB">0</span><span style="color: #007700">:</span><span style="color: #0000BB">attr</span><span style="color: #007700">,
+<br /></span><span style="color: #0000BB">NULL
+<br /></span><span style="color: #007700">);
+<br />}
+</span>
+</pre>Sharing a file for writing, while you still are reading from it, is inherently dangerous...<br />
+      <br />
+      (And, as FILE_SHARE_READ is hardcoded, you cannot change it without re-compiling the EXE headers)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Lloigor</span><br />
+      <span class="post-time small text-muted">21st October 2011 14:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Just made that, hope that can help.. ;)<br />
+      <br />
+      PHP Code:</p>
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #007700">;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;<br />
+      ;;</span><span style="color: #0000BB">EasilyopensfileswithmoreoptionsthanFileOpen<br /></span> <span style="color: #007700">;;</span><span style="color: #0000BB">P1</span><span style="color: #007700">:</span><span style="color: #0000BB">o</span><span style="color: #007700">:</span><span style="color: #0000BB">Handlereturned<br /></span> <span style="color: #007700">;;</span><span style="color: #0000BB">P2</span><span style="color: #007700">:</span><span style="color: #0000BB">i</span><span style="color: #007700">:</span><span style="color: #0000BB">Filename<br /></span> <span style="color: #007700">;;</span><span style="color: #0000BB">P3</span><span style="color: #007700">:</span><span style="color: #0000BB">i</span><span style="color: #007700">:</span><span style="color: #0000BB">AccessMode<br /></span> <span style="color: #007700">;;</span><span style="color: #DD0000">'r'</span><span style="color: #007700">:</span><span style="color: #0000BB">Readonly<br /></span> <span style="color: #007700">;;</span><span style="color: #DD0000">'w'</span><span style="color: #007700">:</span><span style="color: #0000BB">Writeonly<br /></span> <span style="color: #007700">;;</span><span style="color: #DD0000">'rw'</span><span style="color: #007700">:</span><span style="color: #0000BB">Read</span><span style="color: #007700">+</span><span style="color: #0000BB">Write<br /></span> <span style="color: #007700">;;</span><span style="color: #0000BB">P4</span><span style="color: #007700">:</span><span style="color: #0000BB">i</span><span style="color: #007700">:</span><span style="color: #0000BB">Sharemode<br /></span> <span style="color: #007700">;;</span><span style="color: #DD0000">''</span><span style="color: #007700">:</span><span style="color: #0000BB">None<br /></span> <span style="color: #007700">;;</span><span style="color: #DD0000">'r'</span><span style="color: #007700">:</span><span style="color: #0000BB">Readonly<br /></span> <span style="color: #007700">;;</span><span style="color: #DD0000">'rw'</span><span style="color: #007700">:</span><span style="color: #0000BB">Read</span><span style="color: #007700">+</span><span style="color: #0000BB">Write<br /></span> <span style="color: #007700">;;</span><span style="color: #DD0000">'rwd'</span><span style="color: #007700">:</span><span style="color: #0000BB">Read</span><span style="color: #007700">+</span><span style="color: #0000BB">Write</span><span style="color: #007700">+</span><span style="color: #0000BB">Delete<br /></span> <span style="color: #007700">;;</span><span style="color: #0000BB">P5</span><span style="color: #007700">:</span><span style="color: #0000BB">i</span><span style="color: #007700">:</span><span style="color: #0000BB">Createmode<br /></span> <span style="color: #007700">;;</span><span style="color: #DD0000">''</span><span style="color: #007700">:</span><span style="color: #0000BB">Openexistingonly<br /></span> <span style="color: #007700">;;</span><span style="color: #DD0000">'c'</span><span style="color: #007700">:</span><span style="color: #0000BB">Create</span><span style="color: #007700">if</span><span style="color: #0000BB">notexist<br /></span> <span style="color: #007700">;;</span><span style="color: #DD0000">'o'</span><span style="color: #007700">:</span><span style="color: #0000BB">Create</span><span style="color: #007700">and</span><span style="color: #0000BB">Overwrite<br /></span> <span style="color: #007700">;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;<br />
+      !</span><span style="color: #0000BB">defineFileOpenEx</span><span style="color: #DD0000">"!insertmacro_FileOpenEx"<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">macro_FileOpenEx_Handle__File__Access__Share__Create_<br />
+      Push</span><span style="color: #DD0000">"${_Create_}"<br /></span> <span style="color: #0000BB">Push</span><span style="color: #DD0000">"${_Share_}"<br /></span> <span style="color: #0000BB">Push</span><span style="color: #DD0000">"${_Access_}"<br /></span> <span style="color: #0000BB">Push</span><span style="color: #DD0000">"${_File_}"<br /></span> <span style="color: #0000BB">CallFileOpenEx<br />
+      Pop</span><span style="color: #007700">${</span><span style="color: #0000BB">_Handle_</span><span style="color: #007700">}<br />
+      !</span><span style="color: #0000BB">macroend<br />
+      <br /></span> <span style="color: #007700">Function</span><span style="color: #0000BB">FileOpenEx</span><span style="color: #007700">;;$</span><span style="color: #0000BB">0</span><span style="color: #007700">:</span><span style="color: #0000BB">File</span><span style="color: #007700">,$</span><span style="color: #0000BB">1</span><span style="color: #007700">:</span><span style="color: #0000BB">Access</span><span style="color: #007700">,$</span><span style="color: #0000BB">2</span><span style="color: #007700">:</span><span style="color: #0000BB">Sharing</span><span style="color: #007700">,$</span><span style="color: #0000BB">3</span><span style="color: #007700">:</span><span style="color: #0000BB">Create<br />
+      Exch</span><span style="color: #007700">$</span><span style="color: #0000BB">0<br />
+      Exch<br />
+      Exch</span><span style="color: #007700">$</span><span style="color: #0000BB">1<br />
+      Exch2<br />
+      Exch</span><span style="color: #007700">$</span><span style="color: #0000BB">2<br />
+      Exch3<br />
+      Exch</span><span style="color: #007700">$</span><span style="color: #0000BB">3<br />
+      <br />
+      StrCmp</span><span style="color: #DD0000">"r"</span><span style="color: #007700">$</span><span style="color: #0000BB">10</span><span style="color: #007700">+</span><span style="color: #0000BB">3<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">10x80000000</span><span style="color: #007700">;;</span><span style="color: #0000BB">GENERIC_READ<br />
+      Goto</span><span style="color: #007700">+</span><span style="color: #0000BB">6<br />
+      StrCmp</span><span style="color: #DD0000">"w"</span><span style="color: #007700">$</span><span style="color: #0000BB">10</span><span style="color: #007700">+</span><span style="color: #0000BB">3<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">10x40000000</span><span style="color: #007700">;;</span><span style="color: #0000BB">GENERIC_WRITE<br />
+      Goto</span><span style="color: #007700">+</span><span style="color: #0000BB">3<br />
+      StrCmp</span><span style="color: #DD0000">"rw"</span><span style="color: #007700">$</span><span style="color: #0000BB">10</span><span style="color: #007700">+</span><span style="color: #0000BB">3<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">10xC0000000</span><span style="color: #007700">;;</span><span style="color: #0000BB">GENERIC_READ</span><span style="color: #007700">|</span><span style="color: #0000BB">GENERIC_WRITE<br />
+      <br />
+      StrCmp</span><span style="color: #DD0000">""</span><span style="color: #007700">$</span><span style="color: #0000BB">20</span><span style="color: #007700">+</span><span style="color: #0000BB">3<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">20</span><span style="color: #007700">;;</span><span style="color: #0000BB">FILE_SHARE_NONE<br />
+      Goto</span><span style="color: #007700">+</span><span style="color: #0000BB">9<br />
+      StrCmp</span><span style="color: #DD0000">"r"</span><span style="color: #007700">$</span><span style="color: #0000BB">20</span><span style="color: #007700">+</span><span style="color: #0000BB">3<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">21</span><span style="color: #007700">;;</span><span style="color: #0000BB">FILE_SHARE_READ<br />
+      Goto</span><span style="color: #007700">+</span><span style="color: #0000BB">6<br />
+      StrCmp</span><span style="color: #DD0000">"rw"</span><span style="color: #007700">$</span><span style="color: #0000BB">20</span><span style="color: #007700">+</span><span style="color: #0000BB">3<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">23</span><span style="color: #007700">;;</span><span style="color: #0000BB">FILE_SHARE_READ</span><span style="color: #007700">|</span><span style="color: #0000BB">FILE_SHARE_WRITE<br />
+      Goto</span><span style="color: #007700">+</span><span style="color: #0000BB">3<br />
+      StrCmp</span><span style="color: #DD0000">"rwd"</span><span style="color: #007700">$</span><span style="color: #0000BB">20</span><span style="color: #007700">+</span><span style="color: #0000BB">3<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">27</span><span style="color: #007700">;;</span><span style="color: #0000BB">FILE_SHARE_READ</span><span style="color: #007700">|</span><span style="color: #0000BB">FILE_SHARE_WRITE</span><span style="color: #007700">|</span><span style="color: #0000BB">FILE_SHARE_DELETE<br />
+      <br />
+      StrCmp</span><span style="color: #DD0000">""</span><span style="color: #007700">$</span><span style="color: #0000BB">30</span><span style="color: #007700">+</span><span style="color: #0000BB">3<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">33</span><span style="color: #007700">;;</span><span style="color: #0000BB">OPEN_EXISTING<br />
+      Goto</span><span style="color: #007700">+</span><span style="color: #0000BB">6<br />
+      StrCmp</span><span style="color: #DD0000">"c"</span><span style="color: #007700">$</span><span style="color: #0000BB">30</span><span style="color: #007700">+</span><span style="color: #0000BB">3<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">34</span><span style="color: #007700">;;</span><span style="color: #0000BB">OPEN_ALWAYS<br />
+      Goto</span><span style="color: #007700">+</span><span style="color: #0000BB">3<br />
+      StrCmp</span><span style="color: #DD0000">"o"</span><span style="color: #007700">$</span><span style="color: #0000BB">30</span><span style="color: #007700">+</span><span style="color: #0000BB">3<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">32</span><span style="color: #007700">;;</span><span style="color: #0000BB">CREATE_ALWAYS<br />
+      <br />
+      System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">'Kernel32::CreateFile(t,i,i,i,i,i,i)i(r0,r1,r2,0,r3,0x80,0).r2'</span><span style="color: #007700">;;</span><span style="color: #0000BB">Open</span><span style="color: #007700">/</span><span style="color: #0000BB">Createfile<br />
+      <br />
+      Pop</span><span style="color: #007700">$</span><span style="color: #0000BB">3<br />
+      Pop</span><span style="color: #007700">$</span><span style="color: #0000BB">0<br />
+      Pop</span><span style="color: #007700">$</span><span style="color: #0000BB">1<br />
+      Exch</span><span style="color: #007700">$</span><span style="color: #0000BB">2<br />
+      FunctionEnd<br /></span></span> <!-- php buffer end -->
+      <hr />
+      Example:<br />
+      <b>${FileOpenEx} $0 "SomeFile.ext" "r" "rwd" ""</b> ;; opens SomeFile.ext in read mode with full share access, if it exists<br />
+      <br />
+      *
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">24th October 2011 16:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It might be worth changing all those run time string comparisons to compile time (by using !if).<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">SJSJ</span><br />
+      <span class="post-time small text-muted">31st October 2011 06:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thank you, all :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Lloigor</span><br />
+      <span class="post-time small text-muted">31st October 2011 13:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">If you really nead maximum speed, ex: if you open a large amount of files in a tight loop, you may want a more direct approach, something like:<br />
+      PHP Code:</p>
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #007700">!</span><span style="color: #0000BB">defineApiCreateFile</span><span style="color: #DD0000">"!insertmacro_ApiCreateFile"<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">macro_ApiCreateFile_Handle__File__Access__Share__Create_<br />
+      System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call</span><span style="color: #DD0000">'Kernel32::CreateFile(t,i,i,i,i,i,i)i("${_File_}",${_Access_},${_Share_},0,${_Create_},0x80,0).s'</span><span style="color: #007700">;;</span><span style="color: #0000BB">Open</span><span style="color: #007700">/</span><span style="color: #0000BB">Createfile<br />
+      Pop</span><span style="color: #007700">${</span><span style="color: #0000BB">_Handle_</span><span style="color: #007700">}<br />
+      !</span><span style="color: #0000BB">macroend<br /></span></span> <!-- php buffer end -->
+      <hr />
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

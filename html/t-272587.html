@@ -1,0 +1,136 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Set focus to textbox" />
+
+  <title>Set focus to textbox - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Set focus to textbox</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=272587">Set focus to textbox</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">starsign</span><br />
+      <span class="post-time small text-muted">10th June 2007 11:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Set focus to textbox</strong><br />
+      Hi,<br />
+      <br />
+      I have just started using NSIS - thanks for a great piece of software.<br />
+      <br />
+      I have seen a number of posts on setting focus but, perhaps because I am new, they seem to suggest different ways. I would like to understand which is the best way to set the focus to a text box.<br />
+      <br />
+      I have a custom page with 2 textboxes which have to be filled in. When the user clicks 'Next' and one of the textboxes is empty, I would like set the focus to the empty textbox.<br />
+      <br />
+      My code quite happily catches when a textbox is empty and keeps the user on the page (see below), but to make the interface more user friendly I would like to have the cursor in the empty textbox too:<br />
+      <br />
+      Function ValidateUserRegistrationPage<br />
+      <br />
+      ReadINIStr $R0 "$PLUGINSDIR\User Registration.ini" "Field 3" "State"<br />
+      StrCmp $R0 "" 0 +3<br />
+      MessageBox MB_ICONEXCLAMATION|MB_OK "Please enter your name."<br />
+      Abort<br />
+      <br />
+      ReadINIStr $R0 "$PLUGINSDIR\User Registration.ini" "Field 4" "State"<br />
+      StrCmp $R0 "" 0 +3<br />
+      MessageBox MB_ICONEXCLAMATION|MB_OK "Please enter company."<br />
+      Abort<br />
+      <br />
+      FunctionEnd<br />
+      <br />
+      I have seen this post below but it seems to mention different ways to do it (e.g. "From version 2.24 InstallOptions has native FOCUS flag") - how do i use that?<br />
+      <br />
+      <a href="http://forums.winamp.com/showthread.php?threadid=233866&amp;highlight=focus" target="_blank">http://forums.winamp.com/showthread....ighlight=focus</a><br />
+      <br />
+      Thanks in advance for any help.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">10th June 2007 11:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Flags=FOCUS<br />
+      <br />
+      If that does not work, use the code on that link that you provided.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">10th June 2007 16:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">My experience with the new FOCUS flag is that it will only work for the first time the screen is displayed. To change the focus after the validation routine fails the user's selections, you need to move focus like this:</p>
+      <pre>
+<code>  ReadINIStr $R0 "$PLUGINSDIR\User Registration.ini" "Field 3" "State"<br />  StrCmp $R0 "" 0 +5<br />  MessageBox MB_ICONEXCLAMATION|MB_OK "Please enter your name."<br />  ReadINIStr $R0 "$PLUGINSDIR\User Registration.ini" "Field 3" "HWnd"<br />  System::Call "User32::SetFocus(i R0).R0"<br />  Abort<br /></code>
+</pre>That uses the System plugin, but you don't need to add any includes or anything to call it.<br />
+      <br />
+      I recommend using the LogicLib header. It adds a lot of readability to your script and you won't need to use the relative jump that is native to the NSIS commands.<br />
+      <br />
+      The StrCmp jump operand changed in the fragment above because the two lines to set the focus were added after the MessageBox. If you remove the MessageBox the relative jump will have to be changed again from 5 to 4. With the LogicLib you would have an If/EndIf structure instead of relative jumps:
+      <pre>
+<code>  ReadINIStr $R0 "$PLUGINSDIR\User Registration.ini" "Field 3" "State"<br />  ${If} $R0 == ""<br />    MessageBox MB_ICONEXCLAMATION|MB_OK "Please enter your name."<br />    ReadINIStr $R0 "$PLUGINSDIR\User Registration.ini" "Field 3" "HWnd"<br />    System::Call "User32::SetFocus(i R0).R0"<br />    Abort<br />  ${EndIf}</code>
+</pre><br />
+      And since I've already jumped up on the soapbox to say how I like to do things, I like the MUI appearance better than the 'classic'. It isn't always easy to find answers in the documentation, but IMHO the results look better.<br />
+      <br />
+      Don
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">starsign</span><br />
+      <span class="post-time small text-muted">10th June 2007 21:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for both of your replies. I will try the implementation you describe.<br />
+      <br />
+      Just one q Don, you mention using the MUI as it looks better - I agree, my code does use it...am I doing something in my code that suggests that i'm not?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">10th June 2007 21:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Not really, but when using MUI we tend to use...<br />
+      !insertmacro MUI_INSTALLOPTIONS_READ $R0 "User Registration.ini" "Field 3" "State"<br />
+      ...instead of...<br />
+      ReadINIStr $R0 "$PLUGINSDIR\User Registration.ini" "Field 3" "State"<br />
+      <br />
+      They both do exactly the same thing, however.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

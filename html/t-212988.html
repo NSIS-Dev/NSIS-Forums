@@ -1,0 +1,211 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Creating multiple installers with one script?" />
+
+  <title>Creating multiple installers with one script? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Creating multiple installers with one script?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=212988">Creating multiple installers with one script?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">StephenM</span><br />
+      <span class="post-time small text-muted">12th April 2005 15:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Creating multiple installers with one script?</strong><br />
+      Hello all,<br />
+      <br />
+      I was curious if it is possible to have a single script that could grab each seperate file from a directory and make a simple installer for each one?<br />
+      <br />
+      For an example, there is a folder with 600 files inside.<br />
+      Rather than create 600 seperate scripts for each file,<br />
+      just have one script that can iterate through each file<br />
+      and output a corresponding installer.<br />
+      <br />
+      Has this already been done?<br />
+      <br />
+      If anyone could point me in the right direction, it would<br />
+      be most helpful!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">12th April 2005 15:23 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">What I would do, is create an NSIS installer which reads from your folder of files and writes a temporary NSI script for that file, compiles it, and so on and so forth.<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">StephenM</span><br />
+      <span class="post-time small text-muted">12th April 2005 15:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for the quick reply!<br />
+      <br />
+      I am quite new to NSIS development - if you<br />
+      could also highlight any particular important<br />
+      functions I will need to use or a sample<br />
+      script, that would be v. helpful!<br />
+      <br />
+      I wouldn't even know where to start with making<br />
+      temp scripts that could then be sent for<br />
+      compilation itself!!!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">12th April 2005 15:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This is a minimal script you can compile. Put the generated exe in the parent folder of the folder that contains all your files, then run it!<br />
+      Change the !define to the name of your folder first.<br />
+      <br /></p>
+      <pre>
+<code><br />OutFile GenerateInstallers.exe<br /><br />!define FileDir "Files"<br /><br />Function .onInit<br /> ClearErrors<br /> FindFirst $R0 $R1 "$EXEDIR\${FileDir}\*.*"<br /><br /> # Read file name<br /> Loop:<br /> IfErrors Done<br />  StrCmp $R1 . Next<br />  StrCmp $R1 .. Next<br /><br />  # Get file name w/o ext<br />  StrCpy $R2 $R1 -4<br /><br />  # Write temp script<br />  FileOpen $R3 "$EXEDIR\Installer.nsi" w<br />  FileWrite $R3 'OutFile "$R2.exe"$\r$\n'<br />  FileWrite $R3 'Page Directory$\r$\n'<br />  FileWrite $R3 'Page InstFiles$\r$\n'<br />  FileWrite $R3 'Section$\r$\n'<br />  FileWrite $R3 'File "/oname=$$INSTDIR\$R1" "${FileDir}\$R1"$\r$\n'<br />  FileWrite $R3 'SectionEnd$\r$\n'<br />  FileClose $R3<br /><br />  # Compile temp script<br />  ExecWait '"${NSISDIR}\makensis.exe" "$EXEDIR\Installer.nsi"'<br /><br />  Next:<br />  ClearErrors<br />  FindNext $R0 $R1<br /> Goto Loop<br /><br /> Done:<br /> FindClose $R0<br /><br /> # Delete temp script<br /> Delete "$EXEDIR\Installer.nsi"<br /> Abort<br />FunctionEnd<br /><br />Section<br />SectionEnd</code>
+</pre><br />
+      <br />
+      -Stu
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">StephenM</span><br />
+      <span class="post-time small text-muted">12th April 2005 19:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thats great! Thank you - I've modified the script to<br />
+      what I need but thank you v. much!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">StephenM</span><br />
+      <span class="post-time small text-muted">12th April 2005 19:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Just an extra question to go with this.<br />
+      If I were to have subfolders inside the<br />
+      main folder with the files inside, would<br />
+      anyone be able to direct me to a loop<br />
+      code that could iterate through each one<br />
+      of the folders, return back to the parent<br />
+      folder and continue on with more folders?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">12th April 2005 21:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I've got a function that just does that which isn't a fixed one (ie I change it to do all sorts of things). This one is closer to home though - it writes the file names it finds to a text file (which is almost what you need!)<br />
+      You should be able to modify the main parts (ie FileWrite) to what you need.<br />
+      <br /></p>
+      <pre>
+<code> Function GetFilesRecursive<br />  Push $R1<br />  Push $R2<br />  Push $R3<br />  Push $R4<br /><br />  StrCpy $R3 1<br /><br />  Push ""<br /><br />  nextDir:<br />    Pop $R4<br />    IntOp $R3 $R3 - 1<br />    ClearErrors<br /><br />    FindFirst $R1 $R2 "$DirPath$R4\*.*"<br />    checkLoop:<br />       IfFileExists "$DirPath$R4\$R2\*.*" +3<br />          FileWrite $R0 '$\r$\n$${SE-OutPath} "$OutputPath$R4"$\r$\n'<br />       Goto checkDone<br />       FindNext $R1 $R2<br />       IfErrors 0 checkLoop<br />    checkDone:<br />    FindClose $R1<br /><br />    FindFirst $R1 $R2 "$DirPath$R4\*.*"<br /><br />    nextFile:<br />      StrCmp $R2 "." gotoNextFile<br />      StrCmp $R2 ".." gotoNextFile<br /><br />      IfFileExists "$DirPath$R4\$R2\*.*" 0 notDir<br />          IntOp $R3 $R3 + 1<br />          Push "$R4\$R2"<br />          Goto gotoNextFile<br /><br />      notDir:<br />          FileWrite $R0 '$${SE-File} "$DirPath$R4\$R2" "$R2"$\r$\n'<br /><br />  gotoNextFile:<br />    FindNext $R1 $R2<br />    IfErrors 0 nextFile<br /><br />    FindClose $R1<br /><br />    StrCmp $R3 0 0 nextDir<br /><br />  Pop $R4<br />  Pop $R3<br />  Pop $R2<br />  Pop $R1<br /> FunctionEnd</code>
+</pre><br />
+      <br />
+      Edit: That gives me an idea for a new project. One that works similar to FindFirst, FindNext and FindClose, except that it loops through a folder recursively.<br />
+      <br />
+      -Stu
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">StephenM</span><br />
+      <span class="post-time small text-muted">13th April 2005 10:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Wow !!<br />
+      <br />
+      That is a really good script!<br />
+      <br />
+      Definitely not one for the faint-hearted.<br />
+      <br />
+      I've tried combining the two scripts you have<br />
+      generously helped with but am currently struggling<br />
+      to make it work.<br />
+      <br />
+      I know its cheeky to ask but is it possible you<br />
+      can help with this step as well?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">13th April 2005 11:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I think Instructor has made a recursive find function in one of his script headers. I'm not entirely sure and I can't check here at college. You can find such things at the archive (<a href="http://nsis.sf.net/archive" target="_blank">http://nsis.sf.net/archive</a>)<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">StephenM</span><br />
+      <span class="post-time small text-muted">15th April 2005 10:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for giving such great help.<br />
+      <br />
+      Just on the last hurdle now. I've modified<br />
+      the first script you wrote out but I am<br />
+      just wanting to integrate some file existence<br />
+      checking.<br />
+      <br />
+      I've done the PageEx code in a seperate installer<br />
+      script so I know that works fine but when trying<br />
+      to FileWrite the commands into your script, the<br />
+      final installer exe's for each file do not appear.<br />
+      <br /></p>
+      <pre>
+<code><br />OutFile GenerateInstallers.exe<br /><br />!define FileDir "Database"<br /><br />Function .onInit<br /> ClearErrors<br /> FindFirst $R0 $R1 "$EXEDIR\${FileDir}\*.*"<br /><br /> # Read file name<br /> Loop:<br /> IfErrors Done<br />  StrCmp $R1 . Next<br />  StrCmp $R1 .. Next<br /><br />  # Get file name w/o ext<br />  StrCpy $R2 $R1 -4<br /><br />  # Write temp script<br />  FileOpen $R3 "$EXEDIR\Installer.nsi" w<br />  FileWrite $R3 'OutFile "$EXEDIR\${FileDir}\$R2.exe"$\r$\n'<br />  <br />  FileWrite $R3 'XPStyle on$\r$\n'<br />  FileWrite $R3 'SetFont "Verdana" 8$\r$\n'<br />  <br />  FileWrite $R3 'InstallDir "$PROGRAMFILES\test\test"$\r$\n'<br />  FileWrite $R3 'InstallDirRegKey HKLM "Software\test" "Install_Dir"$\r$\n'<br /><br />  FileWrite $R3 'PageEx Directory$\r$\n'<br />  FileWrite $R3 'PageCallbacks "" ""checkFileExistence'<br />  FileWrite $R3 'PageExEnd'<br />  <br />  FileWrite $R3 'Page instfiles$\r$\n'  <br />    <br />  FileWrite $R3 'Function checkFileExistence'<br />    FileWrite $R3 'IfFileExists "$INSTDIR\tester.exe" +3'<br />    FileWrite $R3 'MessageBox MB_OK|MB_ICONEXCLAMATION "Please install the database to a valid folder"'<br />    FileWrite $R3 'Abort'<br />  FileWrite $R3 'FunctionEnd'<br /><br />  FileWrite $R3 'Section$\r$\n'<br />  <br />  FileWrite $R3 'File "/oname=$$INSTDIR\${FileDir}\$R1" "${FileDir}\$R1"$\r$\n'<br />  FileWrite $R3 'SectionEnd$\r$\n'<br />  FileClose $R3<br /><br />  # Compile temp script<br />  ExecWait '"${NSISDIR}\makensis.exe" "$EXEDIR\Installer.nsi"'<br /><br />  Next:<br />  ClearErrors<br />  FindNext $R0 $R1<br /> Goto Loop<br /><br /> Done:<br /> FindClose $R0<br /><br /> # Delete temp script<br /> Delete "$EXEDIR\Installer.nsi"<br /> Abort<br />FunctionEnd<br /><br />Section<br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      Any idea what could be causing the problem?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">StephenM</span><br />
+      <span class="post-time small text-muted">15th April 2005 11:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Silly me.<br />
+      <br />
+      Forgot to put $\r$\n for the new file writes<br />
+      <br />
+      Don't worry.<br />
+      <br />
+      Thanks for all the help!</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

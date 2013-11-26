@@ -1,0 +1,157 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Service Fail/Recovery Actions" />
+
+  <title>Service Fail/Recovery Actions - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Service Fail/Recovery Actions</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=294837">Service Fail/Recovery Actions</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">QMastor</span><br />
+      <span class="post-time small text-muted">21st July 2008 03:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Service Fail/Recovery Actions</strong><br />
+      I am attempting to install and register a Windows service with some additional configuration. The ServiceLib library is useful for the initial registration, and I've worked out how to set the service's description (As seen in the console), but I am having trouble configuring recovery options.<br />
+      <br />
+      I've established that the "ChangeServiceConfig2" function (Defined in the "advapi32" library) can be used to set these options, but I'm not sure how to call it and pass the correct values.<br />
+      <br />
+      When using it to set the description, I called it like this (For all examples, assume that $0 contains the service's handle):<br />
+      <br />
+      !define _SERVICE_CONFIG_DESCRIPTION 1<br />
+      <br />
+      System::Call '*(t "Description") i.r1'<br />
+      System::Call 'advapi32::ChangeServiceConfig2(i r0, i ${_SERVICE_CONFIG_DESCRIPTION}, i r1) i.r2'<br />
+      <br />
+      <br />
+      However, configuring fail actions requires a much more complicated parameter structure, and I don't really know what I'm doing (I'm ordinarily a C# developer, so the extent of my Windows API knowledge is what I've scrounged from <a href="http://www.pinvoke.net" target="_blank">pinvoke</a>, and I have very little understanding of the System plugin).<br />
+      <br />
+      The call should look something like this:<br />
+      <br />
+      !define _SERVICE_CONFIG_FAILURE_ACTIONS 0x02<br />
+      <br />
+      System::Call 'advapi32::ChangeServiceConfig2(i r0, i ${_SERVICE_CONFIG_FAILURE_ACTIONS}, i r3) i.r4'<br />
+      <br />
+      <br />
+      Where $3 contains a structure matching the following:<br />
+      <br />
+      typedef struct _SERVICE_FAILURE_ACTIONS {<br />
+      DWORD dwResetPeriod;<br />
+      LPTSTR lpRebootMsg;<br />
+      LPTSTR lpCommand;<br />
+      DWORD cActions;<br />
+      SC_ACTION *lpsaActions;<br />
+      } SERVICE_FAILURE_ACTIONS,<br />
+      *LPSERVICE_FAILURE_ACTIONS;<br />
+      <br />
+      typedef struct _SC_ACTION {<br />
+      SC_ACTION_TYPE Type;<br />
+      DWORD Delay;<br />
+      } SC_ACTION,<br />
+      *LPSC_ACTION;<br />
+      <br />
+      SC_ACTION_TYPEs<br />
+      0 - No action<br />
+      1 - Restart the service<br />
+      2 - Reboot the computer<br />
+      3 - Run a command<br />
+      <br />
+      <br />
+      I've tried a few variations on the following:<br />
+      <br />
+      ; An array of one SC_ACTION with "restart" action<br />
+      System::Call '*(i 1, i 0) i.r5'<br />
+      System::Call '*(i r5) i.r6'<br />
+      <br />
+      ; SERVICE_FAILURE_ACTIONS<br />
+      System::Call '*(i 0, t, t, i 1, i r6) i.r3'<br />
+      <br />
+      <br />
+      But to no avail...<br />
+      <br />
+      If anyone can help me with this, it would be greatly appreciated. I've done extensive Googling on the subject, but it doesn't look like anyone's tried to do this via NSIS before.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Comperio</span><br />
+      <span class="post-time small text-muted">21st July 2008 16:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Someone else may have better info about the DLL calls, but I thought I'd offer this as an alternate solution:<br />
+      <br />
+      You might have a look at a MS tool called <a href="http://support.microsoft.com/kb/251192" target="_blank"><u>sc.exe</u></a>.<br />
+      <br />
+      It's basically a command line service control manager, which you can run with nsExec.<br />
+      <br />
+      It seems like it *should* work in your situation and might be easier than DLL calls.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">QMastor</span><br />
+      <span class="post-time small text-muted">22nd July 2008 00:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Funnily enough I was actually trying to use the API calls so that I wouldn't need to be reliant on an external program (Namely "sc.exe").<br />
+      <br />
+      I know that it has to be possible for the API calls to work, since that's how Windows (And probably "sc.exe") does it, but I don't really have much experience with the "System" plugin. I'm very likely passing garbage parameters to the function call, and thus doing nothing.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">LoRd_MuldeR</span><br />
+      <span class="post-time small text-muted">22nd July 2008 01:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I think "sc.exe" is available for all Windows versions that support services (Windows NT, 2000, XP and later). So depending on that program shouldn't be a problem. You can simply include it into your installer and extract it to $PLUGINSDIR at runtime...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">hobbes487</span><br />
+      <span class="post-time small text-muted">28th December 2012 22:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I know this is an old thread, but I am trying to solve the same problem. I want to be able to set the recovery options when installing a service, but I don't want to rely on a separate program like sc.exe. Anyone know if this is possible?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">30th December 2012 13:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><a href="http://nsis.sourceforge.net/NSIS_Simple_Service_Plugin" target="_blank">http://nsis.sourceforge.net/NSIS_Simple_Service_Plugin</a><br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

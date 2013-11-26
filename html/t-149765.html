@@ -1,0 +1,108 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="interinstaller communication" />
+
+  <title>interinstaller communication - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">interinstaller communication</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=149765">interinstaller communication</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shortpasta</span><br />
+      <span class="post-time small text-muted">19th September 2003 22:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>interinstaller communication</strong><br />
+      Installer #1: spawns Installer #2 with ExecWait<br />
+      Installer #2: sets up a system environment variable &amp; add a directory to the system path<br />
+      Installer #1: how do i reload system environment variables &amp; new path so i can start using the components installed by Installer #2?<br />
+      <br />
+      thanks for your time...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">20th September 2003 11:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Since it might require a reboot (Windows 9x) and I have no idea how to reload the environment variables for a running process on Windows NT, I suggest you write the value it sets to a known registry key and read it in installer #1. You can also use an INI file or a normal file.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">shortpasta</span><br />
+      <span class="post-time small text-muted">20th September 2003 18:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">you are right, however i choose to use environment variables because i'm setting them up for the application runtime anyways, so i figured i'd use them in the installer as well.<br />
+      <br />
+      so here is what i found:<br />
+      CASE 1:<br />
+      installer #1 spawns &amp; waits for installer #2<br />
+      installer #2 sets an environment variable through the famous WriteEnvStr function. the WriteEnvStr function broadcasts a windows message to all windows indicating that the environment has changed<br />
+      installer #1 responds to this message, reloads the environment &amp; now can SEE the new environment variable.<br />
+      <br />
+      (side note, even the %PATH% variable is reloaded)<br />
+      <br />
+      CASE 2:<br />
+      installer #1 sets the enviroment variable with WriteEnvStr<br />
+      in this case, the installer does not see the variable. to make it see it, i had to set the environment variable for the current process as well, so the whole code is:<br />
+      <br />
+      ; Set environment variable SYNCVOICE_ANT_HOME<br />
+      ; to the installation directory<br />
+      Push "SYNCVOICE_ANT_HOME"<br />
+      Push $INSTDIR\ant<br />
+      Call WriteEnvStr<br />
+      <br />
+      ; set SYNCVOICE_ANT_HOME for current process<br />
+      StrCpy $R0 "SYNCVOICE_ANT_HOME"<br />
+      StrCpy $R1 "$INSTDIR\ant"<br />
+      System::Call 'Kernel32::SetEnvironmentVariableA(t, t) i(R0, R1).r0'<br />
+      <br />
+      Conclusion:<br />
+      Setting an environment variable with WriteEnvStr does not set the variable for the current process, and from what I could tell, it's a Windows thang! The workaround is to set the environment variable for your current process manually with Kernel32::SetEnvironmentVariableA ().</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">21st September 2003 15:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Case one never worked for me, the first installer never updated. It will also always fail on Windows 9x.<br />
+      <br />
+      Doesn't case two set the environment variable only to the current process? Isn't it the parent process you want to see the changes?<br />
+      <br />
+      You can always set the path and write the registry key too.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

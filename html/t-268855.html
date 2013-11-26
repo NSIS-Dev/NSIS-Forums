@@ -1,0 +1,106 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Weird section validation" />
+
+  <title>Weird section validation - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Weird section validation</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=268855">Weird section validation</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">fishsauce</span><br />
+      <span class="post-time small text-muted">3rd April 2007 08:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Weird section validation</strong><br />
+      I'm having problems with trying to activate/deactivate components/sections depending on what the user selects.<br />
+      <br />
+      I have 4 sections:<br />
+      - Section 0 (Read only, always selected)<br />
+      - Section 1<br />
+      - Section 2<br />
+      - Section 3 (This section is independent of the others)<br />
+      <br />
+      The thing is section 1 is a dependency of section 2, so when section 2 is selected I want section 1 to be selected automatically, and when section 1 is deselected I want section 2 to be deselected automatically as well. However, section 1 should also be free of section 2 in that when section 2 is not selected, section 1 can still be selected anyways.<br />
+      <br />
+      So far I've only been able to get the two to be selected/deselected at the same time based on what I've found in this board and in the docs, but I haven't been able to let section 1 be selected when section 2 is not selected. Also this only allows one of the sections to be checked/unchecked; the other is always locked in the checked state, which is undesirable. I should probably note that the NSIS logic syntax feels awkward to me so I might be missing something that is really simple.<br />
+      <br />
+      Here's my code (all section flags are initially set to the checked state):<br /></p>
+      <pre>
+<code><br />Function .onSelChange<br /><br />  Push $0<br /><br />  SectionGetFlags ${Section2} $0<br />  IntOp $0 $0 &amp; ${SF_SELECTED}<br />  SectionsetFlags ${Section1} $0<br /><br />  Pop $0<br /><br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      Thanks in advance for your help!
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">3rd April 2007 09:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You have two mistakes here. The first being always setting section1's flags to the same value of section2's. The second is that you set only the SF_SELECTED flag and remove all the rest.<br />
+      <br />
+      What you should do is get section2's flags, check if SF_SELECTED is on. If it is, get section1's flags, add SF_SELECTED to it and set the flags to the new value.<br />
+      <br />
+      You can do all that very simply with Sections.nsh.</p>
+      <pre>
+<code>!include LogicLib.nsh<br />!include Sections.nsh<br /><br />Function .onSelChange<br /><br />  ${If} ${SectionIsSelected} ${Section2}<br />    !insertmacro SelectSection ${Section1}<br />  ${EndIf}<br /><br />FunctionEnd</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">fishsauce</span><br />
+      <span class="post-time small text-muted">4th April 2007 06:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks! I got it partially working with this code (the macros didn't seem to want to work so I wrote it out by hand)<br />
+      <br /></p>
+      <pre>
+<code><br />Function .onSelChange<br />  Push $0<br />  ${If} ${SectionIsSelected} ${Section2}<br />    SectionGetFlags ${Section1} $0<br />    IntOp $0 $0 | ${SF_SELECTED}<br />    SectionSetFlags ${Section1} $0<br />  ${EndIf}<br />  Pop $0<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      However, this locks the Section1 checkbox whenever Section2 is enabled. Is it possible to uncheck Section2 when the Section1 checkbox is cleared? It seems kind of hard because NSIS doesn't seem to know which checkbox is clicked, so the two conditions conflict.<br />
+      <br />
+      Thanks!
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">8th April 2007 16:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You can probably do that if you remember the state of Section1 in .onSelChange. If it's changed from unselected to selected, select Section2. If it hasn't changed, do nothing.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

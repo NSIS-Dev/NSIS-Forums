@@ -1,0 +1,146 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="newbie trying to use System plugin to call RAPI to detect Compact Framework" />
+
+  <title>newbie trying to use System plugin to call RAPI to detect Compact Framework - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">newbie trying to use System plugin to call RAPI to detect Compact Framework</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=263542">newbie trying to use System plugin to call RAPI to detect Compact Framework</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">briforge</span><br />
+      <span class="post-time small text-muted">12th January 2007 20:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>newbie trying to use System plugin to call RAPI to detect Compact Framework</strong><br />
+      I've been reading about this for awhile and finally decided to try it. My script actually compiled and ran, but now I have a couple questions:<br />
+      <br />
+      Does anyone know if the string I passed is correct, to search for that 'GAC_mscorlib_*' with the '*' wildcard? I don't even know how to try to use the RAPI functions outside of NSIS to test this, I'm really operating outside my expertise here.<br />
+      <br />
+      How would I look at the last output parameter, the r3/$3 which is supposed to be a pointer to the array of _CE_FIND_DATA structures?<br />
+      <br />
+      Thanks<br />
+      <br />
+      Here's my script:<br /></p>
+      <pre>
+<code><br />Section "DetectCF"<br /><br />System::Call "rapi::CeRapiInit() i .r0"<br /><br />/***************<br /> Dll Call Structure<br /><br /> STDAPI_(BOOL) CeFindAllFiles(<br />   LPCWSTR szPath,<br />   DWORD dwFlags,<br />   LPDWORD lpdwFoundCount,<br />   LPLPCE_FIND_DATA ppFindDataArray<br /> );<br /><br /><br />  These are flags for CeFindAllFiles<br />  <br />  #define FAD_NAME            ((WORD) 0x04)<br />  <br />//<br />// The Windows CE WIN32_FIND_DATA structure differs from the<br />// Windows WIN32_FIND_DATA stucture so we copy the Windows CE<br />// definition to here so that both sides match.<br />//<br />typedef struct _CE_FIND_DATA {<br />    DWORD    dwFileAttributes;<br />    FILETIME ftCreationTime;<br />    FILETIME ftLastAccessTime;<br />    FILETIME ftLastWriteTime;<br />    DWORD    nFileSizeHigh;<br />    DWORD    nFileSizeLow;<br />    DWORD    dwOID;<br />    WCHAR    cFileName[MAX_PATH];<br />} CE_FIND_DATA, *LPCE_FIND_DATA;<br /><br />typedef CE_FIND_DATA** LPLPCE_FIND_DATA;<br /><br />*/<br /><br /># Use CeFindAllFiles to search the device's Windows directory for GAC_mscorlib_*.dll<br /><br />System::Call "rapi::CeFindAllFiles(t '\Windows\GAC_mscorlib_*.dll',  \<br />                                   i 0x04, \<br />                                   *l . r2, \<br />                                   *i . r3) b r4"<br />                                   <br />${If} $4 == 'some value'<br />  MessageBox MB_OK 'Found a version of Compact Framework'<br />${Else}<br />  MessageBox MB_OK 'Did not find a version of Compact Framework'<br />${EndIf}<br /><br />System::Call "rapi::CeRapiUninit() i .r0"<br /></code>
+</pre><br />
+      SectionEnd
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">12th January 2007 21:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You're actually supposed to pass a pointer to an allocated structure in the fourth parameter. The structure must be the size of CE_FIND_DATA, which is 552, according to my count. To allocate such a structure, you can use System::Alloc. Pass the result of Alloc as an integer, not a pointer, as it's already the address to the structure.<br />
+      <br />
+      After the call, you can read the result with System::Call as in the <a href="http://nsis.sourceforge.net/Docs/System/System.html#structaddr" target="_blank">example</a> in the documents. FILETIME is `l`, DWORD is `i` and WCHAR[MAX_PATH] is &amp;w256.<br />
+      <br />
+      Also, there's no such type as `b`, like you've used in the return value of CeFindAllFiles.<br />
+      <br />
+      See the System readme for more information.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">briforge</span><br />
+      <span class="post-time small text-muted">16th January 2007 21:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for the reply. My next attempt is below.<br />
+      <br />
+      It appears to be not finding the file. CeRapiGetError returns 0, but CeGetLastError returns 87. The docs for that say to use FormatMessage to get a meaningful error out of that, but I haven't figured that out yet.<br />
+      <br />
+      I also tried searching for a simpler-named file that I verified was actually on the device, in the Windows directory, and it didn't find that one either. I tried finding '\\Windows\\memo.*'. This makes me think I'm doing something else wrong, maybe something wrong with the file string I'm looking for, or the 2nd argument, the Flags parameter to CeFindAllFiles.<br />
+      <br />
+      Any ideas?<br />
+      <br />
+      Thanks<br />
+      <br /></p>
+      <pre>
+<code><br />Section "DetectCF"<br /><br />System::Call "rapi::CeRapiInit() i .r0"<br />DetailPrint "CeRapiInit return : $0"<br /><br />/***************<br /> Dll Call Structure<br /><br /> STDAPI_(BOOL) CeFindAllFiles(<br />   LPCWSTR szPath,<br />   DWORD dwFlags,<br />   LPDWORD lpdwFoundCount,<br />   LPLPCE_FIND_DATA ppFindDataArray<br /> );<br /><br /><br />  These are flags for CeFindAllFiles<br />  <br />  #define FAD_NAME            ((WORD) 0x04)<br />  <br />//<br />// The Windows CE WIN32_FIND_DATA structure differs from the<br />// Windows WIN32_FIND_DATA stucture so we copy the Windows CE<br />// definition to here so that both sides match.<br />//<br />typedef struct _CE_FIND_DATA {<br />    DWORD    dwFileAttributes;<br />    FILETIME ftCreationTime;<br />    FILETIME ftLastAccessTime;<br />    FILETIME ftLastWriteTime;<br />    DWORD    nFileSizeHigh;<br />    DWORD    nFileSizeLow;<br />    DWORD    dwOID;<br />    WCHAR    cFileName[MAX_PATH];<br />} CE_FIND_DATA, *LPCE_FIND_DATA;<br /><br />typedef CE_FIND_DATA** LPLPCE_FIND_DATA;<br /><br />*/<br /><br /># Use CeFindAllFiles to search the device's Windows directory for GAC_mscorlib_*.dll<br /><br />System::Alloc 552<br />Pop $3<br /><br />System::Call "rapi::CeFindAllFiles(t '\\Windows\\GAC_mscorlib_*.dll',  \<br />                                   i 0x04, \<br />                                   *l . r2, \<br />                                   i . r3) i r4"<br />                                   <br />${If} $4 == 1<br />  MessageBox MB_OK 'Found a version of Compact Framework'<br />  System::Call "*$3(i .r5, l .r6, l .r7, l .r8, i .r9, i .r10, i .r11, &amp;w256 .r12)"<br />  DetailPrint "File Found : $R02"<br />${Else}<br />  MessageBox MB_OK 'Did not find a version of Compact Framework'<br />  System::Call "rapi::CeRapiGetError() i .r0"<br />  DetailPrint "RapiGetError return : $0"<br />  ${If} $0 == 0<br />    System::Call "rapi::CeGetLastError() i .r0"<br />    DetailPrint "CeGetLastError return : $0"<br />  ${EndIf}<br />${EndIf}<br /><br />System::Free $3<br />System::Call "rapi::CeRapiUninit() i .r0"<br /><br />SectionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">16th January 2007 21:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The fourth parameter is passed wrongly. Use `ir3` instead of `i.r3`. The dot means no input and only output, so it's not passing anything to the function.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">briforge</span><br />
+      <span class="post-time small text-muted">19th January 2007 20:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for the reply, that got rid of the error that was reported from CeGetLastError.<br />
+      <br />
+      However, since I tried this, I've learned that the problem is likely ActiveSync. There's some issue with version 3.7 of ActiveSync that causes CeFindAllFiles to not work.<br />
+      <br />
+      So now I'm trying CeFindFirstFile. The only problem is I can't find a definition of it's return value, a HANDLE. I tried just returning it to an int/pointer, but I probably need to allocate the space for this structure just like CE_FIND_DATA, right?<br />
+      <br />
+      This is what I tried :<br />
+      <br /></p>
+      <pre>
+<code><br />System::Alloc 552<br />Pop $3<br /><br />System::Call "rapi::CeFindFirstFile(t '\Windows\GAC_mscorlib_*.dll', ir3) i r4"<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">19th January 2007 20:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Integer is fine. There's no need to allocate space for a handle.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">briforge</span><br />
+      <span class="post-time small text-muted">19th January 2007 20:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Wow, another fast response, thanks. CeGetLastError is returning 18. How do I get more information than that? I'm confused by the FormatMessage documentation.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">19th January 2007 20:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You can use an error lookup tool that calls FormatMessage for you. There's a version that comes with Platform SDK and VC. I couldn't find one for download with a quick search, but I'm sure you'll find one somewhere, if you search a bit more.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

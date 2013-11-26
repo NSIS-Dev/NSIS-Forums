@@ -1,0 +1,286 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Debugging advice" />
+
+  <title>Debugging advice - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Debugging advice</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=335047">Debugging advice</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">21st September 2011 16:53 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Debugging advice</strong><br />
+      i'm suffering over a problem occuring with my script and i'm having a difficult time pinpointing it. what this script does is locating and copying some files and using textreplace. in most cases it works without problems, but when a large number of files is involved (in my case 2530) the installer will freeze. to make things worse this does not happen always, just occasionally.<br />
+      <br />
+      i'm looking for some hints on how to find the bug. i've already disabled various parts of the script, but without gaining any knowledge. all i can say is, this happens when working with a lot of files and i <i>believe</i> i did not have this problem when using other (slower) functions to replace text or to locate files. is there anything wrong with my textreplace calls? can they be optimized? any other tips on how to narrowing down the problem?<br />
+      <br />
+      any help is greatly appreciated.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">{_trueparuex^}</span><br />
+      <span class="post-time small text-muted">21st September 2011 20:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">In cases like this I usually just add some messgeboxes to the code to find the point where things go wrong, but in this case <a href="http://nsis.sourceforge.net/Nsisdbg_plug-in" target="_blank">Nsisdbg plug-in</a> is probably much better choice.<br />
+      <br />
+      With Nsisdbg plug-in use the nsisdbg::sendtolog call to track the progress of your script.<br />
+      <br />
+      Edit: I just realized that the Nsisdbg plug-in download link is is dead. I uploaded the <a href="http://koti.mbnet.fi/vaultec/files/miscellaneous/NSIS-Debugger.7z" target="_blank">plug-in on my site</a>.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">22nd September 2011 08:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i shall also note that i only get those problems on windows 7 (both 32 and 64 bit), not on windows xp.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">22nd September 2011 17:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">thanks {_trueparuex^}, i actually tried all of this before - to no success. as i suspect the number of files to be responsible, i wonder if this could be a memory issue. i do have 8gb ram and enough space on all drives, so that should not be the case. i'm also not exceeding the string-length (i'm using the large string build), so i wonder where else i can look. what puzzles me, why does it work on xp in a virtual machine (with 2gb ram)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">30th September 2011 10:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">it appears i could find the problem in my script, so i wanted to resolve it in case someone runs into similar problems.<br />
+      <br />
+      the problem appeared (occasionally, only on windows vista or later) when setting the outdir when the path existed already<br /></p>
+      <pre>
+<code>SetOutPath "$MyTempDir\fonts"</code>
+</pre><br />
+      a simple IfFileExists fixed the issue, but i changed the code to this<br />
+      <pre>
+<code>IfFileExists "$MyTempDir\fonts\*.*" +2<br />CreateDirectory "$MyTempDir\fonts"</code>
+</pre><br />
+      in the following a couple of files were copied, so i didn't really need SetOutPath and changed it to CreateDirectory. for reasons unknown, it was IfFileExists that made the difference!
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">30th September 2011 20:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i continue to have this bug at a later point. again it's caused by a simple copy operation, just this time i can't figure out when and why it's happening (again it happens occasionally and only on vista/win7.) i have a test scenario which helps me testing this on 312 examples, but the result continue to be entirely random, though certain test-files tend to trigger the bug more often.<br />
+      <br />
+      the line in question is this:<br /></p>
+      <pre>
+<code>CopyFiles /SILENT "$EXEDIR\ape\addborder.ape" "$MyTempDir\ape\addborder.ape"</code>
+</pre><br />
+      the source-file is located in $PROGRAMFILES and is a dll with a different file-extension. the problem appears on elevated and usermode installers.<br />
+      <br />
+      any clues, cause i'm clueless!
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">1st October 2011 19:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">here are a couple of things i tried<br />
+      <br />
+      1. extract the file from the installer rather than copying it -&gt; works<br />
+      2. copying the file using the full path as on my system -&gt; works<br />
+      3. checking if the source-file and the target-folder exist -&gt; yes<br />
+      4. checking if $EXEDIR is correct -&gt; yes<br />
+      <br />
+      $EXEDIR = C:\Program Files (x86)\whyEye.org\PimpBot\ape<br />
+      <br />
+      CopyFile "$EXEDIR\ape\addborder.ape" "$MyTempDir\ape\addborder" -&gt; crashes installer<br />
+      CopyFile "C:\Program Files (x86)\whyEye.org\PimpBot\ape\addborder.ape" "$MyTempDir\ape\addborder" -&gt; works<br />
+      <br />
+      i'm clueless, please please help me!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">1st October 2011 20:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">What if you call API directly, instead of CopyFiles?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">1st October 2011 22:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i tried <a href="http://nsis.sourceforge.net/StdUtils_plug-in" target="_blank">StdUtils</a>, which also results in a crash</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">2nd October 2011 07:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Just a random thought: Have you tried this on other PCs? Win Vista/7 are very clunky with file copying. It's possible that bad RAM or a bad HDD causes it to blow.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">2nd October 2011 09:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i asked some friends to test it, but they didn't get any problems (well, i'd love to test it myself). i replaced my ram since this first came up and i tried various disks including ssd, harddrives and ramdisk (hence i'm using $MyTempDir instead of $PLUGINSDIR). i have another windows 7 (32-bit) running in a virtual machine (same problem) and also windows xp (where i NEVER get this problem.) i'm going to install windows 7 on vmware on my laptop and see what happens..<br />
+      <br />
+      further, i've tested various nsis builds (standard and longstr)<br />
+      <br />
+      it's interesting that there have been reports regarding CopyFiles and windows 7 on this forum, though i didn't find a case that really crashes the installer.<br />
+      <br />
+      having found the exact line where this problem occurs, i wonder if it could still be caused by something else. not sure what i should be looking for.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">2nd October 2011 11:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">same thing on the other computer :(</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">3rd October 2011 05:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by Yathosho</small><br />
+        $EXEDIR = C:\Program Files (x86)\whyEye.org\PimpBot\ape<br />
+        <br />
+        CopyFile "$EXEDIR\ape\addborder.ape" "$MyTempDir\ape\addborder" -&gt; crashes installer<br />
+        CopyFile "C:\Program Files (x86)\whyEye.org\PimpBot\ape\addborder.ape" "$MyTempDir\ape\addborder" -&gt; works
+      </blockquote>It shouldn't lead to a crash, but if $EXEDIR already has a trailing 'ape', your copyfile command is wrong.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">3rd October 2011 09:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by MSG</small><br />
+        It shouldn't lead to a crash, but if $EXEDIR already has a trailing 'ape', your copyfile command is wrong.
+      </blockquote>just a typo in the post<br />
+      <br />
+      anyway, i've figured out a workaround so i'm not going to break my head over this one. thanks for all the advice!
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">{_trueparuex^}</span><br />
+      <span class="post-time small text-muted">3rd October 2011 20:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I think you have a heap corruption issue here. The crash.log shows it crashes in ntdll.dll with memory access violation which I think is probably result of heap corruption. If this is the case you probably also get crashes with exception code 0xc0000374 (STATUS_HEAP_CORRUPTION). And the cause for heap corruption would be most likely a third party plug-in. :blah:<br />
+      <br />
+      PaR</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">3rd October 2011 22:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by {_trueparuex^}</small><br />
+        I think you have a heap corruption issue here. The crash.log shows it crashes in ntdll.dll with memory access violation which I think is probably result of heap corruption. If this is the case you probably also get crashes with exception code 0xc0000374 (STATUS_HEAP_CORRUPTION). And the cause for heap corruption would be most likely a third party plug-in. :blah:<br />
+        <br />
+        PaR
+      </blockquote>hmm, so it's probably TextReplace as i've assumed before. i don't want to go back, as this plugin performs MUCH better than any functions or macros i've used before. i tried contacting instructor before to ask if he plans a unicode build, but i never heard from him since. so if plugin causes the crach (i don't want to blame the plugin, but i'm pretty sure it's causing this) it's probably never going to get fixed.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">5th October 2011 13:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i commented out the two plugins in question each at a time (<a href="http://nsis.sourceforge.net/TextReplace_plugin" target="_blank">TextReplace</a> and <a href="http://nsis.sourceforge.net/Locate_plugin" target="_blank">Locate</a>) and it appears that either the locate plugin is buggy or my code using it produces the bug (will look into it!) in either case, the installer didn't crash once in 2,500 test runs.<br />
+      <br />
+      the only let down is this: what happens if it's to blame on the plugin. it appears it's no longer maintained by the author :(</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">DrO</span><br />
+      <span class="post-time small text-muted">5th October 2011 13:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by Yathosho</small><br />
+        the only let down is this: what happens if it's to blame on the plugin. it appears it's no longer maintained by the author :(
+      </blockquote>as the source is provided, you'd need to find someone to update / fix it for you or learn how to do it :)<br />
+      <br />
+      -daz
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">5th October 2011 13:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by DrO</small><br />
+        as the source is provided, you'd need to find someone to update / fix it for you or learn how to do it :)
+      </blockquote>you mean as a warm up for my go at avs 3.0? ;)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">DrO</span><br />
+      <span class="post-time small text-muted">5th October 2011 13:37 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">something like that though i'd prefer a milkdrop 3 which supports avs presets :p<br />
+      <br />
+      -daz</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

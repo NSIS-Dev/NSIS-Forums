@@ -1,0 +1,100 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="nsProcess and x64 Solution" />
+
+  <title>nsProcess and x64 Solution - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">nsProcess and x64 Solution</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=320575">nsProcess and x64 Solution</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">underline</span><br />
+      <span class="post-time small text-muted">6th July 2010 18:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>nsProcess and x64 Solution</strong><br />
+      Hi all,<br />
+      <br />
+      After some tests with x64 OS (XP and 7) I see that only nsProcess plugin (thanks to Instructor) is able to find processes for x64 applications installed and running from "Program Files" and not from "Program Files (x64)". You can test it easy by installing "WinRAR 64bits" then try to find the running process name "WinRAR.exe". Only nsProcess plugin is able to find it. All other FindProcess plugins will fail.<br />
+      <br />
+      Now my issue:<br />
+      <br />
+      Inside my script I use this function:<br />
+      <br />
+      <a href="http://nsis.sourceforge.net/Get_a_list_of_running_processes" target="_blank">http://nsis.sourceforge.net/Get_a_li...ning_processes</a><br />
+      <br />
+      but now I see that this also fail inside x64 OS. Can anyone update or modify this function or maybe create a new one capable to get a list of running processes also inside x64 OS as this one only works in x86 (32bit) OS?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">6th July 2010 21:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">That uses some API's that will fail with 64-bit processes among others (namely GetModuleBaseName). A lot of plug-ins use the exact same API's and fail for the same reason.<br />
+      <br />
+      There are 4 options that I can think of:<br />
+      1. Use <a href="http://msdn.microsoft.com/en-us/library/ms682629%28v=VS.85%29.aspx" target="_blank">EnumProcesses</a> to get an array of process id's followed by an OpenProcess with PROCESS_QUERY_INFORMATION and then a <a href="http://msdn.microsoft.com/en-us/library/ms683197%28VS.85%29.aspx" target="_blank">GetModuleFileNameEx</a>.<br />
+      2. Use <a href="http://msdn.microsoft.com/en-us/library/ms724509%28VS.85%29.aspx" target="_blank">NtQuerySystemInformation</a> with SystemProcessInformation to get an (undocumented) SYSTEM_PROCESS_INFORMATION struct (see <a href="http://processhacker.sourceforge.net/hacking/structs.php" target="_blank">http://processhacker.sourceforge.net...ng/structs.php</a> - the MSDN page does not document the entire struct) - Instructor's nsProcess plug-in uses this on Windows 2000+.<br />
+      3. Use the WmiInspector::Request plug-in function with the <a href="http://msdn.microsoft.com/en-us/library/aa394372%28VS.85%29.aspx" target="_blank">Win32_Process class</a>.<br />
+      4. Write a .NET DLL (the <a href="http://msdn.microsoft.com/en-us/library/1f3ys1f9.aspx" target="_blank">System.Diagnostics.Process.GetProcesses()</a> method is what you need) and call it using the CLR plug-in.<br />
+      <br />
+      All of the above only work on Windows 2000 and above. 1 and 2 can be done using the System plug-in directly or in a DLL and called using the System plug-in.<br />
+      <br />
+      Perhaps I'll add this as another utility function to LockedList, but first can I enquire why you need a list of all processes?<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">underline</span><br />
+      <span class="post-time small text-muted">7th July 2010 11:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi Afrow<br />
+      <br />
+      I needed a list of all running processes to check some incompatible processes with my app but now is fixed as I just search only for incompatible processes using nsProcess plugin instead getting first a list of all running processes.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">8th July 2010 13:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Just to end this topic I have added an EnumProcesses function to LockedList which allows processes to be enumerated using a callback function. I have also added a FindProcess function which works on x64.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

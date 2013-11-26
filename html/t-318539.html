@@ -1,0 +1,128 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="execwait doesn't with .msi/.exe combo" />
+
+  <title>execwait doesn't with .msi/.exe combo - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">execwait doesn't with .msi/.exe combo</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=318539">execwait doesn't with .msi/.exe combo</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dandan78</span><br />
+      <span class="post-time small text-muted">20th April 2010 14:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>execwait doesn't with .msi/.exe combo</strong><br /></p>
+      <pre>
+<code><br />  ; Install App<br />  ExecWait "$INSTDIR\setup.exe"<br />  ; Install Sql Server Express Edition 2005<br />  ExecWait "$INSTDIR\install_sql_server.cmd"<br />  ; Setup and restore database<br />  ExecWait "$INSTDIR\import_db.cmd"<br />  ; setup database user<br />  ExecWait "$INSTDIR\adduser.cmd"<br />  ; Create ODBC DSN<br /></code>
+</pre><br />
+      <br />
+      Hi, setup.exe is part of a .msi/.exe combination created by a Visual Studio setup project.<br />
+      <br />
+      If you run the .msi, it works fine UNLESS the prerequisites are missing. Hence it's better to go with the .exe. The .exe checks for the prerequisites, in this case version 3.5SP1 of the .NET Framework and Crystal Reports Basic, and downloads and installs them if needed.<br />
+      <br />
+      One would expect that running setup.exe with ExecWait would do the checks, get and install anything that's missing, and then install the application (.msi). However, what happens is that the .msi part of the package and the following ExecWait which installs SQL Sever 2005 Express launch at the same time.<br />
+      <br />
+      Does anybody know a way to prevent that from happening?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">20th April 2010 14:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This sounds a lot like some problems I've seen mentioned in here before. Have you tried searching the forums?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dandan78</span><br />
+      <span class="post-time small text-muted">20th April 2010 15:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yes, but unforutnately I didn't find anything, which is not to say that I have given up searching.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">20th April 2010 15:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This might be a thread on it...<br />
+      <a href="http://forums.winamp.com/showthread.php?t=254184" target="_blank">http://forums.winamp.com/showthread.php?t=254184</a><br />
+      <br />
+      The explanation is at least likely.. the installer probably launches another process itself, then exits - so your ExecWait waits just fine.. but the thing it's waiting for exits rapidly :)<br />
+      <br />
+      If the potential solution in that thread doesn't help (and I'm guessing it wouldn't.. start /wait probably suffers from the same issue), you'll have to check how you can stop the initial installer from exiting immediately.<br />
+      <br />
+      Alternatively - but only if you're desperate, look for the actual installing process and halt execution of your code until that process is gone.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dandan78</span><br />
+      <span class="post-time small text-muted">20th April 2010 16:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yes, that it exactly what it does. Setup.exe eventually launches msiexec and exits. As you said, start /wait doesn't help. :(<br />
+      <br />
+      For the last hour and a half I've been trying to dig up a way to prevent setup from exiting immediately but so far without luck. InstallShield would be doable, but this isn't InstallShield. Oh well...<br />
+      <br />
+      I'm getting to the point where no other option remaisn other than doing some low-level Win API stuff, possible wrapping the whole thing in an extra application to make it easier.<br />
+      <br />
+      Thanks, all.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">20th April 2010 17:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><a href="http://unattended.sourceforge.net/installers.php" target="_blank">http://unattended.sourceforge.net/installers.php</a> if you can identify the installer, or if all else fails: <a href="http://nsis.sourceforge.net/ExecWait_and_waiting_for_child_processes_with_Job_Objects" target="_blank">http://nsis.sourceforge.net/ExecWait...th_Job_Objects</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dandan78</span><br />
+      <span class="post-time small text-muted">21st April 2010 09:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>[Solved] execwait doesn't with .msi/.exe combo</strong><br />
+      @Anders<br />
+      <br />
+      Oddly, the Visual Studio setup.exe + .msi combination is not listed on the web page you gave me. The InstallShield variant is, tho, but the solution is not applicable.<br />
+      <br />
+      So all else did fail, but lucky for me the macro works like a charm. :)<br />
+      <br />
+      Thanks again.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

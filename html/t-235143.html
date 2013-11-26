@@ -1,0 +1,83 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Problems with UpgradeDLL and MSXML4" />
+
+  <title>Problems with UpgradeDLL and MSXML4 - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Problems with UpgradeDLL and MSXML4</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=235143">Problems with UpgradeDLL and MSXML4</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Mikesch</span><br />
+      <span class="post-time small text-muted">10th January 2006 11:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Problems with UpgradeDLL and MSXML4</strong><br />
+      I have problems with the installation of msxml4 using UpgradeDLL.<br />
+      <br />
+      This code works for MSXML3 but it fails for MSXML4.<br />
+      (msxml4.dll will not be registered after this code)<br />
+      :rolleyes:<br />
+      <br /></p>
+      <pre>
+<code><br />!include UpgradeDLL.nsh<br /><br />!ifndef MSXML_VERSION<br />  !define MSXML_VERSION "msxml4"<br />!endif<br /><br />!define REDIST_PATH "Redist\${MSXML_VERSION}"<br />!define PRODUCT_EXE "MyApp.exe"<br /><br />;- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -<br /><br />Section "-Install ${MSXML_VERSION}"<br /><br />  MessageBox MB_OK "*** Prepare setup for installing ${MSXML_VERSION} ***"<br />  !insertmacro UpgradeDLL "${REDIST_PATH}\${MSXML_VERSION}.dll" "$SYSDIR\${MSXML_VERSION}.dll" "$SYSDIR"<br /><br />#1      RegDLL "$SYSDIR\${MSXML_VERSION}.dll"<br /><br />  !define UPGRADEDLL_NOREGISTER<br />    !insertmacro UpgradeDLL "${REDIST_PATH}\${MSXML_VERSION}a.dll" "$SYSDIR\${MSXML_VERSION}a.dll" "$SYSDIR"<br />    !insertmacro UpgradeDLL "${REDIST_PATH}\${MSXML_VERSION}r.dll" "$SYSDIR\${MSXML_VERSION}r.dll" "$SYSDIR"<br />  !undef UPGRADEDLL_NOREGISTER<br /><br />  ; Only increase DLL count on new installation<br />  IfFileExists $INSTDIR\${PRODUCT_EXE} skipAddSharedDLL<br />    Push $SYSDIR\${MSXML_VERSION}.dll<br />    Call AddSharedDLL<br />    Push $SYSDIR\${MSXML_VERSION}a.dll<br />    Call AddSharedDLL<br />    Push $SYSDIR\${MSXML_VERSION}r.dll<br />    Call AddSharedDLL<br />  skipAddSharedDLL:<br />SectionEnd<br /><br />;- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -<br /><br />Section "-un.Uninstall ${MSXML_VERSION}"<br /><br />  Push $SYSDIR\${MSXML_VERSION}.dll<br />  Call un.DecrementSharedDLL<br />  Push $SYSDIR\${MSXML_VERSION}a.dll<br />  Call un.DecrementSharedDLL<br />  Push $SYSDIR\${MSXML_VERSION}r.dll<br />  Call un.DecrementSharedDLL<br /><br />SectionEnd<br /><br /></code>
+</pre><br />
+      <br />
+      The msxml files will be copied to system32 but my app fails if it uses xml functionallity.<br />
+      <br />
+      If I try "regsvr32.exe msxml4.dll" my app works successfully.<br />
+      <br />
+      Uncommenting comment #1 has the same effect,<br />
+      the msxml4.dll will be registered sucessfully.<br />
+      <br />
+      What is wrong with this code?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Mikesch</span><br />
+      <span class="post-time small text-muted">10th January 2006 13:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Solved: Problems with UpgradeDLL and MSXML4</strong><br />
+      I found out my problem. :up:<br />
+      <br />
+      First I have to call the UpgradeDLL macro for the dlls which have not to be registered (<i>msxml4a.dll</i> and <i>msxml4r.dll</i>).<br />
+      After this I can call the UpgradeDLL macro for the <i>msxml4.dll</i>. :o<br />
+      <br /></p>
+      <pre>
+<code><br />!include UpgradeDLL.nsh<br /><br />!ifndef MSXML_VERSION<br />  !define MSXML_VERSION "msxml4"<br />!endif<br /><br />!define REDIST_PATH "Redist\${MSXML_VERSION}"<br /><br />;- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -<br />;<br />Section "-Install ${MSXML_VERSION}"<br /><br />  !echo "*** Prepare setup for installing ${MSXML_VERSION} ***"<br /><br />  ; upgrade the dll first which have not to be registered<br />  !define UPGRADEDLL_NOREGISTER<br />    !insertmacro UpgradeDLL "${REDIST_PATH}\${MSXML_VERSION}a.dll" "$SYSDIR\${MSXML_VERSION}a.dll" "$SYSDIR"<br />    !insertmacro UpgradeDLL "${REDIST_PATH}\${MSXML_VERSION}r.dll" "$SYSDIR\${MSXML_VERSION}r.dll" "$SYSDIR"<br />  !undef UPGRADEDLL_NOREGISTER<br /><br />  ; upgrade the main xml file<br />  !insertmacro UpgradeDLL "${REDIST_PATH}\${MSXML_VERSION}.dll" "$SYSDIR\${MSXML_VERSION}.dll" "$SYSDIR"<br /><br />  ; Only increase DLL count on new installation<br />  IfFileExists $INSTDIR\${PRODUCT_EXE} skipAddSharedDLL<br />    Push $SYSDIR\${MSXML_VERSION}.dll<br />    Call AddSharedDLL<br />    Push $SYSDIR\${MSXML_VERSION}a.dll<br />    Call AddSharedDLL<br />    Push $SYSDIR\${MSXML_VERSION}r.dll<br />    Call AddSharedDLL<br />  skipAddSharedDLL:<br />SectionEnd<br /><br />;- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -<br />;<br />Section "-un.Uninstall ${MSXML_VERSION}"<br /><br />  Push $SYSDIR\${MSXML_VERSION}.dll<br />  Call un.DecrementSharedDLL<br />  Push $SYSDIR\${MSXML_VERSION}a.dll<br />  Call un.DecrementSharedDLL<br />  Push $SYSDIR\${MSXML_VERSION}r.dll<br />  Call un.DecrementSharedDLL<br /><br />SectionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

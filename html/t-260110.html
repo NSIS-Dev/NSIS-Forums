@@ -1,0 +1,210 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="InstallLib: can't make NOREBOOT_PROTECTED to work" />
+
+  <title>InstallLib: can't make NOREBOOT_PROTECTED to work - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">InstallLib: can't make NOREBOOT_PROTECTED to work</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=260110">InstallLib: can't make NOREBOOT_PROTECTED to work</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">fmt_jsc</span><br />
+      <span class="post-time small text-muted">22nd November 2006 12:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>InstallLib: can't make NOREBOOT_PROTECTED to work</strong><br />
+      Hello everyone,<br />
+      <br />
+      I've written a bunch a macros to use inside an installer for installing and registering DLLs.<br />
+      I just adapted some bits of code I grabbed here and there on this forum or in the NSIS wiki.<br />
+      <br />
+      But it seems I'm not able to make it work properly!<br />
+      <br />
+      The installer is supposed to install a DLL, which might be in use. To make sure we detect whether it is in use or not, I call InstallLib with NOREBOOT_PROTECTED, as the documentation states: "Warns the user when the library is in use. The user will have to close applications using the library."<br />
+      I open my application, and I check with "WhoLockMe" utility that my DLL is in use.<br />
+      I launch the setup and it doesn't warn me.<br />
+      Several users have complained because their DLL was not updated...<br />
+      <br />
+      Could you please help me determine what I'm doing wrong?<br />
+      <br />
+      Note that I'm using UltraModernUI, don't know if it might change something or not, but I prefer to warn about that :-)<br />
+      I've also tried NOREBOOT_NOTPROTECTED but without success.<br />
+      <br />
+      Here are some bits of my setup:<br />
+      <br />
+      1/ The macros<br />
+      <br />
+      !macro InstallsDLL DLL_PATH DLL_NAME DLL_TYPE<br />
+      IfFileExists "$SYSDIR\${DLL_NAME}" 0 +2<br />
+      StrCpy $ALREADY_INSTALLED 1<br />
+      <br />
+      !insertmacro InstallLib ${DLL_TYPE} $ALREADY_INSTALLED NOREBOOT_PROTECTED "${DLL_PATH}\${DLL_NAME}" "$SYSDIR\${DLL_NAME}" "$SYSDIR"<br />
+      WriteINIStr "$INSTDIR\install.log" "DLLs" "DLL ${DLL_NAME} was installed" ""<br />
+      !macroend<br />
+      <br />
+      !macro AddsOnlyNewerDLL DLL_PATH DLL_NAME DLL_TYPE<br />
+      GetDLLVersionLocal "${DLL_PATH}\${DLL_NAME}" $R0 $R1<br />
+      IntOp $R2 $R0 / 0x00010000<br />
+      IntOp $R3 $R0 &amp; 0x0000FFFF<br />
+      IntOp $R4 $R1 / 0x00010000<br />
+      IntOp $R5 $R1 &amp; 0x0000FFFF<br />
+      StrCpy $0 "$R2.$R3.$R4.$R5"<br />
+      <br />
+      GetDllVersion "$SYSDIR\${DLL_NAME}" $R0 $R1<br />
+      IntOp $R2 $R0 / 0x00010000<br />
+      IntOp $R3 $R0 &amp; 0x0000FFFF<br />
+      IntOp $R4 $R1 / 0x00010000<br />
+      IntOp $R5 $R1 &amp; 0x0000FFFF<br />
+      StrCpy $1 "$R2.$R3.$R4.$R5"<br />
+      <br />
+      ${VersionCompare} $0 $1 $R0<br />
+      <br />
+      StrCmp $R0 "1" +2 0<br />
+      Goto "Skip${DLL_NAME}"<br />
+      !insertmacro InstallsDLL "${DLL_PATH}" "${DLL_NAME}" ${DLL_TYPE}<br />
+      Goto "Fin${DLL_NAME}"<br />
+      Skip${DLL_NAME}:<br />
+      WriteINIStr "$INSTDIR\install.log" "DLLs" "A newer or same version of ${DLL_NAME} is already installed, skipped" ""<br />
+      Fin${DLL_NAME}:<br />
+      !macroend<br />
+      <br />
+      2/ The offending call<br />
+      <br />
+      Section /o InstSystemDLL InstSystemDLL<br />
+      [...]<br />
+      !insertmacro InstallsDLL "&lt;mypath&gt;\MSXML4" "msxml4.dll" REGDLL<br />
+      !insertmacro InstallsDLL "&lt;mypath&gt;\MSXML4" "msxml4r.dll" DLL<br />
+      SectionEnd<br />
+      <br />
+      Whenever MSXML4 is in use, I don't get warned about it being locked!<br />
+      Yet the output window tells me the DLL was registered: "Registering: C:\WINDOWS\system32\msxml4.dll"</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">22nd November 2006 12:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Alter code:<br />
+      iffileexists "$SYSDIR\msxml4.dll" exists notexists<br />
+      exists:<br />
+      get the version and compare, if need update then,<br />
+      loop:<br />
+      clearerrors<br />
+      unregdll "$SYSDIR\msxml4.dll"<br />
+      iferrors inuse notinuse<br />
+      inuse:<br />
+      messagebox mb_ok "please close applications bla bla" idok loop<br />
+      notinuse:<br />
+      delete "$SYSDIR\msxml4.dll"<br />
+      notexists:<br />
+      setoutpath "$SYSDIR"<br />
+      file "local_path\"msxml4.dll"<br />
+      regdll "$SYSDIR\msxml4.dll"</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">fmt_jsc</span><br />
+      <span class="post-time small text-muted">22nd November 2006 15:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Your answer seemed to me a bit odd in the first place, as many people here recommend using InstallLib and not directly calling regdll and unregdll.<br />
+      So I decided to dive within InstallLib's code, and in my understanding it looks like it handles error cases silently instead of Warning the user about file lock, which is in contradiction with NSIS's documentation.<br />
+      Furthermore it already includes the comparison of DLL versions and skips DLL file copy when the version already installed is the same or newer (it's going to save me some macros in my installer :P).<br />
+      In your example you first call unregdll to check whether the DLL is locked or not, if it succeeds I expect a DLL registering counter was decremented somewhere, so calling regdll once afterwards means in the end the DLL registering counter remained unchanged, while I expect it should be 1 more than at the beginning, if that analysis is correct, would calling regdll twice do the trick?<br />
+      Right now I'm playing with C:\Program Files\NSIS\Include\Library.nsh contents, hoping I'll find a workaround that I could inject in a macro duplicated from InstallLib's code. I wish to keep most of InstallLib's features but want to be able to skip version check and want to warn the user when the file is locked.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">23rd November 2006 18:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">When a file is locked, it will be queued for replacement after reboot. If reboot is disabled, the user will be warned through the SetOverwrite setting which will tell him the file can't be opened for writing and that he'd have to abort, retry or ignore this. It's not supposed to be ignored, at least code-wise. There might a problem elsewhere in the code.<br />
+      <br />
+      If the DLL is registered and not replaced, it's probably in a good enough version. Are you sure the DLL versions are really older than what you're installing and that those DLL files are not protected?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">wiRe-07</span><br />
+      <span class="post-time small text-muted">9th October 2007 19:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">@fmt_jsc: you are right, the NSIS documentation contains an error.<br />
+      it claims the NOREBOOT_PROTECTED flag causes the user to get warned in case the lib-file is in use. this is not true! the "library.nsh", even that file included with the latest NSIS distro, only skips installation when it detects the file is in use currently. this state gets determined by calling "SfcIsFileProtected". (anyway, this method always returns 0 on my vista, even if the dll is currently loaded, who knows why :confused: ) if it would return a NZ-number instead, no user warning will occure at all, because the macro will leave! this means: don't use the NOREBOOT_PROTECTED flags, instead use NOREBOOT_NOTPROTECTED only. in this case we will receive a user warning if we try to overwrite the file, since "SetOverwrite" get's turned on, but this happens only on version updates. if the install-file dll-version is older and the flag LIBRARY_IGNORE_VERSION isn't defined, the file operation get's skipped correctly.<br />
+      <br />
+      another real problem with the "library" is the "UnInstallLib" macro. if you want to delete loaded librarys after reboot it works fine, but if not (using a NOREBOOT_xxx flag), the file gets deleted without any verification. a small patch inside the "library.nsh" will fix this behaviour:<br />
+      <br />
+      just replace...<br /></p>
+      <pre>
+<span style="color: #007700">;------------------------
+<br />;</span><span style="color: #0000BB">Delete
+<br /><br />Delete$R1
+<br /><br /></span><span style="color: #007700">!</span><span style="color: #0000BB">ifdefUNINSTALLLIB_UNINSTALL_REBOOT_PROTECTED</span><span style="color: #007700">|</span><span style="color: #0000BB">UNINSTALLLIB_UNINSTALL_REBOOT_NOTPROTECTED
+<br /><br /></span><span style="color: #007700">...
+</span>
+</pre>with something like...<br />
+      <pre>
+<span style="color: #007700">;------------------------
+<br />;</span><span style="color: #0000BB">Delete
+<br /><br /></span><span style="color: #DD0000">"uninstalllib.delete_${UNINSTALLLIB_UNIQUE}:"
+<br /><br /></span><span style="color: #0000BB">Delete$R1
+<br /><br /></span><span style="color: #007700">!</span><span style="color: #0000BB">ifndefUNINSTALLLIB_UNINSTALL_REBOOT_PROTECTED</span><span style="color: #007700">|</span><span style="color: #0000BB">UNINSTALLLIB_UNINSTALL_REBOOT_NOTPROTECTED
+<br /><br /></span><span style="color: #007700">${If}${</span><span style="color: #0000BB">FileExists</span><span style="color: #007700">}</span><span style="color: #0000BB">$R1
+<br /></span><span style="color: #FF8000">#Fileisinuse,can'tjustdelete.Giveuserthechancetoretry.
+<br /><br /></span><span style="color: #0000BB">MessageBoxMB_RETRYCANCEL</span><span style="color: #007700">|</span><span style="color: #0000BB">MB_ICONSTOP</span><span style="color: #DD0000">"\
+<br />Failedtouninstalllibrary:$\n$\n$R1$\n$\n\
+<br />Filemaystillbeinusebysomeotherapplication.$\n\
+<br />PleasecloseallapplicationsbeforeyouRetry,$\n\
+<br />orpressCanceltokeepthisfile.\
+<br />"</span><span style="color: #0000BB">IDRETRY</span><span style="color: #DD0000">"uninstalllib.delete_${UNINSTALLLIB_UNIQUE}"
+<br /><br /></span><span style="color: #007700">${EndIf}
+<br /><br />!endif
+<br /><br />!</span><span style="color: #0000BB">ifdefUNINSTALLLIB_UNINSTALL_REBOOT_PROTECTED</span><span style="color: #007700">|</span><span style="color: #0000BB">UNINSTALLLIB_UNINSTALL_REBOOT_NOTPROTECTED
+<br /><br /></span><span style="color: #007700">...
+</span>
+</pre>now it should give users the chance to close any application, and give any loaded library free for deletion.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">9th October 2007 23:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">PROTECTED doesn't mean in-use. It means protected as in Windows File Protection. Indeed you shouldn't use this for unprotected files.<br />
+      <br />
+      The behavior of UninstallLib is intentional. If you don't want to let it do its work and remove the file at reboot, you can implement the logic around UninstallLib with the same piece of code you've added here. If you think that's a common usage, you can create a Wiki page for it so everyone can find it.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="The Custom Page Leave Function" />
+
+  <title>The Custom Page Leave Function - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">The Custom Page Leave Function</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=270867">The Custom Page Leave Function</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kgobel</span><br />
+      <span class="post-time small text-muted">8th May 2007 22:53 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>The Custom Page Leave Function</strong><br />
+      Hello,<br />
+      I have a product key verification in my custom page leave function....which works great....unless the end user tries to exit the installer...it will give an invalid serial key message to the user and not let them exit.<br />
+      <br />
+      Is there a way to determine if the user pushed the next button, or the Close/Cancel button? If so how?<br />
+      <br />
+      Thanks<br />
+      Kyle</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">9th May 2007 05:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Sounds like error leave function, a code snippet would be helpful.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kgobel</span><br />
+      <span class="post-time small text-muted">9th May 2007 09:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Sure,<br />
+      This is my page leave function<br /></p>
+      <pre>
+<code><br />Function RegLeave<br />;Grab the Registration ID user entered in textbox<br />ReadINIStr ${varInput} "$PLUGINSDIR\REG.ini" "Field 2" "State"<br /><br />;Check the web to see if the code is good<br />InetLoad::load /post "code=${varInput}" "http://www.metroeguide.net/registration/Registration.aspx" "reg.htm" /slient ""<br />;load the contents of the downloaded file into the var $3<br />FileOpen $2 "reg.htm" "r"<br />FileRead $2 $3<br />FileClose $2<br /><br />${If} $3 == 'INVALID'<br />MessageBox MB_OK|MB_ICONEXCLAMATION "Invalid Product Key"<br />Abort<br />${EndIf}<br /><br />${If} $3 == 'TOOMANY'<br />MessageBox MB_OK|MB_ICONEXCLAMATION "Product Key used too many times.  Please call 800-405-2100"<br />Abort<br />${EndIf}<br /><br />${If} $3 == 'SUCCESS'<br />goto serialOK<br />${EndIf}<br /><br /><br />serialOK:<br />FunctionEnd<br /></code>
+</pre><br />
+      The webpage that is the Registration ID is posted to returns 1 of 3 things....either 'INVALID' if no key is entered, or it's an incorrect registration key...'TOOMANY' if the key has been used more than 3 times, and 'SUCCESS' if the key is good. When the user hits the close button...the function I think is run, and it POSTs to the website, which returns INVALID (no key entered)..and doesn't let the installer exit.<br />
+      <br />
+      The way I see it is, the installer is actually doing nothing wrong...It sees it's about to leave the page (when the user presses cancel) so it runs the function...the registration page (the asp page) obviously returns INVALID key....I'm not sure how to really get around it, unless somehow I could tell if the user tried to close the application, or press the next button
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">9th May 2007 10:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Next button is 0, e.g. ReadINIStr $0 "$PLUGINSDIR\test.ini" "Settings" "State"<br />
+      You may want to take a look at included example testnotify.nsi</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kgobel</span><br />
+      <span class="post-time small text-muted">9th May 2007 11:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thank you very much Red Wine for your quick replys.<br />
+      <br />
+      It seems...the Back button, the Install button, and the Cancel button....are all 0's...I did a<br /></p>
+      <pre>
+<code><br />ReadINIStr $0 "$PLUGINSDIR\REG.ini" "Settings" "State"<br />MessageBox MB_OK $0<br /></code>
+</pre><br />
+      and all the buttons returned 0, I believe they are all 0 because none of them are defined in my REG.ini.<br />
+      <br />
+      I also tried disabling the Install Button, (infact tried to disable every button) with no luck...<br />
+      I tried<br />
+      <pre>
+<code><br />GetDlgItem $1 $HWNDPARENT 1<br />EnableWindow $1 0<br /></code>
+</pre><br />
+      from ID 1 to about 10, it seems to have no effect.<br />
+      I am using the ExperienceUI...could this be a problem?<br />
+      <br />
+      Any other Ideas?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">9th May 2007 11:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">How do you know that they are all 0? The Leave function is only executed when you click Next (unless this is not the case in ExperienceUI)!<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kgobel</span><br />
+      <span class="post-time small text-muted">9th May 2007 11:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Good to hear from you Stu!<br />
+      <br />
+      I think I must have another problem them...my Leave Function seems to be executing when I press the Back...The Install...and the Cancel button...<br />
+      <br />
+      [edit]<br />
+      I guess that only happens when I have this in my script<br /></p>
+      <pre>
+<code><br />  !define XPUI_ABORTWARNING<br /></code>
+</pre><br />
+      I suppose it will be fine without it, but it is kindof nice to give the user a chance to 'not cancel' the installation...Do you know of a way I can have the Abort Warning enabled, without the leave function executing everytime a button is clicked?<br />
+      [/edit]<br />
+      <br />
+      Thanks again for your reply
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">9th May 2007 11:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I suspect this is a specific bug of XPUI,<br />
+      do you mind give a try to your entire script with MUI?<br />
+      I guess would be nice for all of us to know about.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Comperio</span><br />
+      <span class="post-time small text-muted">9th May 2007 23:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I think what makes XPUI a bit unique is the way it handles aborts.<br />
+      <br />
+      From the XPUI docs, when XPUI_ABORTWARNING should be set with a value of either TRUE or FALSE. (The default is false).<br />
+      <br />
+      Also if you've defined an abort page, you may find this helpful (also from XPUI docs):<br /></p>
+
+      <blockquote>
+        If you have an Abort Page in your installer, you may want to use an automatic abort warning in order to make the Abort page trigger properly. If you aren't using the ExperienceUI's built-in abort warning system, you can insert the following function to properly invoke the Abort page.<br />
+        <br />
+        <pre>
+<code>Function .onUserAbort<br />  StrCmp $NOABORTWARNING 1 CloseMe<br />  MessageBox MB_YESNO|MB_ICONQUESTION "Are you sure you want to cancel Setup?" IDNO NoAbort<br />  # any custom code you want before the Abort page is called here...<br />  !insertmacro XPUI_USERABORT<br />  NoAbort:<br />  Abort<br />  CloseMe:<br />  # any custom code you want before the installer exits here...<br />FunctionEnd</code>
+</pre>
+      </blockquote>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

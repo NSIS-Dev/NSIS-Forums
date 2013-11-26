@@ -1,0 +1,132 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Displaying a created window before installer displays anything?" />
+
+  <title>Displaying a created window before installer displays anything? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Displaying a created window before installer displays anything?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=341188">Displaying a created window before installer displays anything?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">aerDNA</span><br />
+      <span class="post-time small text-muted">25th January 2012 01:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Displaying a created window before installer displays anything?</strong><br />
+      It's a stupid title but I didn't know how to put it. I want to create a window as a child of a window from another process (static using CreateWindowEx, LoadImage etc.) and basically I succeeded but the problem is that it doesn't appear if my installer hasn't displayed any windows of its own yet, although my created window has 'external' parent, e.g. it will appear after I first display a Msgbox. I'm sure that folks here will know why that is and if there's a solution. Sorry if I didn't make my question clear enough.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">T.Slappy</span><br />
+      <span class="post-time small text-muted">25th January 2012 08:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Try .onInit or .onGUIInit functions: they are called before real installer is shown.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">aerDNA</span><br />
+      <span class="post-time small text-muted">25th January 2012 10:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I am using .onGUIInit, that's exactly the problem. I'll have to post some code to explain what i mean.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">aerDNA</span><br />
+      <span class="post-time small text-muted">25th January 2012 21:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Here. I have also attached this script, together with a test bitmap.<br />
+      <br /></p>
+      <pre>
+<code><br /># This example uses the screensaver preview window as target.<br /><br />OutFile "C:\WINDOWS\System32\PreviewTest.scr"<br />Name "PreviewTest"<br />Caption "PreviewTest"<br />RequestExecutionLevel User<br /><br />!include "FileFunc.nsh"<br />!define WS_CHILD        0x40000000<br />!define WS_VISIBLE      0x10000000<br />!define SS_BITMAP       0x0000000EL<br />!define IMAGE_BITMAP    0<br />!define LR_LOADFROMFILE 0x0010<br />!define STM_SETIMAGE    0x0172<br /><br />        Function .onGUIInit<br /><br /># When a screensaver is selected from the dropdown list, windows runs it with /p #### switch, passing it hwnd of the preview window.<br />${GetParameters} $R0<br />${GetOptions} "$R0" "/P" $R1 # R1=HWND of preview window<br />IfErrors 0 Preview<br />Exec 'Rundll32.exe shell32.dll,Control_RunDLL Desk.cpl,@0, 1'<br />Abort<br /><br />Preview:<br /><br />System::Call '*(&amp;i4,&amp;i4,&amp;i4,&amp;i4) i .r0' # RECT structure<br />System::Call 'user32::GetWindowRect(i R1, i r0) i.'<br />System::Call '*$0(&amp;i4,&amp;i4,&amp;i4,&amp;i4)i(.r1,.r2,.r3,.r4)'<br />System::Free $0<br />IntOp $1 $3 - $1 # x = right - left<br />IntOp $2 $4 - $2 # y = bottom - top<br /><br />System::Call "user32::CreateWindowEx(i 0, t 'STATIC', t 'Preview', i '${WS_CHILD}|${WS_VISIBLE}|${SS_BITMAP}', i 0, i 0, i r1, i r2, i R1, i 0, i 0, i 0) i. R2"<br />IntCmp $R2 0 PreviewEnd<br />File /oname=$PLUGINSDIR\Test.bmp ".\Test.bmp"<br />System::Call "user32::LoadImage(i 0, t '$PLUGINSDIR\Test.bmp', i ${IMAGE_BITMAP}, i 0, i 0, i ${LR_LOADFROMFILE}) i. R3"<br />System::Call "user32::SendMessage(i R2, i ${STM_SETIMAGE}, i ${IMAGE_BITMAP}, i R3) i."<br /><br /># Here's the problem: bitmap will not appear in the preview window until the msgbox is displayed.<br /># What can I do to change that?<br />Sleep 2000<br />MessageBox MB_OK|MB_USERICON "Test bitmap should be visible now."<br /><br />PreviewEnd:<br />Abort<br /><br />FunctionEnd<br /><br />Section "Blank"<br />SectionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">25th January 2012 23:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">A window created with CreateWindowEx or CreateDialog (but not DialogBox) needs to process messages for the window to work correctly, so you either have to call GetMessage+DispatchMessage in a loop with the system plugin or create the window and then hide the nsis window in the pre/show callback of your first page so nsis pumps messages for you.<br />
+      <br />
+      Have you thought about programming this in a "real" language or AutoIt?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">aerDNA</span><br />
+      <span class="post-time small text-muted">26th January 2012 00:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for a traditionally informative reply. I'll see what I can do about message processing. I'm aware nsis wasn't designed for these purposes. I first started using it when I needed to make an installer but then I realized it had possibilities beyond that. I started playing with it and using it to create small programs. I never found the will to move forward and learn a 'real' language, I always managed to find a way to achieve what I needed in nsis but of course I was bound to hit a wall sooner or later.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">26th January 2012 06:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">If you came up with and/or understand the code you posted you are not that far away from coding win32 apps in C (Dealing with RECTs (and structs in general) is actually harder in NSIS)<br />
+      <br />
+      There are several free options for you: mingw+codeblocks, the free visual studio from MS (The 2003 version can still be found online). Coding in c# can be done on any install of windows with dotnet installed (+notepad) <a href="http://www.youtube.com/watch?v=jr1XhCZJoEM" target="_blank">http://www.youtube.com/watch?v=jr1XhCZJoEM</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">26th January 2012 11:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I would recommend C# as an excellent language to begin to learn real programming. You can download Visual Studio 2010 C# Express for free. You can always then branch to C/C++ if the requirement arises (note that C++ Express does not support 64-bit development which is lame).<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">aerDNA</span><br />
+      <span class="post-time small text-muted">26th January 2012 12:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I did learn quite a lot about WinAPI fiddling with System plugin. Thanks for advice and encouragement, I really should get into this C# thing but don't be surprised if I turn up with another 'exotic' nsis question. :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">aerDNA</span><br />
+      <span class="post-time small text-muted">26th January 2012 15:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">GetMessage+DispatchMessage loop works. :up:</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

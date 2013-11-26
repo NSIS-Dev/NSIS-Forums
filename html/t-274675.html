@@ -1,0 +1,800 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Silent Install - Incomplete Releases" />
+
+  <title>Silent Install - Incomplete Releases - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content=" Silent Install - Incomplete Releases" />
+
+  <title>Silent Install - Incomplete Releases - NSIS Forums</title>
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" />
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Silent Install - Incomplete Releases</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=274675">Silent Install - Incomplete Releases</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">20th July 2007 22:23 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Silent Install - Incomplete Releases</strong><br />
+      I've been having some issues lately and am wondering if it's happened a lot. We're doing silent installs using a website I wrote that uses PSExec to kick off silent installs on test systems. The silent install automatically kicks off the uninstaller and then rolls into the installer. We have the fileoverwrite flag set to ifnewer. What's happening is that the delete of files is lagging, and when the file /r gets started, some of the files haven't disappeared yet, and thus NSI says "SKIPPING" and then we end up with an incomplete app out there. It didn't happen at all at first except on one machine. I figure that machine was slower than the rest. Lately it's been happening on all sorts of machines. I'm thinking my best resolution is to set fileoverwrite on, but just wondering if this is a typical situation.<br />
+      <br />
+      Thanks,<br />
+      Eric &lt;&gt;&lt;</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">21st July 2007 02:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Sounds like the process is asynchronous. Make sure you execute the uninstaller with ExecWait and _?=.<br />
+      <br />
+      See: <a href="http://nsis.sourceforge.net/When_I_use_ExecWait_uninstaller.exe_it_doesn%27t_wait_for_the_uninstaller" target="_blank">http://nsis.sourceforge.net/When_I_u...he_uninstaller</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">23rd July 2007 20:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yep, we're doing that. Here's an example of one of our uninstall sections:<br />
+      <br />
+      &lt;!--Code Snippet--&gt;<br />
+      IfSilent runSilentUninstall<br />
+      <br />
+      MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \<br />
+      "Application is already installed. $\n$\nClick `OK` to remove the \<br />
+      previous version or `Cancel` to cancel this upgrade." \<br />
+      IDOK uninst<br />
+      Abort<br />
+      <br />
+      ;Run the uninstaller<br />
+      uninst:<br />
+      ClearErrors<br />
+      CopyFiles /SILENT /FILESONLY "$INSTDIR\Uninst.exe" "$TEMP\Uninst.exe"<br />
+      Delete "$INSTDIR\Uninst.exe"<br />
+      ExecWait '"$TEMP\Uninst.exe" _?=$INSTDIR'<br />
+      goto done<br />
+      <br />
+      runSilentUninstall:<br />
+      <br />
+      ClearErrors<br />
+      CopyFiles /SILENT /FILESONLY "$INSTDIR\Uninst.exe" "$TEMP\Uninst.exe"<br />
+      Delete "$INSTDIR\Uninst.exe"<br />
+      ExecWait '"$TEMP\Uninst.exe" /S _?=$INSTDIR'<br />
+      &lt;!--End Code Snippet--&gt;<br />
+      <br />
+      We've been doing these silent installs for about 6 months. The partial release phenomenon originally only happened on one machine, and not consistently (same installer on other machines worked fine). Now it's been moving through all of the machines. Win2k3 OS. Maybe a patch or something is hosing us up???</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">23rd July 2007 20:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Can't help much without any method to reproduce this. Try adding some debug messages to make sure it's really synchronized.<br />
+      <br />
+      If it's really deleting the files only after the installer starts extracting them and it's not a problem with ExecWait, I'd put my money on some anti-virus update.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">23rd July 2007 21:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'll see if "SetOverWrite on" solves it. It seems like the OS is telling NSIS that things are there that no longer exist. If that's the case, this should fix it (hokey fix, but still a fix). I'm logging (special log build), so I should be able to determine the order of uninstall/install stuff...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">24th July 2007 16:53 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK, now that I've changed it to overwrite, it's getting an error. The log states that it's creating the directory first:<br />
+      <br /></p>
+      <pre>
+<code>CreateDirectory: "D:\Program Files\AppName\Public" (1)</code>
+</pre><br />
+      <br />
+      but this never gets created. So then when it tries to write the files there, it errors:<br />
+      <br />
+      <pre>
+<code>File: overwriteflag=0, allowskipfilesflag=2, name="MyFile1.aspx"<br />File: error creating "D:\Program Files\AppName\Public\MyFile1.aspx"<br />File: error, user cancel<br />File: overwriteflag=0, allowskipfilesflag=2, name="MyFile2.aspx"<br />File: error creating "D:\Program Files\AppName\Public\MyFile2.aspx"<br />File: error, user cancel</code>
+</pre><br />
+      <br />
+      Any clue where I go from here to figure out why the CreateDirectory failed?<br />
+      <br />
+      Thanks,<br />
+      Eric
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">24th July 2007 17:23 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Does "D:\Program Files\AppName" exist?<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">24th July 2007 19:37 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">No, it did, but I deleted it in the uninstaller. Then when the installer tries to create it, it doesn't seem to fail, but it doesn't create it (unless that's what the (1) means after it tries to create the directory).<br />
+      <br />
+      This is getting more confusing, because we've got a different installer that's doing this same thing (saying error creating such and such file), but the files exist after the installer gets done with the new timestamp and everything.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">24th July 2007 20:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">(1) means it's also SetOutPath. It doesn't actually log directory creation failures. I've added a bit more logging there for the next version.<br />
+      <br />
+      You should add a few message boxes in there to figure out what happens when.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">24th July 2007 20:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">What happens when "What"?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">24th July 2007 20:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">What happens at what time point. Which files are extracted at what time? Which files are deleted at what time? What happens first? Does the uninstaller really finish by the time the installer starts? Does the file exists when the installer tries to extract it? Does the folder exist when the installer tries to put a file in it? You can even use IfFileExists for that.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">24th July 2007 22:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Message boxes won't help because this only happens on silent install. I can see what happens, when, by the log file. The uninstaller doesn't log what it does, but it does log that it finished before the installer starts his work.<br />
+      <br /></p>
+      <pre>
+<code>Exec: command=""C:\DOCUME~1\efetzer\Local Settings\Temp\Uninst.exe" /S _?=D:\Program Files\MyApp"<br />Exec: success (""C:\DOCUME~1\efetzer\Local Settings\Temp\Uninst.exe" /S _?=D:\Program Files\MyApp")<br />Section: "Install"<br />settings logging to 1<br />logging set to 1<br /></code>
+</pre><br />
+      <br />
+      The weirdest thing about this is that we had no problems for 5+ months (except occasionally on one machine out of about 200) and then, all of a sudden, it started happening everywhere... I'll add a few pushes to the log as to whether the directory exists or not when it tries to create it and such.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">24th July 2007 22:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Message boxes can show in silent installers when /SD isn't used.<br />
+      <br />
+      The fact Exec finishes doesn't mean the uninstaller really finished executing.<br />
+      <br />
+      If the problem really came without any change, it's probably a failing anti-virus.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">24th July 2007 23:23 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The only change we've identified is the following patch:<br />
+      <br />
+      <a href="http://www.microsoft.com/technet/security/bulletin/MS07-040.mspx" target="_blank">http://www.microsoft.com/technet/sec.../MS07-040.mspx</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">25th July 2007 18:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">What exactly do you mean by "a failing anti-virus"? That we would have a virus on all of these machines?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">25th July 2007 18:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">No an anti-virus suite that isn't doing it's job correctly.<br />
+      A false positive is one of them.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">25th July 2007 18:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I don't understand what you mean. How can a anti-virus suite affect a release executable.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">25th July 2007 19:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ant-virus applications employ a slew of tactics to try and protect your system. Some are simple such as scanning every file on the system once a day and some invasive such as scanning a file when it's modified or even monitor file deletions and modifications and filter those on the basis of known viral behaviors. Sometimes, the more invasive operations can be flawed, either by design or by implementation. That could cause problem such as those you're describing.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">25th July 2007 19:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well explained, thanks! I'll dig into it with my systems dudes.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">16th August 2007 21:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK, this is definitely not it. We reproduced it this afternoon with the antivirus completely shut off. Any more clues?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">17th August 2007 12:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">How about a machine with no Anti-Virus installed? Not all AVs give you an option to completely turn them off in the GUI.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">17th August 2007 15:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I didn't use the GUI, I shut off all of the services (runs as multiple services). I reproduced the error with no processes running for Symantec at all. I'm at the mercy of my organization, and thus, not allowed to uninstall antivirus.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">17th August 2007 16:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Are you sure it has no drivers?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">17th August 2007 16:23 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">BTW, I have heard of this patch you were talking about as the cause for other problems. I don't remember exactly where, but it's worth searching to see if the problems are related.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">17th August 2007 16:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm having that patch removed from the server that the problem happens on consistently. We'll see where this puts us... Thanks again Kichik!!!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">99999999</span><br />
+      <span class="post-time small text-muted">18th August 2007 05:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Re: Silent Install - Incomplete Releases</strong><br /></p>
+
+      <blockquote>
+        <i>Originally posted by stonkers</i><br />
+        <b>I've been having some issues lately and am wondering if it's happened a lot. We're doing silent installs using a website I wrote that uses PSExec to kick off silent installs on test systems. The silent install automatically kicks off the uninstaller and then rolls into the installer. We have the fileoverwrite flag set to ifnewer. What's happening is that the delete of files is lagging, and when the file /r gets started, some of the files haven't disappeared yet, and thus NSI says "SKIPPING" and then we end up with an incomplete app out there. It didn't happen at all at first except on one machine. I figure that machine was slower than the rest. Lately it's been happening on all sorts of machines. I'm thinking my best resolution is to set fileoverwrite on, but just wondering if this is a typical situation.<br />
+        <br />
+        Thanks,<br />
+        Eric &lt;&gt;&lt;</b>
+      </blockquote>Okay Eric, I've had this problem before too. It appears that while the uninstaller is described to work where it doesn't start up another copy of itself when you use the _? parameter, that it still does. All _? does is tell it where to uninstall from.<br />
+      <br />
+      In order to solve this issue, I've posted the following bit of code I used:<br />
+      <br />
+      <pre>
+<code><br /> function RunPreviousVersionUninstall<br />  <br />  StrCpy $0 "$PROGRAMFILES\MYAPP\uninstall.exe"<br />  ${GetParent} "$0" $5<br />  IfFileExists "$0" copyuninstaller loopend<br />  <br />  copyuninstaller:<br />  CopyFiles /SILENT "$0" "$TEMP\tempuninstall.exe"<br /> <br />  setdetailsprint textonly<br />  Exec '"$TEMP\tempuninstall.exe" /S _?=$5'    <br />  StrCpy $2 "Uninstalling Previous Version..." <br />  DetailPrint "$2"<br />  StrCpy $4 ""<br /><br />  Sleep 1000<br /><br />  loopbegin:<br />    StrLen $5 "$4"<br />    StrCmp $5 "12" 0 +2<br />    StrCpy $4 ""<br />    StrCpy $4 "$4."<br />    StrCpy $3 "$2$4"<br />    DetailPrint "$3"<br />        ${nsProcess::FindProcess} "tempuninstall.exe" $R2<br />        StrCmp "$R2" "0" loopagain<br />        ${nsProcess::FindProcess} "tempuninstall" $R2<br />        StrCmp "$R2" "0" loopagain<br />    goto loopend<br />  loopagain:<br />        sleep 1000<br />        goto loopbegin<br />  loopend:<br />  <br />  setdetailsprint both<br />functionend<br /></code>
+</pre><br />
+      <br />
+      As you can see I am waiting for the named process to quit, as the uninstaller starts up another copy of itself, with the same name. If you wait until this process has gone away, then the uninstall will be completed. Everyone here told me that _? made the uninstaller run only once, but that's just not true from my experiences.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">18th August 2007 10:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">When you use _?= another process will <b>never</b> be spawned. That can be shown by the following simple script.</p>
+      <pre>
+<code>OutFile test.exe<br />Name test<br />Section<br />WriteUninstaller $TEMP\uninst.exe<br />ExecWait '"$TEMP\uninst.exe" /S _?=$TEMP'<br />MessageBox MB_OK "uninstall completed"<br />SectionEnd<br /><br />Section uninstall<br />MessageBox MB_OK uninstalling...<br />SectionEnd</code>
+</pre>If this doesn't work for you, it's one huge bug and you should report it instead of creating such workarounds.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">99999999</span><br />
+      <span class="post-time small text-muted">19th August 2007 05:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by kichik</i><br />
+        <b>When you use _?= another process will</b> never be spawned. That can be shown by the following simple script.
+        <pre>
+<code>OutFile test.exe<br />Name test<br />Section<br />WriteUninstaller $TEMP\uninst.exe<br />ExecWait '"$TEMP\uninst.exe" /S _?=$TEMP'<br />MessageBox MB_OK "uninstall completed"<br />SectionEnd<br /><br />Section uninstall<br />MessageBox MB_OK uninstalling...<br />SectionEnd</code>
+</pre>If this doesn't work for you, it's one huge bug and you should report it instead of creating such workarounds.
+      </blockquote>Yeah it doesn't work for me, perhaps it is because I am using it silently as well. However in my case I used the time waiting around, to do something so it's not something I considered a huge issue for me. However I did ask around about it, and everyone just re-iterated the help file, which I can read all by myself (thank you,) and until I figured out that _? wasn't working for me as documented, has exactly the same problems Erik is describing.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">19th August 2007 21:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">As I said, this is a major issue. I need every possible detail.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">22nd August 2007 22:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yeah, I'm still getting the same thing with the patch off. Looks like we've got something going since I've been gone. I'm really happy about that because this is kicking my butt!!!! Let me know kichik if I should do 9 9's workaround. I'm hoping not because I would have to do it in about 400 places. Thanks - Eric</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">23rd August 2007 17:53 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">No, you shouldn't use his workaround. And if my script shows both message boxes at the same time for you too, I need every possible detail and preferably direct access to the computer from you too.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">23rd August 2007 21:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">When i ran it locally - &gt;test /S, it worked fine. The difference being that when I have these problems, I'm using PSEXEC to kick off the exe's in silent mode from another server. I won't be able to see the popups if I run from PSEXEC, so I'll have to figure out a way to modify the test code to show order without needing human intervention. Can you think of a way to do this kichik?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">24th August 2007 08:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Try writing to the same file with both instances on both their beginning and end, and see what comes out first.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">29th August 2007 20:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I don't get what you mean "both their beginning and their end"...<br />
+      <br /></p>
+      <pre>
+<code><br />OutFile test.exe<br />Name test<br />Section<br /><br />;Write to file here?<br /><br />WriteUninstaller $TEMP\uninst.exe<br />ExecWait '"$TEMP\uninst.exe" /S _?=$TEMP'<br /><br />;Write to file here?<br /><br />SectionEnd<br /><br />Section uninstall<br /><br />;Write to file here?<br /><br />SectionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">31st August 2007 09:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+      <pre>
+<code>OutFile test.exe<br />Name test<br />Section<br /><br /># Write here<br /><br />WriteUninstaller $TEMP\uninst.exe<br />ExecWait '"$TEMP\uninst.exe" /S _?=$TEMP'<br /><br /># Write here<br /><br />SectionEnd<br /><br />Section uninstall<br /><br /># Write here<br /><br />Sleep 2000<br /><br /># Write here<br /><br />SectionEnd</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">4th September 2007 17:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This isn't giving me anything like the results that I would expect. The following code:<br />
+      <br /></p>
+      <pre>
+<code>OutFile test.exe<br />Name test<br />;Included file(s)<br />!include "FileFunc.nsh"<br /><br />Section<br /><br />  FileOpen $7 "c:\testFile.txt" a<br />  FileWrite $7 "Write1"<br />  FileWrite $7 "$\r$\n"<br />  FileClose $7<br /><br />WriteUninstaller $TEMP\uninst.exe<br />ExecWait '"$TEMP\uninst.exe" /S _?=$TEMP'<br /><br />  FileOpen $7 "c:\testFile.txt" a<br />  FileWrite $7 "Write2"<br />  FileWrite $7 "$\r$\n"<br />  FileClose $7<br /><br />SectionEnd<br /><br />Section uninstall<br /><br />  FileOpen $7 "c:\testFile.txt" a<br />  FileWrite $7 "Write3"<br />  FileWrite $7 "$\r$\n"<br />  FileClose $7<br /><br />Sleep 2000<br /><br />  FileOpen $7 "c:\testFile.txt" a<br />  FileWrite $7 "Write4"<br />  FileWrite $7 "$\r$\n"<br />  FileClose $7<br /><br />SectionEnd</code>
+</pre><br />
+      <br />
+      Produces a file with the contents:<br />
+      <br />
+      Write2
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">4th September 2007 19:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.5" target="_blank">4.9.5.2 FileOpen</a> Opens a file named "filename", and sets the handle output variable with the handle. The openmode should be one of "r" (read) "w" (write, all contents of file are destroyed) or "a" (append, meaning opened for both read and write, contents preserved). <b>In all open modes, the file pointer is placed at the beginning of the file.</b> If the file cannot be opened, the handle output is set to empty, and the error flag is set.
+      </blockquote>Add a FileSeek command after each open: FileSeek $7 0 END<br />
+      <br />
+      Don
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">4th September 2007 19:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks DEMiller9! With the following code:<br />
+      <br /></p>
+      <pre>
+<code><br />OutFile test.exe<br />Name test<br />;Included file(s)<br />!include "FileFunc.nsh"<br /><br />Section<br /><br />  FileOpen $7 "c:\testFile.txt" a<br />  FileSeek $7 0 END<br />  FileWrite $7 "Write1"<br />  FileWrite $7 "$\r$\n"<br />  FileClose $7<br /><br />WriteUninstaller $TEMP\uninst.exe<br />ExecWait '"$TEMP\uninst.exe" /S _?=$TEMP'<br /><br />  FileOpen $7 "c:\testFile.txt" a<br />  FileSeek $7 0 END<br />  FileWrite $7 "Write2"<br />  FileWrite $7 "$\r$\n"<br />  FileClose $7<br /><br />SectionEnd<br /><br />Section uninstall<br /><br />  FileOpen $7 "c:\testFile.txt" a<br />  FileSeek $7 0 END<br />  FileWrite $7 "Write3"<br />  FileWrite $7 "$\r$\n"<br />  FileClose $7<br /><br />Sleep 2000<br /><br />  FileOpen $7 "c:\testFile.txt" a<br />  FileSeek $7 0 END<br />  FileWrite $7 "Write4"<br />  FileWrite $7 "$\r$\n"<br />  FileClose $7<br /><br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      The results are now:<br />
+      <br />
+      <pre>
+<code><br />Write1<br />Write3<br />Write4<br />Write2<br /></code>
+</pre><br />
+      <br />
+      I believe that shows that the two files aren't being kicked off at the same time, and thus, that the:<br />
+      <br />
+      ExecWait '"$TEMP\uninst.exe" /S _?=$TEMP'<br />
+      <br />
+      is working as designed.<br />
+      <br />
+      But then again, we haven't had the error we usually get in the past week. Could be that the Systems group has done something that we are unaware of to this machine. I'll investigate.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">5th September 2007 17:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK, nothing's changed on the server. I'll have to wait until the next time this issue rears it's ugly head and see if the test.exe exhibits different behavior. Other than that, I have no idea where else to go with this other than always checking the deploy log to see whether it has any errors in it, and if so, deploying locally... Thanks for all the help!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+      <span class="post-time small text-muted">6th September 2007 18:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK, so I found the issue again on a different server, ran the test.exe with PSExec and got the same results:<br />
+      <br />
+      1342<br />
+      <br />
+      So, I'm thinking that we're barking down the completely wrong path (my dog does that a lot also). One thing that is always the case. It fails creating a folder, and thus, it doesn't write any files to that folder. The only reason I can think of for it not being able to create the folder is because it still thinks the folder is there. So maybe it got deleted in the uninstall, but it's so lightning fast (in silent mode because of the lack of interaction), that the OS lies to NSIS saying that the folder is already there. What if I put a 5 second sleeper at the end of all of my uninstalls to give the OS time to catch up? I'll give it a shot and report back.</p>
+    </div>
+    <hr />
+    <!-- Bootstrap core CSS -->
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+    <div class="container">
+      <!-- Put navigation bar here -->
+
+      <ol class="breadcrumb">
+        <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+        <li><a href="f-65.html">NSIS Discussion</a></li>
+
+        <li class="active">Silent Install - Incomplete Releases</li>
+      </ol>
+
+      <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=274675">Silent Install - Incomplete Releases</a></p><br />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+        <span class="post-time small text-muted">8th September 2007 08:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">Putting a sleeper is never the right solution. It just hides the problem a bit better. If "lighting fast" suddenly become over 5 seconds because the CPU or HD are really busy, it won't be able to hide it.<br />
+        <br />
+        Try verifying it's the right tree first by validating the folder exists in the installer. Use IfFileExists.</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">99999999</span><br />
+        <span class="post-time small text-muted">10th September 2007 18:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content"></p>
+
+        <blockquote>
+          <i>Originally posted by stonkers</i><br />
+          <b><br />
+          One thing that is always the case. It fails creating a folder, and thus, it doesn't write any files to that folder. The only reason I can think of for it not being able to create the folder is because it still thinks the folder is there. So maybe it got deleted in the uninstall, but it's so lightning fast (in silent mode because of the lack of interaction), that the OS lies to NSIS saying that the folder is already there. What if I put a 5 second sleeper at the end of all of my uninstalls to give the OS time to catch up? I'll give it a shot and report back.</b>
+        </blockquote>I also found this to be the case, it's some odd thing about the uninstaller/installer interaction.<br />
+        <br />
+        Starting from a clean build the following were the different states after installs:<br />
+        <br />
+        Install #1: Full install, completely successful<br />
+        Install #2: Uninstall previous version, and then attempt an installation. Installation failed, because the install directory could not be created.<br />
+        Install #3: Full install, (because there is no previous installation,) completely successful.<br />
+        <br />
+        And round and round it goes. I have a couple ideas, but basically it appeared to me that the issue was related to the current installer having it's installation directory deleted, *after* it already had assumed it was there, and was ready to use.<br />
+        <br />
+        The solution I used to prove myself more or less right, was to execute a batch file which created the directory, after ruuning the uninstall. It worked perfectly after I did that. As a result, I added a function to our custom plugin to handle this instead.
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">2nd October 2007 20:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">I don't think I've ever had a problem with the installation directory, only subdirectories that are in the File /r command. I don't specifically tell the installer to create the directories, just let it do it when it copies them in.<br />
+        <br />
+        There's something that is causing me to switch gears though. When it fails (not really fails, but in the deploy log I see it error on creating a directory), if I run the installer manually it works (even with the /S option). I'm investigating whether PSExec has issues with permissions possibly (seems ludicrous because I'm admin on the machine and it doesn't have problems creating all directories, just one or another).</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+        <span class="post-time small text-muted">3rd October 2007 01:53 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">I'd say it's time for some debugging...<br />
+        <br />
+        Attached is a set of stubs (for 2.31) that'd simply break into the debugger upon directory creation failure. Use them build an installer that'd be installed using psExec. On the computer where the installer is executed, install <a href="http://www.microsoft.com/whdc/devtools/debugging/default.mspx" target="_blank">windbg</a> and set it as the <a href="http://support.microsoft.com/kb/121434" target="_blank">postmortem debugger</a>. Now execute the installer using psExec and hope the magic psExec does doesn't block windbg from your desktop.<br />
+        <br />
+        Once windbg is open, at the very least create a crash dump using <i>.dump /ma C:\CreateDirectoryFailed.dmp</i> and post it here.</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">3rd October 2007 15:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">I can't get past the 7z file. Do I need to change the extension to use it or is there a specific software I have to open it with?</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+        <span class="post-time small text-muted">3rd October 2007 15:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">No, it's just a simple 7z file. Try with the latest 7-zip.</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">3rd October 2007 17:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">OK, where do the stubs go? I'm not too versed in the inner workings of NSIS...</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+        <span class="post-time small text-muted">3rd October 2007 17:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">C:\Program Files\NSIS\Stubs.</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">3rd October 2007 17:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">Nevermind, I found the obvious "stubs" directory.</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">3rd October 2007 18:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">OK, I've got everything setup except the final step. So, I'm running the installer using PSExec silently from another machine. How am I going to catch the debugger open? I'm not on the machine.</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+        <span class="post-time small text-muted">3rd October 2007 18:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">You can setup remote debugging. Set the postmortem debugging to:</p>
+        <pre>
+<code>windbg -p %ld -e %ld. â€“server tcp:port=12345</code>
+</pre>Then, when it seems like psExec has frozen, try connecting to the debugger which should open on the remote computer using:
+        <pre>
+<code>windbg -remote tcp:server=1.2.3.4,port=12345</code>
+</pre>Of course you'll have to replace 1.2.3.4 with the real IP.
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">3rd October 2007 19:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">OK, thanks! I'm impressed with your windows knowledge kichik!!!</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">26th October 2007 17:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">OK, I haven't managed to get a dump yet, but I did get a better error when I put the latest NSIS on there. When it crashes creating a folder, it says (err=5):<br />
+        <br />
+        CreateDirectory: can't create "C:\Program Files\MyFolder\MySubfolder\TheFolder" (err=5)<br />
+        <br />
+        Does this do anything more for you Kichik? If not, I'll get a dump. I'm thinking what I need to do is wait for it to happen and then re-build that release with the debug stubs and try to release again. The problem with this whole situation is, it's TOTALLY unpredictable when or where it's going to happen.</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+        <span class="post-time small text-muted">26th October 2007 18:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">5 is ERROR_ACCESS_DENIED. Why weren't you be able to get a dump at that point? Right after printing that to the log, it should break into the debugger.</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">31st October 2007 21:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">I have to do a "debug build". They were in a hurry to test this build, so I didn't have time to rebuild. Next time I'll be able to do it hopefully. It seems to be happing a WHOLE lot less since upgrading NSIS (only once so far).</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">1st November 2007 17:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">OK, this sucks!!! So I got the opportunity and did what I said I was going to. The build failed. So I set the debug stubs up and rebuilt. This time, however, everything worked fine. This caused me to dig a little deeper into why the redeploy's aren't working. Well it turns out that when I redeploy with PSEXEC, it is working. It isn't showing us that it's working because our log isn't allowing itself to be overwritten silently. So I'm going to have to catch it when it happens the first time or I won't catch it.<br />
+        <br />
+        Is it safe to do create a debug exe everytime for just this one test environment? In other words, as a part of my build process, when I was building the exe for the test environment, have the build copy the stubs in there, run makensis, then copy the working stubs back over for creating all the other exe's...<br />
+        <br />
+        Of course I also want to address the log issue, but that's another subject...<br />
+        <br />
+        Again, Thanks!<br />
+        Eric &lt;&gt;&lt;</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+        <span class="post-time small text-muted">1st November 2007 19:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">It's perfectly safe to move over the stubs as long as you replace makensis.exe along with them.</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">2nd November 2007 16:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">I must be doing this wrong. I never understood having to replace makensis.exe. I only changed out the stubs. I was under the impression that those stubs went with the version you had told me to upgrade with. Is there a step that I missed?</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+        <span class="post-time small text-muted">2nd November 2007 19:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">Right, I gave you stubs that match makensis.exe 2.31 built with logging. As long as you switch between the normal logging stubs and the special logging stubs, makensis.exe can stay the same. But if you switch to non-logging stubs or another version of stubs, you'll have to switch makensis.exe.</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">2nd November 2007 20:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">Cool, I'll set this up so that I will get a dump whenever it chokes. Thanks Kichik!</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">18th December 2007 16:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content"><strong>Not working...</strong><br />
+        When the folder create fails, the psexec process doesn't hang. I'm guessing that these stubs aren't dumping. Should I put some sort of code in my nsi file for debug purposes to force a dump?</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+        <span class="post-time small text-muted">18th December 2007 21:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">Does it at least crash or does it carry on?</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">18th December 2007 23:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">It carry's on just like it did before the stubs were changed. Gives the can't create folder error in the log file.</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+        <span class="post-time small text-muted">19th December 2007 19:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">What's the exact error it prints to the log?</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">20th December 2007 15:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">I believe as it creates the folder, it says (err=5), and thereafter cannot create files in that folder that doesn't exist. If this isn't the case, I'll cut, paste, and post when it happens again.</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+        <span class="post-time small text-muted">20th December 2007 21:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">Are you sure the executed installer was created with the stubs I gave you? I see no reason it'd ignore a call to DebugBreak(), even when executed with psexec. Open the installer with notepad or some text editor and look for DebugBreak.</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">stonkers</span><br />
+        <span class="post-time small text-muted">7th January 2008 20:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">I believe we've fixed it (no problems for 2 weeks). It looks like IIS was sometimes blocking the installer from deleting folders. So instead of doing an "IISRESET" after the installer is done, we now do an "IISRESET /STOP" in .onInit and then an "IISRESET /START" after the installer is done.<br />
+        <br />
+        BTW - I checked it out and the move of those stub files was failing in NAnt. Probably a typo in folder name on my part, but we won't need it this time. I'll look deeper if we need this again though.<br />
+        <br />
+        Thanks Kichik!!!</p>
+      </div>
+      <hr />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+        <span class="post-time small text-muted">7th January 2008 22:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">A happy ending at last :)</p>
+      </div>
+      <hr />
+
+      <div class="footer">
+        <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+      </div>
+    </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script> <script type="text/javascript">
+//<![CDATA[
+    hljs.initHighlightingOnLoad();
+    //]]>
+    </script>
+  </div>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Executing CACLS With User Account After UAC Was Successful" />
+
+  <title>Executing CACLS With User Account After UAC Was Successful - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Executing CACLS With User Account After UAC Was Successful</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=286486">Executing CACLS With User Account After UAC Was Successful</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">matthewetaft</span><br />
+      <span class="post-time small text-muted">7th February 2008 23:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Executing CACLS With User Account After UAC Was Successful</strong><br />
+      Hi there,<br />
+      <br />
+      I could really use some help here with my NSIS Installation. I've done all the preliminary searches and come up blank before posting this =).<br />
+      <br />
+      <b>Outline:</b> This topic concerns the <a href="http://nsis.sourceforge.net/UAC_plug-in" target="_blank">NSIS UAC Plugin</a>, the <a href="http://nsis.sourceforge.net/Windows_Version_Detection" target="_blank">NSIS Windows Version Detection code</a> and the CACLS command. Operating Systems in question are Windows 2000 / XP Professional.<br />
+      <br />
+      <b>Summary</b>: I have thousands of users who only have limited user accounts. They are in the medical industry, and this is HIPAA standard. I want them to be able to install my program, and I want my program to have access to where it lives in the Program Files directory. My installer uses the UAC Plugin to grant the user administrative rights. Then it installs the program. Then it checks the Windows version. For any Windows version BUT Vista, it executes the CACLS command to grant the Users group access to the Program Files folders (2) that my program must have access to.<br />
+      <br />
+      <b>Problem</b>: When the installation is run from an administrative account, everything works fine. When the installation is run as a limited user account (even though the user gets administrative rights) the CACLS command does not give full control to "Users" to the specified folders.<br />
+      <br />
+      <b>Code Samples</b>:<br />
+      <br />
+      <br />
+      <u>Function To Elevate User Privileges</u><br />
+      Function UAC_Elevate<br />
+      ; Gets Administrative Permissions for install<br />
+      ; Aborts of Permissions cannot be obtained<br />
+      <br />
+      LogText ""<br />
+      LogText "_____________________________________________"<br />
+      LogText ""<br />
+      LogText "User Account Control -- Attempt to Run with Administrative credentials"<br />
+      LogText "_____________________________________________"<br />
+      LogText ""<br />
+      LogText ""<br />
+      <br />
+      UAC_Elevate:<br />
+      UAC::RunElevated<br />
+      StrCmp $0 1223 UAC_ElevationAborted ; UAC dialog aborted by user?<br />
+      StrCmp $0 0 0 UAC_Err ; Error?<br />
+      StrCmp $1 1 0 UAC_Success ;Are we the real deal or just the wrapper?<br />
+      Quit<br />
+      <br />
+      UAC_Err:<br />
+      MessageBox mb_iconstop "You must have administrative credentials to install software, and this installer encountered an error when attempting to obtain these credentials$\n$\nError: $0$\n$\nPlease contact your systems administrator, or call NPF, Inc. at (760) 432-0145."<br />
+      IfSilent +2 0<br />
+      Abort<br />
+      <br />
+      UAC_ElevationAborted:<br />
+      MessageBox mb_iconstop "You must have administrative credentials to install software, and this installer was unable to obtain these credentials.$\n$\nError: Cancelled by user."<br />
+      IfSilent +2 0<br />
+      Abort<br />
+      <br />
+      UAC_Success:<br />
+      StrCmp $3 1 +5<br />
+      StrCmp $1 3 0 UAC_ElevationAborted<br />
+      MessageBox mb_iconstop "You must have administrative credentials to install software, and this installer was unable to obtain these credentials."<br />
+      goto UAC_Elevate<br />
+      <br />
+      FunctionEnd<br />
+      <br />
+      <br />
+      <br />
+      <u>Function to Get Windows Version</u><br />
+      Function GetWindowsVersion<br />
+      <br />
+      LogSet On<br />
+      LogText ""<br />
+      LogText ""<br />
+      LogText "_____________________________________________"<br />
+      LogText ""<br />
+      LogText "Getting the Windows version"<br />
+      LogText "_____________________________________________"<br />
+      LogText ""<br />
+      LogText ""<br />
+      <br />
+      Push $R0<br />
+      Push $R1<br />
+      <br />
+      ClearErrors<br />
+      <br />
+      ReadRegStr $R0 HKLM \<br />
+      "SOFTWARE\Microsoft\Windows NT\CurrentVersion" CurrentVersion<br />
+      <br />
+      IfErrors 0 lbl_winnt<br />
+      <br />
+      ; we are not NT<br />
+      ReadRegStr $R0 HKLM \<br />
+      "SOFTWARE\Microsoft\Windows\CurrentVersion" VersionNumber<br />
+      <br />
+      StrCpy $R1 $R0 1<br />
+      StrCmp $R1 '4' 0 lbl_error<br />
+      <br />
+      StrCpy $R1 $R0 3<br />
+      <br />
+      StrCmp $R1 '4.0' lbl_win32_95<br />
+      StrCmp $R1 '4.9' lbl_win32_ME lbl_win32_98<br />
+      <br />
+      lbl_win32_95:<br />
+      StrCpy $R0 '95'<br />
+      Goto lbl_done<br />
+      <br />
+      lbl_win32_98:<br />
+      StrCpy $R0 '98'<br />
+      Goto lbl_done<br />
+      <br />
+      lbl_win32_ME:<br />
+      StrCpy $R0 'ME'<br />
+      Goto lbl_done<br />
+      <br />
+      lbl_winnt:<br />
+      <br />
+      StrCpy $R1 $R0 1<br />
+      <br />
+      StrCmp $R1 '3' lbl_winnt_x<br />
+      StrCmp $R1 '4' lbl_winnt_x<br />
+      <br />
+      StrCpy $R1 $R0 3<br />
+      <br />
+      StrCmp $R1 '5.0' lbl_winnt_2000<br />
+      StrCmp $R1 '5.1' lbl_winnt_XP<br />
+      StrCmp $R1 '5.2' lbl_winnt_2003<br />
+      StrCmp $R1 '6.0' lbl_winnt_vista lbl_error<br />
+      <br />
+      lbl_winnt_x:<br />
+      StrCpy $R0 "NT $R0" 6<br />
+      Goto lbl_done<br />
+      <br />
+      lbl_winnt_2000:<br />
+      Strcpy $R0 '2000'<br />
+      Goto lbl_done<br />
+      <br />
+      lbl_winnt_XP:<br />
+      Strcpy $R0 'XP'<br />
+      Goto lbl_done<br />
+      <br />
+      lbl_winnt_2003:<br />
+      Strcpy $R0 '2003'<br />
+      Goto lbl_done<br />
+      <br />
+      lbl_winnt_vista:<br />
+      Strcpy $R0 'Vista'<br />
+      Goto lbl_done<br />
+      <br />
+      lbl_error:<br />
+      Strcpy $R0 ''<br />
+      lbl_done:<br />
+      <br />
+      Pop $R1<br />
+      Exch $R0<br />
+      <br />
+      FunctionEnd<br />
+      <br />
+      <br />
+      <u>The CACLS Command</u><br />
+      Call GetWindowsVersion<br />
+      Pop $R0<br />
+      StrCmp $R0 "Vista" 0 +2<br />
+      execute "ICACLS $INSTDIR /GRANT *S-1-5-32-545:(F)"<br />
+      StrCmp $R0 "Vista" +3 0<br />
+      !execute 'CACLS "C:\Program Files\NPF DME" /E /P BUILTIN\Users:F'<br />
+      !execute 'CACLS "C:\Program Files\NPF" /E /P BUILTIN\Users:F'<br />
+      <br />
+      Any help would be greatly appreciated.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">8th February 2008 01:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">1)<br />
+      !execute is a preprocessor command, it takes place on the system you compile your installer on, use ExecWait (or nsExec if you need to hide the dos box)<br />
+      <br />
+      2) There is already a nsis plugin that should be able to do this for you: <a href="http://nsis.sourceforge.net/AccessControl_plug-in" target="_blank">http://nsis.sourceforge.net/AccessControl_plug-in</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">matthewetaft</span><br />
+      <span class="post-time small text-muted">8th February 2008 01:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This is great. Thanks for the fast response. I will try this tomorrow at work. I hope it works!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">matthewetaft</span><br />
+      <span class="post-time small text-muted">8th February 2008 03:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I just tested this, and it worked great!<br />
+      <br />
+      I did have a little trouble remembering where to extract the plug-in. The author of the plug-in didn't have any documentation on it, and I was unable to easily location documentation elsewhere. I ended up looking for my other plug-in to remember. It turns out I was trying to extract it to the folder of my NSIS editing program (oops).<br />
+      <br />
+      So, for the benefit of all that may read this:<br />
+      <br />
+      Once you've downloaded the zip file of the plug-in, you have NSIS installed (not any kind of editing program you may use with NSIS). For me, this location is here:<br />
+      <br />
+      C:\Program Files\NSIS<br />
+      <br />
+      With this zip file, I extracted directly into this folder, and it put all the different files from the zip file into all the appropriate sub folders.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">8th February 2008 04:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Just so you know, it is not good practice to allow normal users to edit files in $programfiles, its easy for a user to replace a exe in there with a trojan and wait for an admin to come along and run it.<br />
+      <br />
+      If your app is designed to only store config data there, you might want to restrict the .exe's and .dll's in that folder so only admins can replace them (or fix your app ;) )</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">matthewetaft</span><br />
+      <span class="post-time small text-muted">8th February 2008 16:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The app isn't broken, it simply lives in program files and reads / writes to files in its directory in program files. The installer doesn't grant access to the enter "Program Files" directory; just "Program Files\NPF DME". Are you saying there is way to grant access like I have done to the "NPF DME" folder, but still restrict access to the .exe's and .dll's in that folder? Would you care to provide a sample for this?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">8th February 2008 22:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">After you have granted access to all users, remove write access on .exe and dll's</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">bedbuffer</span><br />
+      <span class="post-time small text-muted">13th April 2009 08:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi, I have a problem which is more or less somewhat similar to the one who posted it...<br />
+      <br />
+      I made an installer that works perfectly with XP. It works with Vista as well but only with administrators.<br />
+      <br />
+      What if the user wants to install this software but doesn't have the administrator's password (user level at VISTA)? I have tried using the UAC plug in, but this would definitely prompt the user for the admin password.<br />
+      <br />
+      Is there anyway that could make the installer run by the user as if he's the admin?<br />
+      <br />
+      Please help... thanks...</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

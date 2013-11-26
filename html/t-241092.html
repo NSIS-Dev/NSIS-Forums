@@ -1,0 +1,261 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SkinnedButton 1.21 development version" />
+
+  <title>SkinnedButton 1.21 development version - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">SkinnedButton 1.21 development version</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=241092">SkinnedButton 1.21 development version</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">OldGrumpy</span><br />
+      <span class="post-time small text-muted">17th March 2006 09:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>SkinnedButton 1.21 development version</strong><br />
+      Hi everybody,<br />
+      <br />
+      after quite some tedious work, I have a new version ready for testing. It still contains quite some diagnostic code so don't bother about the size ;) This version of the dll performs proper skinning of bigtest.nsi with the UltraModernUI, without additional tweaks to the NSIS sources. Well, at least for me it is working now ;)<br />
+      <br />
+      So I'm asking everybody who is interested in skinned buttons to test the plugin and check if really all buttons will be skinned properly now. If you find some that won't work, please tell me :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zeeh3</span><br />
+      <span class="post-time small text-muted">17th March 2006 09:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Same unskinned buttons problem after messagebox appearance.<br />
+      <br />
+      <br /></p>
+      <pre>
+<code>The sript:<br /> <br />Name "Test"<br />OutFile "Test.exe"<br /> <br />!include "MUI.nsh"<br />!define MUI_CUSTOMFUNCTION_GUIINIT begin<br />!define MUI_PAGE_CUSTOMFUNCTION_LEAVE Messagebox<br />!insertmacro MUI_PAGE_WELCOME<br />Page Custom Custom Leave<br />!insertmacro MUI_PAGE_INSTFILES<br />!insertmacro MUI_LANGUAGE "English"<br /> <br />XPStyle off<br /> <br />Function .onInit<br />  InitPluginsDir<br />  File "/oname=$PLUGINSDIR\button.bmp" \<br />    "${NSISDIR}\Contrib\skinnedbutton\skins\ishield.bmp"<br />FunctionEnd<br /> <br />Function Messagebox<br />  #here is the problem, try to remove leave function to see that<br />  #buttons on the custom page become skinned again<br />  MessageBox MB_OK "This button is not skinned and this messagebox \<br />    makes next custom page buttons unskinned..."<br />Functionend<br /> <br />Function Custom<br /> InstallOptions::dialog "$EXEDIR\test.ini"<br /> Pop $R0<br />FunctionEnd<br /> <br />Function Leave<br />  ReadINIStr $R0 "$EXEDIR\test.ini" "Settings" "State"<br />  StrCmp $R0 1 0 Continue<br />   #after clicking here the buttons are skinned again <br />   MessageBox MB_OK|MB_ICONEXCLAMATION "You clicked me!"<br />   Abort<br /> Continue:<br />FunctionEnd<br /> <br />Function begin<br />  skinnedbutton::skinit /NOUNLOAD "$PLUGINSDIR\button.bmp"<br />Functionend<br /> <br />Function .onGUIEnd<br />  skinnedbutton::unskinit<br />FunctionEnd<br /> <br />Section ""<br />SectionEnd<br /> <br />test.ini file:<br /> <br />[Settings]<br />NumFields=2<br /> <br />[Field 1]<br />Type=Button<br />Left=20<br />Right=-20<br />Top=20<br />Bottom=33<br />Text=Click me!<br />Flags=NOTIFY<br /> <br />[Field 2]<br />Type=GroupBox<br />Left=10<br />Right=-10<br />Top=9<br />Bottom=-9<br />Text=Test</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">OldGrumpy</span><br />
+      <span class="post-time small text-muted">17th March 2006 10:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The message box is a system message box which is created as another top-level window, not as a child window, so I can't skin it directly. I'll see what I can do about that. The unskinned back button on the next page is astonishing, though. Up to now, I just played with the UltraModernUI which has an integrated message box pane - so this bug does not show up at all. Thanks for the feedback, gotta see what I can do about the additional top level window.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">OldGrumpy</span><br />
+      <span class="post-time small text-muted">17th March 2006 15:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Okay, I can now skin the message box button. The method of wansis and skinnedbutton plugins are not sufficient to accomplish this, so I stripped a lot of code and rewrote most of the rest. The only strange thing is that after clicking the message box button, the back button becomes unskinned again *big sigh*<br />
+      <br />
+      Oh, btw, should the large "Click me!" button become skinned too? It looks pretty ugly *g*</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zeeh3</span><br />
+      <span class="post-time small text-muted">17th March 2006 19:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by OldGrumpy</i><br />
+        <b>...<br />
+        <br />
+        Oh, btw, should the large "Click me!" button become skinned too? It looks pretty ugly *g*</b>
+      </blockquote>Yes, this button should be skinned (all buttons on the custom page should be too).
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">OldGrumpy</span><br />
+      <span class="post-time small text-muted">17th March 2006 19:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hmm, the "Click me!" is a html link, isn't it?<br />
+      By the way, I can skin all of them now, except for "Click me" and I have to fix some redraw issues. Put it in the background and bring it to the foreground again and everything looks okay *sigh*</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zeeh3</span><br />
+      <span class="post-time small text-muted">17th March 2006 19:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Nope, "Click me" calls MessageBox MB_OK|MB_ICONEXCLAMATION "You clicked me!", no html here.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">SuperPat45</span><br />
+      <span class="post-time small text-muted">17th March 2006 21:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I have tested this version:<br />
+      <br />
+      there is no more problem withe the startmenu page :-),<br />
+      <br />
+      I have modified with ressourceshacker the modern.exe UI to replace the property of "Show Detail" button from BS_PUSHBUTTON to BS_OWNERDRAW but it remain unskinned, and if I click on it, the next button is unskinned.<br />
+      <br />
+      We are on the good way!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">OldGrumpy</span><br />
+      <span class="post-time small text-muted">17th March 2006 21:37 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">SuperPat45:<br />
+      <br />
+      If you followed my old instructions, you have to edit ui.c from the NSIS sources and recompile NSIS to get the exehead files with the required modifications. With these modifications, the Show Details button will be skinned and the Next button too. But this is already outdated by now. I've implemented a new way of skinning buttons, I just have some minor problems with keeping an eye on childwindows and some window refresh problems I don't fully understand by now. I can launch the test.exe and it looks misdrawn, place another window in front of it and when I remove the other window, test.exe looks okay. So everything gets drawn nicely, just not at the right time ;)<br />
+      <br />
+      I've broken some bits while implementing the new system for the messageboxes. I have to re-implement the skinning for childwindows completely. That means I'll still use the draw routines from wansis but that's about all that's left from the old skinnedbutton plugin. A lot of new code has been integrated.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">SuperPat45</span><br />
+      <span class="post-time small text-muted">17th March 2006 21:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK,<br />
+      <br />
+      I am impatient to see that, and in particular the source code.<br />
+      <br />
+      If you could add some comments for the comprehension in the source code, that would help me much to understand it...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">OldGrumpy</span><br />
+      <span class="post-time small text-muted">18th March 2006 09:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'll attach the sample installer I built from zeeh3's script for demo purposes. As I said, it still has some issues I am currently investigating. But the messagebox is skinned now ;)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zeeh3</span><br />
+      <span class="post-time small text-muted">18th March 2006 11:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Don't forget to put test.ini in the same directory of test.exe or the custom page won't appear. Can you post the script? It is not working for me, no skinned buttons at all :(</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">SuperPat</span><br />
+      <span class="post-time small text-muted">18th March 2006 12:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I tested the example but no button is skinned.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">OldGrumpy</span><br />
+      <span class="post-time small text-muted">18th March 2006 12:40 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yeah, simple but effective fault. I forgot to replace the debug version of the dll with the release version. Most systems out there have no debug runtime dlls installed, that means loading of the skinnedbutton.dll fails and thus no skinned buttons at all. Find the correct version attached, please :)<br />
+      <br />
+      And BTW, SuperPat45: Please shrink the picture in your signature a bit, it voids the forum formatting :(</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">SuperPat</span><br />
+      <span class="post-time small text-muted">21st March 2006 11:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OldGrumpy,<br />
+      <br />
+      Now what SkinnedButton can skin the messagebox buttons,<br />
+      <br />
+      Would be possible to make small NSIS plug-in making possible to change the text color and the background color of the messagesbox?<br />
+      (il would make very pretty with UltraModernUI and SkinnedButton)?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">OldGrumpy</span><br />
+      <span class="post-time small text-muted">21st March 2006 18:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hmm, I can't promise that it will work, but I'll see what I can do. But first of all, I'd like to fix the still unskinned buttons. Lots of work... Unfortunately, my real life consumes almost all of my time. It will take about 1-2 weeks until things get better. So stay tuned :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">SuperPat</span><br />
+      <span class="post-time small text-muted">23rd March 2006 14:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK Thanks</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">SuperPat</span><br />
+      <span class="post-time small text-muted">22nd July 2006 22:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hello,<br />
+      <br />
+      OldGumpy, please, can you send me the lastest version of your SkinnedButton source-code modifiactions?<br />
+      <br />
+      I need it to continue its developpment and that of UltraModernUI.<br />
+      <br />
+      Thank you in advance.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">T.Slappy</span><br />
+      <span class="post-time small text-muted">30th July 2006 22:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>xpstyle on</strong><br />
+      Hi<br />
+      I made installer with full background image and I would like to use your plugin with<br />
+      XPStyle turned ON<br />
+      <br />
+      Check my topic: <a href="http://forums.winamp.com/showthread.php?s=&amp;threadid=251710" target="_blank">http://forums.winamp.com/showthread....hreadid=251710</a><br />
+      <br />
+      But I did it with XPStyle off ........<br />
+      <br />
+      Could you fix it to work with v XPStyle turned ON ?<br />
+      <br />
+      It would greatly help me</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">SuperPat</span><br />
+      <span class="post-time small text-muted">30th July 2006 23:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I would like to, but, I think that it is impossible because if you see the skinned installshield installers, they are all with the XPStyle at off.<br />
+      <br />
+      And unfortunately, I am not necessary knowledges in the win32 api.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

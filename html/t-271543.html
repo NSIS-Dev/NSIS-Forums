@@ -1,0 +1,94 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="IP Address verification doesnt work" />
+
+  <title>IP Address verification doesnt work - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">IP Address verification doesnt work</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=271543">IP Address verification doesnt work</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Veerugadde</span><br />
+      <span class="post-time small text-muted">21st May 2007 21:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>IP Address verification doesnt work</strong><br />
+      Hello all<br />
+      <br />
+      I modified the ValidationIP function in such way that to check for the given address is within our IP address range. But the code seems to be not working and always showing the same result.<br />
+      <br />
+      Could you please help me out with verification of the validationIP.nsh file.<br />
+      <br />
+      Here is the code:<br />
+      <br /></p>
+      <pre>
+<code>!include LogicLib.nsh<br />!include WordFunc.nsh<br />!insertmacro WordFind<br />!insertmacro StrFilter<br />!insertmacro WordFind2X<br /><br /><br />Function ValidateIP<br /><br />  Exch $0<br />  Push $1<br />  Push $2<br /><br />  ${StrFilter} $0 1 "." "" $1<br />  ${If} $0 != $1<br />    # invalid charcaters used<br />    #   example: a127.0.0.1<br />    Goto error<br />  ${EndIf}<br /><br />  ${WordFind} $0 . "#" $1<br />  ${If} $1 != 4<br />    # wrong number of numbers<br />    #   example: 127.0.0.<br />    Goto error<br />  ${EndIf}<br /><br />  ${WordFind} $0 . "*" $1<br />  ${If} $1 != 3<br />    # wrong number of dots<br />    #   example: 127.0.0.1.<br />    Goto error<br />  ${EndIf}<br /># Extracts the first part of Ip address 192.168.xx.x (192) and checks for the number.<br /> ${WordFind} $0 "." "+1{" $1<br />    ${If} $1 &lt; 255<br />    ${OrIf} $1 &gt; 0<br /><br />      IntCmp $1 192 +3<br /><br />    ${Else}<br />      # invalid number<br />      #   example: 500.0.0.1<br />      Goto error<br />    ${EndIf}<br /># Extracts the Second part of Ip address 192.168.xx.x (18) and checks for the number.<br /><br />  ${WordFind2X} $0 "." "." "+2" $1<br />       ${If} $1 &lt; 255<br />       ${OrIf} $1 &gt; 0<br /><br />        IntCmp $1 18 +3<br /><br />       ${Else}<br />      # invalid number<br />      #   example: 500.0.0.1<br />         Goto error<br />      ${EndIf}<br /><br /># Extracts the third part of Ip address 192.168.xx.x (xx) and checks for the number.<br />  ${WordFind2X} $0 "." "." "+3" $1<br />       ${If} $1 &gt; 255<br />       ${OrIf} $1 &lt; 0<br />      # invalid number<br />      #   example: 500.0.0.1<br />         Goto error<br />       ${EndIf}<br /><br /># Extracts the fourth part of Ip address 192.168.xx.x (x) and checks for the number.<br />  ${WordFind2X} $0 "." "." "+4" $1<br />       ${If} $1 &gt; 255<br />       ${OrIf} $1 &lt; 0<br />      # invalid number<br />      #   example: 500.0.0.1<br />         Goto error<br />       ${EndIf}<br /><br /><br />  Pop $2<br />  Pop $1<br />  Pop $0<br /><br />  ClearErrors<br /><br />  Return<br /><br />  error:<br /><br />    Pop $2<br />    Pop $1<br />    Pop $0<br /><br />    SetErrors<br /><br />FunctionEnd</code>
+</pre><br />
+      <br />
+      <br />
+      I called this function for verfication through .nsi file where its invoking always "IP is OK"<br />
+      <br />
+      Please help me out.<br />
+      <br />
+      Thanks.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Comm@nder21</span><br />
+      <span class="post-time small text-muted">21st May 2007 21:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">IntCmp $1 18 +3<br />
+      <br />
+      you can't use relative jumps inside ${If} etc. logic statements.<br />
+      <br />
+      use absolute jumps instead (with labels)<br />
+      <br />
+      or better, abandon the IntCmp/StrCmp things and use ${If} etc. more straighforward!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Veerugadde</span><br />
+      <span class="post-time small text-muted">22nd May 2007 16:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>IP address verfication is working</strong><br />
+      Hello<br />
+      <br />
+      i made a silly mistakes in the code and rectified all those and shame on myself:o<br />
+      <br />
+      thanks.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

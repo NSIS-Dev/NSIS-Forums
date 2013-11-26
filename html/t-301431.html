@@ -1,0 +1,115 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Are the 20 Registers considered Global?" />
+
+  <title>Are the 20 Registers considered Global? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Are the 20 Registers considered Global?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=301431">Are the 20 Registers considered Global?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">fontale</span><br />
+      <span class="post-time small text-muted">26th December 2008 16:23 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Are the 20 Registers considered Global?</strong><br />
+      Greetings from a newbie!<br />
+      <br />
+      I am writing my first ever function in NSIS and for the life of me I can't figure out from reading the manual whether I should <b>ALWAYS</b> push (in the beginning of the function) <b>ALL</b> registers used inside the function - and pop them at the end of the function?<br />
+      <br />
+      If NSIS automatically saves all $0..$9 and $R0..$R9 variables on entering a function then restores them on returning, then I don't have to do that as a programmer.<br />
+      <br />
+      But does NSIS really do that?<br />
+      <br />
+      Thanks -- Phil</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JasonFriday13</span><br />
+      <span class="post-time small text-muted">26th December 2008 17:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yes, you have to manually push and pop the registers. Only push and pop the minimum you need, because it saves typing out all of them. Example:<br /></p>
+      <pre>
+<code>Function GetHWNDDialog<br />  ;Push in order. For the sake of clarity, I used two variables.<br />  Push $0<br />  Push $1<br /> <br />  ;Gets the inner dialog HWND.<br />  FindWindow $0 "#32770" 0 $HWNDPARENT<br /><br />  ;Get a label's HWND on the inner dialog.<br />  GetDlgItem $1 $0 1003<br /><br />  ;Make it black.<br />  SetCtlColors $1 0x000000<br />  ;If you want to return a value, put it in the first <br />  ;variable you pushed, in this function its $0 (StrCpy $0 $1)<br /><br />  ;Pop off in opposite order.<br />  Pop $1<br />  Pop $0 ;To return a value, don't use pop here. Use Exch to  <br />         ;swap the top of the stack with the variable.<br />FunctionEnd</code>
+</pre><br />
+      If you have returned a value from your function, you pop it off the stack so that you can use it in the rest of your script (if you want to).<br />
+      <br />
+      Hope this helps, Jason Ross aka JasonFriday13.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">fontale</span><br />
+      <span class="post-time small text-muted">28th December 2008 17:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thank you Jason.<br />
+      <br />
+      So if I understand correctly, there is a bug in the following code, right?<br />
+      PHP Code:</p>
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #007700">Function</span><span style="color: #0000BB">DoesUserHaveAdminPrivileges<br />
+      Push$R0<br />
+      CallIsUserAdmin</span><span style="color: #FF8000">#seensis.sourceforge.net/IsUserAdmin<br /></span> <span style="color: #0000BB">Pop$R0<br /></span> <span style="color: #007700">${If}</span><span style="color: #0000BB">$R0</span><span style="color: #007700">==</span><span style="color: #DD0000">"false"<br /></span> <span style="color: #0000BB">MessageBoxMB_OK</span><span style="color: #007700">|</span><span style="color: #0000BB">MB_ICONEXCLAMATION</span><span style="color: #DD0000">"MustrunwithAdminPrivileges"<br /></span> <span style="color: #0000BB">Abort<br /></span> <span style="color: #007700">${EndIf}<br /></span> <span style="color: #0000BB">FunctionEnd<br /></span></span> <!-- php buffer end -->
+      <hr />
+      Because although $R0 is pushed in the beginning and popped somewhere in the function, it is popped only to be modified by IsUserAdmin. So it must be popped again, at the end. Did I get this right?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">28th December 2008 19:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">the <a href="http://nsis.sourceforge.net/Wiki/DumpState" target="_blank">DumpState</a> is very helpful to find the problem, when it comes to pushing and popping</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">{_trueparuex^}</span><br />
+      <span class="post-time small text-muted">28th December 2008 23:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by fontale</i><br />
+        <b>...<br />
+        Because although $R0 is pushed in the beginning and popped somewhere in the function, it is popped only to be modified by IsUserAdmin. So it must be popped again, at the end. Did I get this right?</b>
+      </blockquote>Yes, but not necessarily. That function is definitely using a bad practice, but if it's documented properly it is usable.<br />
+      <br />
+      ps. All variables in NSIS are global, even if defined in a function.<br />
+      <br />
+      PaR
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

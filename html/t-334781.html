@@ -1,0 +1,126 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="value of user_var in a !define" />
+
+  <title>value of user_var in a !define - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">value of user_var in a !define</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=334781">value of user_var in a !define</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zackbuffo</span><br />
+      <span class="post-time small text-muted">15th September 2011 15:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>value of user_var in a !define</strong><br />
+      Is there any possibility to put the value of user_var in a !define and vice versa?<br />
+      StrCpy doesn't work with defines.<br />
+      <br />
+      I have to call a function out of a DLL-file, that needs a !define as a parameter, but I have to read the value out of an INI-file before. ReadINIStr works only with a user_var.<br />
+      <br />
+      At first, with a define right into the push-string (1. parameter for CallInstDLL) it looked like this (and worked fine):<br />
+      <br /></p>
+      <pre>
+<code>!define XYZ<br />...<br />Push "$$$$XYZ$$$$=${XYZ}"<br />CallInstDLL Some.dll function</code>
+</pre><br />
+      <br />
+      I tried it this way, but that doesn't work:<br />
+      <br />
+      <pre>
+<code>Var /GLOBAL setXYZ<br />ReadINIstr $setXYZ ...<br />...<br />Push "$$$$XYZ$$$$=$setXYZ"<br />CallInstDLL Some.dll function</code>
+</pre><br />
+      <br />
+      I can't change the $-inferno because it is needed for the called function/DLL and the corresponding XML file.<br />
+      <br />
+      Any ideas?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">15th September 2011 17:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Try it like this:</p>
+      <pre>
+<code>Var /GLOBAL setXYZ<br />ReadINIstr $setXYZ ...<br />...<br />Strcpy $0 "$$$$XYZ$$$$=$setXYZ"<br />Push $0<br />CallInstDLL Some.dll function</code>
+</pre><br />
+      (You may have to escape the $ inferno, especially if there is a variable $XYZ).
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">15th September 2011 17:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by zackbuffo</small><br />
+        I have to call a function out of a DLL-file, that needs a !define as a parameter, but I have to read the value out of an INI-file before. ReadINIStr works only with a user_var.
+      </blockquote>This is wrong. When you call a dll function, it needs parameters. These parameters can be any string/integer. The DLL doesn't care how the parameter is passed, as long as it gets it. So despite what you think, what you need to do is simply use readinistr, and then use the returned string (in a user var!) as the parameter in your DLL.<br />
+      <br />
+      <br />
+      As for defines versus variables, you are confused about the difference between compiletime and runtime. I suggest you google it and find out what the difference is.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">zackbuffo</span><br />
+      <span class="post-time small text-muted">19th September 2011 10:23 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">"Worst case" happened: I tried my code the other day, using the user_var version and it did work. I have no clue, what went wrong before I started this thread. I didn't change anything. :igor:<br />
+      <br />
+      @MSG: I'm aware of the difference between run- and compiletime. But while playing around with NSIS scripting, in some situations I would prefer the possibility to pass a !define value over to a user_var to use it during compile- <u>and</u> runtime instead of initializing it twice.<br />
+      <br />
+      At least this possibility would make sense for me - disregarding possible compiling-issues, that I don't know yet. Maybe someone can tell a little bit about what's going on under the hood, while NSIS is compiling...?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">19th September 2011 12:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">When the precompiler finds a reference to a !defined value, in the form of ${DefineName}, it simply replaces the "${DefineName}" text with whatever the define was !defined as. Example:<br />
+      <br />
+      Precompiler sees (in the nsi script):<br />
+      !define SomeDefine `bar`<br />
+      StrCpy $YourVar "foo ${SomeDefine}"<br />
+      <br />
+      Compiler sees (after precomilation):<br />
+      StrCpy $YourVar "foo bar"<br />
+      <br />
+      As you can see, the compiler never even gets to see any defines. The precompiler simply replaces them with their defined text contents. This is why your question about putting defines into variables doesn't make any sense: At runtime, which is when variables are being used, there ARE no defines. There are only strings, and other variables.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

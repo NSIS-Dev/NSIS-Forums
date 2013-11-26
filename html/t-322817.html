@@ -1,0 +1,142 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Problem deleting/writing file in system32" />
+
+  <title>Problem deleting/writing file in system32 - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Problem deleting/writing file in system32</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=322817">Problem deleting/writing file in system32</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">spinky</span><br />
+      <span class="post-time small text-muted">30th September 2010 15:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Problem deleting/writing file in system32</strong><br />
+      Hey I am having a problem overwriting a .dll that is located in the system32 folder. The thing is I can overwrite the file if I do the overwrite before I call a certain function I created. Obviously then my function is screwing up my .nsi script but I don't know how. Here is the function (it is for retrieving a version of a .dll file by passing a struct by reference):<br />
+      <br />
+      Function loadDll<br />
+      Var /GLOBAL remDLL<br />
+      <br />
+      #create temp directory<br />
+      SetOutPath $TEMP\<br />
+      <br />
+      #copy dll there<br />
+      DetailPrint "Copying my.dll to temporary directory...$TEMP"<br />
+      file "..my.dll"<br />
+      <br />
+      # allocate 12 bytes for struct<br />
+      System::Alloc 12<br />
+      <br />
+      #Pop memory location of struct<br />
+      Pop $0<br />
+      <br />
+      #initialize struct<br />
+      System::Call "*$0(i 0, i 0, i 0)" ;Initialization<br />
+      <br />
+      #Call getVersion in arpts.dll by reference with struct as argument<br />
+      System::Call "$TEMP\my.dll::getVersion(i r0)"<br />
+      <br />
+      #Get values from struct and assign to registries<br />
+      System::Call "*$0(i.r1, i.r2, i.r3)"<br />
+      <br />
+      # print values (test)<br />
+      DetailPrint "New Install DLL Version: $1 . $2 . $3"<br />
+      <br />
+      #free<br />
+      System::Free $0<br />
+      <br />
+      # allocate 12 bytes for struct<br />
+      System::Alloc 12<br />
+      <br />
+      #Pop memory location of struct<br />
+      Pop $4<br />
+      <br />
+      #initialize struct<br />
+      System::Call "*$4(i 0, i 0, i 0)" ;Initialization<br />
+      <br />
+      #Call getVersion in arpts.dll by reference with struct as argument<br />
+      System::Call "$INSTDIR\my.dll::getVersion(i r4)"<br />
+      <br />
+      #Get values from struct and assign to registries<br />
+      System::Call "*$4(i.r5, i.r6, i.r7)"<br />
+      <br />
+      # print values (test)<br />
+      DetailPrint "Installed DLL Version: $5 . $6 . $7"<br />
+      <br />
+      #free<br />
+      System::Free $4<br />
+      <br />
+      #compare versions, if the same then Goto skip install<br />
+      ${If} $1 == $5<br />
+      ${If} $2 == $6<br />
+      ${If} $3 == $7<br />
+      DetailPrint "DLL versions the same, skipping install of my.dll..."<br />
+      StrCpy $remDLL "0"<br />
+      ${Else}<br />
+      StrCpy $remDLL "1"<br />
+      DetailPrint "Overwriting my.dll..."<br />
+      ${EndIf}<br />
+      ${EndIf}<br />
+      ${EndIf}<br />
+      FunctionEnd<br />
+      <br />
+      <br />
+      Any ideas as to why I am getting the error:<br />
+      <br />
+      "Error opening file for writing"<br />
+      <br />
+      C:\WINDOWS\system32\my.dll<br />
+      <br />
+      Thanks in advance,<br />
+      Brett</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">30th September 2010 20:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I think you can't overwrite your installed dll because you implicitly loaded it to check its version. You can either unload it, or make a copy of it and check the version of that copy.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">spinky</span><br />
+      <span class="post-time small text-muted">1st October 2010 14:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for the help that was exactly the problem :).</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

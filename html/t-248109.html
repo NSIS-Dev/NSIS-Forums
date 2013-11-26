@@ -1,0 +1,96 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Registry substring search" />
+
+  <title>Registry substring search - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Registry substring search</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=248109">Registry substring search</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JoeMcC00L</span><br />
+      <span class="post-time small text-muted">7th June 2006 21:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Registry substring search</strong><br />
+      Hello,<br />
+      <br />
+      I'm using the Registry plugin to search for installed items in HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall. Here is the algorithm:<br />
+      <br /></p>
+      <pre>
+<span style="color: #007700">${</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">Open</span><span style="color: #007700">}</span><span style="color: #DD0000">"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall""/K=0/V=0/S=1/B=1/N='ApacheHTTPServer1.3.33'"</span><span style="color: #0000BB">$HANDLE
+<br /></span><span style="color: #007700">${</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">Find</span><span style="color: #007700">}</span><span style="color: #DD0000">"$HANDLE"</span><span style="color: #0000BB">$PATH$VALUE$STRING$TYPE
+<br /></span><span style="color: #007700">${If}</span><span style="color: #0000BB">$TYPE</span><span style="color: #007700">==</span><span style="color: #DD0000">""
+<br /></span><span style="color: #0000BB">MessageBoxMB_OK</span><span style="color: #DD0000">"Status:ApacheHTTPServer1.3.33wasnotfound!"
+<br /></span><span style="color: #007700">${Else}
+<br /></span><span style="color: #0000BB">MessageBoxMB_OK</span><span style="color: #DD0000">"Status:ApacheHTTPServer1.3.33wasfound!$\n\
+<br />$$PATH=$PATH$\n\
+<br />$$VALUE=$VALUE$\n\
+<br />$$STRING=$STRING$\n\
+<br />$$TYPE=$TYPE"
+<br /></span><span style="color: #007700">${EndIf}
+<br />${</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">Close</span><span style="color: #007700">}</span><span style="color: #DD0000">"$HANDLE"
+</span>
+</pre>I would just use the key name, except in this case it's assigned to the GUID.<br />
+      <br />
+      The algorithm works to find the Apache server, but I want to implement functionality to find <i>any</i> version of Apache. This is to determine if the software version that's installed is supported by my software. If not, I will prompt them to upgrade (which should be trivial). Is there a way to search for substrings in the registry, i.e., search for the string "Apache"?<br />
+      <br />
+      Thanks,<br />
+      Joe<br />
+      <br />
+      EDIT:<br />
+      :: Embarassed :: My apologies... as soon as I posted this I figured out a possible solution. Here's the algorithm:<br />
+      <br />
+      <pre>
+<span style="color: #007700">${</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">Open</span><span style="color: #007700">}</span><span style="color: #DD0000">"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall""/K=0/V=1/S=0/B=1/N='DisplayName'"</span><span style="color: #0000BB">$HANDLE
+<br /></span><span style="color: #007700">${Do}
+<br />${</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">Find</span><span style="color: #007700">}</span><span style="color: #DD0000">"$HANDLE"</span><span style="color: #0000BB">$PATH$VALUE$STRING$TYPE
+<br />StrCpy$R0$STRING6
+<br /></span><span style="color: #007700">${If}</span><span style="color: #0000BB">$R0</span><span style="color: #007700">==</span><span style="color: #DD0000">"Apache"
+<br /></span><span style="color: #0000BB">MessageBoxMB_OK</span><span style="color: #DD0000">"Status:Apacheisinstalled!"
+<br /></span><span style="color: #007700">${</span><span style="color: #0000BB">ExitDo</span><span style="color: #007700">}
+<br />${EndIf}
+<br />${</span><span style="color: #0000BB">LoopUntil</span><span style="color: #007700">}</span><span style="color: #0000BB">$TYPE</span><span style="color: #007700">==</span><span style="color: #DD0000">""
+<br /></span><span style="color: #007700">${If}</span><span style="color: #0000BB">$TYPE</span><span style="color: #007700">==</span><span style="color: #DD0000">""
+<br /></span><span style="color: #0000BB">MessageBoxMB_OK</span><span style="color: #DD0000">"Status:Apacheisnotinstalled!"
+<br /></span><span style="color: #0000BB">callInstallApache
+<br /></span><span style="color: #007700">${Endif}
+</span>
+</pre>This is kind of a pain, and it's not the most efficient algorithm. If any of you can think of something quicker, let me know.<br />
+      <br />
+      Thanks again,<br />
+      Joe
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

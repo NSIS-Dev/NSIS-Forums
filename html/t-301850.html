@@ -1,0 +1,191 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Decimal Delimiter" />
+
+  <title>Decimal Delimiter - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Decimal Delimiter</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=301850">Decimal Delimiter</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">GoHa</span><br />
+      <span class="post-time small text-muted">9th January 2009 01:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Decimal Delimiter</strong><br />
+      When installer shows space required/space availabe it use "." as decimal delimiter. For instance: "Space required 13.1Mb"<br />
+      It shows "." regardless of system regional settings.<br />
+      <br />
+      How can I make it use system's decimal delimiter rather then just "."?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">9th January 2009 01:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Is it really that big of a deal?<br />
+      <br />
+      anyways, there is already a bug report about it <a href="http://sourceforge.net/tracker/index.php?func=detail&amp;aid=2276892&amp;group_id=22049&amp;atid=373085" target="_blank">http://sourceforge.net/tracker/index...49&amp;atid=373085</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">GoHa</span><br />
+      <span class="post-time small text-muted">9th January 2009 02:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Our QA team reported it, therefore, I have to investigate.<br />
+      <br />
+      Thanks! Hope it will be fixed sometimes soon.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">9th January 2009 02:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You might be able to set the label text yourself, using SectionGetSize to get the size of a section, adding up for each selected section, and rounding that off to megabytes with decimals - with a comma for a decimal - yourself.. if it's something that can't wait for a fix in NSIS itself</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Egor</span><br />
+      <span class="post-time small text-muted">9th January 2009 03:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yes, I can change label text and can set whatver value I want. But I would be unable to change decimal delimiter in the number.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">9th January 2009 12:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Edit: All's well - Here's what I have now...<br />
+      <br /></p>
+      <pre>
+<code><br />SetCompress off<br />!include "MUI.nsh"<br />!include "WinMessages.nsh"<br />!include "LogicLib.nsh"<br /><br />OutFile "c:\testsetup.exe"<br /><br />Page Components ComponentsPre<br />!insertmacro MUI_LANGUAGE "English"<br /><br />Var SpaceReq<br />SpaceTexts "Space Required: $SpaceReq$\r$\n$\r$\n$\r$\n"<br /><br />Section "Test" Test<br />        File "c:\windows\system32\wmploc.dll" ; 8,231,936bytes<br />SectionEnd<br /><br />Function .onSelChange<br />        ; Initialize at zero bytes<br />        StrCpy $0 0<br /><br />        ; Add selected sections' sizes<br />        ${If} ${SectionIsSelected} ${Test}<br />            SectionGetSize ${Test} $1<br />                IntOp $0 $0 + $1<br />        ${EndIf}<br /><br />        InTop $0 $0 * 1024 ; KBytes -&gt; Bytes<br /><br />        ; Get MegaBytes<br />        IntOp $1 $0 / 1000000<br />        ; Get MegaByte Fraction<br />        IntOp $2 $0 % 1000000<br />        ; Only two characters, please (no rounding)<br />        StrCpy $2 $2 2 0<br /><br /><br />        ; Same for MebiBytes (yeah, I hate the name, too)<br />        IntOp $3 $0 / 1048576<br />        IntOp $4 $0 % 1048576<br />        StrCpy $4 $4 2 0<br /><br />        ; Hey look, a comma and such<br />        StrCpy $SpaceReq "$1,$2MB ($3,$4MiB)"<br />FunctionEnd<br /><br />Function ComponentsPre<br />        StrCpy $SpaceReq "Two Billion Bytes!" ; Initial size value<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      For any devs reading, SectionGetSize without the SectionSetSize returns 8039 - I've verified that the correct (7.8something MB) file is what is included in the installer.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joost Verburg</span><br />
+      <span class="post-time small text-muted">9th January 2009 13:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">That is the size in KB.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">9th January 2009 14:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by Joost Verburg</i><br />
+        <b>That is the size in KB.</b>
+      </blockquote>A-ha. I was thrown off by the help's example for SectionGetSize:<br />
+      <pre>
+<code><br />Function .onInit<br />  # increase required size of section 'test' by 100 bytes<br />  SectionGetSize ${test_section_id} $0<br />  IntOp $0 $0 + 100<br />  SectionSetSize ${test_section_id} $0<br />FunctionEnd<br /></code>
+</pre><br />
+      Should read kbytes, then?<br />
+      <br />
+      I'll adjust my post above - should be a simple mult by 1024 (presuming KiB and not KB)?<br />
+      Edit: Yes - and done.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">9th January 2009 15:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Keep in mind that using IntOp only works up to 2GB of required space. To be sure your code works for future projects, you might consider using the math plugin:<br />
+      <br /></p>
+      <pre>
+<code>Math</code><span style="color: #007700">::</span><span style="color: #0000BB">Script</span><span style="color: #DD0000">'r1=ff(f($SPACENEEDED)/1048576,17);#***91;r1&gt;999,r1=ff(r1/1024,17)+"GB",r1=r1+"MB"***93;'
+</span>
+</pre>I'm not sure if the math plugin uses the system's decimal sign, you might have to replace it in the output string manually.<br />
+      <br />
+      <br />
+      Edit: Wait, I think I'm talking bullshit. Size in kilobytes, and all. &gt;__&lt;
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">GoHa</span><br />
+      <span class="post-time small text-muted">9th January 2009 19:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The "required size" output on standard dialog constist of "LABEL" and "NUMBER":<br />
+      "Required Space" "8.3MB"<br />
+      Left part can be set as a string. OK.<br />
+      Right part can be set only as a number. There are no way to change the format of the number. You cannot delete this number from the dialog and only left the label (wich can be edited as shown above).</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">9th January 2009 19:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">er? have you tried the above code? That should replace the label and number; which should be the exact same control. Perhaps you're using a different UI, though? my example uses MUI</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">GoHa</span><br />
+      <span class="post-time small text-muted">9th January 2009 20:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">deleted</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">GoHa</span><br />
+      <span class="post-time small text-muted">10th January 2009 02:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks. Now I got it. Yes, it works.<br />
+      However, we decided to defer this issue for now, and wait for NSIS team fix, as it require to many code for such a small issue (we also need to show space available... bla-bla-bla).</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">10th January 2009 03:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">fair 'nuff :)</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

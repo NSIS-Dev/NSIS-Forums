@@ -1,0 +1,203 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Plugin / ExDLL question" />
+
+  <title>Plugin / ExDLL question - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Plugin / ExDLL question</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=211184">Plugin / ExDLL question</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Arrby</span><br />
+      <span class="post-time small text-muted">23rd March 2005 20:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Plugin / ExDLL question</strong><br />
+      Am making a plugin and in looking at ExDLL I see the exdll definition:<br />
+      <br />
+      #define EXDLL_INIT() { \<br />
+      g_stringsize=string_size; \<br />
+      g_stacktop=stacktop; \<br />
+      g_variables=variables; }<br />
+      <br />
+      The function def in exdll.c looks like:<br />
+      void __declspec(dllexport) myFunction(HWND hwndParent,<br />
+      int string_size,<br />
+      char *variables,<br />
+      stack_t **stacktop,<br />
+      extra_parameters *extra)<br />
+      <br />
+      What are the "extra_parameters" and can they be used?<br />
+      I.e. how would they get set in the plugin function call?<br />
+      <br />
+      Clarification would be Appreciated!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joel</span><br />
+      <span class="post-time small text-muted">23rd March 2005 21:09 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">In exdll.h:<br /></p>
+      <pre>
+<code><br />typedef struct {<br />  int autoclose;<br />  int all_user_var;<br />  int exec_error;<br />  int abort;<br />  int exec_reboot;<br />  int reboot_called;<br />  int XXX_cur_insttype; // deprecated<br />  int XXX_insttype_changed; // deprecated<br />  int silent;<br />  int instdir_error;<br />  int rtl;<br />  int errlvl;<br />} exec_flags;<br /><br />typedef struct {<br />  exec_flags *exec_flags;<br />  int (__stdcall *ExecuteCodeSegment)(int, HWND);<br />} extra_parameters;<br /></code>
+</pre><br />
+      I guess some behave of the installer is passed though this param? :weird:
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Arrby</span><br />
+      <span class="post-time small text-muted">23rd March 2005 21:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">DOH!, thx Joelito.<br />
+      <br />
+      Hmmm dont see it or the ExecuteCodeSegment function defined in there ever being referenced. Must be for "future enhancements" or something.<br />
+      <br />
+      Follow up question: how do most people handle variable number of parms to a plugin, include the number of parms as the last parm on the call statement itself?<br />
+      <br />
+      I.E. DllName::FunctionName "parm1" "parm2" ... "parmN" "N"<br />
+      or something.<br />
+      <br />
+      I am thinking "bad" things happens if you pop more parms that were pushed in the call??</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joel</span><br />
+      <span class="post-time small text-muted">23rd March 2005 21:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        how do most people handle variable number of parms to a plugin, include the number of parms as the last parm on the call statement itself?
+      </blockquote>I don't know everyone else but I use popstring from exdll.h, as many times I need a param to be passed.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">saivert</span><br />
+      <span class="post-time small text-muted">23rd March 2005 22:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The <b>popstring</b> function included with the ExDLL framework just returns 1 when no more data is located on the stack. So just keep popping until you get 1 in return from <b>popstring</b>.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Arrby</span><br />
+      <span class="post-time small text-muted">23rd March 2005 22:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thx saivert and Joelito!:up:<br />
+      <br />
+      And to think... I actually DID study exdll.h pretty thououghly yesterday! :o Getting OLD I guess.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">saivert</span><br />
+      <span class="post-time small text-muted">23rd March 2005 22:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I guess if you take a look on the source code for exehead subproject of the source code for NSIS, you may get a hint about what the heck "ExecuteCodeSegment" is all about.<br />
+      <br />
+      My personal guess is that you can execute parts of the script from a plugin. Maybe execute a function?? It would be great if this was a possibility cos' then a plugin can call a script function directly instead of the usual routine of letting the control fall back to NSIS' main UI thread as InstallOptions does. And hooking special messages is also pretty ugly.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Arrby</span><br />
+      <span class="post-time small text-muted">23rd March 2005 22:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hmmm, my guess would be that its used as part of the actual NSIS event hadler itself, i.e. seems like its responding to various SendMessage(s) to handle callbacks, aborts, which page to show processing?, progress updates, etc.<br />
+      <br />
+      A bit beyond me at this point! I would need substantial "developer docs" and lotsa time with the debugger to wend my way thru this!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">24th March 2005 15:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Popping until the stack is empty is not a good idea. The stack might contain other things but parameters to your plug-in. Simply require the user to put an end marker such as "--" and pop until you find it.<br />
+      <br />
+      ExecuteCodeSegment executes NSIS code segement. You can use it to execute code pointers the user may pass as a parameter. For example, the user can use GetFunctionAddress to pass a function pointer. See my recently posted nsXML plug-in for an example.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Arrby</span><br />
+      <span class="post-time small text-muted">25th March 2005 05:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thx kichik, I was thinking the same.<br />
+      <br />
+      This *might* be a nice future feature: i.e. have an optional switch for plugins call statement /markstack and compiler would automatically push a "stack marker" before pushing the parms. I realize I can just do that as you suggested but having a formal, well defined, stack marker, you could then recommend that it be used. You could even make it the default and add switch /nostackmarker to prevent the stack marker (possibly with a Setxxx attribute to define default behaviour for backwards compatability).<br />
+      Just a thought.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">saivert</span><br />
+      <span class="post-time small text-muted">25th March 2005 15:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>NSIS plugin guide.</strong><br />
+      Yup yup! Nice idea. But I think the problem is more related to how people generally code their NSIS plugins. They use more stack items instead of using just the first string for all parameters.<br />
+      <br />
+      I like using just the first item and then pack all parameters options data in this one. Just like when you are passing parameters to a Win32 program, the program only gets one string to work with and has to parse this.<br />
+      With NSIS plugins we get a lot of strings (stack items) we must parse and that usually complicates things.<br />
+      <br />
+      Why not got for a "-o1 -o2 --option3" syntax instead of pushing hundreds of strings on the stack. The default size limit on strings in NSIS is 1024, and should be more than enough for most things. If neccessary you could pass a switch in the first string that tells the plugin to pop one more string in order to get more information.<br />
+      <br />
+      Why can't someone in the NSIS dev team write a programmers guide or something, so people can write code that conforms to some guidelines.<br />
+      <br />
+      EDIT: What bout my post??</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">25th March 2005 15:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by Arrby</i><br />
+        <b>Thx kichik, I was thinking the same.<br />
+        <br />
+        This *might* be a nice future feature: i.e. have an optional switch for plugins call statement /markstack and compiler would automatically push a "stack marker" before pushing the parms. I realize I can just do that as you suggested but having a formal, well defined, stack marker, you could then recommend that it be used. You could even make it the default and add switch /nostackmarker to prevent the stack marker (possibly with a Setxxx attribute to define default behaviour for backwards compatability).<br />
+        Just a thought.</b>
+      </blockquote>Good idea. /END would be most suitable because a few plugins use that already (so they won't have to be recompiled)<br />
+      <br />
+      -Stu
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

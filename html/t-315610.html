@@ -1,0 +1,167 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Require Windows XP Service Pack 2 (or later)" />
+
+  <title>Require Windows XP Service Pack 2 (or later) - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Require Windows XP Service Pack 2 (or later)</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=315610">Require Windows XP Service Pack 2 (or later)</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">drjasonharrison</span><br />
+      <span class="post-time small text-muted">23rd December 2009 01:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Require Windows XP Service Pack 2 (or later)</strong><br />
+      Hi,<br />
+      <br />
+      I've tried to use WinSxS_HasAssembly but I've found that it is to rigid in it's acceptance of the version of the MSCVR80.dll. See <a href="http://nsis.sourceforge.net/WinSxS_QueryAssemblyInfo_to_check_if_assembly_is_installed" target="_blank">http://nsis.sourceforge.net/WinSxS_Q...y_is_installed</a><br />
+      <br />
+      I have on one machine version 8.0.50727.42 and on another 8.0.50727.762. I need either of these to be acceptable.<br />
+      <br />
+      Can someone please explain what is happening in this code that would reject based on the rebuild version of the dll and how to fix that?<br />
+      <br />
+      -Jason<br />
+      <br />
+      System::Call "sxs::CreateAssemblyCache(*i.R0,i0)i.r0"<br />
+      ${If} $0 == 0<br />
+      System::Call '*(i 24,i0,l,i0,i0)i.R1' ;TODO,BUGBUG: check alloc success<br />
+      System::Call `$R0-&gt;4(i 0,w '$8',i $R1)i.r0` ;IAssemblyCache::QueryAssemblyInfo<br />
+      ${If} $0 == 0<br />
+      System::Call '*$R1(i,i.r0)'<br />
+      IntOp $0 $0 &amp; 1 ;ASSEMBLYINFO_FLAG_INSTALLED=1<br />
+      ${IfThen} $0 &lt;&gt; 0 ${|} StrCpy $9 1 ${|}<br />
+      ${EndIf}<br />
+      System::Free $R1<br />
+      System::Call $R0-&gt;2() ;IAssemblyCache::Release<br />
+      ${EndIf}</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">msroboto</span><br />
+      <span class="post-time small text-muted">23rd December 2009 04:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Why don't you use Winver.nsh?<br />
+      <br />
+      Look it up in the wiki if my link doesn't work.<br />
+      <a href="http://nsis.sourceforge.net/Include/WinVer.nsh" target="_blank">http://nsis.sourceforge.net/Include/WinVer.nsh</a><br />
+      <br />
+      ${If} ${IsWinXP}<br />
+      ${AndIf} ${AtLeastServicePack} 2<br />
+      DetailPrint "Running WinXP SP2 or above"<br />
+      ${EndIf}</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">23rd December 2009 12:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">@drjasonharrison: That code itself does not really care about the specific version, it just asks windows. The only thing I could think of is to not check for the ASSEMBLYINFO_FLAG_INSTALLED flag, but just check if the call to IAssemblyCache::QueryAssemblyInfo succeeded or not.<br />
+      <br />
+      The code would then simply be:<br /></p>
+      <pre>
+<code><br />System::Call "sxs::CreateAssemblyCache(*i.R0,i0)i.r0"<br />${If} $0 == 0<br />System::Call '*(i 24,i0,l,i0,i0)i.R1' ;TODO,BUGBUG: check alloc success<br />System::Call `$R0-&gt;4(i 0,w '$8',i $R1)i.r0` ;IAssemblyCache::QueryAssemblyInfo<br />${If} $0 == 0<br />StrCpy $9 1<br />${EndIf}<br />System::Free $R1<br />System::Call $R0-&gt;2() ;IAssemblyCache::Release<br />${EndIf}<br /></code>
+</pre><br />
+      (NOTE: I don't know anything or care about SxS (And the MS documentation about it sucks), just checking the return might give false positives (or not work at all) etc.)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">drjasonharrison</span><br />
+      <span class="post-time small text-muted">23rd December 2009 17:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">@Anders<br />
+      <br />
+      Well, the code changes it's behaviour -- if the rebuild version does not match exactly then it fails. However as you point out perhaps the issue is the system call care more.<br />
+      <br />
+      I believe the check against the version number occurs here:<br />
+      <br /></p>
+      <pre>
+<code><br />System::Call '*$R1(i,i.r0)' <br />IntOp $0 $0 &amp; 1 ;ASSEMBLYINFO_FLAG_INSTALLED=1<br /> ${IfThen} $0 &lt;&gt; 0 ${|} StrCpy $9 1 ${|}<br /></code>
+</pre><br />
+      <br />
+      However I don't understand what the ${|} operator is doing. Is this documented somewhere? It's rather hard to google or search the NSIS windows help for ${|}.<br />
+      <br />
+      -Jason
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">drjasonharrison</span><br />
+      <span class="post-time small text-muted">23rd December 2009 17:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">@msroboto<br />
+      <br />
+      Thank you for recommending WinVer, I will try it. Unfortunately my search on the NSIS website for "service pack" and other keywords brought me to the other solution.<br />
+      <br />
+      -Jason</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">drjasonharrison</span><br />
+      <span class="post-time small text-muted">23rd December 2009 17:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm trying this:<br />
+      <br /></p>
+      <pre>
+<code>        <br />var /GLOBAL osVersion<br />${If} ${IsWinXP}<br />${AndIf} ${AtLeastServicePack} 2<br />  StrCpy $osVersion 'WinXP SP2' <br />${Else}<br />  MessageBox MB_OK|MB_ICONEXCLAMATION "Product requires Windows XP Service Pack 2 or later."      Abort<br />${EndIf}<br />${If} ${IsAtLeastVista}<br />  StrCpy $osVersion 'VistaOrLater'<br />${EndIf}<br /></code>
+</pre><br />
+      <br />
+      But the NSIS compiler is complaining about the ${If} ${IsAtLeastVista} line:<br />
+      <br />
+      <pre>
+<code><br />Var: "osVersion"<br />!insertmacro: _If<br />!insertmacro: end of _If<br />!insertmacro: _And<br />!insertmacro: end of _And<br />StrCpy $osVersion "WinXP SP2" () ()<br />!insertmacro: _Else<br />!insertmacro: end of _Else<br />MessageBox: 48: "Product requires Windows XP Service Pack 2 or later."<br />Abort: ""<br />!insertmacro: _EndIf<br />!insertmacro: end of _EndIf<br />!insertmacro: _If<br />!insertmacro: macro "_If" requires 4 parameter(s), passed 2!<br /></code>
+</pre><br />
+      <br />
+      Suggestions?<br />
+      <br />
+      -Jason
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">drjasonharrison</span><br />
+      <span class="post-time small text-muted">23rd December 2009 18:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Okay, found it. I should have used ${AtLeastWinVista}.<br />
+      <br />
+      My trick was to put the ${IsAtLeastVista} on it's own line and then the compiler told me that it couldn't recognize that variable/macro. Which led me to reading the WinVer.nsh documentation a bit closer.<br />
+      <br />
+      -Jason</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

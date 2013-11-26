@@ -1,0 +1,332 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Need help with a dll call : ODBC" />
+
+  <title>Need help with a dll call : ODBC - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Need help with a dll call : ODBC</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=224548">Need help with a dll call : ODBC</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">geoffrey_4js</span><br />
+      <span class="post-time small text-muted">24th August 2005 17:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Need help with a dll call : ODBC</strong><br />
+      Hello,<br />
+      <br />
+      I need to create an ODBC driver during the installation process. I want to use the SQLConfigDriver function from the odbccp32.dll file.<br />
+      <br />
+      The function syntax is the following :<br /></p>
+
+      <blockquote>
+        Summary<br />
+        <br />
+        SQLConfigDriver loads the appropriate driver setup DLL and calls the ConfigDriver function.<br />
+        Syntax<br />
+        <br />
+        BOOL SQLConfigDriver (<br />
+        HWND hwndParent,<br />
+        WORD fRequest,<br />
+        LPCSTR lpszDriver,<br />
+        LPCSTR lpszArgs,<br />
+        LPSTR lpszMsg,<br />
+        WORD cbMsgMax,<br />
+        WORD* pcbMsgOut);<br />
+        <br />
+        Arguments<br />
+        <br />
+        hwndParent [Input]<br />
+        <br />
+        Parent window handle. The function will not display any dialog boxes if the handle is null.<br />
+        <br />
+        fRequest [Input]<br />
+        <br />
+        Type of request. fRequest must contain one of the following values:<br />
+        <br />
+        ODBC_CONFIG_DRIVER: Changes the connection pooling timeout used by the driver.<br />
+        <br />
+        ODBC_INSTALL_DRIVER: Installs a new driver.<br />
+        <br />
+        ODBC_REMOVE_DRIVER: Removes an existing driver.<br />
+        <br />
+        This option can also be driver-specific, in which case the fRequest for the first option must start from ODBC_CONFIG_DRIVER_MAX+1. The fRequest for any additional option must also start from a value greater than ODBC_CONFIG_DRIVER_MAX+1.<br />
+        <br />
+        lpszDriver [Input]<br />
+        <br />
+        The name of the driver as registered in the system information.<br />
+        <br />
+        lpszArgs [Input]<br />
+        <br />
+        A null-terminated string containing arguments for a driver-specific fRequest.<br />
+        <br />
+        lpszMsg [Output]<br />
+        <br />
+        A null-terminated string containing an output message from the driver setup.<br />
+        <br />
+        cbMsgMax [Input]<br />
+        <br />
+        Length of lpszMsg.<br />
+        <br />
+        pcbMsgOut [Output]<br />
+        <br />
+        Total number of bytes available to return in lpszMsg. If the number of bytes available to return is greater than or equal to cbMsgMax, the output message in lpszMsg is truncated to cbMsgMax minus the null-termination character. The pcbMsgOut argument can be a null pointer.<br />
+        Returns<br />
+        <br />
+        The function returns TRUE if it is successful, FALSE if it fails.
+      </blockquote>So I decided to create a macro to execute this function with the system.dll.<br />
+      <br />
+      The code of the macro is the following :<br />
+      <pre>
+<code>!macro LIBODBC_CONFIG_ODBC_DRIVER<br />  !ifdef LIBODBC_UNINST_SUPPORT<br />    !undef UnODBCConfigDriver<br />    !define UnODBCConfigDriver "!insertmacro LIBODBC_CONFIG_ODBC_DRIVER_UnCall"<br />    Function un.ODBCConfigDriver<br />  !else<br />    !undef ODBCConfigDriver<br />    !define ODBCConfigDriver "!insertmacro LIBODBC_CONFIG_ODBC_DRIVER_Call"<br />    Function ODBCConfigDriver<br />  !endif<br /><br />    ; Saves variables, gets the function parameters<br />    Exch $R0  ; input : LOGFILE<br />    Exch 2<br />    Exch $R1  ; input : ODBCDriverName<br />    Exch<br />    Exch $R2  ; input : Type of Request<br />    Push $R3  ; output : TRUE/FALSE<br /><br /><br />    !ifdef LIBODBC_UNINST_SUPPORT<br />      ${UnPrint}   ""<br />      ${UnPrint}   "--------------------------------------"<br />      ${UnPrint}   "--------------------------------------"<br />      ${UnPrint}   "-- ConfigAnODBCDriver"<br />      ${UnPrint}   "ODBCDriverName   : $R1"<br />      ${UnPrint}   "Type of Request  : $R2"<br />      ${UnPrint}   "--------------------------------------"<br />    !else<br />      ${Print}   ""<br />      ${Print}   "--------------------------------------"<br />      ${Print}   "--------------------------------------"<br />      ${Print}   "-- ConfigAnODBCDriver"<br />      ${Print}   "ODBCDriverName   : $R1"<br />      ${Print}   "Type of Request  : $R2"<br />      ${Print}   "--------------------------------------"<br />    !endif<br /><br />    ${Select} "$R2"<br />      ${Case} "ODBC_INSTALL_DRIVER"<br />        StrCpy $R2 1<br />      ${Case} "ODBC_REMOVE_DRIVER"<br />        StrCpy $R2 2<br />      ${Case} "ODBC_CONFIG_DRIVER"<br />        StrCpy $R2 3<br />    ${EndSelect}<br /><br />    SetPluginUnload alwaysoff<br />    <br />    SetOutPath $PLUGINSDIR         ; go to temporary directory<br />    ;File "$SYSDIR\odbccp32.dll"   ; copy dll there<br />    File "C:\WINDOWS\system32\odbccp32.dll"<br /><br />dumpstate::debug<br />    System::Call 'odbccp32.dll::SQLConfigDriver \<br />      (i 0, i $R2, t "$R1", t "", t "", t "", i 0, i 0) i'<br />dumpstate::debug<br /><br />    SetPluginUnload manual         ; let the installer unload the System dll<br />    System::Free 0<br /><br />    ;WriteIniStr "$R0" "ODBC.data"    "ODBC_DRIVER_IS_CONFIGURED"       "$R3"<br /><br />    !ifdef LIBODBC_UNINST_SUPPORT<br />      ${UnPrint} "ODBCDriverConfigured : $R3"<br />      ${UnPrint} "--------------------------------------"<br />    !else<br />      ${Print} "ODBCDriverConfigured : $R3"<br />      ${Print} "--------------------------------------"<br />    !endif<br /><br />    Pop  $R3<br />    Pop  $R2<br />    Pop  $R1<br />    Pop  $R0<br />  FunctionEnd<br />!macroend<br /><br />!macro LIBODBC_CONFIG_ODBC_DRIVER_Call  LOGFILE ODBCDRIVERNAME FREQUEST<br />  !echo `$ {ODBCDriverExists} "${LOGFILE}" "${ODBCDRIVERNAME}" "${FREQUEST}"$\r$\n`<br />  Push `${ODBCDRIVERNAME}`<br />  Push `${FREQUEST}`<br />  Push `${LOGFILE}`<br />  Call ODBCConfigDriver<br />!macroend<br /><br />!macro LIBODBC_CONFIG_ODBC_DRIVER_UnCall  LOGFILE ODBCDRIVERNAME FREQUEST<br />  !echo `$ {UnODBCDriverExists} "${LOGFILE}" "${ODBCDRIVERNAME} "${FREQUEST}""$\r$\n`<br />  Push `${ODBCDRIVERNAME}`<br />  Push `${FREQUEST}`<br />  Push `${LOGFILE}`<br />  Call un.ODBCConfigDriver<br />!macroend</code>
+</pre><br />
+      <br />
+      And I'm calling it this way in the main section of the installer :<br />
+      <pre>
+<code>${ODBCConfigDriver} "$PLUGINSDIR\${UNINSTALL_INI_FILE}" \<br />  "${ODBC_DRIVER_NAME}" "ODBC_INSTALL_DRIVER"</code>
+</pre><br />
+      <br />
+      Mains problems are that I don't known how to get the output from the dll call (0 or 1) and that it doesn't seems to work ://.<br />
+      <br />
+      I try to find documentation about the use of dll with system.dll but i don't find anything interresting (or helping me with my problem).<br />
+      <br />
+      Thanks for your help,<br />
+      <br />
+      Geoffrey
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">25th August 2005 18:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This will put the return value of the function into $0:</p>
+      <pre>
+<code>System::Call "dll::func() i .r0"</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">geoffrey_4js</span><br />
+      <span class="post-time small text-muted">26th August 2005 09:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I've read the documentation and made the tutorial about System plugin and dll call and i've understand a bit more how it works.<br />
+      <br />
+      But I'm still blocked with the pointer.<br />
+      <br />
+      I've the following code :<br />
+      <br /></p>
+      <pre>
+<code><br />Name "ODBC/System Plugin Example"<br />OutFile "ODBC.exe"<br />ShowInstDetails show<br /><br />SetPluginUnload  alwaysoff<br /><br />Section "ODBCTest"<br /><br />     !define ODBC_INSTALL_DRIVER 1<br />     !define ODBC_REMOVE_DRIVER  2<br />     !define ODBC_CONFIG_DRIVER  3<br /><br />     SetOutPath $TEMP<br />     <br />     ; BOOL SQLConfigDriver (<br />     ;      HWND            hwndParent,<br />     ;      WORD            fRequest,<br />     ;      LPCSTR          lpszDriver,<br />     ;      LPCSTR          lpszArgs,<br />     ;      LPSTR           lpszMsg,<br />     ;      WORD            chMsgMax,<br />     ;      WORD *          pcbMsgOut);<br />     <br />     System::Call 'odbccp32::SQLConfigDriver(i, i \<br />       ${ODBC_INSTALL_DRIVER}, t "DRIVER_TEST", t, \<br />       t .r0, i 500, *i .r1) i .r2'<br />     DetailPrint "Output message from the driver setup : $0"<br />     DetailPrint "Available byte : $1"<br />     DetailPrint "Succeeded or not : $2"<br /><br />     ; RETCODE SQLInstallerError(<br />     ;     WORD             iError,<br />     ;     DWORD*           pfErrorCode,<br />     ;     LPSTR            lpszErrorMsg,<br />     ;     WORD             cbErrorMsgMax,<br />     ;     WORD*            pcbErrorMsg);<br />     System::Call 'odbccp32::SQLInstallerError(i, i*i .r0, \<br />       t .r1, i 500, i 500, *i .r2) i .r3'<br />     DetailPrint "iError (Installer Error Code) : $0"<br />     DetailPrint "pfErrorCode : $1"<br />     DetailPrint "pcbErrorMsg : $2"<br />     DetailPrint "Return code : $3"<br /><br />     SetPluginUnload manual<br />     ; do nothing<br />     System::Free 0<br /><br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      It try to create the DRIVER_TEST without any parameters.<br />
+      <br />
+      It return 0 (FALSE) but I can't get any error message from the SQLInstallerError function. I also don't know why SQLConfigDriver doesn't display any Output message($0).<br />
+      <br />
+      Finally, I've got a question.<br />
+      <br />
+      If $0 is equal to something BEFORE the call, does the value be passed into the call (with r0) as an input value ?<br />
+      <br />
+      <br />
+      <a href="http://msdn.microsoft.com/library/default.asp?url=/library/en-us/odbc/htm/odbcsqlconfigdriver.asp" target="_blank">SQLConfigDriver</a><br />
+      <a href="http://msdn.microsoft.com/library/default.asp?url=/library/en-us/odbc/htm/odbcsqlinstallererror.asp" target="_blank">SQLInstallerError</a>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">26th August 2005 10:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">SQLInstallerError probably fails because you've used an invalid syntax. A parameter can't have two types (i*i). It's either a pointer or it's not. If the input for the pointer is not important, you can still use a dot, but you can't have the input parameter a non-pointer.<br />
+      <br />
+      If you've used r0 in the input part of the parameter value, $0 will be passed as the input. If you've used a dot, nothing will be passed. The meaning of nothing depends on the parameter type, but it's usually zero which is also NULL.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">geoffrey_4js</span><br />
+      <span class="post-time small text-muted">26th August 2005 10:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I've correct the type of pfErrorCode but it still doesn't display anything.<br />
+      <br />
+      When the output is a pointer, how is it possible to display where the pointer points to ?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">26th August 2005 10:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">When the output is a pointer, the real pointer that gets to the function points to a temporary buffer created by the System plug-in. Once the call returns, that buffer is converted to a string and copied into the output location you've specified.<br />
+      <br />
+      In your call you have cbErrorMsgMax sent twice. You also pass zero to iError which seems to be the input to the error itself.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">geoffrey_4js</span><br />
+      <span class="post-time small text-muted">26th August 2005 13:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks kichik, things are going to work :)<br />
+      <br />
+      Now I achieve to get the error message, but one thing i don't understand. In the SQLInstallerError doc, they say about the iError parameters : "Error record number. Valid numbers are from 1 through 8". But the only value that worked for me is "1". What means these numbers ?<br />
+      <br />
+      <br />
+      For info, here's the piece of code that have changed :<br />
+      <br /></p>
+      <pre>
+<code><br />    ; BOOL SQLConfigDriver (<br />     ;      HWND            hwndParent,<br />     ;      WORD            fRequest,<br />     ;      LPCSTR          lpszDriver,<br />     ;      LPCSTR          lpszArgs,<br />     ;      LPSTR           lpszMsg,<br />     ;      WORD            chMsgMax,<br />     ;      WORD*           pcbMsgOut);<br />     System::Call 'odbccp32::SQLConfigDriver(i , i \<br />       ${ODBC_INSTALL_DRIVER}, t "DRIVER_TEST", t, \<br />       t .r0, i 500, *i .r1) i .r2'<br />     DetailPrint "Output message from the driver setup : $0"<br />     DetailPrint "Available byte : $1"<br />     DetailPrint "Succeeded or not : $2"<br />     <br />     ; RETCODE SQLInstallerError(<br />     ;     WORD             iError,<br />     ;     DWORD*           pfErrorCode,<br />     ;     LPSTR            lpszErrorMsg,<br />     ;     WORD             cbErrorMsgMax,<br />     ;     WORD*            pcbErrorMsg);<br />     System::Call 'odbccp32::SQLInstallerError(i 1, \<br />       *i .r4, t .r5, i 500, *i .r6) i .r7'<br />     DetailPrint "iError (Installer Error Code) : $4"<br />     DetailPrint "pfErrorCode : $5"<br />     DetailPrint "pcbErrorMsg : $6"<br />     DetailPrint "Return code : $7"<br /></code>
+</pre><br />
+      <br />
+      About the memory allocation for the buffer, is the command System::Alloc useless ? (because in my case, i store a value in a buffer for which memory haven't been allocated for !)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">26th August 2005 14:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I don't know what the value SQLInstallerError accepts mean. You'll have to search MSDN and find out.<br />
+      <br />
+      System::Alloc is not useless. For example, there's no pointer to structure type. Structures can't be described in a string that can be put in a variable.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">geoffrey_4js</span><br />
+      <span class="post-time small text-muted">26th August 2005 15:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">So System:Alloc is (only) used when your need a pointer to a structure type ?<br />
+      <br />
+      I'm progressing, it seems that i need to call another function first (before SQLConfigDriver), it's SQLInstallDriverEx, that I called like that :<br /></p>
+      <pre>
+<code><br />     !define ODBC_INSTALL_INQUIRY  1<br />     !define ODBC_INSTALL_COMPLETE 2<br /><br />     !define S                     "\0"<br />     !define MY_DRIVER_NAME        "ANTS TEST Driver"<br />     !define MY_DRIVER_ATTRIBUTES  "Driver='$SYSDIR\aodbc.dll'${S}Setup='$SYSDIR\aodbc.dll'${S}Antshome='C:\Databases\antsdb'${S}"<br /><br />     ; BOOL SQLInstallDriverEx (<br />     ;      LPCSTR          lpszDriver,<br />     ;      LPCSTR          lpszPathIn,<br />     ;      LPSTR           lpszPathOut,<br />     ;      WORD            cbPathOutMax,<br />     ;      WORD *          pcbPathOut,<br />     ;      LPDWORD         lpdwUsageCount);<br />     StrCpy $R0 "'${MY_DRIVER_NAME}${S}${MY_DRIVER_ATTRIBUTES}${S}'"<br />     DetailPrint "lpszDriver : $R0"<br />     StrCpy $R1 "$DESKTOP"<br />     StrLen $R3 "$R1"<br />     DetailPrint "lpsz length : $R3"<br />     System::Call 'odbccp32::SQLInstallDriverEx(t R0,t R1, t .R2, i R3, i .R4, i ${ODBC_INSTALL_COMPLETE}, i .R5) i .R6'<br />     DetailPrint "Previously installed place for the driver : $R2"<br />     DetailPrint "Number of bytes : $R4"<br />     DetailPrint "Driver usage count : $R5"<br />     DetailPrint "Succeeded or not : $R6"<br /></code>
+</pre><br />
+      <br />
+      But now i've got an error telling me that there's an "invalid keyword-value pairs".<br />
+      <br />
+      It comes from lpszDriver that must contains the driver description and a list of keyword-value pairs describing the driver each times separated by a null byte. Does the system plugin handle the null byte (i've used /0 as told in MSDN doc) ?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">26th August 2005 15:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">As far as I know, the System plug-in doesn't support the \0 syntax. You'll have to allocate a buffer for the string and fill it in manually with System::Copy. You can also allocate a structure with strings in it, but then you'll have to know the length of each string ahead. I guess a nice little function can be created to generate such strucutre creation string.<br />
+      <br />
+      Some examples come up when you search for "system null" in the forum:<br />
+      <br />
+      <a href="http://forums.winamp.com/showthread.php?s=&amp;threadid=172312&amp;highlight=system+null" target="_blank">http://forums.winamp.com/showthread....ht=system+null</a><br />
+      <a href="http://forums.winamp.com/showthread.php?s=&amp;threadid=146196&amp;highlight=system+null" target="_blank">http://forums.winamp.com/showthread....ht=system+null</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">geoffrey_4js</span><br />
+      <span class="post-time small text-muted">26th August 2005 16:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">To be sure that i've understand well, what i have to do is to use a structure of X elements, where each element is the string before the "\0". So in my case my structure would have 4 string (type t) :<br />
+      "ANTS TEST Driver"<br />
+      "Driver=$SYSDIR\aodbc.dll"<br />
+      "Setup=$SYSDIR\aodbc.dll"<br />
+      "Antshome=C:\Databases\antsdb"<br />
+      And what I must do is specified the length of each string ahead.<br />
+      <br />
+      Like that<br />
+      Systemm::Call '*(&amp;t17 "ANTS TEST Driver", &amp;t24 "Driver=$SYSDIR\aodbc.dll", ... )<br />
+      <br />
+      One question, if I use $SYSDIR, the real length I have to specify is the length value of $SYSDIR (18 if SYSDIR=C:\Windows\system or 20 if SYSDIR=C:\Windows\system32) or the length of $SYSDIR (8) ?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">26th August 2005 16:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yes, that's that. Just don't forget the final null terminator (&amp;i1 0 in those examples).<br />
+      <br />
+      You'll have to use the length of the value of $SYSDIR, of course. You can use StrLen to calculate that.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">geoffrey_4js</span><br />
+      <span class="post-time small text-muted">29th August 2005 10:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I've try to reproduce the way to do of the regwritemutlisz script but couldn't achieve to make it work :<br />
+      <br />
+      Here my new piece of code :<br /></p>
+      <pre>
+<code><br />Name "ODBC/System Plugin Example"<br />OutFile "ODBC.exe"<br />ShowInstDetails show<br /><br />SetPluginUnload  alwaysoff<br /><br />Var MY_DRIVER_NAME<br />Var MY_DRIVER_PARAM1<br />Var MY_DRIVER_PARAM2<br />Var MY_DRIVER_PARAM3<br /><br />Section "ODBCTest"<br />     SetOutPath $TEMP<br /><br />     !define ODBC_INSTALL_INQUIRY  1<br />     !define ODBC_INSTALL_COMPLETE 2<br /><br />     !define SQLInstallDriver      "odbccp32::SQLInstallDriverEx(t , t , t , i , i , i , i) i"<br />     !define SQLInstallerError     "odbccp32::SQLInstallerError(i, *i, t, i, *i) i"<br />     <br /><br />     StrCpy  $MY_DRIVER_NAME       "ANTS TEST Driver"<br />     StrCpy  $MY_DRIVER_PARAM1     "Driver=$SYSDIR\aodbc.dll"<br />     StrCpy  $MY_DRIVER_PARAM2     "Setup=$SYSDIR\aodbc.dll"<br />     StrCpy  $MY_DRIVER_PARAM3     "Antshome=C:\Databases\antsdb"<br />     <br /><br />     ; BOOL SQLInstallDriverEx (<br />     ;      LPCSTR          lpszDriver,<br />     ;      LPCSTR          lpszPathIn,<br />     ;      LPSTR           lpszPathOut,<br />     ;      WORD            cbPathOutMax,<br />     ;      WORD *          pcbPathOut,<br />     ;      LPDWORD         lpdwUsageCount);<br /><br />     ; create a buffer<br />     System::Call "*(&amp;t${NSIS_MAX_STRLEN}) i.r1"<br />     <br />     ; fill the buffer with our strings<br />     StrCpy $2 $1                                 ; initial position<br />     <br />     StrLen $9 "$MY_DRIVER_NAME"                  ; length of the driver name<br />     IntOp $9  $9 + 1                             ; plus NULL<br />     System::Call "*$2(&amp;t$9 '$MY_DRIVER_NAME')"   ; place the string<br />     IntOp $2  $2 + $9                            ; advance to the next position<br />     <br />     StrLen $9 "$MY_DRIVER_PARAM1"                ; length of the first parameter<br />     IntOp $9  $9 + 1                             ; plus NULL<br />     System::Call "*$2(&amp;t$9 '$MY_DRIVER_PARAM1')" ; place the string<br />     IntOp $2  $2 + $9                            ; advance to the next position<br />     <br />     StrLen $9 "$MY_DRIVER_PARAM2"                ; length of the second parameter<br />     IntOp $9  $9 + 1                             ; plus NULL<br />     System::Call "*$2(&amp;t$9 '$MY_DRIVER_PARAM2')" ; place the string<br />     IntOp $2  $2 + $9                            ; advance to the next position<br />     <br />     StrLen $9 "$MY_DRIVER_PARAM3"                ; length of the second parameter<br />     IntOp $9  $9 + 1                             ; plus NULL<br />     System::Call "*$2(&amp;t$9 '$MY_DRIVER_PARAM3')" ; place the string<br />     IntOp $2  $2 + $9                            ; advance to the next position<br /><br />     System::Call "*$2(&amp;t1 '')"                   ; place the terminating string<br />     IntOp $2  $2 + 1                             ; avdance to the last position<br />     <br />     IntOp $2  $2 - $1                            ; total length<br />     ; other parameters<br />     StrCpy $R1 "$DESKTOP"<br />     StrLen $R3 "$R1"<br />     IntOp  $R3 $R3 + 1<br /><br />Dumpstate::debug<br />     System::Call "${SQLInstallDriver} (r1, R1, .R2, R3, .R4, ${ODBC_INSTALL_COMPLETE}, .R5) .R6"<br />Dumpstate::debug<br />     DetailPrint "Previously installed place for the driver : $R2"<br />     DetailPrint "Number of bytes : $R4"<br />     DetailPrint "Driver usage count : $R5"<br />     DetailPrint "Succeeded or not : $R6"<br />     <br /><br />     ; RETCODE SQLInstallerError(<br />     ;     WORD             iError,<br />     ;     DWORD *          pfErrorCode,<br />     ;     LPSTR            lpszErrorMsg,<br />     ;     WORD             cbErrorMsgMax,<br />     ;     WORD *           pcbErrorMsg);<br />     System::Call "${SQLInstallerError}(1, .r4, .r5, 500, .r6) .r7"<br />     DetailPrint "iError (Installer Error Code) : $4"<br />     DetailPrint "pfErrorCode : $5"<br />     DetailPrint "pcbErrorMsg : $6"<br />     DetailPrint "Return code : $7"<br /><br /><br />     SetPluginUnload manual<br />     ; do nothing<br />     System::Free 0<br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      I can't figure out what i do wrong.<br />
+      <br />
+      And I've got a second problem, maybe a NSIS bug. If I replace r1 by R0 (or r0), for exemple : System::Call "*(&amp;t${NSIS_MAX_STRLEN}) i.R0", I've got a Windows crash (GPF) of odbc.exe.<br />
+      <br />
+      Geo
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">30th August 2005 18:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">While you've passed a pointer as the first parameter to SQLInstallDriverEx, you've defined the type as a string. This means a string congaing the address to your buffer is passed.<br />
+      <br />
+      As for the GPF, I doubt it's a bug with the System plug-in. The System plug-in gives you a lot of freedom. This freedom can be easily used to generate a GPF. Your code is not polished yet, which is probably the cause to the GPF. If you have a simple piece of code demonstrating a bug, I'd love to see it, but this one seems to be a script problem.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">geoffrey_4js</span><br />
+      <span class="post-time small text-muted">2nd September 2005 13:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi again,<br />
+      <br />
+      I've try to do my best to get a piece of code demonstrating the bug.<br />
+      <br />
+      I'm on WXP-SP2 and use NSIS 2.06 (i've not upgrade to the latest version because i'm in a production environement with absolutely no time to test for the moment).<br />
+      <br />
+      EDIT : the gpf was due to bad instruction use in the nsis script, my fault...<br />
+      <br />
+      I'm going to correct the type in my dll call and try it out.<br />
+      <br />
+      Thx</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

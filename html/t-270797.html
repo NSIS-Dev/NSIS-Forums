@@ -1,0 +1,178 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="user selects silent vs normal install" />
+
+  <title>user selects silent vs normal install - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">user selects silent vs normal install</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=270797">user selects silent vs normal install</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jackkoho</span><br />
+      <span class="post-time small text-muted">7th May 2007 18:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>user selects silent vs normal install</strong><br />
+      I am trying to do what I stated in the subject. Currently, I am using an InstallOptions page for the user to select custom vs express install. However, I can't use Silent inside a function and I can't use conditionals outside a function. So I'm not quite sure how to approach this.<br />
+      <br />
+      I have tried using InstType but it rewrites my SF_SELECTED flags to 0 when I have them set in .onInit.<br />
+      <br />
+      Jack</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">goldy1064</span><br />
+      <span class="post-time small text-muted">7th May 2007 21:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">According to the documentation <a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.9.14.16" target="_blank">here</a>, you may only set the installer silent during .onInit.<br />
+      <br />
+      To get around this, you would need a secondary installer that could wrap around your primary. The wrapper installer would just display the custom InstallOptions page you want and pass either a /S or not to the primary installer.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">theblazingangel</span><br />
+      <span class="post-time small text-muted">7th May 2007 22:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">perhaps:<br />
+      <br />
+      1) use the leave function for your install options page to set a global variable which will tell the rest of the script whether it's in normal/express mode<br />
+      2) use the pre function for other pages to detect express mode, and if so just execute the code and use abort to skip the page (silent)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jackkoho</span><br />
+      <span class="post-time small text-muted">8th May 2007 20:53 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">this wrapper installer idea is pretty crazy but I am going to give it a shot. Will let you know on any progress.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jackkoho</span><br />
+      <span class="post-time small text-muted">9th May 2007 17:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The wrapper idea worked!<br />
+      <br />
+      Here is my code from the wrapper:<br /></p>
+      <pre>
+<code><br /><br />;--------------------------------<br /><br />;Include Modern UI<br /><br />!include "MUI.nsh"<br /><br />!include "zipdll.nsh"<br /><br />!include LogicLib.nsh<br /><br /><br /><br />;--------------------------------<br /><br />;General<br /><br />Name "xxx - v0.9.12"<br /><br />OutFile "xxxtest-wrapper.exe"<br /><br /><br /><br /><br /><br /><br /><br />;--------------------------------<br /><br />;Interface Settings<br /><br />!define MUI_HEADERIMAGE<br /><br />!define MUI_HEADERIMAGE_BITMAP "header.bmp" ; optional<br /><br />!define MUI_ABORTWARNING<br /><br /><br /><br /><br /><br />;--------------------------------<br /><br />;Pages<br /><br />!insertmacro MUI_PAGE_LICENSE "ct_license.txt"<br /><br />Page custom customvsexpress<br /><br />!insertmacro MUI_PAGE_INSTFILES<br /><br />!insertmacro MUI_DEFAULT MUI_FINISHPAGE_TEXT "finishpage text"<br /><br />!insertmacro MUI_DEFAULT MUI_FINISHPAGE_TITLE "finishpagetitle"<br /><br />!insertmacro MUI_PAGE_FINISH<br /><br /><br /><br /><br /><br />;--------------------------------<br /><br />;Languages<br /><br />!insertmacro MUI_LANGUAGE "English"<br /><br /><br /><br /><br /><br />  ReserveFile "iotest.ini"<br /><br />  !insertmacro MUI_RESERVEFILE_INSTALLOPTIONS<br /><br /><br /><br />;--------------------------------<br /><br />;Variables<br /><br /><br /><br />  Var INI_EXPRESS<br /><br />  Var INI_CUSTOM  <br /><br />  <br /><br />#--------------<br /><br />;Installer Sections<br /><br /><br /><br />Function customvsexpress<br /><br />  !insertmacro MUI_INSTALLOPTIONS_DISPLAY "iotest.ini"<br /><br />  !insertmacro MUI_HEADER_TEXT "$(TEXT_IO_TITLE)" "$(TEXT_IO_SUBTITLE)"<br /><br />  !insertmacro MUI_INSTALLOPTIONS_READ $INI_CUSTOM "iotest.ini" "Field 1" "State"<br /><br />  !insertmacro MUI_INSTALLOPTIONS_READ $INI_EXPRESS "iotest.ini" "Field 2" "State"<br /><br />   MessageBox MB_OK "$INI_CUSTOM $INI_EXPRESS"<br /><br />FunctionEnd<br /><br /><br /><br /><br /><br />Section "xxx" xxx<br /><br />#call customvsexpress<br /><br />File setupxxxjacktest.exe<br /><br />StrCmp $INI_CUSTOM "1" custom silent<br /><br />custom: <br /><br />ExecWait "setupxxxjacktest.exe"<br /><br />goto end<br /><br />silent:<br /><br />ExecWait "setupxxxjacktest.exe /S"<br /><br />end:<br /><br />SectionEnd<br /><br /><br /> <br /><br />Function .onInit<br /><br />System::Call 'kernel32::CreateMutexA(i 0, i 0, t "CamerTutorMutex") i .r1 ?e'<br /><br />Pop $R0<br /><br />StrCmp $R0 0 +3<br /><br />  MessageBox MB_OK|MB_ICONEXCLAMATION "The installer is already running."<br /><br />  Abort<br /><br /> <br /><br />  Pop $0<br /><br /> ClearErrors<br /><br />        <br /><br />        !insertmacro MUI_INSTALLOPTIONS_EXTRACT "iotest.ini"<br /><br /><br /><br />        <br /><br />FunctionEnd<br /><br /><br /><br /><br />LangString TEXT_IO_TITLE ${LANG_ENGLISH} "Express vs. Custom Install"<br /><br />LangString TEXT_IO_SUBTITLE ${LANG_ENGLISH} "This page allows the user to choose between an express and custom install."<br /><br /><br /><br /></code>
+</pre><br />
+      <br />
+      Notice how I left the license page and finish page in the wrapper.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jackkoho</span><br />
+      <span class="post-time small text-muted">9th May 2007 17:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">sorry for all the extra space, that was my first time posting code</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jackkoho</span><br />
+      <span class="post-time small text-muted">9th May 2007 17:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">the one downside to this is that I have some execwaits in my wrapped program that have to install OTHER programs which somewhat ruins the silent experience.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MarkA</span><br />
+      <span class="post-time small text-muted">4th December 2008 13:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>user selects silent vs normal install</strong><br />
+      Hi,<br />
+      I have a similar problem in that I would like to be able to automatically decide whether to run a setup as silent or not.<br />
+      <br />
+      I have a wrapper 'setup.exe' where the user selects which components they would like to install. This works perfectly well. However I would also like to be able to offer the components as separate install files and under this circumstance then the install file should not be silent.<br />
+      <br />
+      In my wrapper I can add /S to the exec, but how do I make the setup file take notice and not show the welcome page, etc.<br />
+      <br />
+      Scenario 1 (CD install)<br />
+      Wrapper.exe (user select components)<br />
+      run setup1.exe /S (No Welcome page, etc is displayed)<br />
+      run setup2.exe /S (No Welcome page, etc is displayed)<br />
+      <br />
+      Scenario 2 (Web install)<br />
+      User downloads setup1.exe and runs setup1.exe<br />
+      Welcome page, etc is displayed.<br />
+      <br />
+      The idea is so that I don't have to keep in sync to separate versions of the same setup.<br />
+      <br />
+      <br />
+      many thanks<br />
+      Mark</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">chivalri</span><br />
+      <span class="post-time small text-muted">4th December 2008 18:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Non Interactive Installs</strong><br />
+      Here is what I have done to allow an installer to function in a not silent but not interactive manner.<br />
+      <br />
+      I have my installer setup so that if I run without any command line variables, it runs as usual; however, if I add a /qb command line option then in onInit I set a variable NonInteractive to "1".<br />
+      <br />
+      Then I use:<br />
+      PHP Code:</p>
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #FF8000">#Installerpages<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">defineMUI_PAGE_CUSTOMFUNCTION_PREdirPre<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_WELCOME<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">defineMUI_PAGE_CUSTOMFUNCTION_PREdirPre<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_LICENSEVILicAgreement</span><span style="color: #007700">.</span><span style="color: #0000BB">txt<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">defineMUI_PAGE_CUSTOMFUNCTION_PREdirPre<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_DIRECTORY<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">defineMUI_PAGE_CUSTOMFUNCTION_PREdirPre<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_STARTMENUApplication$StartMenuGroup<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_INSTFILES<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">defineMUI_PAGE_CUSTOMFUNCTION_PREdirPre<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_FINISH<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_UNPAGE_CONFIRM<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_UNPAGE_INSTFILES<br />
+      <br /></span> <span style="color: #007700">Function</span><span style="color: #0000BB">dirPre<br />
+      StrCmp$NonInteractive</span><span style="color: #DD0000">"1"</span><span style="color: #0000BB">0noskip<br />
+      Abort<br />
+      noskip</span><span style="color: #007700">:<br /></span> <span style="color: #0000BB">FunctionEnd<br /></span></span> <!-- php buffer end -->
+      <hr />
+      This causes the installer to run and display the status of what is going on but it does not interact with the user and closes automatically when done.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MarkA</span><br />
+      <span class="post-time small text-muted">5th December 2008 08:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi,<br />
+      thanks for the reply.<br />
+      I will make some more tests a post the solution when I have it working.<br />
+      <br />
+      regs<br />
+      Mark</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

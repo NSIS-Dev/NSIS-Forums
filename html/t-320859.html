@@ -1,0 +1,117 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Are &quot;space required&quot; and &quot;space available&quot; in variables somewhere?" />
+
+  <title>Are "space required" and "space available" in variables somewhere? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Are "space required" and "space available" in variables somewhere?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=320859">Are "space required" and "space available" in variables somewhere?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Bansaw</span><br />
+      <span class="post-time small text-muted">16th July 2010 15:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Are "space required" and "space available" in variables somewhere?</strong><br />
+      These pop up when I specify output directory, but are they available in variables?<br />
+      <br />
+      I want to make a message box that says "this is going to take up xGB of hard drive space, are you sure you want to continue?"<br />
+      <br />
+      (And I want to express it in terms of GB not Kb.)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">16th July 2010 15:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm not sure if they happen to get stored in variables - I don't think so, though.<br />
+      <br />
+      If you're already on the directory page, then you could just steal them out of the labels and parse them from there.<br />
+      <br />
+      Alternatively, and more flexible, you can use SectionGetSize to get the size of a section - just add all of the sections that the user selected up to get the total kilobyte count - just divide by 1000000 or 1048576 to get GB or GiB), and ${DriveSpace} from the File Functions header (See the help file) to get the available space on a drive.<br />
+      <br />
+      Edit: SectionGetSize returns kilobyte, not byte -_-</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">16th July 2010 16:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">something like this...<br />
+      <br /></p>
+      <pre>
+<code><br />!include "LogicLib.nsh"<br />!include "FileFunc.nsh"<br /><br />...<br /><br />Var counter<br />Var spaceNeeded<br />Var spaceAvailable<br /><br />Function someFunction<br />        StrCpy $spaceNeeded 0<br />        StrCpy $counter 0<br />        ${Do}<br />                ${If} ${SectionIsSelected} $counter<br />                    SectionGetSize $counter $0<br />                        IntOp $spaceNeeded $spaceNeeded + $0<br />                ${EndIf}<br />                IntOp $counter $counter + 1<br />        ${LoopUntil} ${Errors}<br />        System::Int64Op $spaceNeeded / 1048576 ; GiB<br />        Pop $spaceNeeded<br />        ${GetRoot} "$INSTDIR" $0<br />        ${DriveSpace} "$0\" "/D=F /S=G" $spaceAvailable ; G = GiB<br />        MessageBox MB_OK "Install dir: $INSTDIR$\r$\nSpace required: $spaceNeeded$\r$\nSpace available: $spaceAvailable"<br />FunctionEnd<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Bansaw</span><br />
+      <span class="post-time small text-muted">16th July 2010 18:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks! It works for the Space Available very well.<br />
+      <br />
+      But, if the total installation is less than 1GB it outputs 0.<br />
+      <br />
+      Is there anyway of it outputting 0.4GB for example</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pengyou</span><br />
+      <span class="post-time small text-muted">16th July 2010 18:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">${DriveSpace} is described in the manual:<br />
+      <a href="http://nsis.sourceforge.net/Docs/AppendixE.html#E.1.4" target="_blank">http://nsis.sourceforge.net/Docs/AppendixE.html#E.1.4</a><br />
+      <br />
+      If you change the /S=G part of the command to /S=K then the result will be shown in kilobytes instead of Gigabytes. If you really want to display 0.4 GB then you'll need to do some more work.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">18th August 2010 18:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Just correcting an error in my earlier post (Can no longer edit) pointed out in another thread.. whoops.<br />
+      <br />
+      The counter increase should be inside the loop, not inside the section selected conditional handling.<br />
+      <br /></p>
+      <pre>
+<code><br />${Do}<br />        ${If} ${SectionIsSelected} $counter<br />                SectionGetSize $counter $0<br />                IntOp $spaceNeeded $spaceNeeded + $0<br />        ${EndIf}<br />        IntOp $counter $counter + 1<br />${LoopUntil} ${Errors}<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

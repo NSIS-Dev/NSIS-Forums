@@ -1,0 +1,116 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="How to &quot;forget&quot; mouse clicks (and keypresses)?" />
+
+  <title>How to "forget" mouse clicks (and keypresses)? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">How to "forget" mouse clicks (and keypresses)?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=313117">How to "forget" mouse clicks (and keypresses)?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">asathatsme</span><br />
+      <span class="post-time small text-muted">28th September 2009 17:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>How to "forget" mouse clicks (and keypresses)?</strong><br />
+      I'm trying to create a page with (atleast) the Next button disabled. So far I have something like this sample:<br />
+      <br /></p>
+      <pre>
+<code><br />Page custom nsDialogs_MakeBackup_Create <br /><br />....<br /><br />Function nsDialogs_MakeBackup_Create<br /><br />nsDialogs::Create /NOUNLOAD 1018 ;1040<br />Pop $Dialog<br />StrCmp $Dialog error 0 +2<br />  Abort<br /><br />${NSD_CreateLabel} 10u 10u 100% 10u "Please, wait a minute while backup files are being compressed."<br />Pop $1<br /><br />GetDlgItem $0 $HWNDPARENT 1 ; disable NEXT button<br />EnableWindow $0 0<br />GetDlgItem $0 $HWNDPARENT 2 ; disable CANCEL button<br />EnableWindow $0 0<br />GetDlgItem $0 $HWNDPARENT 3 ; disable BACK button<br />EnableWindow $0 0<br /><br />ShowWindow $Dialog ${SW_SHOW}<br />System::Call 'user32.dll::UpdateWindow(i $Dialog) i .r3'<br /><br />;longish process here<br />Sleep 5000<br /><br />${NSD_SetText} $1 "Compression has finished."<br /><br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      The idea is just to show a user that something is going on and no need to worry. And I wanted to keep the standard NSIS page layout so banner plugins are not in my list yet. After this informational page the process should continue normally with the next page without any stops here.<br />
+      <br />
+      The problem is that <font color="firebrick">if you click any of the disabled buttons they will be remembered when the next page appears</font>. Which is not a good thing.<br />
+      <br />
+      Are there any nifty system::calls that would take care of unwanted messages? (I'm not very good with system::calls yet as I haven't needed them much)<br />
+      <br />
+      Thanks in advance.<br />
+      <br />
+      cheers..
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">28th September 2009 17:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You are blocking the UI thread, calling ShowWindow+UpdateWindow is cheating. What is this longish process? a nsis plugin call or running a external program?<br />
+      <br />
+      Someone(Not me I hope) could write a plugin that allows you to execute a nsis function in another thread while still processing UI messages<br />
+      <br />
+      Edit: If you are running a external program, you could probably cheat by using nsDialog timers. Have your installer generate a batch file and exec it without waiting. Something like:<br />
+      <br />
+      @echo off<br />
+      start "" /WAIT "$instdir\someapp.exe" param1 "param 2"<br />
+      echo. &gt; "$pluginsdir\done"<br />
+      cls<br />
+      <br />
+      <br />
+      and have the timer check if "$pluginsdir\done" exists every second or so</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pengyou</span><br />
+      <span class="post-time small text-muted">28th September 2009 18:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        The idea is just to show a user that something is going on and no need to worry
+      </blockquote>I had to cope with a similar situation (i.e. avoiding problems caused by user clicking the NEXT button "too soon").<br />
+      <br />
+      My solution was to hide the installer window and use the banner plugin to display some text. The banner text is updated every second or so to reassure the user and once the other process has completed the installer window gets shown again.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">asathatsme</span><br />
+      <span class="post-time small text-muted">28th September 2009 19:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><i>Anders:</i><br />
+      The longish process is atm a call to MakeCAB.<br />
+      <br />
+      nsTimers might be one solution, I'll have to keep that in my mind. I did look at them once already if I could figure out something with them, but forgot them later.<br />
+      <br />
+      <i>pengyou:</i><br />
+      Banners are a solution, but I decided they will be my last resource. Unless somebody shows me a banner that looks like a normal nsis page (and follows the rules nsis uses to build them, like colours, font sizes etc). And editable with nsDialogs commands would be a nice option too ; )<br />
+      <br />
+      Thanks for both of you for reminding me about these :) But I still hope there were some neat tricks to clear those extra messages.<br />
+      <br />
+      cheers..</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

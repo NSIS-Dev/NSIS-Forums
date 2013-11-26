@@ -1,0 +1,196 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Problem to delete installer when cancel" />
+
+  <title>Problem to delete installer when cancel - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Problem to delete installer when cancel</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=308947">Problem to delete installer when cancel</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">skuallpa</span><br />
+      <span class="post-time small text-muted">27th July 2009 12:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Problem to delete installer when cancel</strong><br />
+      Hello,<br />
+      <br />
+      I am working on an updater. Once the download is done, the updater is automatically launched, then overwrite some files and finally delete itself (using the SelfDel plug-in)<br /></p>
+      <pre>
+<code><br />Function .onInstSuccess<br /> <br />  SelfDel::del<br /><br />FunctionEnd<br /></code>
+</pre><br />
+      This works well.<br />
+      <br />
+      However the updater is not deleted in the following case.<br />
+      <br />
+      At the very beginning of the updater, the user can choose language:<br />
+      <pre>
+<code>Function .onInit<br />        <br />    ;display multilanguage list<br />    !insertmacro MUI_LANGDLL_DISPLAY<br /><br />FunctionEnd</code>
+</pre><br />
+      <br />
+      If the user press "cancel" in the window that appear to choose the language, the updater exit and the updater file is not deleted.<br />
+      <br />
+      How can I deal with this case?<br />
+      <br />
+      Thanks in advance
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">27th July 2009 13:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Have you tried calling selfdel from another callback function, such as .onGUIEnd or .onInstFailed?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">skuallpa</span><br />
+      <span class="post-time small text-muted">27th July 2009 13:53 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for your reply MSG,<br />
+      <br />
+      I just tried calling SelfDel from inside the .onGUIEnd and .onInstFailed function but the updater has not been deleted.<br />
+      <br />
+      I have also tried calling from inside .onUserAbort but this gave me a compilation error. (function .onUserAbort already defined).<br />
+      <br />
+      Is the .onUserAbort already defined in the macro ?<br /></p>
+      <pre>
+<code>!insertmacro MUI_LANGDLL_DISPLAY<br /></code>
+</pre><br />
+      <br />
+      Another idea?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">27th July 2009 14:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ah, yes, onuserabort and some other callbacks are used in MUI. You have to use this instead:<br />
+      <br />
+      !define MUI_CUSTOMFUNCTION_ABORT MyOnUserAbort<br />
+      <br />
+      Function MyOnUserAbort<br />
+      SelfDel::del<br />
+      FunctionEnd<br />
+      <br />
+      <br />
+      See <a href="http://nsis.sourceforge.net/Docs/Modern%20UI%202/Readme.html" target="_blank">http://nsis.sourceforge.net/Docs/Mod...02/Readme.html</a> (search for 'custom functions')</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Kshiro</span><br />
+      <span class="post-time small text-muted">27th July 2009 16:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I used this to enable Cancel Button during installing .<br /></p>
+
+      <blockquote>
+        GetDlgItem $0 $HWNDPARENT 2<br />
+        EnableWindow $0 1
+      </blockquote>And i used SelfDel plug-in but it only work when extract the first file . If i click cancel button when extracting above 2nd file , it dont work .
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">skuallpa</span><br />
+      <span class="post-time small text-muted">28th July 2009 09:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for these answers.<br />
+      I have tried this<br /></p>
+      <pre>
+<code><br />!define MUI_CUSTOMFUNCTION_ABORT MyOnUserAbort<br /><br />Function MyOnUserAbort<br />SelfDel::del<br />FunctionEnd</code>
+</pre><br />
+      <br />
+      But this doesn't work. The updater is still not deleted if user press cancel in the window in which he can choose the language.<br />
+      <br />
+      Concerning the solution proposed by Kshiro: I don't see very well how to use this code. The cancel button is already enable. I just want to remove installer if user press cancel.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jpderuiter</span><br />
+      <span class="post-time small text-muted">28th July 2009 13:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This is because the MUI_LANGDLL_DISPLAY macro calls Abort when the user canceled the Languages dialog, which causes an instant quit of the installer (see chapter 4.7.2.1.2 of the NSIS user manual).<br />
+      <br />
+      I think this some sort of bug in MUI.<br />
+      <br />
+      You can prevent this by removing</p>
+      <pre>
+<code>${if} $LANGUAGE == "cancel"<br />     Abort<br />${endif}</code>
+</pre>from the MUI_LANGDLL_DISPLAY macro (in Localization.nsh for MUI2)<br />
+      You need to add this then in the .onInit function after calling MUI_LANGDLL_DISPLAY.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">29th July 2009 01:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Maybe you should post a feature request for a MUI_CUSTOMFUNCTION_LANGDLL_ABORT MyOnUserAbort or something similar.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">skuallpa</span><br />
+      <span class="post-time small text-muted">29th July 2009 08:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for these answers<br />
+      <br />
+      So I have finally edit the file Localization.nsh (located in Program Files\NSIS\Contrib\Modern UI 2). I have add the following line<br />
+      <br /></p>
+      <pre>
+<code><br />Pop $LANGUAGE<br />${if} $LANGUAGE == "cancel"<br />      <font color="red">SelfDel::del   ;remove updater file</font> <br />      Abort<br />${endif}<br /></code>
+</pre><br />
+      <br />
+      and let in my installer the functions<br />
+      <br />
+      <pre>
+<code><br />!define MUI_CUSTOMFUNCTION_ABORT MyOnUserAbort<br /><br />Function  MyOnUserAbort<br />    SelfDel::del  ;remove updater file<br />FunctionEnd<br />        <br />Function .onInstSuccess<br />    SelfDel::del   ;remove updater file<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      So that, the updater file is deleted:<br />
+      <br />
+      -If the user directly press cancel during the language selection<br />
+      -If the user cancel the installation<br />
+      -after the installation was successful.<br />
+      <br />
+      Thanks again for your help
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

@@ -1,0 +1,270 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Text Replace - a little different" />
+
+  <title>Text Replace - a little different - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Text Replace - a little different</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=320008">Text Replace - a little different</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">The Raddish</span><br />
+      <span class="post-time small text-muted">16th June 2010 15:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Text Replace - a little different</strong><br />
+      I'm creating an installer for some new deployment notebook PC's that will not be connected to an external network (they'll never see 'the internet'). They have some apps that display data via HTML that don't really render well in IE (surprise surprise), so I am installing Firefox. I'm attempting to write the installer so that it is silent, but I'm losing some configurations. I'm also trying to make it so that the settings are not dependent on the version of Firefox which is installed so I do not want to crate a specific profile and copy it over, instead I would rather search for specific strings and replace as they appear.<br />
+      <br />
+      I'm also not a 'code guy' so I tend to approach the actual scripting with a 'brute force' way of doing things. I'd appreciate any pointers on a more elegant/efficient script.<br />
+      <br />
+      I'm using the MUI, scripting by hand as I am still learning the process. I'm attempting to <a href="http://www.john.bryntze.net/jbkb/index.php?title=OpenSource-kb4_Silent_installation_and_configuration_of_Firefox#Disable_bookmark_import_wizard" target="_blank">implement these changes</a> in the Firefox profile, but instead of using a batch script I'd like it all to be handled in the "Firefox" section of my overall installer.<br />
+      <br />
+      Essentially, I'd like to point to the newly installed firefox.js file, search for the following strings, and change the boolean state (true/false) as appropriate for the installation<br />
+      (default for these for strings is true, I want the script to find them if they exist and change them to false):<br /></p>
+      <pre>
+<code>pref("browser.shell.checkDefaultBrowser", false)<br />pref("app.update.enabled", false);<br />pref("extensions.update.enabled", false);<br />pref("browser.search.update", false);</code>
+</pre><br />
+      <br />
+      I'd like to write the script so that I can use an ini file as an input because I can reuse the same concept for editing a bunch of .cfg and .xml files in another installation that takes place later in my script.<br />
+      <br />
+      My brute-force attempt (one of many) follows. I've redacted much of my working script, but left some of the header stuff for scrutiny/improvement suggestions.<br />
+      <br />
+      <pre>
+<code><br />Name "FirefoxSilent"<br />OutFile "FirefoxSilent.exe"<br /><br />; Includes --------------------------<br />!include "MUI.nsh"<br />!include "TextReplace.nsh"<br />!include "StrRep.nsh"<br />!include "ReplaceInFile.nsh"<br /><br />; Defines ---------------------------<br />!define FIREFOX "Firefox 3.6.3\Firefox Setup 3.6.3\*.*"<br /><br /><br />; MUI Settings ----------------------<br /><br />!define MUI_ABORTWARNING<br />!define MUI_ICON "${INSTALL_ICON}"<br /><br />; Welcome page<br />!define MUI_WELCOMEPAGE_TITLE '${WELCOME_TITLE}'<br />!define MUI_WELCOMEPAGE_TITLE_3LINES<br />!insertmacro MUI_PAGE_WELCOME <br />; Components page<br />!insertmacro MUI_PAGE_COMPONENTS<br />; Instfiles page<br />!insertmacro MUI_PAGE_INSTFILES<br />; Finish page<br />!define MUI_FINISHPAGE_TITLE '${FINISH_TITLE}'<br />!define MUI_FINISHPAGE_TITLE_3LINES<br />!insertmacro MUI_PAGE_FINISH<br /> <br />; Language files<br />!insertmacro MUI_LANGUAGE "English"<br /> <br />; Reserve files<br />!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS<br /> <br />; MUI end --------------------------<br /><br />; Compression ----------------------<br />SetCompressor lzma<br /><br /><br />Section "FireFox" SEC01<br />        SectionIn RO ;make section mandatory for installation<br />        <br />        ; Installation settings for a silent install of Firefox<br />        WriteINIStr $TEMP\ffconfig.ini Install CloseAppNoPrompt true<br />        WriteINIStr $TEMP\ffconfig.ini Install InstallDirectoryName "Mozilla Firefox"<br />        WriteINIStr $TEMP\ffconfig.ini Install QuickLaunchShortcut false<br />        WriteINIStr $TEMP\ffconfig.ini Install DesktopShortcut false<br />        WriteINIStr $TEMP\ffconfig.ini Install StartMenuShortcuts true<br />        <br />        ; Use 7zip to unpack the installation files from the Firefox Setup executable from<br />        ; http://www.mozilla.com/en-US/firefox/personal.html<br />        ; Unpack to a directory with the same name as the downloaded file, then include that<br />        ; directory in the File /r statement below (/r means recursive)<br />        File /r "${FIREFOX}"<br />        ExecWait '"$INSTDIR\setup.exe" /INI=$TEMP\ffconfig.ini'<br />        <br />        ;  Disable bookmark import wizard<br />        WriteINIStr "C:\Program Files\Mozilla Firefox\override.ini" XRE EnableProfileMigrator false<br />        <br />        ; Don't make Firefox check to be default browser<br />/* THIS IS THE PART THAT DOESN'T WORK */<br />        !insertmacro ReplaceInFile "C:\Program Files\Mozilla Firefox\defaults\pref\firefox.js" 'pref("browser.shell.checkDefaultBrowser", true);' 'pref("browser.shell.checkDefaultBrowser", false);'<br /><br />        <br />        ; Cleanup<br />        Delete $TEMP\ffconfig.ini ;after install<br />SectionEnd</code>
+</pre><br />
+      I can't get the last piece to work, and I've tried multiple approaches to it, none of which will compile.<br />
+      <br />
+      I've tried using the following (and others) but none really works as intended in my application:<br />
+      <br />
+      <a href="http://nsis.sourceforge.net/ReplaceInFile" target="_blank">http://nsis.sourceforge.net/ReplaceInFile</a><br />
+      <a href="http://nsis.sourceforge.net/TextReplace_plugin" target="_blank">http://nsis.sourceforge.net/TextReplace_plugin</a>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">16th June 2010 17:40 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">If you're searching for a whole line you just need to read the old file line by line writing each to a new file. When you come across the line you want to change you write the amended line instead. When done you replace the old file with the new. You will want to use TrimNewLines in there too before doing the comparison.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">The Raddish</span><br />
+      <span class="post-time small text-muted">17th June 2010 16:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for the input, but I don't want to limit myself to just one line.<br />
+      <br />
+      For the Firefox unattended install it would work fine, but not for the rest of my install package usage. I'd like to use the same method for both.<br />
+      <br />
+      What's coming next is that I have a software package that I've installed, but it has a LOT of configuration files. Many of the configuration files are dependent on on input from the user to name the machine. These config files take a great deal of time to set up manually, and are easily prone to error if done incorrectly.<br />
+      <br />
+      My thoughts on proceeding go like this this:<br />
+      <br />
+      1. In my installer, I need to install the base software package and a patch, as well as adobe, firefox, and a couple other utilities. I've got all this working just fine.<br />
+      <br />
+      2. Create a default configuration. When configuring the software, I'll enter a string such as ZZREPLACEMEZZ as the name I'll need to enter when prompted. This name will be filtered down through numerous cfg, xml, ini, and bat files throughout the profile. (actually this step is already complete).<br />
+      <br />
+      3. I then have the installer copy over all the default profile installation files (created in step 2) and paste them into their respective directories. I have this step working also.<br />
+      <br />
+      4. Lastly, I'll prompt the user for the 'Machine Name' during the installation process, and use that string (e.g. 'Machine1') as the string that will overwrite every instance of 'ZZREPLACEMEZZ' in all of the configuration files in the profile. This is the part I'm having trouble with.<br />
+      <br />
+      I figure if I can get it to work in the Firefox profile stuff, I should be able to get it all working the same way for my other software profile. If I could do a blanket string search/replace for the root of the profile, and point to *.xml, *.ini, *.cfg, and *.bat as the files to perform the action instead of searching and replacing each file individually, that would be even better.<br />
+      <br />
+      Any pointers to this end would be greatly appreciated.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">The Raddish</span><br />
+      <span class="post-time small text-muted">17th June 2010 19:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Okay, I'm making a bit of progress. I'm using a model based on the TextReplace plugin found <a href="http://nsis.sourceforge.net/TextReplace_plugin" target="_blank">here</a>.<br />
+      <br /></p>
+      <pre>
+<code>Name</code><span style="color: #DD0000">"TextReplaceTest"
+<br /></span><span style="color: #0000BB">OutFile</span><span style="color: #DD0000">"TextReplaceTest_.exe"
+<br /><br /></span><span style="color: #007700">!include</span><span style="color: #DD0000">"TextReplace.nsh"
+<br /></span><span style="color: #007700">!include</span><span style="color: #DD0000">"FileFunc.nsh"
+<br /></span><span style="color: #007700">!include</span><span style="color: #DD0000">"TextFunc.nsh"
+<br /></span><span style="color: #007700">!include</span><span style="color: #DD0000">"WordFunc.nsh"
+<br /><br /></span><span style="color: #007700">Var</span><span style="color: #0000BB">INPUT_STR1</span><span style="color: #007700">;</span><span style="color: #DD0000">'pref("browser.shell.checkDefaultBrowser",true);'
+<br /></span><span style="color: #007700">Var</span><span style="color: #0000BB">OUTPUT_STR1</span><span style="color: #007700">;</span><span style="color: #DD0000">'pref("browser.shell.checkDefaultBrowser",false);'
+<br /><br /></span><span style="color: #007700">;Var</span><span style="color: #0000BB">FIREFOX_JS</span><span style="color: #007700">;</span><span style="color: #0000BB">FIREFOX_JS</span><span style="color: #DD0000">"C:\ProgramFiles\MozillaFirefox\defaults\pref\firefox.js"
+<br /><br /></span><span style="color: #0000BB">Pagecomponents
+<br />Pageinstfiles
+<br /><br />Section</span><span style="color: #DD0000">"firefox.js"</span><span style="color: #0000BB">Firefox
+<br />ReadINIStr$INPUT_STR1C</span><span style="color: #007700">:</span><span style="color: #0000BB">test</span><span style="color: #007700">.</span><span style="color: #0000BB">iniFirefox_jsIn1
+<br />ReadINIStr$OUTPUT_STR1C</span><span style="color: #007700">:</span><span style="color: #0000BB">test</span><span style="color: #007700">.</span><span style="color: #0000BB">iniFirefox_jsOut1
+<br /><br /></span><span style="color: #007700">;</span><span style="color: #0000BB">fromhttp</span><span style="color: #007700">:</span><span style="color: #FF8000">//nsis.sourceforge.net/Docs/AppendixE.html#E.1.2
+<br /></span><span style="color: #007700">${</span><span style="color: #0000BB">Locate</span><span style="color: #007700">}</span><span style="color: #DD0000">"C:\ProgramFiles""/L=F/M=firefox.js""FindFile"
+<br /></span><span style="color: #0000BB">IfErrors0</span><span style="color: #007700">+</span><span style="color: #0000BB">2
+<br />MessageBoxMB_OK</span><span style="color: #DD0000">"Error"</span><span style="color: #0000BB">IDOK</span><span style="color: #007700">+</span><span style="color: #0000BB">5
+<br /><br /></span><span style="color: #007700">${</span><span style="color: #0000BB">textreplace</span><span style="color: #007700">::</span><span style="color: #0000BB">FindInFile</span><span style="color: #007700">}</span><span style="color: #DD0000">"$R0""$INPUT_STR1""/S=1"</span><span style="color: #007700">$</span><span style="color: #0000BB">0
+<br />MessageBoxMB_OK</span><span style="color: #DD0000">"textreplace::FindInFile$\n$$0={$0}"
+<br /><br /></span><span style="color: #007700">${</span><span style="color: #0000BB">textreplace</span><span style="color: #007700">::</span><span style="color: #0000BB">ReplaceInFile</span><span style="color: #007700">}</span><span style="color: #DD0000">"$R0""$R0""$INPUT_STR1""$OUTPUT_STR1""/S=1/C=1/AO=1"</span><span style="color: #007700">$</span><span style="color: #0000BB">0
+<br />MessageBoxMB_OK</span><span style="color: #DD0000">"textreplace::ReplaceInFile$\n$$0={$0}"
+<br /><br /></span><span style="color: #007700">${</span><span style="color: #0000BB">textreplace</span><span style="color: #007700">::</span><span style="color: #0000BB">Unload</span><span style="color: #007700">}
+<br /></span><span style="color: #0000BB">SectionEnd
+<br /><br /><br /></span><span style="color: #007700">Function</span><span style="color: #0000BB">FindFile
+<br />StrCpy$R0$R9</span><span style="color: #007700">;</span><span style="color: #0000BB">$R0</span><span style="color: #007700">=</span><span style="color: #DD0000">"%path%\filename.ext"
+<br /></span><span style="color: #0000BB">StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">0StopLocate
+<br />Push</span><span style="color: #007700">$</span><span style="color: #0000BB">0
+<br />FunctionEnd
+<br /></span>
+
+<!-- php buffer end -->
+                
+                
+                
+</pre>
+      <hr />
+      <pre>
+        
+My ini file is currently:<br />
+</pre>
+      <pre>
+<code>[Firefox_js]<br />In1='pref("browser.shell.checkDefaultBrowser", true);'<br />Out1='pref("browser.shell.checkDefaultBrowser", false);'</code>
+</pre>
+      <pre>
+<br />What I'd like to do is get the script to keep searching the ini file until there are no more entries in the section.  Is this possible, or do I need to code it explicitly?
+                
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">The Raddish</span><br />
+      <span class="post-time small text-muted">17th June 2010 21:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Okay, I'm still noodling this out. As I mentioned before, I'm not a programmer.<br />
+      <br />
+      What if I do my above script a bit differently? For example, what if I do something like this:<br />
+      PHP Code:</p>
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #0000BB">Section</span><span style="color: #DD0000">"firefox.js"</span><span style="color: #0000BB">Firefox<br /></span><span style="color: #007700">;</span><span style="color: #0000BB">Findthefirefox</span><span style="color: #007700">.</span><span style="color: #0000BB">jsfile<br /></span><span style="color: #007700">${</span><span style="color: #0000BB">Locate</span><span style="color: #007700">}</span><span style="color: #DD0000">"C:\ProgramFiles""/L=F/M=firefox.js""FindFile"<br />
+      <br /></span><span style="color: #0000BB">loop</span><span style="color: #007700">:<br /></span><span style="color: #0000BB">CallGetReplaceText<br /></span><span style="color: #007700">Return<br />
+      <br />
+      ${</span><span style="color: #0000BB">textreplace</span><span style="color: #007700">::</span><span style="color: #0000BB">FindInFile</span><span style="color: #007700">}</span><span style="color: #DD0000">"$R0""$INPUT_STR""/S=1"</span><span style="color: #007700">$</span><span style="color: #0000BB">0<br />
+      MessageBoxMB_OK</span><span style="color: #DD0000">"textreplace::FindInFile$\n$$0={$0}"<br />
+      <br /></span><span style="color: #007700">${</span><span style="color: #0000BB">textreplace</span><span style="color: #007700">::</span><span style="color: #0000BB">ReplaceInFile</span><span style="color: #007700">}</span><span style="color: #DD0000">"$R0""$R0""$INPUT_STR""$OUTPUT_STR""/S=1/C=1/AO=1"</span><span style="color: #007700">$</span><span style="color: #0000BB">0<br />
+      MessageBoxMB_OK</span><span style="color: #DD0000">"textreplace::ReplaceInFile$\n$$0={$0}"<br />
+      <br /></span><span style="color: #007700">${</span><span style="color: #0000BB">textreplace</span><span style="color: #007700">::</span><span style="color: #0000BB">Unload</span><span style="color: #007700">}<br /></span><span style="color: #0000BB">done</span><span style="color: #007700">;exit</span><span style="color: #0000BB">theloop<br />
+      SectionEnd<br />
+      <br /></span><span style="color: #007700">Function</span><span style="color: #0000BB">GetReplaceText<br /></span><span style="color: #007700">;</span><span style="color: #0000BB">Openaconfigurationfile<br /></span><span style="color: #007700">;</span><span style="color: #0000BB">Lookatcounter</span><span style="color: #007700">.If</span><span style="color: #0000BB">counter</span><span style="color: #007700">=</span><span style="color: #0000BB">0</span><span style="color: #007700">,</span><span style="color: #0000BB">startatthetopofthefile<br /></span><span style="color: #007700">;</span><span style="color: #0000BB">Readtwolines<br /></span><span style="color: #007700">;</span><span style="color: #0000BB">Setthefirstline</span><span style="color: #007700">as</span><span style="color: #0000BB">$INPUT_STR<br /></span><span style="color: #007700">;</span><span style="color: #0000BB">Setthesecondline</span><span style="color: #007700">as</span><span style="color: #0000BB">$OUTPUT_STR<br /></span><span style="color: #007700">;</span><span style="color: #0000BB">Incrementacountertoremembermylocation</span><span style="color: #007700">for</span><span style="color: #0000BB">thenext</span><span style="color: #007700">function</span><span style="color: #0000BB">call<br /></span><span style="color: #007700">;If</span><span style="color: #0000BB">lineisblank</span><span style="color: #007700">or</span><span style="color: #0000BB">endoffile</span><span style="color: #007700">,</span><span style="color: #0000BB">setanerrortojumpoutoftheloop<br />
+      FunctionEnd<br />
+      <br />
+      <br /></span><span style="color: #007700">Function</span><span style="color: #0000BB">FindFile<br />
+      StrCpy$R0$R9</span><span style="color: #007700">;</span><span style="color: #0000BB">$R0</span><span style="color: #007700">=</span><span style="color: #DD0000">"%path%\filename.ext"<br /></span><span style="color: #0000BB">StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">0StopLocate<br />
+      Push</span><span style="color: #007700">$</span><span style="color: #0000BB">0<br />
+      FunctionEnd<br /></span></span> <!-- php buffer end -->
+      <hr />
+      At the moment, the configuration file would look like this:<br />
+      PHP Code:
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #0000BB">pref</span><span style="color: #007700">(</span><span style="color: #DD0000">"browser.shell.checkDefaultBrowser"</span><span style="color: #007700">,</span><span style="color: #0000BB">true</span><span style="color: #007700">);<br /></span><span style="color: #0000BB">pref</span><span style="color: #007700">(</span><span style="color: #DD0000">"browser.shell.checkDefaultBrowser"</span><span style="color: #007700">,</span><span style="color: #0000BB">false</span><span style="color: #007700">);<br /></span><span style="color: #0000BB">pref</span><span style="color: #007700">(</span><span style="color: #DD0000">"app.update.enabled"</span><span style="color: #007700">,</span><span style="color: #0000BB">true</span><span style="color: #007700">);<br /></span><span style="color: #0000BB">pref</span><span style="color: #007700">(</span><span style="color: #DD0000">"app.update.enabled"</span><span style="color: #007700">,</span><span style="color: #0000BB">false</span><span style="color: #007700">);<br /></span><span style="color: #0000BB">pref</span><span style="color: #007700">(</span><span style="color: #DD0000">"extensions.update.enabled"</span><span style="color: #007700">,</span><span style="color: #0000BB">true</span><span style="color: #007700">);<br /></span><span style="color: #0000BB">pref</span><span style="color: #007700">(</span><span style="color: #DD0000">"extensions.update.enabled"</span><span style="color: #007700">,</span><span style="color: #0000BB">false</span><span style="color: #007700">);<br /></span><span style="color: #0000BB">pref</span><span style="color: #007700">(</span><span style="color: #DD0000">"browser.search.update"</span><span style="color: #007700">,</span><span style="color: #0000BB">true</span><span style="color: #007700">);<br /></span><span style="color: #0000BB">pref</span><span style="color: #007700">(</span><span style="color: #DD0000">"browser.search.update"</span><span style="color: #007700">,</span><span style="color: #0000BB">false</span><span style="color: #007700">);</span> Now I just have to figure out how to make this logic flow work. Anyone have any input?<br />
+      <br /></span>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">The Raddish</span><br />
+      <span class="post-time small text-muted">22nd June 2010 17:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I got it to work, but it's messy. Any code optimization would be appreciated.<br />
+      <br />
+      The input search/replace file is called ffconfig.txt, and would be formatted as in my post above.<br />
+      <br />
+      PHP Code:</p>
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #0000BB">Name</span><span style="color: #DD0000">"LineReplace"<br /></span><span style="color: #0000BB">OutFile</span><span style="color: #DD0000">"LineReplace.exe"<br /></span><span style="color: #0000BB">InstallDir</span><span style="color: #DD0000">"$DESKTOP"<br />
+      <br /></span><span style="color: #007700">!include</span><span style="color: #DD0000">"FileFunc.nsh"<br /></span><span style="color: #007700">!include</span><span style="color: #DD0000">"TextFunc.nsh"<br /></span><span style="color: #007700">!include</span><span style="color: #DD0000">"WordFunc.nsh"<br />
+      <br /></span><span style="color: #007700">!</span><span style="color: #0000BB">defineFFConfig</span><span style="color: #DD0000">"C:\ffconfig.txt"<br />
+      <br /></span><span style="color: #007700">;</span><span style="color: #0000BB">FIREFOX_JS</span><span style="color: #DD0000">"C:\ProgramFiles\MozillaFirefox\defaults\pref\firefox.js"</span><span style="color: #007700">(default</span><span style="color: #0000BB">location</span><span style="color: #007700">)<br />
+      <br />
+      Var</span><span style="color: #0000BB">FIREFOX_JS<br />
+      <br />
+      SectionSEC01<br /></span><span style="color: #007700">;</span><span style="color: #0000BB">fromhttp</span><span style="color: #007700">:</span><span style="color: #FF8000">//nsis.sourceforge.net/Docs/AppendixE.html#E.1.2<br /></span><span style="color: #007700">${</span><span style="color: #0000BB">Locate</span><span style="color: #007700">}</span><span style="color: #DD0000">"C:\ProgramFiles""/L=F/M=firefox.js""Lookie"<br /></span><span style="color: #0000BB">IfErrors0</span><span style="color: #007700">+</span><span style="color: #0000BB">2<br />
+      MessageBoxMB_OK</span><span style="color: #DD0000">"firefox.jsnotfound"</span><span style="color: #0000BB">IDOK</span><span style="color: #007700">+</span><span style="color: #0000BB">2<br />
+      StrCpy$FIREFOX_JS$R0<br />
+      MessageBoxMB_OK</span><span style="color: #DD0000">'Firefoxconfigurationfileislocatedat:"$FIREFOX_JS"'<br /></span><span style="color: #0000BB">SetOutPath$INSTDIR<br />
+      File</span><span style="color: #DD0000">"${FFConfig}"<br /></span><span style="color: #0000BB">CallReadConfig<br />
+      Delete</span><span style="color: #DD0000">"$INSTDIR\ffconfig.txt"<br /></span><span style="color: #0000BB">SectionEnd<br />
+      <br /></span><span style="color: #007700">Function</span><span style="color: #0000BB">ReadConfig<br /></span><span style="color: #007700">;$</span><span style="color: #0000BB">0</span><span style="color: #007700">-</span><span style="color: #0000BB">configfile<br /></span><span style="color: #007700">;$</span><span style="color: #0000BB">1</span><span style="color: #007700">-</span><span style="color: #0000BB">currentline<br /></span><span style="color: #007700">;$</span><span style="color: #0000BB">2</span><span style="color: #007700">-</span><span style="color: #0000BB">nextline<br />
+      ClearErrors<br />
+      FileOpen</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"$DESKTOP\ffconfig.txt"</span><span style="color: #0000BB">r<br />
+      IfErrorserror<br />
+      readtwolines</span><span style="color: #007700">:<br /></span><span style="color: #0000BB">FileRead</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #007700">$</span><span style="color: #0000BB">1</span><span style="color: #007700">;</span><span style="color: #0000BB">readlinefromtargetfile<br />
+      IfErrorsclose</span><span style="color: #007700">;</span><span style="color: #0000BB">checktosee</span><span style="color: #007700">if</span><span style="color: #0000BB">endofline<br />
+      FileRead</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #007700">$</span><span style="color: #0000BB">2</span><span style="color: #007700">;</span><span style="color: #0000BB">readnextlinefromtargetfile<br /></span><span style="color: #007700">${</span><span style="color: #0000BB">TrimNewLines</span><span style="color: #007700">}$</span><span style="color: #0000BB">1</span><span style="color: #007700">$</span><span style="color: #0000BB">3</span><span style="color: #007700">;</span><span style="color: #0000BB">clearrn</span><span style="color: #007700">for</span><span style="color: #0000BB">currentline<br /></span><span style="color: #007700">${</span><span style="color: #0000BB">TrimNewLines</span><span style="color: #007700">}$</span><span style="color: #0000BB">2</span><span style="color: #007700">$</span><span style="color: #0000BB">4</span><span style="color: #007700">;</span><span style="color: #0000BB">clearrn</span><span style="color: #007700">for</span><span style="color: #0000BB">nextline<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">1</span><span style="color: #007700">$</span><span style="color: #0000BB">3<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">2</span><span style="color: #007700">$</span><span style="color: #0000BB">4<br />
+      MessageBoxMB_OK</span><span style="color: #DD0000">'$$1:$1$\r$\n$$2:$2$\r$\n'<br /></span><span style="color: #0000BB">CallReplaceline<br />
+      Gotoreadtwolines<br />
+      <br />
+      close</span><span style="color: #007700">:<br /></span><span style="color: #0000BB">FileClose</span><span style="color: #007700">$</span><span style="color: #0000BB">0<br />
+      gotoend<br />
+      <br />
+      error</span><span style="color: #007700">:<br /></span><span style="color: #0000BB">SetErrors<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #DD0000">''<br />
+      <br /></span><span style="color: #0000BB">end</span><span style="color: #007700">:<br /></span><span style="color: #0000BB">FunctionEnd<br />
+      <br /></span><span style="color: #007700">Function</span><span style="color: #0000BB">Replaceline<br /></span><span style="color: #007700">;</span><span style="color: #0000BB">from</span><span style="color: #007700">:</span><span style="color: #0000BB">http</span><span style="color: #007700">:</span><span style="color: #FF8000">//nsis.sourceforge.net/Replacing_Lines_in_a_Text_File<br /></span><span style="color: #007700">;$</span><span style="color: #0000BB">3</span><span style="color: #007700">-</span><span style="color: #0000BB">handletofirefox</span><span style="color: #007700">.</span><span style="color: #0000BB">jsfile<br /></span><span style="color: #007700">;</span><span style="color: #0000BB">$R1</span><span style="color: #007700">-</span><span style="color: #0000BB">tempfile<br /></span><span style="color: #007700">;$</span><span style="color: #0000BB">4</span><span style="color: #007700">-</span><span style="color: #0000BB">handletotempfile<br /></span><span style="color: #007700">;$</span><span style="color: #0000BB">5</span><span style="color: #007700">-</span><span style="color: #0000BB">textstringtochangefromconfigfile<br />
+      ClearErrors<br />
+      FileOpen</span><span style="color: #007700">$</span><span style="color: #0000BB">3</span><span style="color: #DD0000">"$FIREFOX_JS""r"</span><span style="color: #007700">;</span><span style="color: #0000BB">opentargetfile</span><span style="color: #007700">for</span><span style="color: #0000BB">reading<br />
+      GetTempFileName$R1</span><span style="color: #007700">;</span><span style="color: #0000BB">get</span><span style="color: #007700">new</span><span style="color: #0000BB">tempfilename<br />
+      FileOpen</span><span style="color: #007700">$</span><span style="color: #0000BB">4$R1</span><span style="color: #DD0000">"w"</span><span style="color: #007700">;</span><span style="color: #0000BB">opentempfile</span><span style="color: #007700">for</span><span style="color: #0000BB">writing<br />
+      MessageBoxMB_OK</span><span style="color: #DD0000">'$$1:$1$\r$\n$$2:$2$\r$\n$$R0:$R0$\r$\n$$R1:$R1'<br /></span><span style="color: #0000BB">loop</span><span style="color: #007700">:<br /></span><span style="color: #0000BB">FileRead</span><span style="color: #007700">$</span><span style="color: #0000BB">3</span><span style="color: #007700">$</span><span style="color: #0000BB">5</span><span style="color: #007700">;</span><span style="color: #0000BB">readlinefromtargetfile<br />
+      IfErrorsdone</span><span style="color: #007700">;</span><span style="color: #0000BB">check</span><span style="color: #007700">if</span><span style="color: #0000BB">endoffilereached<br />
+      StrCmp</span><span style="color: #007700">$</span><span style="color: #0000BB">5</span><span style="color: #DD0000">"$1$\r$\n"</span><span style="color: #0000BB">0</span><span style="color: #007700">+</span><span style="color: #0000BB">2</span><span style="color: #007700">;</span><span style="color: #0000BB">comparelinewithsearchstringwithCR</span><span style="color: #007700">/</span><span style="color: #0000BB">LF<br />
+      StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">5</span><span style="color: #DD0000">"$2$\r$\n"</span><span style="color: #007700">;</span><span style="color: #0000BB">changeline<br />
+      StrCmp</span><span style="color: #007700">$</span><span style="color: #0000BB">5</span><span style="color: #DD0000">"$1"</span><span style="color: #0000BB">0</span><span style="color: #007700">+</span><span style="color: #0000BB">2</span><span style="color: #007700">;</span><span style="color: #0000BB">comparelinewithsearchstringwithoutCR</span><span style="color: #007700">/</span><span style="color: #0000BB">LF</span><span style="color: #007700">(</span><span style="color: #0000BB">attheendofthefile</span><span style="color: #007700">)<br /></span><span style="color: #0000BB">StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">5</span><span style="color: #DD0000">"$2"</span><span style="color: #007700">;</span><span style="color: #0000BB">changeline<br />
+      FileWrite</span><span style="color: #007700">$</span><span style="color: #0000BB">4</span><span style="color: #007700">$</span><span style="color: #0000BB">5</span><span style="color: #007700">;</span><span style="color: #0000BB">writechanged</span><span style="color: #007700">or</span><span style="color: #0000BB">unchangedlinetotempfile<br />
+      Gotoloop<br />
+      <br />
+      done</span><span style="color: #007700">:<br /></span><span style="color: #0000BB">FileClose</span><span style="color: #007700">$</span><span style="color: #0000BB">3</span><span style="color: #007700">;</span><span style="color: #0000BB">closetargetfile<br />
+      FileClose</span><span style="color: #007700">$</span><span style="color: #0000BB">4</span><span style="color: #007700">;</span><span style="color: #0000BB">closetempfile<br />
+      Delete</span><span style="color: #DD0000">"$FIREFOX_JS"</span><span style="color: #007700">;</span><span style="color: #0000BB">deletetargetfile<br />
+      CopyFiles</span><span style="color: #007700">/</span><span style="color: #0000BB">SILENT$R1</span><span style="color: #DD0000">"$FIREFOX_JS"</span><span style="color: #007700">;</span><span style="color: #0000BB">copytempfiletotargetfile<br />
+      Delete$R1</span><span style="color: #007700">;</span><span style="color: #0000BB">deletetempfile<br />
+      FunctionEnd<br />
+      <br /></span><span style="color: #007700">Function</span><span style="color: #0000BB">Lookie<br />
+      StrCpy$R0$R9<br /></span><span style="color: #007700">;</span><span style="color: #0000BB">$R0</span><span style="color: #007700">=</span><span style="color: #DD0000">"%path%\firefox.js"<br /></span><span style="color: #0000BB">StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">0StopLocate<br />
+      Push</span><span style="color: #007700">$</span><span style="color: #0000BB">0<br />
+      FunctionEnd<br /></span></span> <!-- php buffer end -->
+      <hr />
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

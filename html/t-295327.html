@@ -1,0 +1,118 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="execwait problems" />
+
+  <title>execwait problems - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">execwait problems</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=295327">execwait problems</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">cinvoice</span><br />
+      <span class="post-time small text-muted">31st July 2008 12:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>execwait problems</strong><br />
+      Hello everyone!<br />
+      A bit of a problem appeared when using ExecWait<br />
+      <br />
+      Here's a piece of my NSIS script:<br />
+      <br />
+      ClearErrors<br />
+      ExecWait '"$INSTDIR\returnZero.exe"'<br />
+      IfErrors 0 errors<br />
+      Goto done<br />
+      errors:<br />
+      MessageBox MB_OK "Errors!"<br />
+      Abort<br />
+      done:<br />
+      <br />
+      <br />
+      returnZero is a dummy, a program written in C++ that just can't be more simple:<br />
+      <br />
+      int main(int argc, char* argv[])<br />
+      {<br />
+      exit(0);<br />
+      }<br />
+      <br />
+      But the installer goes to <b>errors</b> label anyway, as if the return code of my program was not 0.<br />
+      <br />
+      Could anybody please help me with this prob?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">LoRd_MuldeR</span><br />
+      <span class="post-time small text-muted">31st July 2008 14:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The error flag will only be raised if that executable could not be run (e.g. file not found). This is not related to the exit code at all. To capture the exit code, you must use another variable. Like this:<br />
+      <br /></p>
+      <pre>
+<code>ClearErrors<br />ExecWait '"$INSTDIR\returnZero.exe"' $0<br />IfErrors errors<br />StrCmp $0 0 done nonezeroexitcode<br /><br />errors:<br />  MessageBox MB_OK "Faild to run executable!"<br />  Abort<br /><br />nonezeroexitcode:<br />  MessageBox MB_OK "Executable returned exit code != 0"<br />  Abort<br /><br />done:</code>
+</pre><br />
+      <br />
+      Also I think you used "IfErrors" wrongly!<br />
+      <br />
+      Your code says: IF errors THEN nothing ELSE goto label "errors"<br />
+      But it should be: IF errors THEN goto label "errors" (ELSE nothing)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">cinvoice</span><br />
+      <span class="post-time small text-muted">31st July 2008 20:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ow, thank you alot. It started working :) (By the way, the problem also was I messed up $INSTDIR and $EXEDIR)<br />
+      <br /></p>
+
+      <blockquote>
+        The error flag will only be raised if that executable could not be run (e.g. file not found). This is not related to the exit code at all
+      </blockquote>Hm, I'm a bit condused by this - according to ExecWait description,<br />
+
+      <blockquote>
+        4.9.1.4 ExecWait<br />
+        command [user_var(exit code)]<br />
+        Execute the specified program and wait for the executed process to quit. See Exec for more information. If no output variable is specified ExecWait sets the error flag if the program executed returns a nonzero error code, or if there is an error. If an output variable is specified, ExecWait sets the variable with the exit code (and only sets the error flag if an error occurs; if an error occurs the contents of the user variable are undefined).
+      </blockquote>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">LoRd_MuldeR</span><br />
+      <span class="post-time small text-muted">31st July 2008 21:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You are right. If you omit the variable, then ExecWait will indeed raise the error flag for a none-zero exit code. But then you cannot distinguish between an error (process could not be started) and a none-zero exit code (process did run, but returned a value != zero). It's your decision what you need. But make sure you use IfErrors correctly: The installer will jump to the <i>first</i> label when there was an error and it will jump to the <i>second</i> label when there was NO error. The second label can be omitted, if not needed. See my code above ...</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

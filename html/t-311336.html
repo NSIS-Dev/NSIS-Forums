@@ -1,0 +1,132 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="[delete user account] remaining home directory" />
+
+  <title>[delete user account] remaining home directory - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">[delete user account] remaining home directory</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=311336">[delete user account] remaining home directory</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">ginglese</span><br />
+      <span class="post-time small text-muted">2nd September 2009 10:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>[delete user account] remaining home directory</strong><br />
+      Hi all,<br />
+      <br />
+      During my install I'm creating a user account (postgres). Then When uninstalling I'm using the UserMgr plugin to delete a user account.<br />
+      User account is correctly deleted but the user home directory remain and the next time i install the software i have a new home directoy named postgres.%computer name%.001 ...<br />
+      <br />
+      I made a lot of search on the web to find a way do delete this remaining directory and ended with the only solution that is to retrieve the user home directory thanks to the ProfileImagePath registry keys.<br />
+      <br />
+      But to do so I need to retreive first the user profil SID, then go to the registry and look to ProfileImagePath keys.<br />
+      <br />
+      here is an exemple made with win32 c# (i guess)<br /></p>
+      <pre>
+<code><br />require 'win32/security'<br />require 'win32/registry'<br /><br />key = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\"<br />usr = 'some_user'<br /><br />sec = Win32::Security::SID.open(usr)<br />key += sec.to_s<br /><br />Win32::Registry::HKEY_LOCAL_MACHINE.open(key) do |reg|<br />  puts reg['ProfileImagePath']<br />end<br /></code>
+</pre><br />
+      <br />
+      to do the same with C++ win32 code i need to use LookupAccountName then convert SID to string ...<br />
+      <br />
+      do you have better solution ? or is nsis providing something for that ?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jpderuiter</span><br />
+      <span class="post-time small text-muted">2nd September 2009 13:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well, can't you just get the home directory with the UserMgr plugin (UserMgr::GetUserInfo) before deleting the account, then delete the account, and then delete the Home directory you just got before?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">ginglese</span><br />
+      <span class="post-time small text-muted">2nd September 2009 13:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi,<br />
+      Thanks for the tip but the Home directory from UserMgr plugin is always empty (you can look at a user account with the administrator tools, you have access to the home directory field).</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">ginglese</span><br />
+      <span class="post-time small text-muted">2nd September 2009 13:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hello everybody,<br />
+      <br />
+      I think I found a way (replace "pilgrim" and "postgres" by your server name and user account name):<br />
+      <br />
+      -LookupAccountNameW retrieves SID from user name<br />
+      -ConvertSidToStringSid converts SID to something like "S-1-5-21-1801674531-*********-**********-***"<br />
+      -Then retrieve "ProfileImagePath" from HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList + string SID<br />
+      -End by expending registry values.<br />
+      <br /></p>
+      <pre>
+<code><br /> System::Call '*(&amp;w${NSIS_MAX_STRLEN})i.R8'<br /> System::Call 'advapi32::LookupAccountNameW(w "pilgrim",w "postgres",i R8,*i ${NSIS_MAX_STRLEN}, w .R1, *i ${NSIS_MAX_STRLEN}, *i .r0)i .r1'<br /> System::Call 'advapi32::ConvertSidToStringSid(i R8,*t .R1)i .r0'<br /><br /> ReadRegStr $0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$R1" "ProfileImagePath"<br /> ExpandEnvStrings $0 $0<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jpderuiter</span><br />
+      <span class="post-time small text-muted">2nd September 2009 15:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">When the Home directory from UserMgr is empty, it means that it's location has never been modified, and thus it is the default location.<br />
+      But I'm not sure right now how to get this default location...<br />
+      <br />
+      I can add a GetUserSID function to UserMgr to simplify your solution, but I guess it's not really needed right now.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">ginglese</span><br />
+      <span class="post-time small text-muted">2nd September 2009 15:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It would be great to have it in UserMgr plugin.<br />
+      You may also want to add GetUserStringSID.<br />
+      <br />
+      Someone may also need the reverse function GetUserNameFromSID...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jpderuiter</span><br />
+      <span class="post-time small text-muted">2nd September 2009 19:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK, done.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

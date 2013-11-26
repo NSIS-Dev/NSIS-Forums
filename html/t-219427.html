@@ -1,0 +1,78 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="MSN Messenger and NSIS (Now Playing)" />
+
+  <title>MSN Messenger and NSIS (Now Playing) - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">MSN Messenger and NSIS (Now Playing)</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=219427">MSN Messenger and NSIS (Now Playing)</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">saivert</span><br />
+      <span class="post-time small text-muted">21st June 2005 23:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>MSN Messenger and NSIS (Now Playing)</strong><br />
+      I'm working on a NSIS script that uses the System plug-in in order to set the Now Playing item in MSN Messenger.<br />
+      <br />
+      Here is the script, but something is wrong. CAn someone point it out for me?<br />
+      <br /></p>
+      <pre>
+<code><br />Function Page1Leave<br />ReadIniStr $R0 "$PLUGINSDIR\msnmsgr-nowplaying.ini" "Settings" "State"<br />StrCmp $R0 0 next<br />Abort<br /><br />next:<br />ReadIniStr $R1 "$PLUGINSDIR\msnmsgr-nowplaying.ini" "Field 1" "State"<br />        <br />StrCpy $TITLE $R1<br />StrCpy $ARTIST "Saivert"<br />StrCpy $ALBUM "The last one"<br /><br />StrCpy $R4 'Music\01\0{0} - {1}\0 $ARTIST \0 $TITLE \0 $ALBUM \0WMContentID'<br />StrLen $R5 $R4<br />IntOp $R5 $R5 * 2<br />System::Alloc /NOUNLOAD 256<br />Pop $R6<br />System::Call /NOUNLOAD "*$R6(&amp;w128 R4.)"<br />System::Call /NOUNLOAD "*(i 0x547, i R5, i R1) i .R2"<br />FindWindow $R3 "MsnMsgrUIManager"<br />SendMessage $R3 ${WM_COPYDATA} $HWNDPARENT $R2<br />System::Free /NOUNLOAD $R2<br />System::Free $R6<br /><br />; Write to IO ini file<br />WriteIniStr "$PLUGINSDIR\msnmsgr-nowplaying.ini" "Field 3" "Text" $R4<br />SendMessage $HWNDPARENT 0x408 0 0 ; Reload page<br />Abort<br /><br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      The code is a fragment of the entire script. I'm using an InstallOptions page to present a text field where one can enter a title, the ARTIST and ALBUM is variables declared with <b>Var</b> and set to static values using <b>StrCpy</b>. When user clicks the next button, the function above gets called, and it just executes the commands past <i>next</i> label and then keeps the page by using an undocumented message to reload the page. This is so I can write to the IO ini file and have the new data reloaded by InstallOptions.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">saivert</span><br />
+      <span class="post-time small text-muted">30th June 2005 17:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I guess none of you are interested in this. It didn't take long before this post ended up on page three. So here is an update anyway:<br />
+      <br />
+      I have rewritten the code to use wsprintfW as in ShaneH's code over at MsnFanatics.com, but it's still not working.<br />
+      <br />
+      I saw some VB code there that used a structure to hold the title, artist and album info (pluss WMCOntentID) but later code just uses a string with literal "\0" sequences in it.<br />
+      <br />
+      The code so far:<br /></p>
+      <pre>
+<code><br />Function Page1Leave<br />  ReadIniStr $R0 "$PLUGINSDIR\msnmsgr-nowplaying.ini" "Settings" "State"<br />  StrCmp $R0 0 next<br />  StrCmp $R0 5 clear<br />  <br />  clear:<br />    FindWindow $R0 "#32770" "" $HWNDPARENT 0<br />    GetDlgItem $R0 $R0 1203<br />    SendMessage $R0 0xC 0 "STR:"<br />    Abort<br />  next:<br />ReadIniStr $R0 "$PLUGINSDIR\msnmsgr-nowplaying.ini" "Field 4" "State"<br /><br />System::Alloc 1024<br />Pop $R1<br />; Set up string to send the MSN Messenger<br />; A backslash at the end of line means span next line.<br />; I needed to do this in order to keep the layout on<br />; the forum neat.<br />System::Call 'user32::wsprintfW(i R1, w s, i 1, w "{0} - {1}", w R0,\<br /> w "Artist", w "Album", w "WMContentID") i..?c'\<br /> "\\0Music\\0%d\\0%s\\0%s\\0%s\\0%s\\0%s\\0"<br /><br />System::Call "kernel32::lstrlenW(i R1) i.R2"<br />IntOp $R2 $R2 * 2<br /><br />System::Call "*(i 0x547, i R2, i R1) i .R3"<br />StrCpy $R4 0<br />nextwnd:<br />  FindWindow $R5 "MsnMsgrUIManager" "" 0 $R4<br />  StrCpy $R4 $R5<br />  SendMessage $R5 ${WM_COPYDATA} $HWNDPARENT $R3 /TIMEOUT=1000<br />  StrCmp $R5 0 +1 nextwnd<br />System::Free $R3<br /><br />; get the complete string<br />System::Call "*$R1(&amp;w1024 .R6)"<br />System::Free $R1<br /><br />; Write to IO ini file<br />;WriteIniStr "$PLUGINSDIR\msnmsgr-nowplaying.ini" "Field 7" "State" $R6<br />;SendMessage $HWNDPARENT 0x408 0 0 ; Reload page<br />; we just set the text<br />FindWindow $R0 "#32770" "" $HWNDPARENT 0<br />GetDlgItem $R0 $R0 1206<br />SendMessage $R0 0xC 0 "STR:$R6"<br /><br /><br />Abort<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      You can download the latest 7z archive with all the files here:<br />
+      <a href="http://saivert.inthegray.com/download.php?get=Li91cGxvYWRzL25zaXMvbXNubXNnci1ub3dwbGF5aW5nLjd6" target="_blank">msnmsgr-nowplaying.7z (34kB)</a>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

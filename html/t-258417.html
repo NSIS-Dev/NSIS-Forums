@@ -1,0 +1,142 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Updating Space required after setting $INSTDIR" />
+
+  <title>Updating Space required after setting $INSTDIR - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Updating Space required after setting $INSTDIR</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=258417">Updating Space required after setting $INSTDIR</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">27th October 2006 20:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Updating Space required after setting $INSTDIR</strong><br />
+      In my installer I am copying a 100MB file from a CD to the installation directory using FileCopy. The installer first does MUI_PAGE_COMPONENTS, then asks where to find the file from the CD (called arc.sar), and after that gets to the MUI_PAGE_DIRECTORY. What I want the installer to do is first get $INSTDIR on the DIRECTORY page, then check if $INSTDIR\arc.sar exists, and then substract arc.sar's size from the required free space, updating the Space Required: label on that same page, the DIRECTORY page.<br />
+      <br />
+      Some parts of the script:<br /></p>
+      <pre>
+<code><br />  !insertmacro MUI_PAGE_COMPONENTS<br />  ;Custom page: asks where to find arc.sar<br />  Page custom GetSarLocation CheckSarLocation<br />  ;Find arc.sar in $INSTDIR and substract filesize<br />  !define MUI_PAGE_CUSTOMFUNCTION_PRE CheckExistingSar<br />  !insertmacro MUI_PAGE_DIRECTORY<br />  !insertmacro MUI_PAGE_INSTFILES<br /><br />Function CheckExistingSar<br />  IfFileExists "$INSTDIR\arc.sar" 0 NoExistingSar<br />  Push "$INSTDIR\arc.sar"<br />  Call FileSizeNew<br />  Pop $EXISTING_SAR_SIZE<br />  IntOp $EXISTING_SAR_SIZE $EXISTING_SAR_SIZE % -1000<br />  SectionGetSize CommonInstall $2<br />  IntOp $2 $2 - EXISTING_SAR_SIZE<br />  SectionSetSize CommonInstall $2<br /><br />  NoExistingSar:<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      As you can see I've tried to use PAGE_CUSTOMFUNCTION_PRE on PAGE_DIRECTORY, and indeed the function CheckExistingSar updates the size of the CommonInstall section succesfully if it can find arc.sar. Only the 'Space required' value does not change, and the CheckExistingSar function is in fact called only once. Entering a different install path does not call the function again.<br />
+      <br />
+      I've read some hints about using FindWindow etc commands to manually influence the label, but I have no clue how to go about this. Any help would be greatly appreciated.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">28th October 2006 14:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You should call the CheckExistingSar function in .onVerifyInstDir. That'd update the required size every time the installation directory changes.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">28th October 2006 15:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Obviously I'm not yet used to the way NSIS works... Thanks for the tip.<br />
+      <br />
+      Because .onVerifyInstDir is called multiple times, I had to create an empty, hidden section that I set to a certain size (instead of decreasing the size of CommonInstall, because that would keep decreasing each time the function is called).<br />
+      <br /></p>
+      <pre>
+<code>Section "-Install Nothing" EmptyInstall<br />  NOP<br />SectionEnd<br /><br />Function .onVerifyInstDir<br />  IfFileExists "$INSTDIR\arc.sar" 0 NoExistingSar<br /><br />  &lt;get filesize of arc.sar in $INSTDIR&gt;<br />  &lt;divide $EXISTING_SAR_SIZE by 1024 and round it&gt;<br /><br />  IntOp $2 -1 * $EXISTING_SAR_SIZE<br />  SectionSetSize EmptyInstall $2<br /><br />  NoExistingSar:<br />FunctionEnd</code>
+</pre><br />
+      <br />
+      The first problem is that when I enter .onVerifyInstDir for the first time, before doing anything, NSIS tells me that EmptyInstall is 4812 kB large, which seems kind of large for a NOP...<br />
+      The second problem is that, even while I succesfully SectionSetSize EmptyInstall to be -100880 kB large, the Space required field remains unchanged. If I set EmptyInstall to +100880kB, it still doesn't update anything. Am I forgetting something?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">28th October 2006 15:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You're setting the size of your first section and not the new section. You need to use ${EmptyInstall} with section commands. It's a define, so you must use curly brackets with it. If you don't, SectionSetSize will try to get a number out of the string "EmptyInstall" and will always get to zero, which is the index of the first section.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">28th October 2006 16:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You are, of course, correct. This is the biggest problem I have with learning NSIS, I cannot find any documentation about the basic syntax. Just these things like what {} mean, how I put variables in a string, the very basic stuff. I'm using trial and error, which is probably the worst possible way to figure it out...<br />
+      <br />
+      This works... Kind of. .onVerifyInstDir is however not called often enough. For example when I start install and reach the DIRECTORY page normally, it does not verify the default directory that is already filled in. Going Back and then Next again doesn't update it either. Typing a different directory then pressing Tab, still nothing.<br />
+      I have to click 'browse' or 'next' before it will enter .onVerifyInstDir, and I cannot click 'next' because the installer thinks I don't have enough space (while I do, because I'll be overwriting arc.sar).<br />
+      <br />
+      I could add an extra CheckExistingSar call in the PAGE_PRE function, but that still doesn't solve the problem of manually typing in an installation directory. I'd need it to update every time I type a character, not just when I change the Drive letter at the front.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">28th October 2006 16:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well, it's all there in the documentation. The description for `Section` points to the fact that the section index is !define. However, there's no example, it doesn't link to !define and doesn't explain the consequences. I've updated the documentation to fix those problems and added a few code examples in the description for Section(Get|Set)X.<br />
+      <br />
+      .onVerifyInstDir is only called when the installation directory is changed and is still valid. If $INSTDIR is invalid to start with, .onVerifyInstDir will not be called. It also means that the size is checked and updated on screen before it's called. Because of that, the directory will have to be updated twice before the user will see your change. One time for the new size and the next for the update itself.<br />
+      <br />
+      To get around it, you can force the window to update itself after the size changes. Not the simplest thing on earth, because .onVerifyInstDir isn't exactly built for that, as the name suggests. But it works.</p>
+      <pre>
+<code>!define WM_IN_UPDATEMSG 0x40f<br /><br />Function .onVerifyInstDir<br />  # lock to prevent infinite recursion<br />  StrCmp $1 lock 0 +2<br />    Return<br />  StrCpy $1 lock<br /><br />  # do whatever<br />  SectionGetSize 0 $0<br />  IntOp $0 $0 + 100<br />  SectionSetSize 0 $0<br /><br />  # update<br />  FindWindow $0 "#32770" "" $HWNDPARENT<br />  SendMessage $0 ${WM_IN_UPDATEMSG} 0 0<br /><br />  # unlock<br />  StrCpy $1 ""<br />FunctionEnd</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">28th October 2006 17:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I can't say I really understand what that code does... But putting CheckExistingSar instead of #dowhatever still works only halfway. NSIS still doesn't reach .onVerifyInstDir if the default dir has too little free space to continue. If however the default dir is on a drive with free space, the updating after each keystroke does appear to work.<br />
+      <br />
+      Unless you'd like to try another idea, I think I will drop the issue - it's not a very important feature. In any case, thanks a lot for the help so far.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">28th October 2006 17:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Right, the solution was only for the second part of the problem. For updating the text. .onVerifyInstDir is still called only once the directory is valid in all other areas.<br />
+      <br />
+      You can have the required size set to zero by default, have .onVerifyInstDir call Abort to tell the directory is invalid and only set the required size once the directory is valid and contains that RAR file. It will still be a problem if there isn't enough space and the user then immediately selects another directory because .onVerifyInstDir won't be called to update it.<br />
+      <br />
+      That's the best I can think of at the moment. A second solution which isn't exactly the ideal, would be to use two pages or to test the free space for yourself, using <a href="http://nsis.sourceforge.net/CheckSpaceFree" target="_blank">CheckSpaceFree</a> or something similar.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

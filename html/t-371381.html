@@ -1,0 +1,107 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="How much memory is occupied by what or process ?" />
+
+  <title>How much memory is occupied by what or process ? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">How much memory is occupied by what or process ?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=371381">How much memory is occupied by what or process ?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stass</span><br />
+      <span class="post-time small text-muted">20th September 2013 15:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>How much memory is occupied by what or process ?</strong><br />
+      How can I tell how much memory is used by a particular process ?<br />
+      <br />
+      Is it possible to use this function <b>GetProcessMemoryInfo</b> ? How to do it ?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">23rd September 2013 18:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Something like this maybe:<br /></p>
+
+      <blockquote>
+        Var /GLOBAL pid<br />
+        <br />
+        System::Call KERNEL32::GetCurrentProcessId()i.s<br />
+        Pop $pid<br />
+        <br />
+        !include LogicLib.nsh<br />
+        !define PROCESS_VM_READ 0x0010<br />
+        !define PROCESS_QUERY_INFORMATION 0x0400<br />
+        !define PROCESS_QUERY_LIMITED_INFORMATION 0x1000<br />
+        <br />
+        System::Call 'KERNEL32::OpenProcess(i${PROCESS_VM_READ}|${PROCESS_QUERY_LIMITED_INFORMATION},i0,i$pid)i.r0'<br />
+        ${If} $0 = 0<br />
+        System::Call 'KERNEL32::OpenProcess(i${PROCESS_VM_READ}|${PROCESS_QUERY_INFORMATION},i0,i$pid)i.r0'<br />
+        ${EndIf}<br />
+        ${If} $0 = 0<br />
+        DetailPrint "Unable to open process $pid!"<br />
+        Goto done_noprocess<br />
+        ${EndIf}<br />
+        !define CB_PMC32 40<br />
+        !define CB_PMCE32 44<br />
+        System::Call '*(i,i,i,i,i,i,i,i,i,i,i0)i.r1' ; Probably only going to work for 32 bit processes<br />
+        System::Call 'PSAPI::GetProcessMemoryInfo(ir0,ir1,i${CB_PMCE32})i.r2'<br />
+        ${If} $2 = 0<br />
+        System::Call 'PSAPI::GetProcessMemoryInfo(ir0,ir1,i${CB_PMC32})i.r2'<br />
+        ${EndIf}<br />
+        ${If} $2 = 0<br />
+        DetailPrint "GetProcessMemoryInfo failed"<br />
+        ${Else}<br />
+        System::Call '*$1(i.r2,i,i,i.r3,i,i,i,i,i.r4,i,i.r5)'<br />
+        ${IfThen} $5 &lt;&gt; 0 ${|} StrCpy $4 $5 ${|} ; MSDN claims PagefileUsage is always 0 on Win7+ (Does not seem to be true but lets play it safe)<br />
+        DetailPrint "cbStruct=$2 WorkingSet=$3 PrivateUsage=$4"<br />
+        ${EndIf}<br />
+        System::Free $1<br />
+        System::Call 'KERNEL32::CloseHandle(ir0)'<br />
+        done_noprocess:
+      </blockquote>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stass</span><br />
+      <span class="post-time small text-muted">24th September 2013 05:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><b>Anders</b><br />
+      Thank you very much !</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="32-bit NSIS installer launching 64-bit child processes?" />
+
+  <title>32-bit NSIS installer launching 64-bit child processes? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">32-bit NSIS installer launching 64-bit child processes?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=286707">32-bit NSIS installer launching 64-bit child processes?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Otac0n</span><br />
+      <span class="post-time small text-muted">11th February 2008 21:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>32-bit NSIS installer launching 64-bit child processes?</strong><br />
+      Hey guys, I'm having trouble launching DPInst from NSIS (to install my NIC drivers) on 64-bit versions of windows. It seems that no matter how I launch the executable from NSIS (Exec, ExecWait, ExecShell, or through a .cmd scripte with any of the 3), i can not get the Process to show up as a 64-bit process...<br />
+      <br />
+      If I run it from the shell or from CMD, it works fine...<br />
+      DPInst must be run as a 64-bit process to function...<br />
+      <br />
+      any suggestions?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">11th February 2008 21:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Where is it installed? Is it $SYSDIR? Did you turn off redirection?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Otac0n</span><br />
+      <span class="post-time small text-muted">11th February 2008 21:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">well, take a look:<br />
+      <br />
+      setup.nsi<br /></p>
+      <pre>
+<code><br />Name "CDIF"<br />SetCompressor lzma<br />RequestExecutionLevel highest<br />.<br />.<br />.<br />!insertmacro MUI_PAGE_WELCOME<br />!insertmacro MUI_PAGE_INSTFILES<br /><br />OutFile "setup.exe"<br />CRCCheck on<br /><br /><br />Section "Driver"<br /> SetOutPath "$TEMP\cdif\"<br /> File /r "installer\"<br /> ExecWait "$TEMP\cdif\setup.cmd"<br /> RMDir /r "$TEMP\cdif\"<br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      <br />
+      setup.cmd<br />
+      <pre>
+<code><br />((echo %PROCESSOR_ARCHITECTURE% | find "IA64" /C) &gt;&gt; nul) &amp;&amp; goto win64<br />((echo %PROCESSOR_ARCHITECTURE% | find "64" /C) &gt;&gt; nul) &amp;&amp; goto winx64<br /><br />:win32<br />cd Win32<br />goto install<br /><br />:win64<br />cd Win64<br />goto install<br /><br />:winx64<br />cd Winx64<br />goto install<br /><br />:install<br />DPInst.exe /C /LM /Q<br />pause<br /></code>
+</pre><br />
+      <br />
+      <br />
+      The DPInst in each folder (for 32, AMD64, or IA64) is the correct version.<br />
+      <br />
+      I just need to launch them as a process with the right bit-depth...
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">11th February 2008 21:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">PROCESSOR_ARCHITECTURE will return x86 when probed in 32-bit cmd.exe. Check for the executable to run with RunningX64 instead.</p>
+      <pre>
+<code>${If} ${RunningX64}<br />  ExecWait `"$TEMP\cdif\winx64\dpinst.exe" /C /LM /Q`<br />${Else}<br />  ExecWait `"$TEMP\cdif\win32\dpinst.exe" /C /LM /Q`<br />${EndIf}</code>
+</pre>You can also probe PROCESSOR_ARCHITEW6432 instead.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dusal</span><br />
+      <span class="post-time small text-muted">9th November 2008 02:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Please help me</strong><br />
+      Hello. Please help me. I'm newbee.<br />
+      <br />
+      I have i386, ia64, amd64, wow64 different dll files. How can I choose and copy files to system folder?<br />
+      Can I use it like this?<br />
+      <br />
+      SetOutPath "$SYSDIR\"<br />
+      if (processor==ia64) { File "ia64\kbdmon.dll" }<br />
+      elseif (processor==amd64) { File "amd64\kbdmon.dll" }<br />
+      elseif (processor==wow64) { File "wow64\kbdmon.dll" }<br />
+      else { File "i386\kbdmon.dll" }<br />
+      <br />
+      If yes please help me how to I write in my *.nsi file. I don't know much about programming language.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

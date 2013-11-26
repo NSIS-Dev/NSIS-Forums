@@ -1,0 +1,117 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Hangs during nsDialogs timer execution" />
+
+  <title>Hangs during nsDialogs timer execution - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Hangs during nsDialogs timer execution</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=332594">Hangs during nsDialogs timer execution</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Treewyrm</span><br />
+      <span class="post-time small text-muted">18th July 2011 23:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Hangs during nsDialogs timer execution</strong><br />
+      I've run into a problem while making a custom page (using nsDialogs). The page mimics InstFiles except that it is used to display progress of copying files from one directory to another using list of files embed into installer. Copying files is done in loop. Page is displayed prior to InstFiles.<br />
+      <br />
+      The problem is that after a few seconds the page is displayed the window hangs up in "not responding" mode, although copying goes on fine and if I'd wait till the end it would resume back.<br />
+      <br />
+      I've tested without copying any files and using dummy "Sleep" commands but it made no difference. Apparently if the process in CreateTimer takes more than a few seconds the installer window becomes unresponsive.<br />
+      <br />
+      Is there any way of preventing it from doing so?<br />
+      <br />
+      NSIS 2.46, Windows 7 x64<br />
+      <br />
+      Here is code for the page:<br /></p>
+      <pre>
+<code><br />!define /math PBM_SETRANGE32 ${WM_USER} + 6<br />!define FILES_COUNT 2400<br /><br />Page custom CopyFilesPage<br /><br />Var CopyFilesPage.Dialog<br />Var CopyFilesPage.Status<br />Var CopyFilesPage.ProgressBar<br /><br />Function CopyFilesPage<br />  nsDialogs::Create 1018<br />  Pop $CopyFilesPage.Dialog<br /><br />  !insertmacro MUI_HEADER_TEXT "Copy files" "Description"<br />  <br />  ${NSD_CreateLabel} 0 0 450 15 ""<br />  Pop $CopyFilesPage.Status<br />  <br />  ${NSD_CreateProgressBar} 0 16 450 17 ""<br />  Pop $CopyFilesPage.ProgressBar<br />  <br />  ${NSD_CreateTimer} CopyFiles 10<br />  nsDialogs::Show<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      And here is the actual file copy function:<br />
+      <br />
+      <pre>
+<code><br />Function CopyFiles<br />  ${NSD_KillTimer} CopyFiles<br /><br />  InitPluginsDir<br />  File /oname=$PLUGINSDIR\files.md5 "texts\files.md5"<br />  FileOpen $R0 $PLUGINSDIR\files.md5 r<br />  <br />  IfErrors 0 start<br />    MessageBox MB_OK|MB_ICONSTOP $(INSTALL_FOLDER_NOACCESS)<br />    Abort<br />    <br />  start:<br />    ClearErrors<br />    StrCpy $9 0 ; Checking toggle<br />    StrCpy $8 1 ; File counter<br />    SendMessage $CopyFilesPage.ProgressBar ${PBM_SETRANGE32} 0 "${FILES_COUNT}"<br />  <br />  loop: ; Read next file from the list and check if it exists<br />    FileRead $R0 $1<br />    IfErrors done<br />    <br />    IntOp $8 $8 + 1<br />    <br />    StrCpy $2 $1 32<br />    StrCpy $3 $1 "" 34<br />    ${StrFilter} $3 "" "" "$\n$\r" $3<br />    <br />    FileWrite $R1 "*$3$\r$\n"<br />    <br />    IfFileExists "$FL_INSTDIR\$3" check<br />      MessageBox MB_OK|MB_ICONSTOP $(COPY_FILE_MISSING)<br />      FileWrite $R1 "File missing!$\r$\n"<br />      Goto stop<br />    <br />  check: ; Get file MD5 signature and compare it to the value from the list<br />    StrCmp $9 1 copy ; Checking disabled, copy file<br />    StrCmp $2 "--------------------------------" copy ; Don't need to verify file, copy it<br />      md5dll::GetMD5File "$SOURCEDIR\$3"<br />      Pop $4<br />    <br />    StrCmp $2 $4 copy ; MD5 matched, copy it<br />      MessageBox MB_YESNO|MB_ICONEXCLAMATION $(COPY_FILE_CHECK_FAIL) IDYES disableCheck IDNO<br />        Goto stop<br />        <br />  copy: ; Copy the file to new installation directory<br />    CopyFiles /SILENT $SOURCEDIR\$3 $INSTDIR\$3<br />    ${NSD_SetText} $CopyFilesPage.Status "$3"<br />    SendMessage $CopyFilesPage.ProgressBar ${PBM_SETPOS} "$8" 0<br />    Goto loop<br />      <br />  disableCheck: ; Disable checking<br />    StrCpy $9 1<br />    Goto loop<br />          <br />  stop: ; Abort installation<br />    FileClose $R0<br />    Abort<br /><br />  done:<br />    FileClose $R0<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      I suspect that I need tell NSIS to postpone some sort of window timeout so that window wouldn't hang in "not responsive" mode, but how do I do that and were in code?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Treewyrm</span><br />
+      <span class="post-time small text-muted">19th July 2011 00:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Here is simplified code to replicate the behavior:<br />
+      <br /></p>
+      <pre>
+<code>!include MUI2.nsh<br />!include WinMessages.nsh<br /><br />ShowInstDetails show<br />RequestExecutionLevel user<br /><br />!define /math PBM_SETRANGE32 ${WM_USER} + 6<br />!define MUI_FINISHPAGE_NOAUTOCLOSE<br /><br />Name "Copy files!"<br />OutFile "copyfiles.exe"<br /><br />Page custom copyPage copyFiles<br />!insertmacro MUI_PAGE_INSTFILES<br />!insertmacro MUI_PAGE_FINISH<br />!insertmacro MUI_LANGUAGE English<br /><br />Section<br />  DetailPrint "Done here!"<br />SectionEnd<br /><br />Var PageCopyFiles<br />Var PageCopyFiles.ProgressBar<br />Var PageCopyFiles.Status<br /><br />Function copyPage<br />  StrCpy $R0 150 ; Numbers of files<br />  StrCpy $R1 1 ; Counter starts at one<br /> <br />  nsDialogs::Create 1018<br />  Pop $PageCopyFiles<br /><br />  !insertmacro MUI_HEADER_TEXT "Copying Files" "Time to hang up!"<br />  <br />  ${NSD_CreateLabel} 0 0 450 15 ""<br />  Pop $PageCopyFiles.Status<br />  ${NSD_CreateProgressBar} 0 16 450 17 ""<br />  Pop $PageCopyFiles.ProgressBar<br />  SendMessage $PageCopyFiles.ProgressBar ${PBM_SETRANGE32} 0 $R0<br />  nsDialogs::Show  <br />FunctionEnd<br /><br />Function copyFiles<br />  loop:<br />    IntCmp $R1 $R0 done 0 done<br />    IntOp $R1 $R1 + 1   <br />    ${NSD_SetText} $PageCopyFiles.Status "Copy $R1"<br />    SendMessage $PageCopyFiles.ProgressBar ${PBM_SETPOS} "$R1" 0<br />    Sleep 100<br />    Goto loop<br />  done:<br />    ${NSD_SetText} $PageCopyFiles.Status "Copy complete."<br />FunctionEnd</code>
+</pre><br />
+      <br />
+      Freezes at "Copy 55" or so but will unfreeze once it finishes.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">T.Slappy</span><br />
+      <span class="post-time small text-muted">19th July 2011 08:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I can see problem in your loop.<br />
+      You call the copyFiels function in the same thread as GUI runs, there may be a catch.<br />
+      Try to create separate thread (= plugin) which will copy files and create callback for updating progress bar.<br />
+      <br />
+      If copying is fine and it freezes only on point 55 there may be some problem with sleep implementation?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Treewyrm</span><br />
+      <span class="post-time small text-muted">19th July 2011 09:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well, I've been tinkering further trying to find solutions and came by with another one for my particular case.<br />
+      <br />
+      It seems a little dirty trick, but it did work for me. I removed custom page for copying files. I put file copy function into a hidden section above all others, then I modified UI with resourcehacker to add extra progress bar above the normal one. During file copy function I update the progressbar above as files being copied, once complete I hide it so that primary progress bar is visible again and installer continues as normal extracting files displaying extraction progress.<br />
+      <br />
+      So from what I can gather anything executed in sections does not make installer halt if the process is taking long time. I suppose it is because code in sections run in a separate thread. If so then it is a logical explanation why my previous attempt froze installer window although continued to install - it took all the thread just for itself. But while I did figure a workaround for my specific case I would like to know for the future how do I run functions outside GUI thread to do some heavy processing in custom pages and how do I use callbacks to update some element inside GUI, such as progress bar or text labels.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">19th July 2011 10:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i had a very similar problem and it was only caused by a variable that was already in use. i haven't really looked into your script, but maybe my solution works for you as well.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

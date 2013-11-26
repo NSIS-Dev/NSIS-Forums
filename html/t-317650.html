@@ -1,0 +1,182 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="CopyFiles problem on Win7 x64" />
+
+  <title>CopyFiles problem on Win7 x64 - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">CopyFiles problem on Win7 x64</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=317650">CopyFiles problem on Win7 x64</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">ngildea</span><br />
+      <span class="post-time small text-muted">11th March 2010 14:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>CopyFiles problem on Win7 x64</strong><br />
+      I'm have a problem with CopyFiles on Windows 7 x64. I use CopyFiles to firstly back up an existing file from another program's installation, then to copy another file from my installation into the directory to replace the backed-up file.<br />
+      <br />
+      Under Windows XP, Vista and Windows 7 32-bit this all works correctly. Under Windows 7 x64 both the CopyFile operations fail. Initially, I thought it may be a permissions issue but running as administrator makes no difference. I then considered that there may be some problem with the underlying operation so I replaced the use of CopyFiles with direct calls to CopyFileA in kernel32.dll, and still the problem persisted. I made a small test app which perfoms the same operations using CopyFileA from kernel32 which <b>does</b> work, even without Admin privilidges.<br />
+      <br />
+      Does anyone have any idea why this is the case?<br />
+      <br />
+      <b>Edit:</b><br />
+      <br />
+      I have built a plugin DLL with the following function (just a wrapper around CopyFileA) which does work.<br />
+      <br /></p>
+      <pre>
+<code><br />void __declspec(dllexport) copy(<br />        HWND hWndParent, int string_size, char* variables, stack_t** stacktop, extra_parameters* extraParams)<br />{<br />        char srcPath[1024], dstPath[1024];<br />        DWORD error;<br /><br />        g_hwndParent = hWndParent;<br />        EXDLL_INIT();<br /><br />        memset(srcPath, 0, 1024);<br />        memset(dstPath, 0, 1024);<br />        <br />        if (popstringn(srcPath, 1023) || popstringn(dstPath, 1023))<br />        {<br />                return;<br />        }<br /><br />        if (!CopyFileA(srcPath, dstPath, FALSE))<br />        {<br />                char buffer[1024];<br />                memset(buffer, 0, 1024);<br /><br />                error = GetLastError();<br />                sprintf(buffer, "error: %d\n", error);<br />                MessageBoxA(hWndParent, buffer, "CopyFile failed.", MB_OK);<br />        }<br />}<br /></code>
+</pre><br />
+      <br />
+      I can't imagine why this works, but the builtin CopyFiles command itself fails. Surely CopyFiles just does this, along with some other book keeping and error checking?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pengyou</span><br />
+      <span class="post-time small text-muted">11th March 2010 20:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">CopyFiles works OK on my Windows 7 x64 system when I use it to copy single files silently.<br />
+      <br />
+      It would help if you showed the code that fails. How does it fail? (do you get an error, what appears in the installer log)<br />
+      <br />
+      Which version of NSIS are you using?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">ngildea</span><br />
+      <span class="post-time small text-muted">12th March 2010 12:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Here's a cut down version of the script that shows the problem:<br />
+      <br /></p>
+      <pre>
+<code><br />Name "CopyFilesError"<br />OutFile "copyfiles.exe"<br />InstallDir $PROGRAMFILES\CopyFilesError<br />RequestExecutionLevel admin<br /><br />Page directory<br />Page instfiles<br /><br />Var VC_BIN_FOLDER<br />Var VC_CL_PATH<br /><br />Function InstallFile<br />        ReadRegStr $0 HKLM "Software\Microsoft\VisualStudio\${VISUAL_STUDIO_VERSION}\Setup\VC" "ProductDir"<br />        StrCpy $VC_BIN_FOLDER "$0\bin"<br />        StrCpy $VC_CL_PATH "$VC_BIN_FOLDER\cl.exe"<br />        <br />        CopyFiles $VC_CL_PATH "$VC_BIN_FOLDER\cl_backup.exe"  ; will fail<br />        CopyFiles /SILENT $VC_CL_PATH "$VC_BIN_FOLDER\cl_backup_silent.exe"   ; will fail<br />        CopyFiles /FILESONLY $VC_CL_PATH "$VC_BIN_FOLDER\cl_backup_filesonly.exe"     ; will fail<br />        exdll::copy $VC_CL_PATH "$VC_BIN_FOLDER\cl_backup_dll.exe"    ; will succeed<br />FunctionEnd<br /><br />Section "" <br />        SetOutPath $INSTDIR     <br />        Call InstallFile<br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      The installer log says "Copy failed.". Is there any way to get better error information?<br />
+      <br />
+      I'm using version 2.46.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pengyou</span><br />
+      <span class="post-time small text-muted">12th March 2010 12:51 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Have you tried</p>
+      <pre>
+<code>CopyFiles <font color="red"><b>"</b></font>$VC_CL_PATH<font color="red"><b>"</b></font> "$VC_BIN_FOLDER\cl_backup.exe"</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">ngildea</span><br />
+      <span class="post-time small text-muted">12th March 2010 16:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for the replies. I have now tried adding the extra quotes, that didn't work either.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pengyou</span><br />
+      <span class="post-time small text-muted">12th March 2010 18:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I don't have Visual Studio or your special plugin so I had to make some changes to your sample script ... and it also failed for me.<br />
+      <br />
+      Edit:<br />
+      Oops! My idea was rubbish! I should have commented out your plugin call instead of deleting it.<br />
+      <br />
+      I had found that to access the uninstall entry for the 32-bit version of the Visual C++ 2008 redistributable I had to use SetRegView 64 before reading from the registry. So I jumped to the wrong conclusion...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">thek</span><br />
+      <span class="post-time small text-muted">12th March 2010 22:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm currently not able to check it myself but try removing<br />
+      "RequestExecutionLevel admin"<br />
+      If this is not set, Win7 does some *magic* compatibility stuff</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pengyou</span><br />
+      <span class="post-time small text-muted">13th March 2010 17:37 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Have you checked the value of $0 to see what is being read from the registry?<br />
+      <br />
+      In your CopyFilesError script try changing</p>
+      <pre>
+<code>ReadRegStr $0 HKLM "Software\Microsoft\VisualStudio\${VISUAL_STUDIO_VERSION}\Setup\VC" "ProductDir"<br />StrCpy $VC_BIN_FOLDER "$0\bin"<br />StrCpy $VC_CL_PATH "$VC_BIN_FOLDER\cl.exe"</code>
+</pre>to
+      <pre>
+<code>ReadRegStr $0 HKLM "Software\Microsoft\VisualStudio\${VISUAL_STUDIO_VERSION}\Setup\VC" "ProductDir"<br />StrCpy $VC_BIN_FOLDER "$0\bin"<br />StrCpy $VC_CL_PATH "$VC_BIN_FOLDER\cl.exe"<br /><br />DetailPrint "$$0=$0"<br />DetailPrint "$$VC_BIN_FOLDER=$VC_BIN_FOLDER"<br />DetailPrint "$$VC_CL_PATH=$VC_CL_PATH"</code>
+</pre>and check the log to see the values which are being used.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">ngildea</span><br />
+      <span class="post-time small text-muted">15th March 2010 16:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I have discovered the problem, the CopyFiles instruction will fail when there are multiple directory separators in a row. My code was building the path "c:\Program Files (x86)\Microsoft Visual Studio 8\VC\\bin" which works correctly in the direct API calls, but for some reason NSIS chokes on this.<br />
+      <br />
+      Thanks for the help!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">onurk</span><br />
+      <span class="post-time small text-muted">24th August 2010 17:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">ngildea, thanks a lot for sharing your ideas on this issue. you have been really helpful. I wonder if you could send me the DLL you built as a workaround. I am not familiar with C++ development so even if you posted your code here, I could not make use of it.<br />
+      <br />
+      I also wonder whether you have a way of fixing the file path (multiple directory separators) so that CopyFiles would work fine.<br />
+      <br />
+      I appreciate any kind of help.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">24th August 2010 17:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">WordReplace?<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

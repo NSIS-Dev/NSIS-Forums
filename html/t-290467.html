@@ -1,0 +1,161 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="makeNSIS fails on big file" />
+
+  <title>makeNSIS fails on big file - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">makeNSIS fails on big file</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=290467">makeNSIS fails on big file</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wizou</span><br />
+      <span class="post-time small text-muted">18th April 2008 14:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>makeNSIS fails on big file</strong><br />
+      Hello.. I have a problem on big files with NSIS 2.36 :<br /></p>
+
+      <blockquote>
+        SetCompressor lzma<br />
+        <br />
+        Section "Main"<br />
+        File "bigfile.dat"<br />
+        SectionEnd
+      </blockquote>bigfile is 1 740 336 643 bytes long<br />
+      <br />
+      makeNSIS either crashes or display the following error:<br />
+
+      <blockquote>
+        File: "bigfile.dat" [compress]Error: add_db_data() - compress() failed(input/output error [-4])
+      </blockquote>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wizou</span><br />
+      <span class="post-time small text-muted">18th April 2008 15:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">when using bzip2 ou zlib, it always crashes</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wizou</span><br />
+      <span class="post-time small text-muted">18th April 2008 18:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">From my investigation using Process Explorer, for each file, makensis.exe tries to map in memory :<br />
+      - the file to compress<br />
+      - a temporary file which size is 1.25 times the size of the file to compress (probably a buffer for compression)<br />
+      <br />
+      Now I can see the memory address space of makensis has a free space between ctype.nls (0x890000+0x3000) and lpk.dll (0x62DC0000) under Windows XP SP2<br />
+      <br />
+      This free memory space is 1 649 594 368 bytes long, so the biggest "compressable" file should be about 733 151 232 bytes long<br />
+      <br />
+      Do you confirm my analysis ?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">18th April 2008 18:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">NSIS doesn't support files as large as that. There are solutions on the Wiki like CABSetup.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wizou</span><br />
+      <span class="post-time small text-muted">21st April 2008 10:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">:(<br />
+      I don't want to extract a CAB file on the user harddisk and then uncompress it to the installation target folder, (that would require a lot of free space on disk), when it seems possible to directly uncompress from the installer to the target folder. Plus I need a one-file installer (can't span on multiple installer files).<br />
+      <br />
+      Besides, NSIS worked perfectly with big file up to 1.52 GB but crashes with a file 1.62 GB long<br />
+      <br />
+      (forget the 700 MB limit from my previous analysis)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wizou</span><br />
+      <span class="post-time small text-muted">21st April 2008 17:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">ok I've analyzed NSIS sources and I've come to the conclusion that the biggest file (if alone) that NSIS can currently support should be under (about) 1 704 564 322 bytes = 1.58 GB<br />
+      <br />
+      formula= (0x7FFFFFFF-4-1024-(16&lt;&lt;20))/5*4</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wizou</span><br />
+      <span class="post-time small text-muted">22nd April 2008 10:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">kichik, you could add support for files up to 2GB simply by adding the following lines in <b>build.cpp</b> in function CEXEBuild::add_db_data<br />
+      <br /></p>
+      <pre>
+<code>    int bufferlen = length + 1024 + length / 4; // give a nice 25% extra space<br />    if (bufferlen &lt; 0)          // we've hit a signed integer overflow (file is over 1.6 GB)<br />        bufferlen = INT_MAX-st-sizeof(int)-(16 &lt;&lt; 20); //  so maximize compressor room and hope the file compresses well<br /></code>
+</pre><br />
+      as commented, it should work correctly as long as the big file to compress do compress well, under the room allocated for compression
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">22nd April 2008 10:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Please submit it as a <a href="http://sourceforge.net/tracker/?group_id=22049&amp;atid=373087" target="_blank">patch</a>.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">evin</span><br />
+      <span class="post-time small text-muted">22nd April 2008 11:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Use the Vpatch. (NSIS\Bin\GenPat.exe)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wizou</span><br />
+      <span class="post-time small text-muted">22nd April 2008 13:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><a href="http://sourceforge.net/tracker/index.php?func=detail&amp;aid=1948700&amp;group_id=22049&amp;atid=373087" target="_blank">done.</a><br />
+      <br />
+      Vpatch doesn't apply for a first installation<br />
+      <br />
+      However I did develop a WPatch, more powerful for patching files *in-place* without requiring more free space on disk than the size difference<br />
+      I plan to release it soon</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

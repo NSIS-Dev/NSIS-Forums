@@ -1,0 +1,170 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="What is it with those Splash plugins?" />
+
+  <title>What is it with those Splash plugins? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">What is it with those Splash plugins?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=316032">What is it with those Splash plugins?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">5th January 2010 23:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>What is it with those Splash plugins?</strong><br />
+      can't say i'm fully happen with any of them. i've been using AdvSplash for many years, but at some point (new NSIS or new OS), it will not display small bitmaps properly. in my example the used bitmap has only a height of 32 pixels, but the plugin will display it with a height of 38 pixels, the difference will be black (see attachment).<br />
+      <br />
+      (i don't know when the plugin started to behave like this, but on a sidenote i also wanted to mention another issue with bitmaps i came across. earlier versions of nsis had no problem using rle-compressed bitmaps, new versions will display some gibberish instead.)<br />
+      <br />
+      so, i've tried NewAdvSplash. that will display small bitmaps without a problem. however, when i use it with a splash-sound and the /BANNER option, it will always crash my installer once the splash stops showing. without the banner it works, but shows an ugly window caption for the fraction of a second. without sound it's also working perfectly. here's the code i'm using<br />
+      <br /></p>
+      <pre>
+<code>newadvsplash::play /NOUNLOAD "$PLUGINSDIR\spltmp.wav"<br />newadvsplash::show /NOUNLOAD ##SPLASHTIME## 0 100 0xff00ff /BANNER "$PLUGINSDIR\spltmp.bmp"<br />newadvsplash::wait ;with or without this line - crashes!<br />newadvsplash::stop</code>
+</pre><br />
+      <br />
+      <br />
+      unfortunately, NewAdvSplash isn't complete documented, so it could be the fault lies in this code. the third line is completely undocumented, but it was mentioned in one of the examples. leaving that line, will still result in a crash. any help?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">meaningoflights</span><br />
+      <span class="post-time small text-muted">6th January 2010 03:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I use advsplash too, does this code cause a crash on any of your PCs?<br />
+      <br />
+      <br />
+      !include WinVer.nsh<br />
+      !include x64.nsh<br />
+      <br />
+      XPStyle on<br />
+      <br />
+      ;funky little splash fade in effect!<br />
+      Function .onInit<br />
+      # the plugins dir is automatically deleted when the installer exits<br />
+      InitPluginsDir<br />
+      File /oname=$PLUGINSDIR\splash.bmp "c:\myprog\logo.bmp"<br />
+      <br />
+      #optional<br />
+      #File /oname=$PLUGINSDIR\splash.wav "C:\myprog\sound.wav"<br />
+      <br />
+      advsplash::show 4000 600 400 -1 $PLUGINSDIR\splash<br />
+      <br />
+      Pop $0 ; $0 has '1' if the user closed the splash screen early,<br />
+      ; '0' if everything closed normal, and '-1' if some error occured.<br />
+      Delete $PLUGINSDIR\splash.bmp<br />
+      FunctionEnd<br />
+      <br />
+      <br />
+      Or you may like to check other options like this:<br />
+      <a href="http://forums.winamp.com/showthread.php?s=&amp;threadid=97048" target="_blank">http://forums.winamp.com/showthread....threadid=97048</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br />
+      <span class="post-time small text-muted">6th January 2010 07:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I don't see 'wait' entry point in newadvsplash.dll. Very strange that you could compile this. Followinng works for me:</p>
+      <pre>
+<code><br />Name "NewAdvSplash.dll test"<br />OutFile "newadvsplash.exe"<br />!define IMG_NAME1 aist.gif<br />!include WinMessages.nsh<br /><br />Function .onInit<br /><br />;  the plugins dir is automatically deleted when the installer exits<br />    InitPluginsDir<br />    SetOutPath "$PLUGINSDIR"<br /><br />    newadvsplash::play /NOUNLOAD "$EXEDIR\jc.mp3"<br />    File ${IMG_NAME1}<br />    newadvsplash::show /NOUNLOAD 3000 1000 500 -2 /BANNER "$PLUGINSDIR\${IMG_NAME1}"<br />    Sleep 3000 ; not changes 4.5 sec of 'show time'. add your code instead of sleep<br /><br />FunctionEnd<br /><br />; MUI requires custom function definition<br />Function .onGUIInit<br /><br />    newadvsplash::stop /wait ; waits or exits immediately if finished, remove /wait to terminate now<br />    Delete "$PLUGINSDIR\${IMG_NAME1}"<br />    SetOutPath "$EXEDIR"<br /><br />;  plug-in requires this to be called in .onGUIInit<br />;  if you use 'show' in the .onInit function with /BANNER key.<br />    ShowWindow $HWNDPARENT ${SW_RESTORE}<br /><br />FunctionEnd<br /><br />Section<br />SectionEnd</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">6th January 2010 12:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">well, it's no longer crashing now, but only because i accidently left out the stop call. whenever i add it to my onGUIinit function, the installer crashes. also, i still get to see that window caption for a very short time (might be longer on slow cpus). according to process explorer, that caption it that of a program called <i>consent.exe</i>.<br />
+      <br />
+      unlike my previous claim, this has nothing to do with the /BANNER option, but only happens when i use the plugin with a splash sound.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">10th January 2010 00:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">so, is it wise to leave the stop function? or what can i do to get it work without crashing?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br />
+      <span class="post-time small text-muted">10th January 2010 10:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Flashing window is a sound player, even if started 'hidden' it appears for a short time.<br />
+      I not found any problems with crashing in correct script (see above). Please publish sample script which causes crash. newadvsplash manual <a href="http://nsis.sourceforge.net/NewAdvSplash_plug-in" target="_blank">http://nsis.sourceforge.net/NewAdvSplash_plug-in</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">15th January 2010 17:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">try this</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br />
+      <span class="post-time small text-muted">16th January 2010 11:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yes, s. happens with wav (not mp3!) if sound is longer, them show time. This case MCI window instead of correct termination just crashes... OK, for wav sound attached dll should be fine, and no flashing MCI windows any more (but no mp3 as well). Please let me know if any problem occure.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">17th January 2010 00:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by Takhir</i><br />
+        <b>Yes, s. happens with wav (not mp3!) if sound is longer, them show time.</b>
+      </blockquote>are only certain bitrates supported? i tried a mono mp3 at 64 kbit and it behaves just like it did with a wave. anyway, with no mp3-support i can stick to the old AdvSplash and use compressed waves. thanks for your help!
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">21st March 2010 18:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">when you click the splash screen (to abort it), it will still wait for the remaining time set in the splash plugin</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Best Practices for Debugging NSIS Scripts?" />
+
+  <title>Best Practices for Debugging NSIS Scripts? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Best Practices for Debugging NSIS Scripts?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=325521">Best Practices for Debugging NSIS Scripts?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">nsnb</span><br />
+      <span class="post-time small text-muted">4th January 2011 16:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Best Practices for Debugging NSIS Scripts?</strong><br />
+      I am embarrassed to admit that I have been going very long writing hundreds of NSIS scripts (with varying degrees of complexity) without ever using a debugger. So far, I have been able to get away with it, but every once in a while I stumble upon a problem that makes me wish there would be a way to single-step or view some console output.<br />
+      <br />
+      What is the recommended way to debug NSIS scripts?<br />
+      <br />
+      Is it the same for scripts that have '<b>SilentInstall silent</b>' and '<b>SetSilent silent</b>' on?<br />
+      <br />
+      More specifically, I have a single line that doesn't work for some reason, but I have no clue why, because the NSIS script has '<b>SilentInstall silent</b>' and '<b>SetSilent silent</b>' on:<br />
+      <br /></p>
+      <pre>
+<code>ReadEnvStr$varCOMSPECCOMSPEC<br />nsExec</code><span style="color: #007700">::</span><span style="color: #0000BB">Exec</span><span style="color: #DD0000">'"$varCOMSPEC"/C"$SYSDIR\attrib$PROFILE\Desktop\*"&gt;dtattr.txt'
+</span>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">CrushBug</span><br />
+      <span class="post-time small text-muted">4th January 2011 18:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Our biggest sanity saver is a logging macro that allows us to log to a text file in Documents and thus we can just add in a ${LogWrite} "varCOMSPEC=$varCOMSPEC" or return codes or what have you. We can also do log levels and wrap certain logging in a "${If} $LogLevel &gt; 1" block.<br />
+      <br />
+      After that, there was a Debug/DumpState plug-in that we used to use (although looking on my system right now, I can't find it anymore). This plug-in with put up a dialog with current variable and stack states. I don't know if it would work in a silent installer as we haven't specifically tried it in that state.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">blh83</span><br />
+      <span class="post-time small text-muted">4th January 2011 18:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well I usually use message boxes but those don't typically show in silent installs. I have noticed that using a banner shows up even on silent install (this may not be on purpose, but it could be a useful bug for you :)). So you could do something like:<br />
+      <br />
+      Banner::show "Some stuff ${some variable}"<br />
+      ;you may have to put an artificial delay here depending on what you're doing.<br />
+      Banner::destroy<br />
+      <br />
+      Also, looking at what you are trying to do, I am wondering why you are needing the ENVIRONMENT variable COMSPEC? I understand it holds the path to cmd.exe, but is it necessary to call cmd.exe? could you simply run:<br />
+      <br />
+      nsExec::Exec '"$SYSDIR\attrib $PROFILE\Desktop\*" &gt; dtattr.txt ' ?<br />
+      <br />
+      Also, you spelled "attrib" wrong (you've got "atrrib"). As a side note, the attrib function also expects some sort of attribute to be passed in before the file name for which you are modifying. So I would expect to see something like:<br />
+      <br />
+      nsExec::Exec '"$SYSDIR\attrib R $PROFILE\Desktop\*" &gt; dtattr.txt ' for Read only.<br />
+      <br />
+      I haven't used 'attrib' much so these are simple observations that may not be helpful.<br />
+      <br />
+      When I run into problems calling an executable, I always open an actual command prompt and try it from there (by copying and pasting the relevant text from my installer so as to catch spelling errors like the one above). Hope this helps.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">nsnb</span><br />
+      <span class="post-time small text-muted">4th January 2011 19:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by blh83</small><br />
+        Well I usually use message boxes but those don't typically show in silent installs
+      </blockquote>That's what I've been using too. Interestingly, in my silent install MessageBox does show up, so it helps.<br />
+      <br />
+
+      <blockquote>
+        <small>Originally posted by blh83</small><br />
+        Also, you spelled "attrib" wrong (you've got "atrrib").
+      </blockquote>You are correct. That was a typo in the posting, not in the script (I usually copy &amp; paste verbatim but this time I failed to do so).<br />
+      <br />
+      Thanks.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">nsnb</span><br />
+      <span class="post-time small text-muted">4th January 2011 19:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by CrushBug</small><br />
+        Our biggest sanity saver is a logging macro that allows us to log to a text file in Documents and thus we can just add in a ${LogWrite} "varCOMSPEC=$varCOMSPEC"... We can also do log levels and wrap certain logging in a "${If} $LogLevel &gt; 1" block.
+      </blockquote>I looked at the NSIS User Manual but I couldn't find ${LogWrite}. Is that a plugin? Where do I find it?<br />
+      <br />
+      Thanks.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">CrushBug</span><br />
+      <span class="post-time small text-muted">4th January 2011 22:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It was just an internally developed set of macros that use the built-in NSIS FileOpen 'a', FileSeek END and FileWrite $LogString commands. I would like to post the code and some future date, but we are in the middle of finalling a project right now, so it will be some time before I can get to it.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">LoRd_MuldeR</span><br />
+      <span class="post-time small text-muted">4th January 2011 23:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Something like this should be sufficient:<br />
+      <br /></p>
+      <pre>
+<code>Var mylogfile<br /><br />Function .onInit<br />  FileOpen $mylogfile "$TEMP\nsislog.txt" "a"<br />FunctionEnd<br /><br />!macro _LogWrite text<br />  FileWrite $mylogfile '${text}'<br />!macroend<br /><br />!define LogWrite !insertmacro _LogWrite</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">T.Slappy</span><br />
+      <span class="post-time small text-muted">5th January 2011 07:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Maybe you could use this: <a href="http://nsis.sourceforge.net/Nsisdbg_plug-in" target="_blank">http://nsis.sourceforge.net/Nsisdbg_plug-in</a><br />
+      <br /></p>
+
+      <blockquote>
+        NSIS Debugger is a NSIS plugin which allows you to debug your NSIS installers. The plugin will create a dialog which will be displayed alongside the NSIS window. The first thing you will get familiar with is the tabbed pages. Use them to switch between variable list, stack view, debug log, config. and about page.
+      </blockquote>I did not test it, but it seems good.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Marshall7a</span><br />
+      <span class="post-time small text-muted">6th January 2011 09:40 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I wrote a set of macros specific to my project that logged the name of the function/section, the values of all the registers, and the contents of the stack (using the stack plugin). Then, at the start and end of every function/section I called a "DebugPre" and "DebugPost" macro which wrote out all that information, as well as storing it in another huge set of registers dedicated to the purpose. That way, I could tell if the registers or stack were getting messed up by any function automatically (it would pop up a message box if there was an error at the end of a function).<br />
+      <br />
+      Of course, this took a while to implement and debug the debug code so that it was stable and didn't cause any problems itself.<br />
+      <br />
+      And a basic installer produced a 50MB log file when there were no errors.<br />
+      <br />
+      You might call it overkill, but for a big/complex project it might be worth it - I was surprised by how many register/stack issues I had introduced that went unnoticed 99% of the time. (It depends on how functional you make an installer, and how many levels deep your macro/function calls go)<br />
+      <br />
+      Although I do have to disable the debug code when releasing an installer because, even without the log file, it still slows down the installer a lot.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

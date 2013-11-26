@@ -1,0 +1,155 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Partial String Match During Uninstall" />
+
+  <title>Partial String Match During Uninstall - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Partial String Match During Uninstall</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=311202">Partial String Match During Uninstall</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jweinraub</span><br />
+      <span class="post-time small text-muted">31st August 2009 22:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Partial String Match During Uninstall</strong><br />
+      How do I do a partial string match during an uninstallation routine?<br />
+      <br />
+      We make a software product and now we have released a "viewer" version, which is a stripped down version of the main thing. Only issue is, there is one common icon on the desktop.<br />
+      <br />
+      Typically they shouldn't co-exist, but I allow it anyway by doing something like this:<br />
+      <br /></p>
+      <pre>
+<code><br />Function .onInit<br />  ReadRegStr $R0 HKLM \<br />  "Software\Microsoft\Windows\CurrentVersion\Uninstall\NeatoTek" \<br />  "UninstallString"<br />  StrCmp $R0 "" goahead<br />  MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \<br />  "NeatoTek 1.2 is already installed. $\n$\nClick `OK` to continue the \<br />  installation of the NeatoTek 1.2 Viewer or `Cancel` to cancel this installation." \<br />  IDOK goahead<br />  Abort<br /><br /><br />goahead:<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      I adapted code from the uninstall if found before start routine actually.<br />
+      <br />
+      But in the uninstall portion:<br />
+      <br />
+      <pre>
+<code><br />${If} $nt == "no"<br />  ; function here<br />  Delete "$DESKTOP\Common Icon.lnk"<br />  ${EndIf}<br /></code>
+</pre><br />
+      <br />
+      I originally did a global var but since uninstall is an entirely different scope that didn't work. I wanted to use the same code below, and I am sure it would work, but I rather use the Display Name part of the registry, but for some reason, our product has the version number in it, whilst it also being in Display Version. Since we have released several released already too late for that change, but I rather use Display Name on the top portion too since I have a generic version in there, i rather output the var itself reads so i dont have to keep changing this with each release.<br />
+      <br />
+      So my question is, how do i do the strcmp on that "Foobar 500" as display name and just search for foobar. The viewer has two words followed by the number, the full version I believe has one word with the number.<br />
+      <br />
+      Any help is appreciated. I know I wrote a lot, but I think I confused things more than necessary so I hope I didnt!<br />
+      <br />
+      thanks!
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jpderuiter</span><br />
+      <span class="post-time small text-muted">31st August 2009 22:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm not sure what you want exactly, but if you want the DisplayName without the DisplayVersion you can use the WordReplace function from the WordFunc Header, like</p>
+      <pre>
+<code>${WordReplace} "$DisplayName" " $DisplayVersion" "" "+" $R0<br /></code>
+</pre><br />
+      Or if you just want to check if a string contains another string, you can use
+      <pre>
+<code>${WordFind} "$nt" "foobar" "#" $R0<br />${If} $R0 &gt; 0<br />  ; function here<br />  Delete "$DESKTOP\Common Icon.lnk"<br />${EndIf}</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jweinraub</span><br />
+      <span class="post-time small text-muted">31st August 2009 23:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I figured my full story was more confusing what I want.<br />
+      <br />
+      To summarise and make it more clear.<br />
+      <br />
+      Our company produces a product that requires software to run it. It generates special kind of files.<br />
+      <br />
+      If one did not own the equipment, but is interested in examining the data our devices produce they can get the free<br />
+      viewer.<br />
+      <br />
+      Lets call this Foobar Viewer 100.<br />
+      So in its DisplayName portion of the Uninstall in the registry, we get "Foobar Viewer 100".<br />
+      <br />
+      If the enduser does own our equipment, Lets call this now Neato 100. So its uninstall displayname parameter is now Neato 100.<br />
+      <br />
+      What I am trying to accomplish is two fold.<br />
+      <br />
+      During the installation of the Viewer, it determines if the full version is there by examining the value of Neato in this case.<br />
+      <br />
+      Because a user can have Version say 1-infinity (since there will always be a newer version), I want to determine if they have Neato installed, under displayName.<br />
+      <br />
+      However, since Neato and Foobar both share a common application that has a shortcut on the desktop, when one uninstalls the viewer (foobar), and if Neato is already installed, i don't want its icon to be removed. since both are sharing the same function, except in two different spots, I am trying to just find the name.<br />
+      <br />
+      For now, I don't care what happens to the viewer if a user uninstalls the full version. Right now, however, my logic works, the appropiate icons stay/remove how i want them to do so, though i have to say If "Neato 100" else kind of deal.<br />
+      <br />
+      I hope this did not make things more confusing but after reading and rereading this, I think this makes more sense.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">1st September 2009 00:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I suggest doing a partial string copy (up to where the number begins) and then check that portion.<br /></p>
+      <pre>
+<code>strcpy $1 "Foobar Viewer 100"<br />strcpy $1 $1 -4   # truncate 4 characters<br />${If} $1 == "Foobar Viewer"<br />MessageBox MB_OK "It works"<br />${Else}<br />${Endif}</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jweinraub</span><br />
+      <span class="post-time small text-muted">1st September 2009 14:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Fantastic mate, thanks so much!<br />
+      <br />
+      I reckon when we get to version 1000 the program will be called something else, I hope!<br />
+      <br />
+      Actually, I think we will go with the full version (the number above is a build number, the full version is 6.3.100)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jpderuiter</span><br />
+      <span class="post-time small text-muted">1st September 2009 17:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well, as I mentioned above you can use the WordFind macro from the WordFunc library, so that it is independant of whatever version you have:</p>
+      <pre>
+<code>strcpy $1 "Foobar Viewer 100"<br />${WordFind} "$1" "Foobar Viewer" "#" $R0<br />${If} $R0 &gt; 0<br />  Delete "$DESKTOP\Common Icon.lnk"<br />${EndIf}</code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

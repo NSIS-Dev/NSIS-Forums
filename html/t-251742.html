@@ -1,0 +1,160 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Problem creating scheduled task" />
+
+  <title>Problem creating scheduled task - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Problem creating scheduled task</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=251742">Problem creating scheduled task</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">BSOD2600</span><br />
+      <span class="post-time small text-muted">23rd July 2006 08:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Problem creating scheduled task</strong><br />
+      I need to create a scheduled task on Windows 2000/XP/2003, which runs daily, every 5 minutes with a duration of 24hrs.<br />
+      <br />
+      Since windows 2000 does not have the schtasks.exe tool, I'm forced to use alternative methods. No, I do NOT want to use the AT command, since then it wouldn't visable to the user. I'm trying to use the CreateTask stuff which is found in the System plugin. Seems though when the installer is in the portion of the script were it creates the scheduled task, the whole installer crashes. This is all I get in the eventlog:<br /></p>
+
+      <blockquote>
+        The application, , generated an application error The error occurred on 07/23/2006 @ 00:05:47.237 The exception generated was c0000005 at address 01141519 (Store)
+      </blockquote>I know it has something to do with the system plugin and the scheduled task, but not sure what I'm doing wrong. I can see the scheduled task does get created... but the entire installer crashes, so doesn't do me any good.<br />
+      <br />
+      Here is what I've got going:<br />
+      <pre>
+<code><br />        ;Create scheduled task<br />        ${If} $OS != 'Windows2000'<br />            ExecDos::exec /NOUNLOAD /TIMEOUT=2000 '"$SYSDIR\schtasks.exe" /create /RU SYSTEM /SC MINUTE /MO 5 /TN Cacti /TR "php $INSTDIR\inetpub\wwwroot\cacti\poller.php" /ST 01:00:00' "" "$INSTDIR\Inetpub\wwwroot\cacti\log\schtasks.log"<br />        ${Else}<br />            MessageBox MB_OK "Creating win2k task"<br />            push "Cacti"<br />            push "Invokes the Cacti poller"<br />            push "php"<br />            push "$INSTDIR\inetpub\wwwroot\cacti\"<br />            push "$INSTDIR\inetpub\wwwroot\cacti\poller.php"<br />            push "*(&amp;l2, &amp;i2 0, &amp;i2 2006, &amp;i2 1, &amp;i2 1, &amp;i2 0, &amp;i2 0, &amp;i2 0, &amp;i2 9, &amp;i2 0, i 1440, i 5, i 0, i 1, &amp;i2 1, i 0, i 0, &amp;i2 0) i.s"<br />            Call CreateTask<br />            Pop $0<br />            MessageBox MB_OK "CreateTask result: $0"<br />        ${EndIf}<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">23rd July 2006 08:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">It works fine for me when I test it and aside from a stray `&amp;i2 0` at the end, I can't see anything wrong with the code. Try adding some debug messages in CreateTask to see exactly where it crashes.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">BSOD2600</span><br />
+      <span class="post-time small text-muted">23rd July 2006 16:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well it crashes for me somewhere inside of CreateTask.<br />
+      <br />
+      I've actually copied the CreateTask function from the forum thread where it was implemented. Is there some other way I'm suppose to do use it? If I don't do that, then I get the error<br /></p>
+
+      <blockquote>
+        Error: resolving install function "CreateTask" in install section "Cacti" (1)
+      </blockquote>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">23rd July 2006 16:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Of course it crashes inside CreateTask, there's nothing special in the code calling it ;) That's why you should try adding debug message <b>into</b> CreateTask.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">BSOD2600</span><br />
+      <span class="post-time small text-muted">23rd July 2006 16:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Alright, did that and found the location, when the scheduled task doesn't exist.<br />
+      <br /></p>
+      <pre>
+<code><br />#Function CreateTask<br />     MessageBox MB_OK "debug10"<br /><br />End:<br />     ; restore registers and push result<br />     System::Store "P0 l"<br />     MessageBox MB_OK "debug20"<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      It crashes right after debug10, so I assume its the system:store line which is the cause.<br />
+      <br />
+      When the scheduled task already exists, it crashes in a different spot<br />
+      <pre>
+<code><br />     ; ITask-&gt;SetComment()<br />     System::Call '$R2-&gt;18(w r1)'<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">23rd July 2006 18:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hmm... There's error checking for ITaskScheduler-&gt;NewWorkItem(). It shouldn't crash if it returns ERROR_FILE_EXISTS.<br />
+      <br />
+      I still can't see why it would crash when the task doesn't already exist. Does it work with the original TASK_TRIGGER structure from the example?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">BSOD2600</span><br />
+      <span class="post-time small text-muted">23rd July 2006 21:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Nope, using the sample code chunk from that nsi file crashes on <i>System::Store "P0 l"</i>. Running the installer again, it then crashes on <i>System::Call '$R2-&gt;18(w r1)'</i>.<br />
+      <br />
+      Sounds like brainsucker didn't test this code on Windows 2000.<br />
+      <br />
+      I'm not setting the <i>SetPluginUnload alwaysoff</i> or <i>SetPluginUnload manual</i> stuff. Would that be causing this problem? Anything special I need to consider since I'm using other plugins too?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">24th July 2006 19:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">The first crash is caused by the lack of SetPluginUnload. SetPluginUnload alwaysoff tells NSIS to keep plug-ins loaded. When it's used, plug-ins aren't unloaded from memory after the plug-in call line. In this specific case, the first code line in CreateTask saves variables on a new stack. A pointer to that stack is kept in the plug-in's memory. When it's unloaded, because SetPluginUnload alwaysoff isn't used, that pointer is gone. When the plug-in is reloaded in the last line, that pointer points to a new stack that doesn't contain the pushed variables from the first line. When the plug-in tries to pop the variables from this wrong stack, it crashes because they're not there.<br />
+      <br />
+      The second problem is actually the same problem as the first, because you've placed the message box before the end label.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">BSOD2600</span><br />
+      <span class="post-time small text-muted">25th July 2006 06:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ah, figured it might've been something with those settings. After enabling that, no more crashes. thanks :-).<br />
+      <br />
+      Does leaving the setting <i>SetPluginUnload alwaysoff</i> make the installer more inefficient / memory intensive?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">25th July 2006 23:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I doubt you'll be able to tell the difference in terms of memory usage. However, it might leave plug-ins behind in the temporary folder pending deletion on reboot. You should set it back to <i>manual</i> just before the last plug-in call for it to be unloaded. If you want to contain the effect to CreateTask, have it set to manual just before the Store call.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

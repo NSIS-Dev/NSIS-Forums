@@ -1,0 +1,325 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Question regarding an installer that can also upgrade" />
+
+  <title>Question regarding an installer that can also upgrade - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Question regarding an installer that can also upgrade</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=133004">Question regarding an installer that can also upgrade</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">G_J</span><br />
+      <span class="post-time small text-muted">24th April 2003 20:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Question regarding an installer that can also upgrade</strong><br />
+      Hi,<br />
+      I am creating an installer using NSIS 2.0 beta 3, Modern UI.<br />
+      My requirement is to have the installer check first whether the application is currently running and/or previously installed - this I managed to implement successfully via a DLL that contains some helper functions (in my app there's more to it than just searching for files or Windows that can be scripted).<br />
+      Next, if the application is running, I ask the user to close it and loop until it really is closed. OK so far. However, if the application is installed but not running, I don't want to proceed as a normal install<br />
+      (Welcome, EULA, Components, Directory, Install Files, Finish);<br />
+      Instead, I want to provide a custom page that informs that user that I have detected a previous version x.xx installed at path yyy, and that by clicking Next the application will be *upgraded*.<br />
+      That's because I don't want to potentially end up with 2 or more installations side-by-side. The new version *must* upgrade the previous one in its current location.<br />
+      I also want to simplify the upgrade for the user by removing pages that an upgrade doesn't need. The upgrade should simply read the previous installation folder from the Registry and use it and should *not* display the Welcome, EULA, Components and Directory pages. After the custom page, file installation should take place and then the Finish page. That's all.<br />
+      So the requirement is to have a dual purpose installer that either does a full install or an upgrade that displays fewer pages, based on a check conducted at runtime (currently in Function .onInit).<br />
+      No matter what I did, I couldn't implement this with NSIS Modern UI. It seems that the pages need to be declared up front, losing flexibility on whether to omit a particular page later on.<br />
+      There doesn't seem to be functionality to skip a page or to go from one page to another page.<br />
+      Even when using MUI_CUSTOMPAGECOMMANDS and insertmacro to declare the pages, the compiler complained when I did !insertmacro MUI_PAGECOMMAND_INSTFILES from a function. Without this, I couldn't get the upgrade to be functional. Regarding some other pages like EULA, Components and Directory, even without an !insertmacro they still got displayed! Because I had LicenseData for the install, the compiler insisted that I have !define MUI_LICENSEPAGE and would not allow me to add a license page dynamically (practically forcing me to show a license page even in the upgrade).<br />
+      To prevent this email from growing too long I'll stop discussing the many dead ends I reached at every step and will leave the stage for the NSIS experts to try to solve this problem. I would appreciate any solid tips regarding the implementation of such an install/upgrade. Thank you.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joost Verburg</span><br />
+      <span class="post-time small text-muted">24th April 2003 21:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Page commands only define which pages are being included in the installer.<br />
+      <br />
+      To skip a certain page, define a custom page pre function (check the Modern UI Readme) and use the Abort command in the function.<br />
+      <br />
+      <font size="1">offtopic: I replied to your bugreport too</font></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">24th April 2003 21:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">To create your "upgrade page" I suggest you define a welcome page pre-function (MUI_CUSTOMFUNCTION_WELCOME_PRE) and write your own strings to ioSpecial.ini inside $PLUGINSDIR. For example:<br />
+      <br /></p>
+      <pre>
+<code>!define MUI_CUSTOMFUNCTION_WELCOME_PRE welcomePreFunc<br />#...<br />Function welcomePreFunc<br /># if upgrading....<br />  !insertmacro MUI_INSTALLOPTIONS_WRITE "ioSpecial.ini" \<br />     "Field 2" "Text" "upgrading title"<br />  !insertmacro MUI_INSTALLOPTIONS_WRITE "ioSpecial.ini" \<br />     "Field 3" "Text" "upgrading text"<br />FunctionEnd</code>
+</pre><br />
+      <br />
+      Then just skip the other pages using Abort from their pre-function as Joost said.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">G_J</span><br />
+      <span class="post-time small text-muted">25th April 2003 00:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks! Your suggestions worked superbly and I have the entire upgrade up and running. Two new, smaller issues were encountered and I hope you can help me with those:<br />
+      <br />
+      1. I am writing a path contained in a variable to the .ini file of InstallOptions (as the text of a label control). However, InstallOptions expects all backslashes to be escaped with another backslash, which they aren't. Therefore they are not displayed at all. Is there an NSIS trick to fix this, or must I resort to my DLL and write a helper function to manipulate the path?<br />
+      <br />
+      2. I want to change (dynamically) one of the strings in the Finish page, at the point where I know that this is an upgrade, to say "The application has been successfully upgraded" (instead of installed). When I want to do this, the strings have already been loaded. I can't seem to find a way to modify them at that point. The Modern UI readme only mentions a way to brand a string before the strings are loaded. Please let me know if there is a fix: I'm probably missing something very basic here. If not, what can be done about this?<br />
+      Thanks.<br />
+      <br />
+      PS: greets to kichik from the nearby town of Tel Aviv.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">25th April 2003 00:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">1: You will need to convert all \ to \\ and then write that to the ini file in order for them to be written as \ (for labels only)<br />
+      I'll nock together a function if ya want in a sec.<br />
+      <br />
+      2:<br /></p>
+      <pre>
+<code>!define MUI_TEXT_FINISHPAGE_SUBTITLE "[Place your text here]"</code>
+</pre><br />
+      <br />
+      -Stu
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">25th April 2003 00:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Here we are...</strong><br />
+      Usage:<br />
+      Push C:\program~1\nsis<br />
+      Call ConvertBStoDBS<br />
+      Pop $R0<br />
+      <br />
+      $R0 is now C:\\program~1\\nsis<br />
+      <br /></p>
+      <pre>
+<code><br />Function ConvertBStoDBS<br /> Exch $R0<br /> Push $R1<br /> Push $R2<br /> Push $R3<br /> Push $R4<br /> StrCpy $R1 -1<br /> StrCpy $R3 0<br /> StrCpy $R4 ""<br /> StrCpy $R5 ""<br /> loop:<br />   StrCpy $R2 $R0 1 $R1<br />   IntOp $R1 $R1 - 1<br />   StrCmp $R2 "" done<br />   StrCmp $R2 "\" 0 +3<br />   StrCpy $R4 "$R2\$R4"<br /> Goto loop<br />   StrCpy $R4 "$R2$R4"<br /> Goto loop<br /> done:<br />   Pop $R3<br />   Pop $R2<br />   Pop $R1<br />   Exch $R4<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      (ConvertBStoDBS stands for Convert Back Slash to Double Back Slash :p)<br />
+      <br />
+      I'll put it up oin the archive too.<br />
+      <br />
+      -Stu
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Sunjammer</span><br />
+      <span class="post-time small text-muted">25th April 2003 02:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">G_J, any chance you could post your installer source at the Archive? Even if u have to strip most of it out for coporate reasons the page structure and code to make it work would be a great example to many.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">G_J</span><br />
+      <span class="post-time small text-muted">25th April 2003 11:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Afrow UK: many thanks for your backslash-doubler function.<br />
+      Your tip regarding !define MUI_TEXT_FINISHPAGE_SUBTITLE "[Place your text here]" didn't work though. I am using a multi-lingual Modern UI installer. The message I want to change is defined as follows in English.nsh:<br />
+      <br />
+      !insertmacro MUI_LANGUAGEFILE_STRING MUI_TEXT_FINISH_INFO_TEXT "${MUI_PRODUCT} has been installed on your computer.\r\n\r\nClick Finish to close this wizard."<br />
+      <br />
+      I need to change it well after the strings have been loaded, i.e. after !insertmacro MUI_LANGUAGE "English" is performed. Any ideas?<br />
+      <br />
+      Sunjammer: I think I will indeed post the installer source (with some minor censorship) in a few days once it's done. Since I've never done this I may ask you for help. Cheers.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Sunjammer</span><br />
+      <span class="post-time small text-muted">25th April 2003 11:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">G_J, no worries, ask away :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">25th April 2003 11:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm thinking, you could get the dialog item number, and then insert text using a macro.<br />
+      <br /></p>
+      <pre>
+<code><br />!macro CUSTOM_FINISHPAGE_TEXT TEXT<br />        GetDlgItem $2 $HWNDPARENT 1037<br />        SendMessage $2 ${WM_SETTEXT} 0 "STR:${TEXT}"<br />!macroend<br /></code>
+</pre><br />
+      <br />
+      Just change the number (currently 1037) until you get the right item on the page.<br />
+      <br />
+      On the finish page, use:<br />
+      <pre>
+<code><br />Function CustomText<br />  !insertmacro MUI_HEADER_TEXT "${MUI_PRODUCT} has been installed on your computer.\r\n\r\nClick Finish to close this wizard."<br />FunctionEnd<br /></code>
+</pre><br />
+      This function is called using this:<br />
+      !define MUI_CUSTOMFUNCTION_FINISHPAGE_SHOW "CustomText"<br />
+      <br />
+      This might work, if I understand what you need.<br />
+      <br />
+      I'd try and get the dialog number for you now, but I gota go!<br />
+      <br />
+      -Stu
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joost Verburg</span><br />
+      <span class="post-time small text-muted">25th April 2003 12:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+      <pre>
+<code>!define MUI_TEXT_FINISH_INFO_TEXT "${MUI_PRODUCT} has been installed on your computer.\r\n\r\nClick Finish to close this wizard."</code>
+</pre><br />
+      add that before the MUI_LANGUAGE macro's. If you have multiple languages, put 'em before each macro.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">G_J</span><br />
+      <span class="post-time small text-muted">25th April 2003 14:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Joost, as I mentioned I can't specify the alternative text before the MUI_LANGUAGE macros because I need to use it *conditionally*. In normal circumstances I leave this text with its default phrasing. But if it's an upgrade, which I detect during .onInit, only then do I want to change the text and by that time the MUI_LANGUAGE macros have taken place.<br />
+      <br />
+      Afrow, thanks for your idea on using GetDlgItem. It appears to be in the right direction. Unfortunately, it fails. The reason is that if I define a Show function for the Finish page, I found that it gets called while the File Installation page is still displayed. So looking then for the internal #32770 dialog of $HWNDPARENT gets me the one for the File Installation page (and *not* the Finish page). I tried using the weird ${MUI_TEMP1} mentioned in the Modern UI readme but I get the same result. To summarize, I can't get hold of the HWND of the internal dialog of the Finish page. Once that is possible, GetDlgItem using the ID as obtained by Spy++ for the label that I want to change, will probably conclude the affair. Once again, I'd appreciate your ideas.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">25th April 2003 14:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">To change one of the strings in the finish page dynamically do the same as you have done for the welcome page, define a pre-function (MUI_CUSTOMFUNCTION_FINISH_PRE) and write to the same file in the same place ($PLUGINSDIR\ioSpecial.ini) to the same INI fields.<br />
+      <br />
+      Greetings from Jerusalem :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">G_J</span><br />
+      <span class="post-time small text-muted">25th April 2003 15:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Kichik, thanks for your extreme responsiveness. Unfortunately, your suggestion didn't work. Almost, but no cigar... In the Pre function of the Finish page, ioSpecial.ini still has the definition of the Welcome page. Any changes I make there to the strings are lost the moment the function end and the Finish page really gets displayed (unlike changes I made to the [Settings] section that did take effect). I verified this by adding dummy MessageBox calls in my Pre function and I manually examined the said ioSpecial.ini at that point in a temp location on my disk. The problem seems to be that the Pre function of the Finish page is called, perhaps, too early, not giving the scripter a real chance to tweak this page either through GetDlgItem or through the ioSpecial.ini. Am I making any sense? Regards, GJ</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">25th April 2003 15:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Oops, it's show you're supposed to use in both welcome and finish, MUI_CUSTOMFUNCTION_FINISH_SHOW and MUI_CUSTOMFUNCTION_WELCOME_SHOW. Pre is to skip the page, show is to change it, and finish is for preventing the user from leaving the page.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">G_J</span><br />
+      <span class="post-time small text-muted">25th April 2003 15:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Sorry, still not working! In the Show function of the Finish page, I indeed see the ioSpecial.ini of the Finish page. My modifications in it take place successfully. I verified this. But the new labels I set are ignored, and the default ones are always displayed.<br />
+      <br />
+      I suspect that the labels are already read into memory *before* the Show function and are not read back. Hence, it is impossible to change them in the Show function, by writing to ioSpecial.ini.<br />
+      Try modifying any of the Text labels in Field 2 through 4 and you'll see. I believe this may be an NSIS buglet.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">25th April 2003 16:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">OK, here's the deal - on the show function the page has already been created but it's not shown to let the user (and the MUI macros) change background colors and fonts used in the dialog. Therefore the INI file, as you said, has already been read. What you'll need to do is use SendMessage (hwnd) WM_SETTEXT 0 "STR:text" to change the text. To get the HWND use GetDlgItem using ${MUI_TEMP1} as the HWND of the newly created dialog.<br />
+      <br /></p>
+
+      <blockquote>
+        MUI_CUSTOMFUNCTION_FINISH_SHOW - ${MUI_TEMP1} contains HWND of Finish dialog
+      </blockquote>The dialog item ID is 1200 + field number - 1. For example, this code (taken from the MUI) sets the header background color and sets its font:<br />
+      <br />
+      <pre>
+<code>GetDlgItem ${MUI_TEMP2} ${MUI_TEMP1} 1201<br />SetBkColor ${MUI_TEMP2} "${MUI_BGCOLOR}"<br />CreateFont ${MUI_TEMP3} "$(MUI_FONT_TITLE)" "$(MUI_FONTSIZE_TITLE)" "$(MUI_FONTSTYLE_TITLE)"<br />SendMessage ${MUI_TEMP2} ${WM_SETFONT} ${MUI_TEMP3} 0</code>
+</pre><br />
+      <br />
+      I am sorry for the confusion.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joost Verburg</span><br />
+      <span class="post-time small text-muted">25th April 2003 16:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I have updated the Modern UI. Grab the latest CVS version and you can write to the INI file in the pre function (the fields have been created).</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">G_J</span><br />
+      <span class="post-time small text-muted">25th April 2003 16:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks Kichik. I finally got this to work.<br />
+      <br />
+      Somewhere at the top I define:<br />
+      LangString TEXT_UPGRADE_SUCCESS ${LANG_ENGLISH} "${MUI_PRODUCT} has been successfully upgraded!$\r$\n$\r$\nClick Finish to close this wizard."<br />
+      ... and for the other languages.<br />
+      <br />
+      Then in the Show function of the Finish page, the following code, though can be optimized a little, seems to work well:<br />
+      <br />
+      Function MyFinishShow<br />
+      ; Change the text on the Finish page conditionally<br />
+      ; if it's an upgrade:<br />
+      StrCmp $5 "Upgrade" 0 Leave<br />
+      Push $R0<br />
+      Push $R1<br />
+      StrCpy $R0 ${MUI_TEMP1}<br />
+      GetDlgItem $R1 $R0 1202<br />
+      SendMessage $R1 ${WM_SETTEXT} 0 "STR:$(TEXT_UPGRADE_SUCCESS)"<br />
+      Pop $R1<br />
+      Pop $R0<br />
+      Leave:<br />
+      FunctionEnd<br />
+      <br />
+      Thanks again!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joost Verburg</span><br />
+      <span class="post-time small text-muted">25th April 2003 17:23 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Good :D You can also write to the INI file in the pre func. It's up to you what you think is better.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

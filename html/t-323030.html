@@ -1,0 +1,187 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Delimiter Question" />
+
+  <title>Delimiter Question - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Delimiter Question</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=323030">Delimiter Question</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">10th October 2010 23:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Delimiter Question</strong><br />
+      i'm parsing the attached file for certain keywords using the good old <a href="http://nsis.sourceforge.net/Find_a_string_in_an_e.g._exe_or_dll_file" target="_blank">SearchByteFile</a>. this works in most cases, but sometimes the result would be more dependable if i could parse for two keywords.<br />
+      <br />
+      example: the attached file contains the words "Screen Reverse". at the moment i can only parse the file for "Reverse", using the both words seperated by a space as delimiter won't work (encoding issue?).<br />
+      <br />
+      does anybody has a suggestion on how i can detect the delimiter between the two words? if was thinking of using WordFind2x maybe, but i wouldn't know how to make it work with a file<br />
+      <br />
+      <font size="1">ps: i'm using this to detect if an avs-preset is using a plugin (in this case the Screen Reverse plugin), so i can install the plugin if missing</font></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">11th October 2010 01:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">That function seems pretty iffy.. sometimes finding a string, sometimes not, depending on whether or not its group size happens to bisect the search string.. which in a worst case scenario means you have to run that search function as many times as your search string is long (on large files).<br />
+      <br />
+      I.e. if you try to find the word "Screen" and use a group size of 15, it's fine:<br /></p>
+      <pre>
+<code>NullsoftAVSPr
+<br />eset0.2P0›V
+<br />irtualEffect</code><span style="color: #007700">:
+<br /></span><span style="color: #0000BB">ScreenReverse
+<br /><br />H0šVirtualE
+<br /></span>
+
+<!-- php buffer end -->
+                
+                
+                
+</pre>
+      <hr />
+      <pre>
+        
+Try again with search size 16...<br />
+        PHP Code:
+        
+                
+</pre>
+      <hr />
+      <pre>
+                <code style="white-space:nowrap">
+                
+                        <!-- php buffer start --></code><span style="color: #000000">
+<span style="color: #0000BB">NullsoftAVSPre
+<br />set0.2P0›Vir
+<br />tualEffect</span><span style="color: #007700">:</span><span style="color: #0000BB">Scr
+<br />eenReverse
+<br />H0š
+<br />VirtualEffect</span><span style="color: #007700">:
+</span></span>
+</pre>Which appears to be the actual problem you're seeing, as the character in that file is most definitely just a space character, and if I use a group size of 15 (see above where "Screen Reverse" happens to fit in a single grouping), the output of that function is 'yes' (found) and '1' (once).<br />
+      Any multiple of that minimum fit will work, as well as any value greater than that string's position in the file -and- smaller than the actual file size (which is why the default value of '500' in that function doesn't work.. the file itself is only 181 bytes).<br />
+      <br />
+      That function probably needs fixing... and clean-up (I see an initializable variable that's inside a loop) ;)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">11th October 2010 04:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">alright.. hit my head against some max string length thing somewhere.. probably missing a +1 or a -1 somewhere in the actual code.. but for now I'm tossing a 'max length' into a variable that's one less than the actual max string length define.<br />
+      <br />
+      which is also why I'm posting this as pastebin.. so somebody can point out where that +1 / -1 I'm missing went before I sanitize it into something a bit more usable (and without custom variables).<br />
+      <br />
+      That said.. it does work.. you don't have to worry about a group size (it'll default to NSIS's maximum string length (uhh.. see above)) and will find the string you're looking for even across the group boundaries (by simply keeping the last bit of a previous group).<br />
+      <a href="http://www.pastebin.ca/1959048" target="_blank">http://www.pastebin.ca/1959048</a><br />
+      ( copy/paste into an editor that doesn't linewrap. ouch. )<br />
+      <br />
+      There's a few tweaks in there, if you want to poke at it right now in its above pastebin state..<br />
+      - the file offsets at which the search string is found will be pushed to the stack. This can all be removed for slightly faster execution / less code. This includes a small bit that deals with NULL bytes.<br />
+      - the character that represents a NULL byte can be changed.. not that it really matters, as it's only used in order to keep file offset counting correct.<br />
+      - the file offsets can be 0-based or 1-based (currently.. as every editor I use uses 1-based offsets, but pieces of code will usually be 0-based)<br />
+      - the search is currently case sensitive.. can easily be made case insensitive by changing the "S==" logic to a "==" logic.<br />
+      - the search currently searches the entire file... obviously, you only care about finding it -once-.. so in your case, you could exit the outer loop (a hacky goto will do) as soon as it finds the first needle and increases the counter.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">11th October 2010 07:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">you're a star, will test this as soon as i get home. thanks!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">11th October 2010 09:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">btw: to make this macro work multiple times, you need to add<br />
+      <br /></p>
+      <pre>
+<code>StrCpy $file.eof 0</code>
+</pre><br />
+      <br />
+      before the loop
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">11th October 2010 12:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">yeah, like I said.. haven't sanitized it yet.. 'd like to know why my maximum string length needs to be 1 less than the actual maximum string length first before potentially replacing / amending the wiki page; that pastebin will expire in about a month.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">13th October 2010 12:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i'm also wondering why this macro (like the one i used before) are performing so weak. i did a search in notepad++ and got 3517 hits in 1563 files in about 16s. the same search using this macro takes a lot longer (something between 30 and 40mins.) some guy on the avs forum wrote a c++ app and search took about a second. (hope he can/wants to turn that into a nsis plugin!)<br />
+      <br />
+      how can there be such a huge difference between those three methods?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">13th October 2010 13:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well it's a 'use the right tool for the job' sort of thing. NSIS is very powerful and flexible and just the fact that you -can- use it to search for strings in binaries is a testament to that.<br />
+      <br />
+      But that doesn't mean you -should- unless you have no choice (and as there is indeed no plugin, your choices are limited).<br />
+      There's several things that make the macro much slower than a more dedicated solution.. starting with NSIS code being semi-interpreted, going through the various variable access bits and pieces, the need to read one byte at a time if going binary in NSIS (while another app might simple read 8K of bytes in one go), etc. It's also entirely possible that my code can be optimized further.<br />
+      <br />
+      It can probably at least be sped up by ignoring the fact that you're reading a binary file (as you only care about plaintext), and search within that; there's probably already functions for doing so in the WiKi, but the main adjustment would be how $haystack gets built.<br />
+      <br />
+      But it will never be as fast as a dedicated solution. And if your installer needs to seek through thousands of files or files any larger than a few kilobytes, a dedicated solution is most likely what you'd want :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Yathosho</span><br />
+      <span class="post-time small text-muted">13th October 2010 13:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">will stick with your macro for now as it's more reliable than everything i tried before. i used a more sloppy one in the previous version of my "installer". so while this might be performing as good or bad as the previous one, it's certainly a win. and in the best case i will get a plugin to replace it soon.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

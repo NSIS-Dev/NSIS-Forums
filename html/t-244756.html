@@ -1,0 +1,250 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Find registry key in HKU for particular user" />
+
+  <title>Find registry key in HKU for particular user - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Find registry key in HKU for particular user</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=244756">Find registry key in HKU for particular user</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wabiloo</span><br />
+      <span class="post-time small text-muted">27th April 2006 18:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Find registry key in HKU for particular user</strong><br />
+      Hi,<br />
+      <br />
+      I'm creating an installer that installs a program that will run as a particular user. So, first I create a new user. Then, I need to make modifications to the registry for that particular user, as well as make changes to the startup menu for that particular user.<br />
+      This user has very few rights, so I need to make these changes as part of my installer, while it is running with admin rights.<br />
+      <br />
+      How do I go about finding what SID a user has, where its profile is stored, and what registry key that user has?<br />
+      I cannot seem to find a way with EnumUsersReg and UserInfo to find these things.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">27th April 2006 18:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'd suggest create the new account and force a reboot/login for the new user, and use HKCU....RunOnce to write all needed reg records.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wabiloo</span><br />
+      <span class="post-time small text-muted">8th May 2006 16:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Unfortunately that wouldn't work as the user I create has no rights to write to the registry.<br />
+      Plus, I have so many things to setup in the registry that I would want to do it from the Administrator account.<br />
+      <br />
+      It now looks even worse than I thought.<br />
+      <br />
+      My software runs as an input-free application. I need to create a user with limited privileges for that. The installer should create that user and set it up accordingly (startup menu, and some registry keys in HKU).<br />
+      What I've noticed is that when I create the user, the registry key for its SID is not created in the registry nor is the profile created until I log off and log on again. However, since the user created has limited rights, it can't pursue the installation as it has no right to write in the registry.<br />
+      I'm completely stuck!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">8th May 2006 21:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">This code works fine for unattended XP new installations as well for existing XP systems.<br />
+      The new account appears immediately in Control Panel.<br /></p>
+      <pre>
+<code>function CreateUser<br />nsexec::exec 'net user "test_userXP" "" /add'<br />nsexec::exec 'net localgroup "Power Users" "test_userXP" /delete'<br />nsexec::exec 'net localgroup "Users" "test_userXP" /add'<br />nsexec::exec 'net localgroup "Guests" "test_userXP" /delete'<br />nsexec::exec 'net localgroup "HelpServicesGroup" "test_userXP" /delete'<br />nsexec::exec 'net localgroup "Network Configuration Operators" "test_userXP" /delete'<br />nsexec::exec 'net localgroup "Remote Desktop Users" "test_userXP" /delete'<br />nsexec::exec 'net localgroup "Replicator" "test_userXP" /delete'<br />nsexec::exec 'net localgroup "Backup Operators" "test_userXP" /delete'<br />nsexec::exec 'net localgroup "Administrators" "test_userXP" /delete'<br />nsexec::exec 'net accounts /maxpwage:unlimited'<br />functionend<br /><br />section -<br />call CreateUser<br />sectionend</code>
+</pre><br />
+      * For the example above the new account is a limited user, add/delete to/from groups according to what account you wish to create.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">CancerFace</span><br />
+      <span class="post-time small text-muted">8th May 2006 23:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">@Wabiloo<br />
+      When you create the new user his/her registry hive is not loaded so you will not find any info in the registry, unless this user manually logs into your computer. When that user is logged, the default user profile (usually found in <i>%SystemDrive%\Documents and Settings\Default User</i>) will be copied to the new user's folder. Note that messing around with the DefaultUser hive will affect every user that will be created in the future.</p>
+
+      <blockquote>
+        as well as make changes to the startup menu for that particular user
+      </blockquote>if your program will run in the context of the new user, why do you need to make changes to the StartUp menu of that user? Do you actually need the new user to login with a GUI to the computer?<br />
+      <br />
+      If you still want to find the user's SID this will do the trick:
+      <pre>
+<code>System::Call 'netapi32.dll::NetUserGetInfo(w n, w "PutYourUserNameHere", i 23, *i .R8)i.r4'<br />System::Call '*$R8(w .R1, w .R2, w .R3, i .R4, i .R9)'<br />System::Call advapi32::ConvertSidToStringSid(iR9,*t.R0)<br />DetailPrint "The SID is $R0"<br />System::Free $R8</code>
+</pre><br />
+      @Red Wine<br />
+      When a user is created using
+      <pre>
+<code>net user "test_userXP" "" /add</code>
+</pre>he/she belongs by default only to the Users group so there is no reason to delete this user from every possible group. Your code will give error 1377 for each group you will try to remove the user from, if the user does not belong to that group.<br />
+      <br />
+      CF
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">9th May 2006 00:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">@ CF<br />
+      Uh! forgive me that I don't know what exactly is this 1377, but I know that when I create an account by that way, it appears immediately in Control Panel and all it needs is log off/log in and the account is in tact and running. Though, trying to create the new account with this 1377 free way, there is not account at all. Do you think am I missing something?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">CancerFace</span><br />
+      <span class="post-time small text-muted">9th May 2006 00:40 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Try it on a command prompt.</p>
+      <pre>
+<code>net user "test_userXP" "" /add</code>
+</pre><br />
+      The account is present as soon as the above command finishes. However if you try to add the account to the Users group:<br />
+      <pre>
+<code>C:\&gt;net localgroup "Users" "test_userXP" /add<br />System error 1378 has occurred.<br />The specified account name is already a member of the local group.</code>
+</pre><br />
+      or remove the account from any other group that it doesn't belong to:<br />
+      <pre>
+<code>C:\&gt;net localgroup "Guests" "test_userXP" /delete<br />System error 1377 has occurred.<br />The specified account name is not a member of the local group.</code>
+</pre><br />
+      and so on ...<br />
+
+      <blockquote>
+        Though, trying to create the new account with this 1377 free way, there is not account at all
+      </blockquote>???<br />
+      <br />
+      CF
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wabiloo</span><br />
+      <span class="post-time small text-muted">10th May 2006 12:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">@CancerFace<br />
+      <br />
+      My application runs as a replacement shell instead of explorer. However, I want it to run automatically only when a specific user logs on. My installer creates that user. That user has no admin rights.<br />
+      <br />
+      So, what I need to be able to do, is for that user only, access the registry key Winlogon/Shell and replace it.<br />
+      <br />
+      Can anyone see a way of doing that?<br />
+      <br />
+      CancerFace, when you say "messing around with the DefaultUser hive" do you mean whatever is in HKU/.Default ?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Wabiloo</span><br />
+      <span class="post-time small text-muted">10th May 2006 13:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Do you think the following would be possible?<br />
+      <br />
+      1) Create a user (say one called User1) with "net user"<br />
+      Because the user has not logged on yet, no profile exists for it.<br />
+      2) Copy the C:\Documents and Settings\Default User into c:\documents and settings\user1<br />
+      3) load the registry hive NTUSER.dat from that new profile, with "reg load", into a new HKU/User1<br />
+      4) make the changes to that registry key<br />
+      5) Unload the hive<br />
+      <br />
+      Do you think that would work, or is windows doing a trillion other things before creating a valid profile for a user?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">CancerFace</span><br />
+      <span class="post-time small text-muted">10th May 2006 21:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        CancerFace, when you say "messing around with the DefaultUser hive" do you mean whatever is in HKU/.Default ?
+      </blockquote>Yes, this is the hive found in <i>%SystemDrive%\Documents and Settings\Default User\ntuser.dat</i>. When the new user is logged in this hive is transferred to his/her profile path and is used as a template. There are several changes that take place to that hive, apart from the permissions being set for the new user. For example, the values found under the <i>Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders</i> key change in order to reflect the new user's profile. Basically it would be a good idea to first copy the default hive to a new place and then edit it in order to avoid enforcing changes to all the users that will be created after that.<br />
+
+      <blockquote>
+        1) Create a user (say one called User1) with "net user"<br />
+        Because the user has not logged on yet, no profile exists for it.<br />
+        2) Copy the C:\Documents and Settings\Default User into c:\documents and settings\user1<br />
+        3) load the registry hive NTUSER.dat from that new profile, with "reg load", into a new HKU/User1<br />
+        4) make the changes to that registry key<br />
+        5) Unload the hive
+      </blockquote>In general I think that this will work. I have done something similar in the past: I created a template account, logged in to the domain then configured it as I wanted. Used that hive as a template and then for every new user that I would create I would copy over that hive to the new user's profile folder. Here is a snip of what I was using on our server in a batch to generate a new user's profile structure:<br />
+      <pre>
+<code>MKDIR \\%SERVER%\profiles$\%NewUserNameE%<br />:: copy the template profile<br />XCOPY /I /E /H /K /Y \\%SERVER%\profiles$\Template\Profile \\%SERVER%\profiles$\%NewUserName% &gt;nul<br />:: change TemplateUser to the new username<br />REG.EXE LOAD HKU\%NewUserName% \\%SERVER%\profiles$\%NewUserName%\NTUSER.DAT<br />REGFIND.EXE -P HKEY_USERS\%NewUserName% TemplateUser -r %NewUserName%<br />REG.EXE UNLOAD HKU\%NewUserName%<br />:: Create the homedir structure<br />UNRAR.EXE x -r -inul \\%SERVER%\profiles$\Template\Home\TemplateHome.rar \\%SERVER%\home$\%NewUserName%\<br />:: Set Permissions<br />SUBINACL.EXE /subdirectories \\%SERVER%\home$\%NewUserName% /setowner=%DomainName%\%NewUserName%<br />SUBINACL.EXE /subdirectories \\%SERVER%\home$\%NewUserName%\* /setowner=%DomainName%\%NewUserName%</code>
+</pre>There are more elegant ways to do this using API calls but back then that did the job and everybody was happy :)<br />
+      <br />
+      Hope this helps<br />
+      <br />
+      CF
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Lord HellFire</span><br />
+      <span class="post-time small text-muted">30th March 2011 16:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Cancerface, that is just awesome! Thanks!<br />
+      <br />
+      Exactly what I am looking for!!<br />
+      <br />
+      I modified it to copy the files directly from C:\Users instead of via the share, and to load a .reg file into the HKU\ %username% before unload, which will be modified by script to adapt to the new username before it is imported.<br />
+      <br />
+      This is just awesome, because when I need to make changes valid for all new users, I can just modify the Defaultuser profile and the changes will automatically apply for all new users.<br />
+      <br />
+      I can also make smaller .reg-files targeting specific settings and change them for individual users (provided they are not logged on)<br />
+      <br />
+      Again, thanks! This is gold!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">jpderuiter</span><br />
+      <span class="post-time small text-muted">30th March 2011 23:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Please note this is an old thread.<br />
+      You can do the same now with the UserMgr plugin.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Lord HellFire</span><br />
+      <span class="post-time small text-muted">1st April 2011 09:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">jpderuiter:<br />
+      Thanks for the info.<br />
+      But I need the ability to do these things via command prompt, so I can (batch)script processes for creating new users more quickly and easily from our database, which is why this helps me so much ;)</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

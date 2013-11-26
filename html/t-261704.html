@@ -1,0 +1,787 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Will NSIS do what i'm looking to do?" />
+
+  <title>Will NSIS do what i'm looking to do? - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content=" Will NSIS do what i'm looking to do?" />
+
+  <title>Will NSIS do what i'm looking to do? - NSIS Forums</title>
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" />
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Will NSIS do what i'm looking to do?</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=261704">Will NSIS do what i'm looking to do?</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
+      <span class="post-time small text-muted">13th December 2006 15:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Will NSIS do what i'm looking to do?</strong><br />
+      Hi Guys,<br />
+      <br />
+      I've recently discovered NSIS and before learning the NSIS language I need to know if it'll do what i want..<br />
+      <br />
+      I have an application that's about 10mb, i want the installer to prompt the user for a licence code and username, when the user presses next i want the installer to send a POST (or GET) to:<br />
+      <br />
+      http://www.mydomain.com/myapp/reg.php?u=%USER_NAME%&amp;c=%LICENCE_CODE%<br />
+      <br />
+      My script will either provide a 64 char string or the word INVALID, if it returns a string that string needs to be written to a file during the installation, if it returns invalid then the installer needs to prevent the install from proceeding.<br />
+      <br />
+      Thanks!<br />
+      D.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Comm@nder21</span><br />
+      <span class="post-time small text-muted">13th December 2006 17:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">no, nsis cant do this itself, you'll need to use one of the few internet plugins available.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">FineWolf</span><br />
+      <span class="post-time small text-muted">13th December 2006 22:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Yes you can do what you want via NSISdl (included with the NSIS distribution). I have used something similar in the past do make sure that the installer used was the latest version.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
+      <span class="post-time small text-muted">14th December 2006 14:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for the answers guys!<br />
+      <br />
+      After several hours i've come up with the following:<br />
+      <br />
+      ## General<br />
+      InstallDir "$PROGRAMFILES\Test"<br />
+      Name "Test Installer"<br />
+      OutFile "Install.exe"<br />
+      <br />
+      ## Include headers<br />
+      !include MUI.nsh<br />
+      !include LogicLib.nsh<br />
+      <br />
+      ## Interface Settings<br />
+      !define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\orange-install.ico"<br />
+      !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\orange-uninstall.ico"<br />
+      XPStyle on<br />
+      <br />
+      ## Reserve Files, files that are required before the actual installation should be stored first, this will make your installer start faster.<br />
+      ReserveFile "validateSerial.ini"<br />
+      !insertmacro MUI_RESERVEFILE_INSTALLOPTIONS<br />
+      <br />
+      ## Pages<br />
+      Page custom SerialPageShow SerialPageLeave<br />
+      Page custom validateSerial<br />
+      !insertmacro MUI_PAGE_DIRECTORY<br />
+      !insertmacro MUI_PAGE_INSTFILES<br />
+      <br />
+      ## Languages<br />
+      !insertmacro MUI_LANGUAGE English<br />
+      <br />
+      Function .onInit<br />
+      !insertmacro MUI_INSTALLOPTIONS_EXTRACT "validateSerial.ini"<br />
+      FunctionEnd<br />
+      <br />
+      Function SerialPageShow<br />
+      !insertmacro MUI_HEADER_TEXT "Enter Serial Code" "Enter the software serial code to continue."<br />
+      <br />
+      PassDialog::Dialog Serial \<br />
+      /HEADINGTEXT 'Please enter the serial code located on the software CD case...' \<br />
+      /CENTER \<br />
+      /BOXDASH 12 70 5 '' \<br />
+      /BOXDASH 92 70 5 '' \<br />
+      /BOXDASH 172 70 5 '' \<br />
+      /BOXDASH 252 70 5 '' \<br />
+      /BOX 332 70 5 ''<br />
+      <br />
+      Pop $R0 # success, back, cancel or error<br />
+      FunctionEnd<br />
+      <br />
+      Function SerialPageLeave<br />
+      <br />
+      ## Pop values from stack<br />
+      Pop $R1<br />
+      Pop $R2<br />
+      Pop $R3<br />
+      Pop $R4<br />
+      Pop $R5<br />
+      <br />
+      ;!insertmacro MUI_HEADER_TEXT "Validating..." "Please Wait"<br />
+      ;!insertmacro MUI_INSTALLOPTIONS_DISPLAY "validateSerial.ini"<br />
+      <br />
+      ;MessageBox MB_OK "Break1"<br />
+      <br />
+      FunctionEnd<br />
+      <br />
+      Function validateSerial<br />
+      <br />
+      ;MessageBox MB_OK "Break2"<br />
+      <br />
+      ;## Disable the Back button<br />
+      ;GetDlgItem $R6 $HWNDPARENT 3<br />
+      ;EnableWindow $R6 0<br />
+      ;## Disable the Next button<br />
+      ;GetDlgItem $R6 $HWNDPARENT 1<br />
+      ;EnableWindow $R6 0<br />
+      <br />
+      GetTempFileName $0<br />
+      InetLoad::load /post "licence=$R1-$R2-$R3-$R4-$R5" "http://www.deanbayley.co.uk/test/verify.php" "$0" /slient ""<br />
+      Pop $1 # $1 now holds the exit code for above<br />
+      <br />
+      FileOpen $2 $0 "r"<br />
+      FileRead $2 $3<br />
+      FileClose $2<br />
+      <br />
+      ${If} $3 == 'INVALID'<br />
+      MessageBox MB_OK|MB_ICONEXCLAMATION "Invalid Serial"<br />
+      Call SerialPageShow<br />
+      ${Else}<br />
+      Goto serialOK<br />
+      ${EndIf}<br />
+      <br />
+      Abort<br />
+      <br />
+      serialOK:<br />
+      FunctionEnd<br />
+      <br />
+      Section ""<br />
+      SectionEnd<br />
+      <br />
+      The required files and plugins are attached, (plugins need copied to the plugins dir)<br />
+      <br />
+      aaaaa-aaaaa-aaaaa-aaaaa-aaaaa is a valid serial and will verify, anything else will return INVALID and should cause the script to not continue...<br />
+      <br />
+      If you read through the script you can see what i was trying to do, i want it to work like so:<br />
+      <br />
+      Enter serial -&gt; Press Next -&gt; Displays Custom Page "please wait..." -&gt; if it was valid continue to install dir selection || if NOT go back to the begining...<br />
+      <br />
+      At the moment it goes back to the begining after an error but then doesn't care if the serial validates or not...<br />
+      <br />
+      Any help wold be really appreciated...<br />
+      D.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
+      <span class="post-time small text-muted">14th December 2006 17:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I've sorted it...<br />
+      <br />
+      After spending about 2 hours reading the manual i found a much more efficient way of doing this.<br />
+      <br />
+      For anyone interested i've attached the result to this post.<br />
+      <br />
+      Thanks Guys.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">14th December 2006 18:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Great! I guess it works as expected!<br />
+      I think you should remove the temp file once the verification has done.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
+      <span class="post-time small text-muted">14th December 2006 18:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'll leave the server side script there (its not the live one anyway) so that people can play with it and hopefully learn from it...<br />
+      <br />
+      The only valid serial is aaaaa-aaaaa-aaaaa-aaaaa-aaaaa anything else will return invalid.<br />
+      <br />
+      Now to start adding files to the installer :)<br />
+      <br />
+      Dean.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kisin</span><br />
+      <span class="post-time small text-muted">22nd March 2007 11:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">can you please post the source for the install.zip file?<br />
+      it can realy help me out<br />
+      <br />
+      thanks</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
+      <span class="post-time small text-muted">22nd March 2007 18:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I would love to help on any specific questions but unfortunately i don't have the specific source code you requested and for security reasons i can't release the final versions source code...<br />
+      <br />
+      Dean.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pankajch82</span><br />
+      <span class="post-time small text-muted">23rd June 2008 22:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">i am trying same , using above code &amp; using below url<br />
+      <a href="http://pnilyaoverseas.com/pankaj/test.php?test=12345" target="_blank">http://pnilyaoverseas.com/pankaj/test.php?test=12345</a><br />
+      <br />
+      for easy testing i had disabled post from 5 boxes , now it just post from 1st box .....so if u type 12345 it should return Valid , if u type 00000 it should return INVALID.<br />
+      <br />
+      But its not happening , its taking valid for everything</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
+      <span class="post-time small text-muted">23rd June 2008 23:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi pankajch82,<br />
+      <br />
+      I wondered who was testing it today, i setup a notification when people visit the test url...<br />
+      <br />
+      Anyway it is impossible for anyone to know why its not working without you posting your PHP source code, its like showing the doctor your foot and asking whats wrong with your ear...<br />
+      <br />
+      If you post your PHP source i'll have a look...<br />
+      <br />
+      D.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pankajch82</span><br />
+      <span class="post-time small text-muted">24th June 2008 09:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">hi , yep your code is famous :)<br />
+      <br />
+      I am very new to both NSIS &amp; PHP<br />
+      <br />
+      attached is PHP + NSIS stuff ....<br />
+      <br />
+      URL to test :<a href="http://pnilyaoverseas.com/pankaj/test.php?test=12345" target="_blank">http://pnilyaoverseas.com/pankaj/test.php?test=12345</a><br />
+      <br />
+      only 12345 &amp; 00000 are valid , rest are all invalid.<br />
+      <br />
+      In temp file i get the below error<br />
+      &lt;br /&gt;<br />
+      &lt;b&gt;Warning&lt;/b&gt;: mysql_num_rows(): supplied argument is not a valid MySQL result resource in &lt;b&gt;/home/home2/indiamm/public_html/pankaj/test.php&lt;/b&gt; on line &lt;b&gt;19&lt;/b&gt;&lt;br /&gt;<br />
+      INVALID<br />
+      <br />
+      It will be great if you can provide me detail son how you are handling .<br />
+      <br />
+      Thanks</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">24th June 2008 10:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">That will occur if $_GET['test'] is empty.<br />
+      <a href="http://pnilyaoverseas.com/pankaj/test.php?test=" target="_blank">http://pnilyaoverseas.com/pankaj/test.php?test=</a><br />
+      <br />
+      You need extra single quotes:<br />
+      <br />
+      $result = mysql_query("SELECT status FROM key WHERE id='" . $_GET['test'] . "'");<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pankajch82</span><br />
+      <span class="post-time small text-muted">24th June 2008 10:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for that .......got it resolved .<br />
+      <br />
+      Just now need to have a waiting screen that says "validating" in here ...<br />
+      <br />
+      :)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
+      <span class="post-time small text-muted">24th June 2008 10:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You beat me to it..<br />
+      <br />
+      Heres my version of it..</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">24th June 2008 11:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">@ Dean,<br />
+      <br />
+      Hi, could you please consider to make a reference page at wiki?<br />
+      That would be indeed helpful for others.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <span class="post-time small text-muted">28th June 2008 15:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi not working<br />
+      <br />
+      I have For Checked User Site.<br />
+      <br />
+      <br /></p>
+      <pre>
+<code><br /><br />## Reserve Files,<br />ReserveFile "validateUser.ini"<br />!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS<br /><br />## Pages<br />Page custom UserPageShow UserPageLeave<br />Page custom validateUser<br />!insertmacro MUI_PAGE_DIRECTORY<br />!insertmacro MUI_PAGE_INSTFILES<br /><br />## Languages<br />!insertmacro MUI_LANGUAGE English<br /><br />Function .onInit<br />!insertmacro MUI_INSTALLOPTIONS_EXTRACT "validateUser.ini"<br />FunctionEnd<br /><br />Function UserPageShow<br />        !insertmacro MUI_INSTALLOPTIONS_EXTRACT "validateUser.ini"<br /><br />                    PassDialog::InitDialog /NOUNLOAD UserPass<br />                    Pop $R0 # Page HWND<br /><br />                    GetDlgItem $R1 $R0 ${IDC_USERNAME}<br />                    SetCtlColors $R1 0xFF0000 0xFFFFFF<br />                    GetDlgItem $R1 $R0 ${IDC_PASSWORD}<br />                    SetCtlColors $R1 0x0000FF 0xFFFFFF<br /><br /> PassDialog::Show<br />Pop $R0 # success, back, cancel or error<br />FunctionEnd<br /><br />Function UserPageLeave<br /><br /><br />## Pop password &amp; username from stack<br />Pop $R0<br />Pop $R1<br /><br />## A bit of validation<br />StrCmp $R0 '${Username1}' 0 +2<br />StrCmp $R1 '${Password1}' Good Bad<br />StrCmp $R0 '${Username2}' 0 +2<br />StrCmp $R1 '${Password2}' Good Bad<br /><br />        !insertmacro MUI_HEADER_TEXT "Validating..." "Please Wait"<br /><br /><br />FunctionEnd<br /><br />Function validateUser<br /><br />        ;## Disable the Back button<br />        GetDlgItem $R6 $HWNDPARENT 3<br />        EnableWindow $R6 0<br />        ## Disable the Next button<br />        GetDlgItem $R6 $HWNDPARENT 1<br />        EnableWindow $R6 0<br /><br />        Banner::show /NOUNLOAD /set 76 "Please Wait Checking" "Validating ......"<br />        Banner::getWindow /NOUNLOAD<br /><br />        GetTempFileName $0<br />        InetLoad::load /post "licence=$R0-$R1" "http://www.site.com/site/user.php" "$0" /slient ""<br />        Pop $1 # $1 now holds the exit code for above<br /><br />        FileOpen $2 $0 "r"<br />        FileRead $2 $3<br />        FileClose $2<br /><br />        ${If} $3 == 'INVALID'<br />        Banner::destroy<br />        MessageBox MB_OK|MB_ICONEXCLAMATION "Invalid User. Setup will exit now."<br /><br />        Quit<br /><br />        ${Else}<br />        Banner::destroy<br />        Goto USEROK<br />        ${EndIf}<br /><br />        USEROK:<br />FunctionEnd<br /><br />Section ""<br />SectionEnd<br /></code>
+</pre><br />
+      <br />
+      It does not work.<br />
+      <br />
+      If Someone know please help me!<br />
+      <br />
+      Thank alot.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dandaman32</span><br />
+      <span class="post-time small text-muted">30th June 2008 05:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Afrow:<br /></p>
+      <pre>
+<code>$result</code><span style="color: #007700">=</span><span style="color: #0000BB">mysql_query</span><span style="color: #007700">(</span><span style="color: #DD0000">"SELECTstatusFROMkeyWHEREid='"</span><span style="color: #007700">.</span><span style="color: #0000BB">$_GET</span><span style="color: #007700">***91;</span><span style="color: #DD0000">'test'</span><span style="color: #007700">***93;.</span><span style="color: #DD0000">"'"</span><span style="color: #007700">);
+</span>
+</pre>Bad. SQL injection at it's finest my friend ;)<br />
+      <pre>
+<code>$result</code><span style="color: #007700">=</span><span style="color: #0000BB">mysql_query</span><span style="color: #007700">(</span><span style="color: #DD0000">"SELECTstatusFROMkeyWHEREid='"</span><span style="color: #007700">.</span><span style="color: #0000BB">mysql_real_escape_string</span><span style="color: #007700">(</span><span style="color: #0000BB">$_GET</span><span style="color: #007700">***91;</span><span style="color: #DD0000">'test'</span><span style="color: #007700">***93;).</span><span style="color: #DD0000">"'"</span><span style="color: #007700">);
+</span>
+</pre>Looks good otherwise :)<br />
+      <br />
+      <b>Edit: Holy crap it's numba two hundred! :D</b><br />
+      <br />
+      --Dan
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <span class="post-time small text-muted">30th June 2008 12:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks can you example for me thank you</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <span class="post-time small text-muted">30th June 2008 12:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Error - aborting creation process<br />
+      <br />
+      PHP Code:</p>
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #0000BB"><br /></span><span style="color: #FF8000">##General<br /></span> <span style="color: #0000BB">InstallDir</span><span style="color: #DD0000">"$PROGRAMFILES\Test"<br /></span> <span style="color: #0000BB">Name</span><span style="color: #DD0000">"TestInstaller"<br /></span> <span style="color: #0000BB">OutFile</span><span style="color: #DD0000">"Install.exe"<br />
+      <br /></span> <span style="color: #FF8000">##Includeheaders<br /></span> <span style="color: #007700">!include</span><span style="color: #0000BB">MUI</span><span style="color: #007700">.</span><span style="color: #0000BB">nsh<br /></span> <span style="color: #007700">!include</span><span style="color: #0000BB">LogicLib</span><span style="color: #007700">.</span><span style="color: #0000BB">nsh<br />
+      <br /></span> <span style="color: #FF8000">##InterfaceSettings<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">defineMUI_ICON</span><span style="color: #DD0000">"$Icons\orange-install.ico"<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">defineMUI_UNICON</span><span style="color: #DD0000">"Icons\orange-uninstall.ico"<br /></span> <span style="color: #0000BB">XPStyleon<br />
+      AutoCloseWindowtrue<br />
+      <br />
+      <br /></span> <span style="color: #FF8000">##ReserveFiles<br /></span> <span style="color: #0000BB">ReserveFile</span><span style="color: #DD0000">"validateUser.ini"<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_RESERVEFILE_INSTALLOPTIONS<br />
+      <br /></span> <span style="color: #FF8000">##Pages<br /></span> <span style="color: #0000BB">PagecustomUserPageShowUserPageLeave<br />
+      PagecustomvalidateUser<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_DIRECTORY<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_INSTFILES<br />
+      <br /></span> <span style="color: #FF8000">##Languages<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_LANGUAGEEnglish<br />
+      <br /></span> <span style="color: #007700">Function.</span><span style="color: #0000BB">onInit<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_INSTALLOPTIONS_EXTRACT</span><span style="color: #DD0000">"validateUser.ini"<br /></span> <span style="color: #0000BB">FunctionEnd<br />
+      <br /></span> <span style="color: #007700">Function</span><span style="color: #0000BB">UserPageShow<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_INSTALLOPTIONS_EXTRACT</span><span style="color: #DD0000">"validateUser.ini"<br />
+      <br /></span> <span style="color: #0000BB">PassDialog</span><span style="color: #007700">::</span><span style="color: #0000BB">InitDialog</span><span style="color: #007700">/</span><span style="color: #0000BB">NOUNLOADUserPass<br />
+      Pop$R0</span><span style="color: #FF8000">#PageHWND<br />
+      <br /></span> <span style="color: #0000BB">GetDlgItem$R1$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">IDC_USERNAME</span><span style="color: #007700">}<br /></span> <span style="color: #0000BB">SetCtlColors$R10xFF00000xFFFFFF<br />
+      GetDlgItem$R1$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">IDC_PASSWORD</span><span style="color: #007700">}<br /></span> <span style="color: #0000BB">SetCtlColors$R10x0000FF0xFFFFFF<br />
+      <br />
+      PassDialog</span><span style="color: #007700">::</span><span style="color: #0000BB">Show<br />
+      Pop$R0</span><span style="color: #FF8000">#success,back,cancelorerror<br /></span> <span style="color: #0000BB">FunctionEnd<br />
+      <br /></span> <span style="color: #007700">Function</span><span style="color: #0000BB">UserPageLeave<br />
+      <br />
+      <br /></span> <span style="color: #FF8000">##Poppassword&amp;usernamefromstack<br /></span> <span style="color: #0000BB">Pop$R0<br />
+      Pop$R1<br />
+      <br /></span> <span style="color: #FF8000">##Abitofvalidation<br /></span> <span style="color: #0000BB">StrCmp$R0</span><span style="color: #DD0000">'${Username1}'</span><span style="color: #0000BB">0</span><span style="color: #007700">+</span><span style="color: #0000BB">2<br />
+      StrCmp$R1</span><span style="color: #DD0000">'${Password1}'</span><span style="color: #0000BB">GoodBad<br />
+      StrCmp$R0</span><span style="color: #DD0000">'${Username2}'</span><span style="color: #0000BB">0</span><span style="color: #007700">+</span><span style="color: #0000BB">2<br />
+      StrCmp$R1</span><span style="color: #DD0000">'${Password2}'</span><span style="color: #0000BB">GoodBad<br />
+      <br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_HEADER_TEXT</span><span style="color: #DD0000">"Validating...""PleaseWait"<br />
+      <br />
+      <br /></span> <span style="color: #0000BB">FunctionEnd<br />
+      <br /></span> <span style="color: #007700">Function</span><span style="color: #0000BB">validateUser<br />
+      <br />
+      <br /></span> <span style="color: #007700">;</span><span style="color: #FF8000">##DisabletheBackbutton<br /></span> <span style="color: #0000BB">GetDlgItem$R6$HWNDPARENT3<br />
+      EnableWindow$R60<br /></span> <span style="color: #FF8000">##DisabletheNextbutton<br /></span> <span style="color: #0000BB">GetDlgItem$R6$HWNDPARENT1<br />
+      EnableWindow$R60<br />
+      <br />
+      Banner</span><span style="color: #007700">::</span><span style="color: #0000BB">show</span><span style="color: #007700">/</span><span style="color: #0000BB">NOUNLOAD</span><span style="color: #007700">/</span><span style="color: #0000BB">set76</span><span style="color: #DD0000">"PleaseWaitChecking""Validating......"<br /></span> <span style="color: #0000BB">Banner</span><span style="color: #007700">::</span><span style="color: #0000BB">getWindow</span><span style="color: #007700">/</span><span style="color: #0000BB">NOUNLOAD<br />
+      <br />
+      GetTempFileName</span><span style="color: #007700">$</span><span style="color: #0000BB">0<br />
+      InetLoad</span><span style="color: #007700">::</span><span style="color: #0000BB">load</span><span style="color: #007700">/</span><span style="color: #0000BB">post</span><span style="color: #DD0000">"licence=$R0-$R1""http://www.site.com/site/user.php""$0"</span><span style="color: #007700">/</span><span style="color: #0000BB">slient</span><span style="color: #DD0000">""<br /></span> <span style="color: #0000BB">Pop</span><span style="color: #007700">$</span><span style="color: #0000BB">1</span><span style="color: #FF8000">#$1nowholdstheexitcodeforabove<br />
+      <br /></span> <span style="color: #0000BB">FileOpen</span><span style="color: #007700">$</span><span style="color: #0000BB">2</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"r"<br /></span> <span style="color: #0000BB">FileRead</span><span style="color: #007700">$</span><span style="color: #0000BB">2</span><span style="color: #007700">$</span><span style="color: #0000BB">3<br />
+      FileClose</span><span style="color: #007700">$</span><span style="color: #0000BB">2<br />
+      <br /></span> <span style="color: #007700">${If}$</span><span style="color: #0000BB">3</span><span style="color: #007700">==</span><span style="color: #DD0000">'INVALID'<br /></span> <span style="color: #0000BB">Banner</span><span style="color: #007700">::</span><span style="color: #0000BB">destroy<br />
+      MessageBoxMB_OK</span><span style="color: #007700">|</span><span style="color: #0000BB">MB_ICONEXCLAMATION</span><span style="color: #DD0000">"InvalidUser.Setupwillexitnow."<br />
+      <br /></span> <span style="color: #0000BB">Quit<br />
+      <br /></span> <span style="color: #007700">${Else}<br /></span> <span style="color: #0000BB">Banner</span><span style="color: #007700">::</span><span style="color: #0000BB">destroy<br />
+      GotoUSEROK<br /></span> <span style="color: #007700">${EndIf}<br />
+      <br /></span> <span style="color: #0000BB">USEROK</span><span style="color: #007700">:<br /></span> <span style="color: #0000BB">FunctionEnd<br />
+      <br />
+      Section</span><span style="color: #DD0000">""<br /></span> <span style="color: #0000BB">SectionEnd<br /></span></span> <!-- php buffer end -->
+      <hr />
+      <br />
+      PHP Code:
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #0000BB">MakeNSISv2.37</span><span style="color: #007700">-</span><span style="color: #0000BB">Copyright1995</span><span style="color: #007700">-</span><span style="color: #0000BB">2008Contributors<br />
+      SeethefileCOPYING</span><span style="color: #007700">for</span><span style="color: #0000BB">licensedetails</span><span style="color: #007700">.<br /></span> <span style="color: #0000BB">CreditscanbefoundintheUsersManual</span><span style="color: #007700">.<br />
+      <br /></span> <span style="color: #0000BB">Processingconfig</span><span style="color: #007700">:<br /></span> <span style="color: #0000BB">Processingplugindlls</span><span style="color: #007700">:</span><span style="color: #DD0000">"C:\ProgramFiles\NSIS\Plugins\*.dll"<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">AccessControl</span><span style="color: #007700">::</span><span style="color: #0000BB">DenyOnFile<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">AccessControl</span><span style="color: #007700">::</span><span style="color: #0000BB">DenyOnRegKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">AccessControl</span><span style="color: #007700">::</span><span style="color: #0000BB">GrantOnFile<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">AccessControl</span><span style="color: #007700">::</span><span style="color: #0000BB">GrantOnRegKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">AccessControl</span><span style="color: #007700">::</span><span style="color: #0000BB">RevokeOnFile<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">AccessControl</span><span style="color: #007700">::</span><span style="color: #0000BB">RevokeOnRegKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">AccessControl</span><span style="color: #007700">::</span><span style="color: #0000BB">SetFileGroup<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">AccessControl</span><span style="color: #007700">::</span><span style="color: #0000BB">SetFileOwner<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">AccessControl</span><span style="color: #007700">::</span><span style="color: #0000BB">SetOnFile<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">AccessControl</span><span style="color: #007700">::</span><span style="color: #0000BB">SetOnRegKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">AccessControl</span><span style="color: #007700">::</span><span style="color: #0000BB">SetRegKeyGroup<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">AccessControl</span><span style="color: #007700">::</span><span style="color: #0000BB">SetRegKeyOwner<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">AdvSplash</span><span style="color: #007700">::</span><span style="color: #0000BB">show<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Banner</span><span style="color: #007700">::</span><span style="color: #0000BB">destroy<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Banner</span><span style="color: #007700">::</span><span style="color: #0000BB">getWindow<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Banner</span><span style="color: #007700">::</span><span style="color: #0000BB">show<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">BgImage</span><span style="color: #007700">::</span><span style="color: #0000BB">AddImage<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">BgImage</span><span style="color: #007700">::</span><span style="color: #0000BB">AddText<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">BgImage</span><span style="color: #007700">::</span><span style="color: #0000BB">Clear<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">BgImage</span><span style="color: #007700">::</span><span style="color: #0000BB">Destroy<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">BgImage</span><span style="color: #007700">::</span><span style="color: #0000BB">Redraw<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">BgImage</span><span style="color: #007700">::</span><span style="color: #0000BB">SetBg<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">BgImage</span><span style="color: #007700">::</span><span style="color: #0000BB">SetReturn<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">BgImage</span><span style="color: #007700">::</span><span style="color: #0000BB">Sound<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">BrandingURL</span><span style="color: #007700">::</span><span style="color: #0000BB">Set<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">BrandingURL</span><span style="color: #007700">::</span><span style="color: #0000BB">Unload<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ButtonEvent</span><span style="color: #007700">::</span><span style="color: #0000BB">AddEventHandler<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ButtonEvent</span><span style="color: #007700">::</span><span style="color: #0000BB">Unload<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ButtonEvent</span><span style="color: #007700">::</span><span style="color: #0000BB">WhichButtonID<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Delay</span><span style="color: #007700">::</span><span style="color: #0000BB">DelayButton<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Delay</span><span style="color: #007700">::</span><span style="color: #0000BB">Free<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Dialer</span><span style="color: #007700">::</span><span style="color: #0000BB">AttemptConnect<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Dialer</span><span style="color: #007700">::</span><span style="color: #0000BB">AutodialHangup<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Dialer</span><span style="color: #007700">::</span><span style="color: #0000BB">AutodialOnline<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Dialer</span><span style="color: #007700">::</span><span style="color: #0000BB">AutodialUnattended<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Dialer</span><span style="color: #007700">::</span><span style="color: #0000BB">GetConnectedState<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Dialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">Author<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Dialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">Folder<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Dialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">Open<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Dialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">Ver<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">EmbeddedLists</span><span style="color: #007700">::</span><span style="color: #0000BB">Dialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">EmbeddedLists</span><span style="color: #007700">::</span><span style="color: #0000BB">InitDialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">EmbeddedLists</span><span style="color: #007700">::</span><span style="color: #0000BB">Show<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">EnumCDs</span><span style="color: #007700">::</span><span style="color: #0000BB">next<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ExecCmd</span><span style="color: #007700">::</span><span style="color: #0000BB">exec<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ExecCmd</span><span style="color: #007700">::</span><span style="color: #0000BB">wait<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ExecDos</span><span style="color: #007700">::</span><span style="color: #0000BB">exec<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ExecDos</span><span style="color: #007700">::</span><span style="color: #0000BB">wait<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">FontName</span><span style="color: #007700">::</span><span style="color: #0000BB">name<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">FontName</span><span style="color: #007700">::</span><span style="color: #0000BB">version<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">GetVersion</span><span style="color: #007700">::</span><span style="color: #0000BB">IEVersion<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">GetVersion</span><span style="color: #007700">::</span><span style="color: #0000BB">WindowsName<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">GetVersion</span><span style="color: #007700">::</span><span style="color: #0000BB">WindowsPlatformArchitecture<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">GetVersion</span><span style="color: #007700">::</span><span style="color: #0000BB">WindowsPlatformId<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">GetVersion</span><span style="color: #007700">::</span><span style="color: #0000BB">WindowsServerName<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">GetVersion</span><span style="color: #007700">::</span><span style="color: #0000BB">WindowsServicePack<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">GetVersion</span><span style="color: #007700">::</span><span style="color: #0000BB">WindowsServicePackBuild<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">GetVersion</span><span style="color: #007700">::</span><span style="color: #0000BB">WindowsType<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">GetVersion</span><span style="color: #007700">::</span><span style="color: #0000BB">WindowsVersion<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">InetLoad</span><span style="color: #007700">::</span><span style="color: #0000BB">load<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">InstOpts</span><span style="color: #007700">::</span><span style="color: #0000BB">dialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">InstallOptions</span><span style="color: #007700">::</span><span style="color: #0000BB">dialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">InstallOptions</span><span style="color: #007700">::</span><span style="color: #0000BB">initDialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">InstallOptions</span><span style="color: #007700">::</span><span style="color: #0000BB">show<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">InstallOptionsEx</span><span style="color: #007700">::</span><span style="color: #0000BB">dialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">InstallOptionsEx</span><span style="color: #007700">::</span><span style="color: #0000BB">initDialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">InstallOptionsEx</span><span style="color: #007700">::</span><span style="color: #0000BB">setFocus<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">InstallOptionsEx</span><span style="color: #007700">::</span><span style="color: #0000BB">show<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">LangDLL</span><span style="color: #007700">::</span><span style="color: #0000BB">LangDialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Locate</span><span style="color: #007700">::</span><span style="color: #0000BB">_Close<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Locate</span><span style="color: #007700">::</span><span style="color: #0000BB">_Find<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Locate</span><span style="color: #007700">::</span><span style="color: #0000BB">_GetSize<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Locate</span><span style="color: #007700">::</span><span style="color: #0000BB">_Open<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Locate</span><span style="color: #007700">::</span><span style="color: #0000BB">_RMDirEmpty<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Locate</span><span style="color: #007700">::</span><span style="color: #0000BB">_Unload<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">LockedList</span><span style="color: #007700">::</span><span style="color: #0000BB">AddFile<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">LockedList</span><span style="color: #007700">::</span><span style="color: #0000BB">AddModule<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">LockedList</span><span style="color: #007700">::</span><span style="color: #0000BB">Dialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">LockedList</span><span style="color: #007700">::</span><span style="color: #0000BB">InitDialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">LockedList</span><span style="color: #007700">::</span><span style="color: #0000BB">Show<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">LockedList</span><span style="color: #007700">::</span><span style="color: #0000BB">SilentPercentComplete<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">LockedList</span><span style="color: #007700">::</span><span style="color: #0000BB">SilentSearch<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">LockedList</span><span style="color: #007700">::</span><span style="color: #0000BB">SilentWait<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">LockedList</span><span style="color: #007700">::</span><span style="color: #0000BB">Unload<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Math</span><span style="color: #007700">::</span><span style="color: #0000BB">Script<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">ArrayCount<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">ArrayExists<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Clear<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Concat<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Copy<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Cut<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Debug<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Delete<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">ErrorStyle<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Exists<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">ExistsI<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">FreeUnusedMem<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Join<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::New<br />
+      -</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Pop<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Push<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Put<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">ReDim<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Read<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">ReadToStack<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Reverse<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Search<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">SearchI<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">SetSize<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Shift<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">SizeOf<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Sort<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Splice<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Swap<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Unload<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Unshift<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">Write<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">WriteList<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISArray</span><span style="color: #007700">::</span><span style="color: #0000BB">WriteListC<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISdl</span><span style="color: #007700">::</span><span style="color: #0000BB">download<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NSISdl</span><span style="color: #007700">::</span><span style="color: #0000BB">download_quiet<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">NotifyIcon</span><span style="color: #007700">::</span><span style="color: #0000BB">Icon<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_CERAPIINIT<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_CERAPIINITEX<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_CERAPIUNINIT<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_Close<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_CopyKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_CopyValue<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_CreateKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_DeleteKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_DeleteKeyEmpty<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_DeleteValue<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_Find<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_HexToStr<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_KeyExists<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_MoveKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_MoveValue<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_Open<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_Read<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_ReadExtra<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_SaveKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_StrToHex<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_Unload<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_Write<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PPC</span><span style="color: #007700">-</span><span style="color: #0000BB">Registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_WriteExtra<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PassDialog</span><span style="color: #007700">::</span><span style="color: #0000BB">Dialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PassDialog</span><span style="color: #007700">::</span><span style="color: #0000BB">InitDialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PassDialog</span><span style="color: #007700">::</span><span style="color: #0000BB">Show<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PopupListBox</span><span style="color: #007700">::</span><span style="color: #0000BB">MultiSelect<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">PopupListBox</span><span style="color: #007700">::</span><span style="color: #0000BB">SingleSelect<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">RealProgress</span><span style="color: #007700">::</span><span style="color: #0000BB">AddProgress<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">RealProgress</span><span style="color: #007700">::</span><span style="color: #0000BB">DetailProgress<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">RealProgress</span><span style="color: #007700">::</span><span style="color: #0000BB">FileProgress<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">RealProgress</span><span style="color: #007700">::</span><span style="color: #0000BB">GetProgress<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">RealProgress</span><span style="color: #007700">::</span><span style="color: #0000BB">GradualProgress<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">RealProgress</span><span style="color: #007700">::</span><span style="color: #0000BB">SetProgress<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">RealProgress</span><span style="color: #007700">::</span><span style="color: #0000BB">Unload<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ScrollLicense</span><span style="color: #007700">::</span><span style="color: #0000BB">Set<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ScrollLicense</span><span style="color: #007700">::</span><span style="color: #0000BB">Unload<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">SelfDel</span><span style="color: #007700">::</span><span style="color: #0000BB">del<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">SetCursor</span><span style="color: #007700">::</span><span style="color: #0000BB">File<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">SetCursor</span><span style="color: #007700">::</span><span style="color: #0000BB">Position<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">SetCursor</span><span style="color: #007700">::</span><span style="color: #0000BB">System<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">SetCursor</span><span style="color: #007700">::</span><span style="color: #0000BB">Visibility<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ShutDown</span><span style="color: #007700">::</span><span style="color: #0000BB">LogOff<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ShutDown</span><span style="color: #007700">::</span><span style="color: #0000BB">PowerOff<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ShutDown</span><span style="color: #007700">::</span><span style="color: #0000BB">Reboot<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ShutDown</span><span style="color: #007700">::</span><span style="color: #0000BB">ShutDown<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">Splash</span><span style="color: #007700">::</span><span style="color: #0000BB">show<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">StartMenu</span><span style="color: #007700">::</span><span style="color: #0000BB">Init<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">StartMenu</span><span style="color: #007700">::</span><span style="color: #0000BB">Select<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">StartMenu</span><span style="color: #007700">::</span><span style="color: #0000BB">Show<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Alloc<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Call<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Copy<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Free<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Get<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Int64Op<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">System</span><span style="color: #007700">::</span><span style="color: #0000BB">Store<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ToggleInstFiles</span><span style="color: #007700">::</span><span style="color: #0000BB">Set<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ToggleInstFiles</span><span style="color: #007700">::</span><span style="color: #0000BB">Unload<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ToolTips</span><span style="color: #007700">::</span><span style="color: #0000BB">Author<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ToolTips</span><span style="color: #007700">::</span><span style="color: #0000BB">Classic<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ToolTips</span><span style="color: #007700">::</span><span style="color: #0000BB">Modern<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">TypeLib</span><span style="color: #007700">::</span><span style="color: #0000BB">GetLibVersion<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">TypeLib</span><span style="color: #007700">::</span><span style="color: #0000BB">Register<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">TypeLib</span><span style="color: #007700">::</span><span style="color: #0000BB">UnRegister<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserInfo</span><span style="color: #007700">::</span><span style="color: #0000BB">GetAccountType<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserInfo</span><span style="color: #007700">::</span><span style="color: #0000BB">GetName<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">AddPrivilege<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">AddToGroup<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">BuiltAccountEnv<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">ChangeUserPassword<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">CreateAccount<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">CreateAccountEx<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">CreateGroup<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">DeleteAccount<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">DeleteGroup<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">GetCurrentUserName<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">GetLocalizedStdAccountName<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">GetUserInfo<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">HasPrivilege<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">IsMemberOfGroup<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">RegLoadUserHive<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">RegUnLoadUserHive<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">RemoveFromGroup<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">RemovePrivilege<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">SetRegKeyAccess<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">UserMgr</span><span style="color: #007700">::</span><span style="color: #0000BB">SetUserInfo<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">VPatch</span><span style="color: #007700">::</span><span style="color: #0000BB">vpatchfile<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">WAnsis</span><span style="color: #007700">::</span><span style="color: #0000BB">config<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">WAnsis</span><span style="color: #007700">::</span><span style="color: #0000BB">setskin<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">WAnsis</span><span style="color: #007700">::</span><span style="color: #0000BB">skinit<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">WAnsis</span><span style="color: #007700">::</span><span style="color: #0000BB">unskinit<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ZipDLL</span><span style="color: #007700">::</span><span style="color: #0000BB">extractall<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">ZipDLL</span><span style="color: #007700">::</span><span style="color: #0000BB">extractfile<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">cdrom</span><span style="color: #007700">::</span><span style="color: #0000BB">CLOSE<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">cdrom</span><span style="color: #007700">::</span><span style="color: #0000BB">FINDCLOSE<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">cdrom</span><span style="color: #007700">::</span><span style="color: #0000BB">FINDNEXT<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">cdrom</span><span style="color: #007700">::</span><span style="color: #0000BB">OPEN<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">cdrom</span><span style="color: #007700">::</span><span style="color: #0000BB">STATUS<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">cdrom</span><span style="color: #007700">::</span><span style="color: #0000BB">VOLUMENAME<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">cdrom</span><span style="color: #007700">::</span><span style="color: #0000BB">VOLUMESERIALNUMBER<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">inetc</span><span style="color: #007700">::</span><span style="color: #0000BB">get<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">inetc</span><span style="color: #007700">::</span><span style="color: #0000BB">head<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">inetc</span><span style="color: #007700">::</span><span style="color: #0000BB">post<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">inetc</span><span style="color: #007700">::</span><span style="color: #0000BB">put<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">md5dll</span><span style="color: #007700">::</span><span style="color: #0000BB">GetMD5File<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">md5dll</span><span style="color: #007700">::</span><span style="color: #0000BB">GetMD5Random<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">md5dll</span><span style="color: #007700">::</span><span style="color: #0000BB">GetMD5String<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsDialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">Create<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsDialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">CreateControl<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsDialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">CreateItem<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsDialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">GetUserData<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsDialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">OnBack<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsDialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">OnChange<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsDialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">OnClick<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsDialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">OnNotify<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsDialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">SelectFileDialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsDialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">SelectFolderDialog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsDialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">SetRTL<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsDialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">SetUserData<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsDialogs</span><span style="color: #007700">::</span><span style="color: #0000BB">Show<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsExec</span><span style="color: #007700">::</span><span style="color: #0000BB">Exec<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsExec</span><span style="color: #007700">::</span><span style="color: #0000BB">ExecToLog<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsExec</span><span style="color: #007700">::</span><span style="color: #0000BB">ExecToStack<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsProcess</span><span style="color: #007700">::</span><span style="color: #0000BB">_FindProcess<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsProcess</span><span style="color: #007700">::</span><span style="color: #0000BB">_KillProcess<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsProcess</span><span style="color: #007700">::</span><span style="color: #0000BB">_Unload<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsisUser</span><span style="color: #007700">::</span><span style="color: #0000BB">IsLoginValid<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">nsislog</span><span style="color: #007700">::</span><span style="color: #0000BB">Log<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_Close<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_CopyKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_CopyValue<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_CreateKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_DeleteKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_DeleteKeyEmpty<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_DeleteValue<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_Find<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_HexToStr<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_KeyExists<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_MoveKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_MoveValue<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_Open<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_Read<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_ReadExtra<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_RestoreKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_SaveKey<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_StrToHex<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_Unload<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_Write<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">registry</span><span style="color: #007700">::</span><span style="color: #0000BB">_WriteExtra<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">version</span><span style="color: #007700">::</span><span style="color: #0000BB">GetWindowsVersion<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">version</span><span style="color: #007700">::</span><span style="color: #0000BB">IsWindows2000<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">version</span><span style="color: #007700">::</span><span style="color: #0000BB">IsWindows2003<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">version</span><span style="color: #007700">::</span><span style="color: #0000BB">IsWindows31<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">version</span><span style="color: #007700">::</span><span style="color: #0000BB">IsWindows95<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">version</span><span style="color: #007700">::</span><span style="color: #0000BB">IsWindows98<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">version</span><span style="color: #007700">::</span><span style="color: #0000BB">IsWindows98orLater<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">version</span><span style="color: #007700">::</span><span style="color: #0000BB">IsWindowsME<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">version</span><span style="color: #007700">::</span><span style="color: #0000BB">IsWindowsNT351<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">version</span><span style="color: #007700">::</span><span style="color: #0000BB">IsWindowsNT40<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">version</span><span style="color: #007700">::</span><span style="color: #0000BB">IsWindowsPlatform9x<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">version</span><span style="color: #007700">::</span><span style="color: #0000BB">IsWindowsPlatformNT<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">version</span><span style="color: #007700">::</span><span style="color: #0000BB">IsWindowsXP<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_CloneNode<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_Coordinate<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_CreateNode<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_CreateText<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_DeclarationEncoding<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_DeclarationStandalone<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_DeclarationVersion<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_ElementPath<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_FindCloseElement<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_FindNextElement<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_FirstAttribute<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_FirstChild<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_FirstChildElement<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_FreeNode<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_GetAttribute<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_GetNodeValue<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_GetText<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_GotoHandle<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_GotoPath<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_InsertAfterNode<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_InsertBeforeNode<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_InsertEndChild<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_IsCDATA<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_LastAttribute<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_LastChild<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_LoadFile<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_NextAttribute<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_NextSibling<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_NextSiblingElement<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_NoChildren<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_NodeHandle<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_NodeType<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_Parent<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_PreviousAttribute<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_PreviousSibling<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_RemoveAttribute<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_RemoveNode<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_ReplaceNode<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_RootElement<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_SaveFile<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_SetAttribute<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_SetAttributeName<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_SetAttributeValue<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_SetCDATA<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_SetCondenseWhiteSpace<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_SetEncoding<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_SetNodeValue<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_SetText<br /></span> <span style="color: #007700">-</span><span style="color: #0000BB">xml</span><span style="color: #007700">::</span><span style="color: #0000BB">_Unload<br />
+      <br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">define</span><span style="color: #007700">:</span><span style="color: #DD0000">"MUI_INSERT_NSISCONF"</span><span style="color: #007700">=</span><span style="color: #DD0000">""<br />
+      <br /></span> <span style="color: #0000BB">Changingdirectoryto</span><span style="color: #007700">:</span><span style="color: #DD0000">"D:\Download\NSIS\code\2\verify"<br />
+      <br /></span> <span style="color: #0000BB">Processingscriptfile</span><span style="color: #007700">:</span><span style="color: #DD0000">"D:\Download\NSIS\code\2\verify\user.nsi"<br /></span> <span style="color: #0000BB">InstallDir</span><span style="color: #007700">:</span><span style="color: #DD0000">"$PROGRAMFILES\Test"<br /></span> <span style="color: #0000BB">Name</span><span style="color: #007700">:</span><span style="color: #DD0000">"TestInstaller"<br /></span> <span style="color: #0000BB">OutFile</span><span style="color: #007700">:</span><span style="color: #DD0000">"Install.exe"<br /></span> <span style="color: #007700">!include:</span><span style="color: #DD0000">"C:\ProgramFiles\NSIS\Include\MUI.nsh"<br /></span> <span style="color: #007700">!include:</span><span style="color: #DD0000">"C:\ProgramFiles\NSIS\Contrib\ModernUI\System.nsh"<br /></span> <span style="color: #0000BB">NSISModernUser</span><span style="color: #007700">Interface</span><span style="color: #0000BB">version1.75</span><span style="color: #007700">-</span><span style="color: #0000BB">Â©2002</span><span style="color: #007700">-</span><span style="color: #0000BB">2007JoostVerburg</span><span style="color: #007700">(</span><span style="color: #0000BB">C</span><span style="color: #007700">:</span><span style="color: #0000BB">ProgramFilesNSISContribModernUISystem</span><span style="color: #007700">.</span><span style="color: #0000BB">nsh</span><span style="color: #007700">:</span><span style="color: #0000BB">11</span><span style="color: #007700">)<br />
+      !</span><span style="color: #0000BB">define</span><span style="color: #007700">:</span><span style="color: #DD0000">"MUI_VERBOSE"</span><span style="color: #007700">=</span><span style="color: #DD0000">"3"<br /></span> <span style="color: #007700">!include:</span><span style="color: #0000BB">closed</span><span style="color: #007700">:</span><span style="color: #DD0000">"C:\ProgramFiles\NSIS\Contrib\ModernUI\System.nsh"<br /></span> <span style="color: #007700">!include:</span><span style="color: #0000BB">closed</span><span style="color: #007700">:</span><span style="color: #DD0000">"C:\ProgramFiles\NSIS\Include\MUI.nsh"<br /></span> <span style="color: #007700">!include:</span><span style="color: #DD0000">"C:\ProgramFiles\NSIS\Include\LogicLib.nsh"<br /></span> <span style="color: #007700">!include:</span><span style="color: #0000BB">closed</span><span style="color: #007700">:</span><span style="color: #DD0000">"C:\ProgramFiles\NSIS\Include\LogicLib.nsh"<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">define</span><span style="color: #007700">:</span><span style="color: #DD0000">"MUI_ICON"</span><span style="color: #007700">=</span><span style="color: #DD0000">"C:\ProgramFiles\NSIS\Contrib\Graphics\Icons\orange-install.ico"<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">define</span><span style="color: #007700">:</span><span style="color: #DD0000">"MUI_UNICON"</span><span style="color: #007700">=</span><span style="color: #DD0000">"C:\ProgramFiles\NSIS\Contrib\Graphics\Icons\orange-uninstall.ico"<br /></span> <span style="color: #0000BB">XPStyle</span><span style="color: #007700">:</span><span style="color: #0000BB">on<br />
+      AutoCloseWindow</span><span style="color: #007700">:</span><span style="color: #0000BB">true<br />
+      ReserveFile</span><span style="color: #007700">:</span><span style="color: #DD0000">"validateuser.ini"</span><span style="color: #007700">***91;</span><span style="color: #0000BB">compress</span><span style="color: #007700">***93;</span><span style="color: #0000BB">124</span><span style="color: #007700">/</span><span style="color: #0000BB">139bytes<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">MUI_RESERVEFILE_INSTALLOPTIONS<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">endofMUI_RESERVEFILE_INSTALLOPTIONS<br />
+      Page</span><span style="color: #007700">:</span><span style="color: #0000BB">custom</span><span style="color: #007700">(</span><span style="color: #0000BB">creator</span><span style="color: #007700">:</span><span style="color: #0000BB">UserPageShow</span><span style="color: #007700">)(</span><span style="color: #0000BB">leave</span><span style="color: #007700">:</span><span style="color: #0000BB">UserPageLeave</span><span style="color: #007700">)<br /></span> <span style="color: #0000BB">Page</span><span style="color: #007700">:</span><span style="color: #0000BB">custom</span><span style="color: #007700">(</span><span style="color: #0000BB">creator</span><span style="color: #007700">:</span><span style="color: #0000BB">validateUser</span><span style="color: #007700">)<br />
+      !</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">MUI_PAGE_DIRECTORY<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">endofMUI_PAGE_DIRECTORY<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">MUI_PAGE_INSTFILES<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">endofMUI_PAGE_INSTFILES<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">MUI_LANGUAGE<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">endofMUI_LANGUAGE<br /></span> <span style="color: #007700">Function:</span><span style="color: #DD0000">".onInit"<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">MUI_INSTALLOPTIONS_EXTRACT<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">endofMUI_INSTALLOPTIONS_EXTRACT<br />
+      FunctionEnd<br /></span> <span style="color: #007700">Function:</span><span style="color: #DD0000">"UserPageShow"<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">MUI_INSTALLOPTIONS_EXTRACT<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">endofMUI_INSTALLOPTIONS_EXTRACT<br />
+      File</span><span style="color: #007700">:</span><span style="color: #DD0000">"PassDialog.dll"</span><span style="color: #007700">-&gt;</span><span style="color: #DD0000">"$PLUGINSDIR\PassDialog.dll"</span><span style="color: #007700">***91;</span><span style="color: #0000BB">compress</span><span style="color: #007700">***93;</span><span style="color: #0000BB">3933</span><span style="color: #007700">/</span><span style="color: #0000BB">8704bytes<br />
+      PluginCommand</span><span style="color: #007700">:</span><span style="color: #0000BB">InitDialogUserPass<br />
+      Pop</span><span style="color: #007700">:</span><span style="color: #0000BB">$R0<br />
+      warning</span><span style="color: #007700">:</span><span style="color: #0000BB">unknownvariable</span><span style="color: #007700">/</span><span style="color: #0000BB">constant</span><span style="color: #DD0000">"{IDC_USERNAME}"</span><span style="color: #0000BB">detected</span><span style="color: #007700">,</span><span style="color: #0000BB">ignoring</span><span style="color: #007700">(</span><span style="color: #0000BB">D</span><span style="color: #007700">:</span><span style="color: #0000BB">DownloadNSIScode2verifyuser</span><span style="color: #007700">.</span><span style="color: #0000BB">nsi</span><span style="color: #007700">:</span><span style="color: #0000BB">40</span><span style="color: #007700">)<br /></span> <span style="color: #0000BB">GetDlgItem</span><span style="color: #007700">:</span><span style="color: #0000BB">output</span><span style="color: #007700">=</span><span style="color: #0000BB">$R1dialog</span><span style="color: #007700">=</span><span style="color: #0000BB">$R0item</span><span style="color: #007700">=${</span><span style="color: #0000BB">IDC_USERNAME</span><span style="color: #007700">}<br /></span> <span style="color: #0000BB">SetCtlColors</span><span style="color: #007700">:</span><span style="color: #0000BB">hwnd</span><span style="color: #007700">=</span><span style="color: #0000BB">$R1text</span><span style="color: #007700">=</span><span style="color: #0000BB">0xFF0000background</span><span style="color: #007700">=</span><span style="color: #0000BB">0xFFFFFF<br />
+      warning</span><span style="color: #007700">:</span><span style="color: #0000BB">unknownvariable</span><span style="color: #007700">/</span><span style="color: #0000BB">constant</span><span style="color: #DD0000">"{IDC_PASSWORD}"</span><span style="color: #0000BB">detected</span><span style="color: #007700">,</span><span style="color: #0000BB">ignoring</span><span style="color: #007700">(</span><span style="color: #0000BB">D</span><span style="color: #007700">:</span><span style="color: #0000BB">DownloadNSIScode2verifyuser</span><span style="color: #007700">.</span><span style="color: #0000BB">nsi</span><span style="color: #007700">:</span><span style="color: #0000BB">42</span><span style="color: #007700">)<br /></span> <span style="color: #0000BB">GetDlgItem</span><span style="color: #007700">:</span><span style="color: #0000BB">output</span><span style="color: #007700">=</span><span style="color: #0000BB">$R1dialog</span><span style="color: #007700">=</span><span style="color: #0000BB">$R0item</span><span style="color: #007700">=${</span><span style="color: #0000BB">IDC_PASSWORD</span><span style="color: #007700">}<br /></span> <span style="color: #0000BB">SetCtlColors</span><span style="color: #007700">:</span><span style="color: #0000BB">hwnd</span><span style="color: #007700">=</span><span style="color: #0000BB">$R1text</span><span style="color: #007700">=</span><span style="color: #0000BB">0x0000FFbackground</span><span style="color: #007700">=</span><span style="color: #0000BB">0xFFFFFF<br />
+      File</span><span style="color: #007700">:</span><span style="color: #DD0000">"PassDialog.dll"</span><span style="color: #007700">-&gt;</span><span style="color: #DD0000">"$PLUGINSDIR\PassDialog.dll"</span><span style="color: #007700">***91;</span><span style="color: #0000BB">compress</span><span style="color: #007700">***93;</span><span style="color: #0000BB">0</span><span style="color: #007700">/</span><span style="color: #0000BB">8704bytes<br />
+      PluginCommand</span><span style="color: #007700">:</span><span style="color: #0000BB">Show<br />
+      Pop</span><span style="color: #007700">:</span><span style="color: #0000BB">$R0<br />
+      FunctionEnd<br /></span> <span style="color: #007700">Function:</span><span style="color: #DD0000">"UserPageLeave"<br /></span> <span style="color: #0000BB">Pop</span><span style="color: #007700">:</span><span style="color: #0000BB">$R0<br />
+      Pop</span><span style="color: #007700">:</span><span style="color: #0000BB">$R1<br />
+      warning</span><span style="color: #007700">:</span><span style="color: #0000BB">unknownvariable</span><span style="color: #007700">/</span><span style="color: #0000BB">constant</span><span style="color: #DD0000">"{Username1}"</span><span style="color: #0000BB">detected</span><span style="color: #007700">,</span><span style="color: #0000BB">ignoring</span><span style="color: #007700">(</span><span style="color: #0000BB">D</span><span style="color: #007700">:</span><span style="color: #0000BB">DownloadNSIScode2verifyuser</span><span style="color: #007700">.</span><span style="color: #0000BB">nsi</span><span style="color: #007700">:</span><span style="color: #0000BB">57</span><span style="color: #007700">)<br /></span> <span style="color: #0000BB">StrCmp</span><span style="color: #DD0000">"$R0""${Username1}"</span><span style="color: #0000BB">equal</span><span style="color: #007700">=</span><span style="color: #0000BB">0</span><span style="color: #007700">,</span><span style="color: #0000BB">nonequal</span><span style="color: #007700">=+</span><span style="color: #0000BB">2<br />
+      warning</span><span style="color: #007700">:</span><span style="color: #0000BB">unknownvariable</span><span style="color: #007700">/</span><span style="color: #0000BB">constant</span><span style="color: #DD0000">"{Password1}"</span><span style="color: #0000BB">detected</span><span style="color: #007700">,</span><span style="color: #0000BB">ignoring</span><span style="color: #007700">(</span><span style="color: #0000BB">D</span><span style="color: #007700">:</span><span style="color: #0000BB">DownloadNSIScode2verifyuser</span><span style="color: #007700">.</span><span style="color: #0000BB">nsi</span><span style="color: #007700">:</span><span style="color: #0000BB">58</span><span style="color: #007700">)<br /></span> <span style="color: #0000BB">StrCmp</span><span style="color: #DD0000">"$R1""${Password1}"</span><span style="color: #0000BB">equal</span><span style="color: #007700">=</span><span style="color: #0000BB">Good</span><span style="color: #007700">,</span><span style="color: #0000BB">nonequal</span><span style="color: #007700">=</span><span style="color: #0000BB">Bad<br />
+      warning</span><span style="color: #007700">:</span><span style="color: #0000BB">unknownvariable</span><span style="color: #007700">/</span><span style="color: #0000BB">constant</span><span style="color: #DD0000">"{Username2}"</span><span style="color: #0000BB">detected</span><span style="color: #007700">,</span><span style="color: #0000BB">ignoring</span><span style="color: #007700">(</span><span style="color: #0000BB">D</span><span style="color: #007700">:</span><span style="color: #0000BB">DownloadNSIScode2verifyuser</span><span style="color: #007700">.</span><span style="color: #0000BB">nsi</span><span style="color: #007700">:</span><span style="color: #0000BB">59</span><span style="color: #007700">)<br /></span> <span style="color: #0000BB">StrCmp</span><span style="color: #DD0000">"$R0""${Username2}"</span><span style="color: #0000BB">equal</span><span style="color: #007700">=</span><span style="color: #0000BB">0</span><span style="color: #007700">,</span><span style="color: #0000BB">nonequal</span><span style="color: #007700">=+</span><span style="color: #0000BB">2<br />
+      warning</span><span style="color: #007700">:</span><span style="color: #0000BB">unknownvariable</span><span style="color: #007700">/</span><span style="color: #0000BB">constant</span><span style="color: #DD0000">"{Password2}"</span><span style="color: #0000BB">detected</span><span style="color: #007700">,</span><span style="color: #0000BB">ignoring</span><span style="color: #007700">(</span><span style="color: #0000BB">D</span><span style="color: #007700">:</span><span style="color: #0000BB">DownloadNSIScode2verifyuser</span><span style="color: #007700">.</span><span style="color: #0000BB">nsi</span><span style="color: #007700">:</span><span style="color: #0000BB">60</span><span style="color: #007700">)<br /></span> <span style="color: #0000BB">StrCmp</span><span style="color: #DD0000">"$R1""${Password2}"</span><span style="color: #0000BB">equal</span><span style="color: #007700">=</span><span style="color: #0000BB">Good</span><span style="color: #007700">,</span><span style="color: #0000BB">nonequal</span><span style="color: #007700">=</span><span style="color: #0000BB">Bad<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">MUI_HEADER_TEXT<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">endofMUI_HEADER_TEXT<br />
+      FunctionEnd<br /></span> <span style="color: #007700">Function:</span><span style="color: #DD0000">"validateUser"<br /></span> <span style="color: #0000BB">GetDlgItem</span><span style="color: #007700">:</span><span style="color: #0000BB">output</span><span style="color: #007700">=</span><span style="color: #0000BB">$R6dialog</span><span style="color: #007700">=</span><span style="color: #0000BB">$HWNDPARENTitem</span><span style="color: #007700">=</span><span style="color: #0000BB">3<br />
+      EnableWindow</span><span style="color: #007700">:</span><span style="color: #0000BB">handle</span><span style="color: #007700">=</span><span style="color: #0000BB">$R6enable</span><span style="color: #007700">=</span><span style="color: #0000BB">0<br />
+      GetDlgItem</span><span style="color: #007700">:</span><span style="color: #0000BB">output</span><span style="color: #007700">=</span><span style="color: #0000BB">$R6dialog</span><span style="color: #007700">=</span><span style="color: #0000BB">$HWNDPARENTitem</span><span style="color: #007700">=</span><span style="color: #0000BB">1<br />
+      EnableWindow</span><span style="color: #007700">:</span><span style="color: #0000BB">handle</span><span style="color: #007700">=</span><span style="color: #0000BB">$R6enable</span><span style="color: #007700">=</span><span style="color: #0000BB">0<br />
+      File</span><span style="color: #007700">:</span><span style="color: #DD0000">"Banner.dll"</span><span style="color: #007700">-&gt;</span><span style="color: #DD0000">"$PLUGINSDIR\Banner.dll"</span><span style="color: #007700">***91;</span><span style="color: #0000BB">compress</span><span style="color: #007700">***93;</span><span style="color: #0000BB">1423</span><span style="color: #007700">/</span><span style="color: #0000BB">4096bytes<br />
+      PluginCommand</span><span style="color: #007700">:</span><span style="color: #0000BB">show</span><span style="color: #007700">/</span><span style="color: #0000BB">set76PleaseWaitCheckingValidating</span><span style="color: #007700">......<br /></span> <span style="color: #0000BB">File</span><span style="color: #007700">:</span><span style="color: #DD0000">"Banner.dll"</span><span style="color: #007700">-&gt;</span><span style="color: #DD0000">"$PLUGINSDIR\Banner.dll"</span><span style="color: #007700">***91;</span><span style="color: #0000BB">compress</span><span style="color: #007700">***93;</span><span style="color: #0000BB">0</span><span style="color: #007700">/</span><span style="color: #0000BB">4096bytes<br />
+      PluginCommand</span><span style="color: #007700">:</span><span style="color: #0000BB">getWindow<br />
+      GetTempFileName</span><span style="color: #007700">-&gt;$</span><span style="color: #0000BB">0<br />
+      File</span><span style="color: #007700">:</span><span style="color: #DD0000">"InetLoad.dll"</span><span style="color: #007700">-&gt;</span><span style="color: #DD0000">"$PLUGINSDIR\InetLoad.dll"</span><span style="color: #007700">***91;</span><span style="color: #0000BB">compress</span><span style="color: #007700">***93;</span><span style="color: #0000BB">8136</span><span style="color: #007700">/</span><span style="color: #0000BB">16384bytes<br />
+      PluginCommand</span><span style="color: #007700">:</span><span style="color: #0000BB">load</span><span style="color: #007700">/</span><span style="color: #0000BB">postlicence</span><span style="color: #007700">=</span><span style="color: #0000BB">$R0</span><span style="color: #007700">-</span><span style="color: #0000BB">$R1</span><span style="color: #007700">***91;</span><span style="color: #0000BB">url</span><span style="color: #007700">***93;</span><span style="color: #0000BB">http</span><span style="color: #007700">:</span><span style="color: #FF8000">//www.site.com/site/user.php***91;/url***93;$0/slient<br /></span> <span style="color: #0000BB">Pop</span><span style="color: #007700">:$</span><span style="color: #0000BB">1<br />
+      FileOpen</span><span style="color: #007700">:$</span><span style="color: #0000BB">0</span><span style="color: #007700">as</span><span style="color: #0000BB">r</span><span style="color: #007700">-&gt;$</span><span style="color: #0000BB">2<br />
+      FileRead</span><span style="color: #007700">:$</span><span style="color: #0000BB">2</span><span style="color: #007700">-&gt;$</span><span style="color: #0000BB">3</span><span style="color: #007700">(</span><span style="color: #0000BB">max</span><span style="color: #007700">:)<br /></span> <span style="color: #0000BB">FileClose</span><span style="color: #007700">:$</span><span style="color: #0000BB">2<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">_If<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">endof_If<br />
+      File</span><span style="color: #007700">:</span><span style="color: #DD0000">"Banner.dll"</span><span style="color: #007700">-&gt;</span><span style="color: #DD0000">"$PLUGINSDIR\Banner.dll"</span><span style="color: #007700">***91;</span><span style="color: #0000BB">compress</span><span style="color: #007700">***93;</span><span style="color: #0000BB">0</span><span style="color: #007700">/</span><span style="color: #0000BB">4096bytes<br />
+      PluginCommand</span><span style="color: #007700">:</span><span style="color: #0000BB">destroy<br />
+      MessageBox</span><span style="color: #007700">:</span><span style="color: #0000BB">48</span><span style="color: #007700">:</span><span style="color: #DD0000">"InvalidUser.Setupwillexitnow."<br /></span> <span style="color: #0000BB">Quit<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">_Else<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">endof_Else<br />
+      PluginCommand</span><span style="color: #007700">:</span><span style="color: #0000BB">destroy<br />
+      Goto</span><span style="color: #007700">:</span><span style="color: #0000BB">USEROK<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">_EndIf<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacro</span><span style="color: #007700">:</span><span style="color: #0000BB">endof_EndIf<br />
+      FunctionEnd<br />
+      Section</span><span style="color: #007700">:</span><span style="color: #DD0000">""<br /></span> <span style="color: #0000BB">SectionEnd<br />
+      <br />
+      Processed1file</span><span style="color: #007700">,</span><span style="color: #0000BB">writingoutput</span><span style="color: #007700">:<br /></span> <span style="color: #0000BB">Addingplug</span><span style="color: #007700">-</span><span style="color: #0000BB">insinitializing</span><span style="color: #007700">function...</span><span style="color: #0000BB">Done</span><span style="color: #007700">!<br /></span> <span style="color: #0000BB">Error</span><span style="color: #007700">:</span><span style="color: #0000BB">couldnotresolvelabel</span><span style="color: #DD0000">"Good"</span><span style="color: #0000BB">in</span><span style="color: #007700">function</span><span style="color: #DD0000">"UserPageLeave"<br /></span> <span style="color: #0000BB">Error</span><span style="color: #007700">-</span><span style="color: #0000BB">abortingcreationprocess<br /></span></span> <!-- php buffer end -->
+      <hr />
+      Error: could not resolve label "Good" in function "UserPageLeave"<br />
+      Error - aborting creation process
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">30th June 2008 13:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">you might want to attach the code or use pastebin next time instead of filling the thread with a long ass script</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">30th June 2008 16:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by Anders</i><br />
+        <b>you might want to attach the code or use pastebin next time instead of filling the thread with a long ass script</b>
+      </blockquote>Right! Moreover, is difficult to keep my eyes on the text while the girl from the avatar is looking at me. ;)<br />
+      btw didava, the compiler explains its self when it throws errors. Complains about some missing labels but you should take care about the warnings too.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <span class="post-time small text-muted">30th June 2008 16:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">ok sorry sorry sorry can you help me!! plz example for me thank you very</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">30th June 2008 17:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">didava, I'd say you're trying to achieve things which are beyond of your nsis knowledge so far, for instance take a look at the log you've posted above, there are several warnings and errors. If you don't know how to deal with these issues what example are you seeking? You should already know how to declare user variables and how to add/use labels.<br />
+      <br />
+      My advice is go start with the very basics. Review the manual, examine the included simple examples, use the forum and step by step you'll become able to proceed in more complicated scripting.<br />
+      <br />
+      And finally, where the girl has gone?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <span class="post-time small text-muted">30th June 2008 18:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">first of all, I have to say that the grammatical errors you noticed above are not mine! I have a friend who has very little inkling of English. anyway, I want you to excuse me for such an inconvenience. secondly, I had followed your manual and had reviewed it several times. But, I have to admit that we have just kicked off NSIS. We have some knowledge about PHP; however, the problem is how we can relate/combine NSIS with PHP? we noticed in your example that you have used NSIS for serial number. now we want to use your example for username and password. But how?<br />
+      We want you to kindly give us an example+code for username and password. thanks in advance!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">30th June 2008 18:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well, I haven't noticed grammatical errors and I would never talk about such things. I was talking about compiler's errors and warnings that you should be able to deal with, at least according to the long log that you've posted above.<br />
+      <br />
+      I haven't published any manual, it is the nsis manual.<br />
+      <br />
+      Unfortunately it is not my example either, in fact I have never implemented it in a real world installer of mine. However, I'm watching this thread and I know that at least 2 users have done it successfully.<br />
+      <br />
+      Provided that your script does not throw errors and warnings related to labels and user variables, I guess that would be a step forward to use it for user name/password instead of serial number.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <span class="post-time small text-muted">30th June 2008 19:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">we have attached our code for you to see if there is any problem in it. and also take a look at the error it causes:<br />
+      <br />
+      PHP Code:</p>
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #0000BB">Error</span><span style="color: #007700">:</span><span style="color: #0000BB">couldnotresolvelabel</span><span style="color: #DD0000">"Good"</span><span style="color: #0000BB">in</span><span style="color: #007700">function</span><span style="color: #DD0000">"UserPageLeave"<br /></span> <span style="color: #0000BB">Error</span><span style="color: #007700">-</span><span style="color: #0000BB">abortingcreationprocess<br /></span></span> <!-- php buffer end -->
+      <hr />
+      guide us where exactly our problem lies. we appreciate if you just give us an example+script. thank you very much for your cooperation dear.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <span class="post-time small text-muted">30th June 2008 19:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Please, I've already mentioned several times that you're missing the very basics of nsis scripting. In fact, I'd say that you're keep posting on the wrong place. This thread is dedicated to a specific implementation. You're coming back again and again asking for a ready to use script while you don't even know what a label is. The compiler speaks to you and tells you exactly what is the error. If you don't know what a label is, please read the nsis manual. And if you still can't deal with it, search the forum or open a new thread to ask for help but leave the current thread for those that would be useful for them.<br />
+      <br />
+      <a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.2.1" target="_blank">http://nsis.sourceforge.net/Docs/Chapter4.html#4.2.1</a><br />
+      <br />
+      <a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.3" target="_blank">http://nsis.sourceforge.net/Docs/Chapter4.html#4.3</a></p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">arctic_ged</span><br />
+      <span class="post-time small text-muted">15th July 2008 10:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Popup Window</strong><br />
+      Does anyone know how to create a popup that says "Please wait... Verifying your serial number", as seen on deanbayley's completed installer??</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pospec</span><br />
+      <span class="post-time small text-muted">15th July 2008 10:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I don't know what is deanbayley's completed installer, however you can try to look into NSIS's Examples\Banner subdirectory ;)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">arctic_ged</span><br />
+      <span class="post-time small text-muted">15th July 2008 10:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Excellent that is what Iâ€™ve been looking for. Cheers!</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pospec</span><br />
+      <span class="post-time small text-muted">15th July 2008 10:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I always find something that I am looking for in Examples directory<br />
+      :up:</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <span class="post-time small text-muted">13th October 2008 19:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">hello, how is it goin?<br />
+      i could very easily develop the program by means of your nice method! and, by the way, the username and password work properly!<br />
+      but please tell me, if i want the username and password work only on one computer,what should i do?<br />
+      i appreciate if you could guide me through this: when the subscriber wants to install the program, i want to do sth that the serial number on his hard disk or motherboard be sent to me in order that i can realize that he is the real subscriber or not!!!<br />
+      if there is any plug-in, i appreciate if you send it to me with an example.<br />
+      thanks in advance!!! i'm eagerly looking forward to hearing from you soon...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <span class="post-time small text-muted">14th October 2008 12:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">hello...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Comperio</span><br />
+      <span class="post-time small text-muted">14th October 2008 20:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Here's an example of how to get the drive serial number:<br />
+      <a href="http://nsis.sourceforge.net/Get_Disk_Volume_Serial_Number" target="_blank">http://nsis.sourceforge.net/Get_Disk..._Serial_Number</a><br />
+      <br />
+      But just keep in mind you'd be restricting installation that DRIVE not to the computer.<br />
+      <br />
+      Getting the serial numbers from other hardware might be more involved. This is the best info I could find from NSIS:<br />
+      <a href="http://forums.winamp.com/showthread.php?s=&amp;threadid=257639" target="_blank">http://forums.winamp.com/showthread....hreadid=257639</a><br />
+      <br />
+      Other than that, you'll probably have to do some research on your own (maybe at MSDN, etc.)</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <span class="post-time small text-muted">15th October 2008 23:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">thanks Comperio.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">D13G0</span><br />
+      <span class="post-time small text-muted">21st October 2008 17:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <i>Originally posted by pankajch82</i><br />
+        <b>i am trying same , using above code &amp; using below url<br />
+        <a href="http://pnilyaoverseas.com/pankaj/test.php?test=12345" target="_blank">http://pnilyaoverseas.com/pankaj/test.php?test=12345</a><br />
+        <br />
+        for easy testing i had disabled post from 5 boxes , now it just post from 1st box .....so if u type 12345 it should return Valid , if u type 00000 it should return INVALID.<br />
+        <br />
+        But its not happening , its taking valid for everything</b>
+      </blockquote>Hi, the same happens to me, I created a database and a table with 2 fields, one for the key and another for the status, insert a key into the database to perform the test but does not work.<br />
+      <br />
+      I think that everything is fine, because if i apply the test directly to the site the result is the expected, but not with the installer.<br />
+      <br />
+      Any help is welcome.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Sinister Edd</span><br />
+      <span class="post-time small text-muted">7th January 2010 09:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hello all,<br />
+      I was wondering what the solution was on that problem when you enter a false key and where send back to the insert product key page, then when you entered the same key the key was valid.<br />
+      <br />
+      Thanks in advance</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">anandharaja</span><br />
+      <span class="post-time small text-muted">22nd January 2010 14:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">hello<br />
+      <br />
+      iam searching a serialUI like that, i spending lot of time to find the code. now i got the result. see my attachement</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">technobuddha</span><br />
+      <span class="post-time small text-muted">15th February 2010 17:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>putting output into variable, is it possible</strong><br />
+      Hello there,<br />
+      Does anyone have an example on how I can put the return html status into a variable?<br />
+      <br />
+      I'm still new to NSIS, and I fully admit i'm not a programmer (systems admin guy here). I'm creating a username and password functionality, and the return from the PHP file would normally go into a file, but I'd like to have this return into a variable.<br />
+      <br />
+      Do I need to do fileOpen ?<br />
+      <br />
+      or?</p>
+    </div>
+    <hr />
+    <!-- Bootstrap core CSS -->
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+    <div class="container">
+      <!-- Put navigation bar here -->
+
+      <ol class="breadcrumb">
+        <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+        <li><a href="f-65.html">NSIS Discussion</a></li>
+
+        <li class="active">Will NSIS do what i'm looking to do?</li>
+      </ol>
+
+      <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=261704">Will NSIS do what i'm looking to do?</a></p><br />
+
+      <div class="post">
+        <p class="post-meta"><span class="post-author text-primary">windfreet</span><br />
+        <span class="post-time small text-muted">1st July 2010 10:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+        <p class="post-content">can you help me please post the source for the validate serial number.zip file?<br />
+        <br />
+        thanks</p>
+      </div>
+      <hr />
+
+      <div class="footer">
+        <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+      </div>
+    </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script> <script type="text/javascript">
+//<![CDATA[
+    hljs.initHighlightingOnLoad();
+    //]]>
+    </script>
+  </div>
+</body>
+</html>

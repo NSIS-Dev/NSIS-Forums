@@ -1,0 +1,106 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Find string offset in exe or dll" />
+
+  <title>Find string offset in exe or dll - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Find string offset in exe or dll</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=272038">Find string offset in exe or dll</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Rolando</span><br />
+      <span class="post-time small text-muted">31st May 2007 03:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Find string offset in exe or dll</strong><br />
+      I was searching for a function that can give me the offset in where a string can be found inside a exe/dll file and came across <a href="http://nsis.sourceforge.net/Find_a_string_in_an_e.g._exe_or_dll_file" target="_blank">this</a>. Now that function seems to do the job quite well, only it doesn't give me the hexadecimal or decimal offset of where the string I searched for is found. Is there anyway to do that?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <span class="post-time small text-muted">31st May 2007 08:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+      <pre>
+<code>Push "C:\Program Files\NSIS\makensis.exe"<br />Push "KERNEL32"<br />Push 0  ; offset to start<br />Call BinStrSearch<br />Pop $1  ; address of string or 0 if not found<br /></code>
+</pre><br />
+      I use the code shown above to call BinStrSearch; I've just added it to the <a href="http://nsis.sourceforge.net/BinStrSearch" target="_blank">Wiki</a> since I can't find the original function at the moment.<br />
+      <br />
+      It will return the decimal offset, but you can convert it to hex with a single statement:
+      <pre>
+<code>Pop $1<br />IntFmt $1 "0x%04x" $1</code>
+</pre><br />
+      Don
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Rolando</span><br />
+      <span class="post-time small text-muted">31st May 2007 12:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">well thanks for that, but the weird thing is that using <a href="http://nsis.sourceforge.net/Find_a_string_in_an_e.g._exe_or_dll_file" target="_blank">SearchByteFile</a> I do find the string but I can't know the offset however, using <a href="http://nsis.sourceforge.net/BinStrSearch" target="_blank">BinStrSearch</a> returns 0 for the same string, meaning it's not found.<br />
+      <br />
+      Isn't it possible to modify the first function and make it return the offset?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">31st May 2007 13:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I shall re-write that function is it doesn't always work with the offset (or -1) as the output.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">31st May 2007 14:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Try this:<br /></p>
+      <pre>
+<code><br />Function SearchBinaryFile<br />Exch $R0 # file<br />Exch<br />Exch $R1 # search<br />Push $R2<br />Push $R3<br />Push $R4<br />Push $R5<br />Push $R6<br /><br />  StrLen $R2 $R1<br />  ClearErrors<br />  FileOpen $R3 $R0 r<br />  IfErrors error<br />  StrCpy $R0 0<br /><br />  read:<br />    StrCpy $R6 ``<br />    StrCpy $R4 0<br />    read_string:<br />      ClearErrors<br />        FileReadByte $R3 $R5<br />      IfErrors error<br />      IntFmt $R5 %c $R5<br />      StrCpy $R6 $R6$R5<br />      IntOp $R4 $R4 + 1<br />    StrCmp $R4 $R2 0 read_string<br /><br />    StrCmp $R6 $R1 done<br />      IntOp $R0 $R0 + 1<br />      FileSeek $R3 $R0 SET<br />      Goto read<br /><br />  error:<br />    StrCpy $R0 -1<br />    Goto +2<br />  done:<br />    FileClose $R3<br /><br />Pop $R6<br />Pop $R5<br />Pop $R4<br />Pop $R3<br />Pop $R2<br />Pop $R1<br />Exch $R0 # offset or -1<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      Usage:<br />
+      <pre>
+<code><br />Push "string"<br />Push "path\to\file.ext"<br />  Call SearchBinaryFile<br />Pop $R0 # offset / -1<br /></code>
+</pre><br />
+      <br />
+      Stu
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

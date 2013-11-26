@@ -1,0 +1,192 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Showing a custom page if..." />
+
+  <title>Showing a custom page if... - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Showing a custom page if...</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=127695">Showing a custom page if...</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">8th March 2003 11:23 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Showing a custom page if...</strong><br /></p>
+      <pre>
+<code><br />        IfFileExists "$TEMP\map-compiler.ini" WriteSettingsNo<br />        WriteINIStr "$TEMP\map-compiler.ini" "Settings" "Show" "Yes"<br />        WriteSettingsNo:<br /><br />        ReadINIStr $1 "$TEMP\map-compiler.ini" "Settings" "Show"<br />        StrCmp $1 Yes ViewSettingsYes ViewSettingsNo<br />        ViewSettingsYes:<br />        Page Custom SetCustom2 " - Change required settings"<br />        ViewSettingsNo:<br /><br />  ReadINIstr $2 "$TEMP\map-compiler_settings.ini" "Field 6" "State"<br />  StrCmp $2 1 DialogYes DialogNo<br />   DialogYes:<br />        Page Custom SetCustom2 " - Change required settings"<br />   DialogNo:<br /></code>
+</pre><br />
+      <br />
+      I have tried puttin this code everywhere, but it won't work.<br />
+      I'd like the custom page to show before the MUI Welcome page only if the user has aloowed it before.<br />
+      On first load of the program, the user will be allowed to toggle 'Show settings dialog'. If it is off (0) then it won't be shown again.<br />
+      <br />
+      Why isn't the custom page showing?<br />
+      <br />
+      -Stuart
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">8th March 2003 11:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Page is not a runtime command. The fact that it can be used in sections and functions has been fixed in the latest CVS version. You'll need to condition the call to InstsallOptions, because you can't condition Page.<br />
+      <br />
+      For example:<br /></p>
+      <pre>
+<span style="color: #007700">Function</span><span style="color: #0000BB">ShowPage
+<br />StrCmp</span><span style="color: #007700">$</span><span style="color: #0000BB">1Noskip
+<br />InstallOptions</span><span style="color: #007700">::</span><span style="color: #0000BB">dialog$TEMPdialog</span><span style="color: #007700">.</span><span style="color: #0000BB">ini
+<br />Pop</span><span style="color: #007700">$</span><span style="color: #0000BB">2
+<br />skip</span><span style="color: #007700">:
+<br /></span><span style="color: #0000BB">FunctionEnd
+<br /></span>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">8th March 2003 13:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I see.<br />
+      I'd have the function and now have...<br /></p>
+      <pre>
+<code><br />ReadINIStr $1 "$TEMP\map-compiler.ini" "Settings" "Show"<br />        StrCmp $1 Yes ViewSettingsYes ViewSettingsNo<br />        ViewSettingsYes:<br />        Call ShowPage<br />        ViewSettingsNo:<br /></code>
+</pre><br />
+      <br />
+      Yeah?<br />
+      <br />
+      -Stuart
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">8th March 2003 14:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I don't know where to put this piece of code. It needs to go in a function, but the only function before the welcome page is ${PRE}<br />
+      Putting it in there works, but it really doesn't work good.<br />
+      Clicking next goes to the welcome page, but the back button doesn't appear.<br />
+      Also, clicking next once brings up the custom IO page again.<br />
+      <br />
+      I think I will have to do this..<br />
+      <br /></p>
+      <pre>
+<code><br />Function .onInit<br />WriteINIStr "$TEMP\map-compiler_settings_show.ini" " " " " " "<br />FunctionEnd<br /><br />Function ShowPage<br />        IfFileExists "$TEMP\map-comiler_settings_show.ini" 0 +2<br />        InstallOptions::dialog "$TEMP\map-compiler_settings.ini"<br />FunctionEnd<br /><br />Function .onInstSuccess<br />        Delete "$TEMP\map-compiler_settings_show.ini"<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      -Stuart
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">8th March 2003 14:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Ok, well the Next and Back buttons still screwed...<br />
+      <br />
+      Custom Page<br />
+      Next &gt;<br />
+      <br />
+      Welcome Page<br />
+      Next &gt;<br />
+      No &lt; Back button<br />
+      <br />
+      InstFiles Page<br />
+      &lt; Back, Next&gt;<br />
+      &lt; Back goes to Custom Page not Welcome Page<br />
+      <br />
+      -Stuart</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">8th March 2003 14:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Never mind. I have changed it to a perminant page, since once the page was turned off, the user couldn't turn it back on.<br />
+      It doesn't matter too much that the user has to go through one more page really!<br />
+      <br />
+      -Stuart</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deguix</span><br />
+      <span class="post-time small text-muted">8th March 2003 18:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">If you use Modern UI, and custom pages, you have to use:<br />
+      <br />
+      !define MUI_PAGECOMMAND_[PAGE_NAME]<br />
+      <br />
+      In your case, you used the:<br />
+      <br />
+      !define MUI_WELCOMEPAGE<br />
+      <br />
+      So, you should use:<br />
+      <br />
+      !define MUI_PAGECOMMANDS_WELCOME</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">8th March 2003 19:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">That would remove the welcome page and replace it with my custom page would it not?<br />
+      <br />
+      -Stuart</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">deguix</span><br />
+      <span class="post-time small text-muted">8th March 2003 19:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Only replace the !define MUI_WELCOMEPAGE by !define MUI_PAGECOMMANDS_WELCOME. Nothing else. This will should help you.<br />
+      <br />
+      [edit]Whoops, is MUI_PAGECOMMAND_WELCOME, sorry![/edit]</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Joost Verburg</span><br />
+      <span class="post-time small text-muted">9th March 2003 00:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You need both !define MUI_WELCOMEPAGE and <b>!insertmaco</b> MUI_PAGECOMMAND_WELCOME. Insert the macro on the right place between the other page commands.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

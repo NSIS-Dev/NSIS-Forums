@@ -1,0 +1,177 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="getting cppunit tests to work and pass on linux" />
+
+  <title>getting cppunit tests to work and pass on linux - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">getting cppunit tests to work and pass on linux</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=226633">getting cppunit tests to work and pass on linux</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pabs</span><br />
+      <span class="post-time small text-muted">22nd September 2005 07:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>getting cppunit tests to work and pass on linux</strong><br />
+      I tried to enable the cppunit tests in the debian package, but it didn't work.<br />
+      <br />
+      Some issues:</p>
+
+      <ul>
+        <li>Needs to link against dl for dlopen/etc</li>
+
+        <li>Needs to ignore .nsi tests that require System.dll (or AddBrandingImage) when it is not available or skipped. This includes places where StrCmp and the like is used.</li>
+
+        <li>makensis.nsi tries to include makensis.exe and NSIS.chm, which don't exist on Linux.</li>
+
+        <li>The LogicLib portability issues I mentioned.</li>
+      </ul>The attached patch contains the changes I made while trying to get "scons test" to pass on my install. It does this mainly by turning off tests that fail.<br />
+      <br />
+      Tests that failed:
+
+      <ul>
+        <li>MMap:
+
+          <blockquote>
+            mmap.cpp:46:Assertion<br />
+            Test name: MMapTest::testMMapFile<br />
+            equality assertion failed<br />
+            - Expected: \uffff<br />
+            - Actual :
+          </blockquote>
+        </li>
+
+        <li>The Source/Plugins.cpp change is because I got this:<br />
+
+          <blockquote>
+            Processing script file: ".test/Examples/LogicLib.nsi"<br />
+            makensis: Source/Plugins.cpp:118: Value&lt;unnamed&gt;::get_value(const std::map&lt;Key, Value, std::less&lt;_Key&gt;, std::allocator&lt;std::pair&lt;const _Key, _Tp&gt; &gt; &gt;&amp;, const Key&amp;) [with Key = std::string, Value = std::string]: Assertion `the_map.find(key) != the_map.end()' failed.<br />
+            scons: *** [.test/Examples/LogicLib] Error -6<br />
+            scons: building terminated because of errors.
+          </blockquote>
+        </li>
+
+        <li>.nsi files due to System.dll: LogicLib.nsi, StrFunc.nsi, TextFunc.nsi, makensis.nsi, TextFuncTest.nsi, FileFunc.nsi, FileFuncTest.nsi, Library.nsi.</li>
+
+        <li>gfx.nsi failed due to missing AddBrandingImage support</li>
+      </ul>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">23rd September 2005 16:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Turning off compilation of the scripts is fine because we know what's wrong there. But turning off assertions defeats the purpose of the tests. The failure should not be ignored, the cause should be investigated.<br />
+      <br />
+      Can you get a stack dump for the Plugins.cpp assertion failure? I can't reproduce it.<br />
+      <br />
+      I was able to reproduce a segfault in mmap.cpp, but not an assertion failure. I'll look into it.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pabs</span><br />
+      <span class="post-time small text-muted">24th September 2005 10:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Indeed. The patch was just to show which assertions failed.<br />
+      <br />
+      With the mmap failure, p2[j] is always 0 at the assertion point. CppUnit doesn't seem to raise a signal when an assertion is triggered, so I don't have a backtrace for this one. Is there any way to change this?<br />
+      <br />
+      The Plugins.cpp error was with LogicLib.nsi, which uses System.dll (via Str*). I got the following backtrace when running under gdb.</p>
+
+      <blockquote>
+        Processing script file: ".test/Examples/LogicLib.nsi"<br />
+        makensis: Source/Plugins.cpp:118: Value&lt;unnamed&gt;::get_value(const std::map&lt;Key, Value, std::less&lt;_Key&gt;, std::allocator&lt;std::pair&lt;const _Key, _Tp&gt; &gt; &gt;&amp;, const Key&amp;) [with Key = std::string, Value = std::string]: Assertion `the_map.find(key) != the_map.end()' failed.<br />
+        <br />
+        Program received signal SIGABRT, Aborted.<br />
+        [Switching to Thread -1210747200 (LWP 13424)]<br />
+        0xb7d829e7 in raise () from /lib/tls/libc.so.6<br />
+        (gdb) bt<br />
+        #0 0xb7d829e7 in raise () from /lib/tls/libc.so.6<br />
+        #1 0xb7d8431b in abort () from /lib/tls/libc.so.6<br />
+        #2 0xb7d7b885 in __assert_fail () from /lib/tls/libc.so.6<br />
+        #3 0x0806aff5 in (anonymous namespace)::get_value&lt;std::string, std::string&gt; (the_map=Variable "the_map" is not available.) at Source/Plugins.cpp:118<br />
+        #4 0x0806a2c5 in Plugins::NormalizedCommand (this=0xbf9e02dc, command=@0xbf9cf1d4) at Source/Plugins.cpp:134<br />
+        #5 0x0806a4dd in Plugins::IsPluginCommand (this=0xbf9e02dc, token=@0xbf9cf1d4) at Source/Plugins.cpp:110<br />
+        #6 0x0808fd87 in CEXEBuild::doParse (this=0xbf9e0260, str=0x827ec68 " System::Int64Op `0x100000000` `=` `4294967296`") at Source/script.cpp:313<br />
+        #7 0x0809059b in CEXEBuild::process_oneline (this=0xbf9e0260, line=0x81b7c5f " System::Int64Op `${_a}` `${_o}` `${_b}`", filename=0xbf9cf3a0 "macro:_Int64Cmp", linenum=0) at Source/script.cpp:751<br />
+        #8 0x0808d81f in CEXEBuild::doCommand (this=0xbf9e0260, which_token=78, line=@0xbf9d36d4) at Source/script.cpp:983<br />
+        #9 0x0808ff11 in CEXEBuild::doParse (this=0xbf9e0260, str=0x820d870 " !insertmacro _Int64Cmp `0x100000000` = `4294967296` `` `_542.5`") at Source/script.cpp:440<br />
+        #10 0x0809059b in CEXEBuild::process_oneline (this=0xbf9e0260, line=0x81b7ceb " !insertmacro _Int64Cmp `${_a}` = `${_b}` `${_t}` `${_f}`", filename=0xbf9d38d0 "macro:_L=", linenum=0) at Source/script.cpp:751<br />
+        #11 0x0808d81f in CEXEBuild::doCommand (this=0xbf9e0260, which_token=78, line=@0xbf9d7c04) at Source/script.cpp:983<br />
+        #12 0x0808ff11 in CEXEBuild::doParse (this=0xbf9e0260, str=0x81e5820 " !insertmacro _L= `0x100000000` `4294967296` \"\" _542.5") at Source/script.cpp:440<br />
+        #13 0x0809059b in CEXEBuild::process_oneline (this=0xbf9e0260, line=0x81b83df " !insertmacro _${_o} `${_a}` `${_b}` \"\" ${${_Logic}Else}", filename=0xbf9d7e00 "macro:_If", linenum=0) at Source/script.cpp:751<br />
+        #14 0x0808d81f in CEXEBuild::doCommand (this=0xbf9e0260, which_token=78, line=@0xbf9dc134) at Source/script.cpp:983<br />
+        #15 0x0808ff11 in CEXEBuild::doParse (this=0xbf9e0260, str=0x815a900 " !insertmacro _If true 0x100000000 L= 4294967296") at Source/script.cpp:440<br />
+        #16 0x0809075f in CEXEBuild::parseScript (this=0xbf9e0260) at Source/script.cpp:626<br />
+        #17 0x08090a46 in CEXEBuild::process_script (this=0xbf9e0260, filepointer=0x0, filename=0xbf9e22fc ".test/Examples/LogicLib.nsi") at Source/script.cpp:199<br />
+        #18 0x08066dd0 in main (argc=2, argv=0xbf9e2794) at Source/makenssi.cpp:456
+      </blockquote>Also, I noted during getting the backtrace that even when DEBUG is set to yes, makensis is built with -s, causing debugging symbols from the .o files to be stripped.<br />
+      <br />
+      I'd like to enable the tests during building in the debian package, but I imagine they might fail on lots of the debian architectures, forcing me to find and fix those failures before nsis could get back into the next release.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">24th September 2005 12:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Patches to fix the two assertions and remove optimizations and symbol stripping in debug mode are attached.<br />
+      <br />
+      The mmap test patch changes the test to fit the current situation, even though the mmap classes need a bit of work.<br />
+      <br />
+      Thanks.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">pabs</span><br />
+      <span class="post-time small text-muted">24th September 2005 16:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Cool. Just need the following changes to allow cppunit to be detected and Source/Tests/mmap.cpp to be compiled.<br />
+      <br />
+      1. Add dl to libs in Source/Tests/SConscript. CppUnit seems to use the functions dlclose, dlopen, dlsym for dynamically loading shared libraries.<br />
+      2. Change "min" to "std::min" in Source/Tests/mmap.cpp, or similar.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <span class="post-time small text-muted">24th September 2005 16:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">You're right, those are simple enough and can be easily made to work on Windows as well. Done.</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

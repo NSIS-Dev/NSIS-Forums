@@ -1,0 +1,217 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="[Solution] Getting file size at compile time" />
+
+  <title>[Solution] Getting file size at compile time - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">[Solution] Getting file size at compile time</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=338396">[Solution] Getting file size at compile time</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stopasking</span><br />
+      <span class="post-time small text-muted">28th November 2011 16:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>[Solution] Getting file size at compile time</strong><br />
+      Hi guys.<br />
+      <br />
+      I managed to solve <a href="http://forums.winamp.com/showthread.php?t=338354" target="_blank">my previous issue</a>, here's the code I came up with to get a size of file at compile time:<br />
+      <br /></p>
+      <pre>
+<code>!macro CTFileSize _FILE _RESULT<br /><br />!echo 'CTFileSize: "${_FILE}"'<br /><br />!verbose push<br />!verbose 3<br /><br />!tempfile __TEMP_BAT_FILE<br />!delfile "${__TEMP_BAT_FILE}"<br />!tempfile __TEMP_NSH_FILE<br />!delfile "${__TEMP_NSH_FILE}"<br /><br />!system 'cmd /C ECHO @ECHO Push %~z1 &gt; "${__TEMP_BAT_FILE}.bat"'<br />!system '"${__TEMP_BAT_FILE}.bat" "${_FILE}" &gt; "${__TEMP_NSH_FILE}.nsh"'<br />!include "${__TEMP_NSH_FILE}.nsh"<br /><br />!delfile "${__TEMP_BAT_FILE}.bat"<br />!undef __TEMP_BAT_FILE<br />!delfile "${__TEMP_NSH_FILE}.nsh"<br />!undef __TEMP_NSH_FILE<br /><br />Pop ${_RESULT}<br /><br />!verbose pop<br /><br />!macroend</code>
+</pre><br />
+      <br />
+      Usage:<br />
+      <br />
+      <pre>
+<code>!insertmacro CTFileSize "C:\Windows\notepad.exe" $R0<br />MessageBox MB_OK "Size of notepad: $R0 bytes"</code>
+</pre><br />
+      <br />
+      Perhaps somebody else will find it useful.<br />
+      <br />
+      P.S. I use this code to calculate the size of a section for several install modes, and change it at runtime, using the SectionSetSize function.<br />
+      The docs say:<br />
+      "The Value for Size must be entered in KiloByte and supports only whole numbers."<br />
+      Only whole KBs? Why the heck is that? o_0
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">28th November 2011 17:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Whole KBs is probably to allow larger sizes within a 32 bits variable.<br />
+      <br />
+      Next time, please post the solution in the thread where you asked the question.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">28th November 2011 17:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Why post a new thread?<br />
+      <br />
+      My take on this:<br /></p>
+
+      <blockquote>
+        !macro GetFileSize define file<br />
+        !tempfile __GetFileSize<br />
+        !execute 'cmd /E:ON /V:OFF /C if 1==1 for %A in ("${file}") do echo !define ${define} "%~zA" &gt; "${__GetFileSize}"'<br />
+        !include "${__GetFileSize}"<br />
+        !delfile "${__GetFileSize}"<br />
+        !undef __GetFileSize<br />
+        !macroend<br />
+        <br />
+        !insertmacro GetFileSize thesize "$%windir%\explorer.exe"<br />
+        !echo thesize=${thesize}
+      </blockquote>Edit: Added missing !undef
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stopasking</span><br />
+      <span class="post-time small text-muted">28th November 2011 18:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        Next time, please post the solution in the thread where you asked the question.
+      </blockquote>OK, sorry, I just thought that it would be easier for others to find it that way. (SEO, page title, etc.)<br />
+      Also, maybe it's worth to add this to the wiki?<br />
+      <br />
+
+      <blockquote>
+        Whole KBs is probably to allow larger sizes within a 32 bits variable.
+      </blockquote>More than 4 GB for an installer?<br />
+      I don't think so (I bet it won't work anyway).<br />
+      If you know another way of e.g. setting a section size in bytes and not in KBs, tell me. It's not a must but it looks nicer. After all, NSIS does that by default.<br />
+      <br />
+
+      <blockquote>
+        My take on this
+      </blockquote>Wow, nice! :)<br />
+      I'm not too good at working with cmd, so I would never come up with this.<br />
+      A couple of corrections, though:<br />
+      * A "/Q" parameter for cmd to turn off echo.<br />
+      * What is the "if 1==1" for? I guess nothing.<br />
+      * You forgot to undef __GetFileSize.<br />
+      <br />
+      Also, it's more convenient for me to get the size to a variable, and not to a define, so here's my version:<br />
+
+      <blockquote>
+        !macro CTFileSize _FILE _RESULT<br />
+        !tempfile __TEMP_NSH_FILE<br />
+        !execute 'cmd /Q /E:ON /V:OFF /C for %A in ("${_FILE}") do echo StrCpy ${_RESULT} %~zA &gt; "${__TEMP_NSH_FILE}"'<br />
+        !include "${__TEMP_NSH_FILE}"<br />
+        !delfile "${__TEMP_NSH_FILE}"<br />
+        !undef __TEMP_NSH_FILE<br />
+        !macroend
+      </blockquote>Usage is the same as in the first post:<br />
+
+      <blockquote>
+        !insertmacro CTFileSize "C:\Windows\notepad.exe" $R0<br />
+        MessageBox MB_OK "Size of notepad: $R0 bytes"
+      </blockquote>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">28th November 2011 18:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">IF 1==1 does "nothing" yes, but it fixes bugs in cmd.exe</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stopasking</span><br />
+      <span class="post-time small text-muted">28th November 2011 18:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">That's interesting, what bugs does it fix?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
+      <span class="post-time small text-muted">28th November 2011 18:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by stopasking</small><br />
+        More than 4 GB for an installer?<br />
+        I don't think so (I bet it won't work anyway).
+      </blockquote>I have one. CopyFiles and AddSize are your friends.
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">stopthemess</span><br />
+      <span class="post-time small text-muted">14th December 2012 14:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I need to get a size of a folder at compile time.<br />
+      I came up with the following batch script:<br /></p>
+
+      <blockquote>
+        @ECHO OFF<br />
+        SET sum=0<br />
+        FOR /R %1 %%A IN (*) DO ( SET /A sum+=%%~zA )<br />
+        echo %sum%
+      </blockquote>It works.<br />
+      Now I want to use it as a command line parameter of cmd.<br />
+      I tried the following:<br />
+
+      <blockquote>
+        cmd /Q /E:ON /V:OFF /K SET sum=0 &amp; FOR /R "%userprofile%\Desktop\" %A IN (*) DO ( SET /A sum+=%~zA ) &amp; ECHO %sum%
+      </blockquote>but it doesn't work as expected.<br />
+      <br />
+      Help me please.<br />
+      <br />
+      <b><i>--EDIT--</i></b><br />
+      <br />
+      That's what I came up with:<br />
+
+      <blockquote>
+        !macro CTFolderSize _FOLDER _RESULT<br />
+        !tempfile __TEMP_NSH_FILE<br />
+        !execute 'cmd /Q /E:ON /V:OFF /C (SET sum=0) &amp; (FOR /R "${_FOLDER}" %A IN (*) DO SET /A "sum+=%~zA" &gt; NUL ) &amp; ( CALL ECHO StrCpy ${_RESULT} %sum% &gt; "${__TEMP_NSH_FILE}" )'<br />
+        !include "${__TEMP_NSH_FILE}"<br />
+        !delfile "${__TEMP_NSH_FILE}"<br />
+        !undef __TEMP_NSH_FILE<br />
+        !macroend
+      </blockquote>I'm not sure how good is the solution, but it seems to work.
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

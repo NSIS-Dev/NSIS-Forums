@@ -1,0 +1,113 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Odd LangString behavior" />
+
+  <title>Odd LangString behavior - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Odd LangString behavior</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=237277">Odd LangString behavior</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Dashus</span><br />
+      <span class="post-time small text-muted">5th February 2006 21:46 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Odd LangString behavior</strong><br />
+      I'm reading in a language id from regsitry which doesn't match the ${LANGUAGE_*} values so I'm just switching the LANGID and popping the appropriate value into $LANGUAGE. The problem is that while the value of $LANGUAGE is correct it always prints the english error message. The license agreement is in the correct language; just never any of the error messages. All errors are thrown only in .onInit. Any ideas?<br />
+      <br /></p>
+      <pre>
+<code><br />!define LANGID_ENGLISH 0<br />!define LANGIS_FRENCH 1<br /><br />!insertmacro MUI_LANGUAGE "English"<br />!insertmacro MUI_LANGUAGE "French"<br /><br />LicenseLangString myLicenseData ${LANG_ENGLISH} "local\license.txt.EN"<br />LicenseLangString myLicenseData ${LANG_FRENCH} "local\license.txt.FR"<br />LicenseData $(myLicenseData)<br /><br />LangString emsg_InstallerAlreadyRunning ${LANG_ENGLISH} "English - Installer already running."<br />LangString emsg_InstallerAlreadyRunning ${LANG_FRENCH} "French - Installer already running."<br /><br />Function .onInit<br /><br />    ; Get the game language value<br />    ReadRegDWORD $LANGID HKLM "..." "Language"<br />    ${Select} $LANGID<br />    ${Case} ${LANGID_FRENCH}<br />      Push ${LANG_FRENCH}<br />      Pop $LANGUAGE<br />    ${Default}<br />      Push ${LANG_ENGLISH}<br />      Pop $LANGUAGE<br />    ${EndSelect}<br /><br />    MessageBox MB_OK|MB_ICONEXCLAMATION "$LANGUAGE"<br /><br />    ; Prevent multiple instances of installer<br />    System::Call 'kernel32::CreateMutexA(i 0, i 0, t "TSLRP") i .r1 ?e'<br />    Pop $R0<br />    StrCmp $R0 0 +3<br />    MessageBox MB_OK|MB_ICONEXCLAMATION "$(emsg_InstallerAlreadyRunning)"<br />    Abort<br />    ...<br /></code>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">dandaman32</span><br />
+      <span class="post-time small text-muted">6th February 2006 01:17 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Possible solutions:<br />
+      <br />
+      Solution 1:<br />
+      <br />
+      Typo:<br /></p>
+
+      <blockquote>
+        LANGIS_FRENCH
+      </blockquote>should be<br />
+
+      <blockquote>
+        LANGID_FRENCH
+      </blockquote>Solution 2:<br />
+      Language IDs are wrong. English is 1033 and French is 1036.<br />
+      <br />
+      Solution 3:<br />
+      Try:<br />
+      <pre>
+<code>ReadRegDWORD $LANGID HKLM "..." "Language" ; edit this!<br />${Select} $LANGID<br />${Case} ${LANGID_FRENCH}<br />  StrCpy $LANGUAGE 1036<br />${Default}<br />  StrCpy $LANGUAGE 1033<br />${EndSelect}</code>
+</pre><br />
+      Edit: Modern UI will require the language ID to be correct (i. e. 1033 for english and 1036 for french) or you won't see much of a ui.<br />
+      <br />
+      -dandaman32
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Dashus</span><br />
+      <span class="post-time small text-muted">7th February 2006 00:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">1) Typo isn't in my original; I didn't copy paste...foolish me :igor:<br />
+      <br />
+      2) The MessageBox displays the proper value of $LANGUAGE for both the first and second instance of the installer.<br />
+      <br />
+      3) And I do in fact get the UI to come up. It's just that I'm trying to display the "The installer is already running" in the language of the user. But despite the fact that the value in $LANGUAGE (1036) is correct for both instances I always get the English error message.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">glory_man</span><br />
+      <span class="post-time small text-muted">7th February 2006 09:08 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">That's because $LANGUAGE variable is set in .onInit, but NSIS re-reads it only after .onInit. So your multilanguage variable "emsg_InstallerAlreadyRunning" will be "multilanguage" only after .onInit execution.<br />
+      <a href="http://forums.winamp.com/showthread.php?postid=1641306#post1641306" target="_blank">Here</a> and <a href="http://forums.winamp.com/showthread.php?s=&amp;threadid=147907&amp;highlight=oninit+Messagebox" target="_blank">here</a> discussion. Or search the forum for "oninit", "multilanguage", "messagebox".</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Dashus</span><br />
+      <span class="post-time small text-muted">8th February 2006 02:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Appreciate it!</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

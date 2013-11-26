@@ -1,0 +1,252 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Problem building NSIS on Windows 7 64bit" />
+
+  <title>Problem building NSIS on Windows 7 64bit - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Problem building NSIS on Windows 7 64bit</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=330546">Problem building NSIS on Windows 7 64bit</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JonHodgson</span><br />
+      <span class="post-time small text-muted">12th May 2011 00:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Problem building NSIS on Windows 7 64bit</strong><br />
+      Hi,<br />
+      <br />
+      I've been successfully compiling NSIS on one machine, actually I only really want to compile my own versions of the UI exes but I've been using scons and compiling the whole thing, it's worked fine. That was visual Studio 2005 on Win XP<br />
+      <br />
+      My new development machine however is running Windows 7 64 bit, still Visual Studio 2005, I've updated to the very latest trunk and scons but when I try to build using scons I get<br />
+      <br /></p>
+
+      <blockquote>
+        BgImage.cpp<br />
+        Contrib\BgImage\BgImage.cpp(154) : error C2065: 'GWL_WNDPROC' : undeclared ident<br />
+        ifier<br />
+        Contrib\BgImage\BgImage.cpp(391) : error C2664: 'CallWindowProcA' : cannot conve<br />
+        rt parameter 1 from 'long (__cdecl *)(HWND,unsigned int,unsigned int,long)' to '<br />
+        WNDPROC'<br />
+        This conversion requires a reinterpret_cast, a C-style cast or function-<br />
+        style cast<br />
+        scons: *** [build\release\BgImage\BgImage.obj] Error 2<br />
+        scons: building terminated because of errors.
+      </blockquote>I want to build a 32 bit installer, I just happen to be on a 64 bit machine, anybody got any ideas?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">12th May 2011 01:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">First off, to change the UI's you can just use Resource Hacker, no need to compile.<br />
+      <br />
+      To get around this problem you can skip compiling the plugins (SKIPPLUGINS=all)<br />
+      <br />
+      As far as the errors go, it does seem like there is some 64 bit stuff going on since GWL_WNDPROC should work just fine for 32 bit code.<br />
+      <br />
+      If you still want to compile:<br />
+      <br />
+      change oldProc = (void *)SetWindowLong(hwndParent, GWL_WNDPROC, (long)WndProc); to<br /></p>
+      <pre>
+<code>oldProc</code><span style="color: #007700">=(</span><span style="color: #0000BB">void</span><span style="color: #007700">*)</span><span style="color: #0000BB">SetWindowLongPtr</span><span style="color: #007700">(</span><span style="color: #0000BB">hwndParent</span><span style="color: #007700">,</span><span style="color: #0000BB">GWLP_WNDPROC</span><span style="color: #007700">,(</span><span style="color: #0000BB">LONG_PTR</span><span style="color: #007700">)</span><span style="color: #0000BB">WndProc</span><span style="color: #007700">);
+</span>
+</pre>and<br />
+      return CallWindowProc(<br />
+      (long (__stdcall *)(HWND,unsigned int,unsigned int,long))oldProc,hwnd,message,wParam,lParam);<br />
+      <br />
+      to<br />
+      <pre>
+<span style="color: #007700">return</span><span style="color: #0000BB">CallWindowProc</span><span style="color: #007700">(
+<br />(</span><span style="color: #0000BB">WNDPROC</span><span style="color: #007700">)</span><span style="color: #0000BB">oldProc</span><span style="color: #007700">,</span><span style="color: #0000BB">hwnd</span><span style="color: #007700">,</span><span style="color: #0000BB">message</span><span style="color: #007700">,</span><span style="color: #0000BB">wParam</span><span style="color: #007700">,</span><span style="color: #0000BB">lParam</span><span style="color: #007700">);
+</span>
+</pre>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">12th May 2011 10:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I've been unsuccessful building NSIS on anything other than XP 32 with VS2005 and the 2003 SDK. Even then I had to hack the scons script to import the correct paths from the environment.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">JonHodgson</span><br />
+      <span class="post-time small text-muted">12th May 2011 11:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm going to try the resource editor route.<br />
+      <br />
+      Any recommendations? So far I've found Resource Hacker, XN Resource Editor and ResEdit, but I have no idea how they differ or how good they are.<br />
+      <br />
+      Also, I'm about to do a search for it, but does anyone know how to make a bitmap the background to a dialog or a set of controls? There seems to be no explicit z-ordering of controls that I can see, so if things overlap then anything can happen.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">DrO</span><br />
+      <span class="post-time small text-muted">12th May 2011 11:37 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">the z-ordering is primarily based on the order the controls on a dialog resource are specified.<br />
+      <br />
+      -daz</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">12th May 2011 16:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"></p>
+
+      <blockquote>
+        <small>Originally posted by Afrow UK</small><br />
+        I've been unsuccessful building NSIS on anything other than XP 32 with VS2005 and the 2003 SDK. Even then I had to hack the scons script to import the correct paths from the environment.<br />
+        <br />
+        Stu
+      </blockquote>Try another scons version?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">12th May 2011 17:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Tried 1.0 and 2.0. I had to modify the NSIS scons script.<br />
+      <br />
+      Edit: IIRC the error was "can't open Windows.h" or along those lines so it wasn't picking up my SDK path. In the end I had to get it to read LIB from the environment to get it to build. Don't have the actual code with me mind.<br />
+      <br />
+      Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">12th May 2011 17:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Well, have you reported it on their bug tracker?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">12th May 2011 17:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">No I haven't because I haven't tried building anything else with scons so I assumed it's a problem with the NSIS scons script rather than with scons itself. Perhaps it is scons though.<br />
+      <br />
+      This is similar to the code I had to add (taken from <a href="http://stackoverflow.com/questions/211035/fatal-error-c1083-cannot-open-include-file-windows-h-and-scons" target="_blank">http://stackoverflow.com/questions/2...ws-h-and-scons</a>):</p>
+      <pre>
+<code>import os<br />env = Environment(ENV={'PATH': os.environ['PATH']})<br /><br />env['ENV']['TMP'] = os.environ['TMP']<br />env.AppendUnique(CPPPATH=os.environ['INCLUDE'].split(';'))<br />env.AppendUnique(LIBPATH=os.environ['LIB'].split(';'))<br /></code>
+</pre>I think it was the CPPPATH/INCLUDE rather than LIB that needed to be set.<br />
+      <br />
+      Stu
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Pawel</span><br />
+      <span class="post-time small text-muted">14th November 2011 23:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi, I am trying to build NSIS sources on win7 x64 with visual studio 2010 express.<br />
+      (SCONS 2.1, wxWidgets 2.8.12, Python 2.7.2).<br />
+      <br />
+      I compiled successfully NSIS Menu with wxWidgets, but when I try to do SCONS command<br />
+      I got this error:<br />
+      <br />
+      <br /></p>
+      <pre>
+<code>C</code><span style="color: #007700">:</span><span style="color: #0000BB">NSIS_ANSIsrc</span><span style="color: #007700">&gt;</span><span style="color: #0000BB">scons
+<br />scons</span><span style="color: #007700">:</span><span style="color: #0000BB">ReadingSConscriptfiles</span><span style="color: #007700">...
+<br /></span><span style="color: #0000BB">Mkdir</span><span style="color: #007700">(</span><span style="color: #DD0000">"build\release\config"</span><span style="color: #007700">)
+<br /></span><span style="color: #0000BB">Delete</span><span style="color: #007700">(</span><span style="color: #DD0000">"nsis-14-Nov-2011.cvs"</span><span style="color: #007700">)
+<br /></span><span style="color: #0000BB">Delete</span><span style="color: #007700">(</span><span style="color: #DD0000">".instdist"</span><span style="color: #007700">)
+<br /></span><span style="color: #0000BB">Delete</span><span style="color: #007700">(</span><span style="color: #DD0000">".test"</span><span style="color: #007700">)
+<br /></span><span style="color: #0000BB">UsingMicrosofttoolsconfiguration
+<br />KeyError</span><span style="color: #007700">:</span><span style="color: #DD0000">'LIB'</span><span style="color: #007700">:
+<br /></span><span style="color: #0000BB">File</span><span style="color: #DD0000">"C:\NSIS_ANSI\src\SConstruct"</span><span style="color: #007700">,</span><span style="color: #0000BB">line352</span><span style="color: #007700">:
+<br /></span><span style="color: #0000BB">envs</span><span style="color: #007700">=</span><span style="color: #0000BB">SConscript</span><span style="color: #007700">(</span><span style="color: #DD0000">'SCons/Config/ms'</span><span style="color: #007700">)
+<br /></span><span style="color: #0000BB">File</span><span style="color: #DD0000">"C:\Python27\Scripts\..\Lib\site-packages\scons-2.1.0\SCons\Script\SConscript.py"</span><span style="color: #007700">,</span><span style="color: #0000BB">line614</span><span style="color: #007700">:
+<br />return</span><span style="color: #0000BB">method</span><span style="color: #007700">(*</span><span style="color: #0000BB">args</span><span style="color: #007700">,**</span><span style="color: #0000BB">kw</span><span style="color: #007700">)
+<br /></span><span style="color: #0000BB">File</span><span style="color: #DD0000">"C:\Python27\Scripts\..\Lib\site-packages\scons-2.1.0\SCons\Script\SConscript.py"</span><span style="color: #007700">,</span><span style="color: #0000BB">line551</span><span style="color: #007700">:
+<br />return</span><span style="color: #0000BB">_SConscript</span><span style="color: #007700">(</span><span style="color: #0000BB">self</span><span style="color: #007700">.</span><span style="color: #0000BB">fs</span><span style="color: #007700">,*</span><span style="color: #0000BB">files</span><span style="color: #007700">,**</span><span style="color: #0000BB">subst_kw</span><span style="color: #007700">)
+<br /></span><span style="color: #0000BB">File</span><span style="color: #DD0000">"C:\Python27\Scripts\..\Lib\site-packages\scons-2.1.0\SCons\Script\SConscript.py"</span><span style="color: #007700">,</span><span style="color: #0000BB">line260</span><span style="color: #007700">:
+<br /></span><span style="color: #0000BB">exec_file_incall_stack</span><span style="color: #007700">***91;-</span><span style="color: #0000BB">1</span><span style="color: #007700">***93;.</span><span style="color: #0000BB">globals
+<br />File</span><span style="color: #DD0000">"C:\NSIS_ANSI\src\SCons\Config\ms"</span><span style="color: #007700">,</span><span style="color: #0000BB">line63</span><span style="color: #007700">:
+<br /></span><span style="color: #0000BB">libdirs</span><span style="color: #007700">=</span><span style="color: #0000BB">defenv</span><span style="color: #007700">***91;</span><span style="color: #DD0000">'ENV'</span><span style="color: #007700">***93;***91;</span><span style="color: #DD0000">'LIB'</span><span style="color: #007700">***93;.</span><span style="color: #0000BB">split</span><span style="color: #007700">(</span><span style="color: #0000BB">os</span><span style="color: #007700">.</span><span style="color: #0000BB">pathsep</span><span style="color: #007700">)
+<br /><br /></span><span style="color: #0000BB">C</span><span style="color: #007700">:</span><span style="color: #0000BB">NSIS_ANSIsrc</span><span style="color: #007700">&gt;
+</span>
+</pre>What is wrong with this?<br />
+      -Pawel<br />
+      <br />
+      Ps: NSIS Unicode from Jim compiles correctly...
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <span class="post-time small text-muted">15th November 2011 10:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Scons 2.1 is very recent, we have not tested with it at all (I'm using 1.2)<br />
+      <br />
+      Why would you use 2010 to compile the ansi version anyway? I don't think it supports the older windows versions so you might as well use unicode...<br />
+      <br />
+      You could compare the "...\Scons\Config\ms" files and merge over any changes that might be 2010 specific...</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Pawel</span><br />
+      <span class="post-time small text-muted">15th November 2011 16:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Hi Anders,<br />
+      Thanks for repley. Will try with older Scons. And maybe VS 2005.<br />
+      However, if I can build Unicode NSIS it seems that I don't need ANSI build anymore.<br />
+      But, just wanted to try if this is possible on my machine.<br />
+      -Pawel</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Pawel</span><br />
+      <span class="post-time small text-muted">15th November 2011 21:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I built it successfully. Thanks Anders.<br />
+      Win7 x86, NSIS 2.46, Scons 1.2, Python 2.6.2, wxWidgets 2.8.10, VisualStudio 2008 Express (+ Windows SDK).<br />
+      -Pawel</p>
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>

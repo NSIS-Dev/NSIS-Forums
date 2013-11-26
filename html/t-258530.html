@@ -1,0 +1,286 @@
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Change description font in component page" />
+
+  <title>Change description font in component page - NSIS Forums</title><!-- Bootstrap core CSS -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <!--[if lt IE 9]>
+                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+  <div class="container">
+    <!-- Put navigation bar here -->
+
+    <ol class="breadcrumb">
+      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
+
+      <li><a href="f-65.html">NSIS Discussion</a></li>
+
+      <li class="active">Change description font in component page</li>
+    </ol>
+
+    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=258530">Change description font in component page</a></p><br />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">nsisuser</span><br />
+      <span class="post-time small text-muted">29th October 2006 12:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content"><strong>Change description font in component page</strong><br />
+      I'm using UMUI for my installer and the default message in the description box is very hard to read (you know the one saying "Position your mouse over a component to see its description").<br />
+      <br />
+      I tried to change the font using this code, but no luck -- it only changed the "onmouseOver" description text :<br /></p>
+      <pre>
+<code><br />Function "ComponentShow"<br />FindWindow $0 "#32770" "" $HWNDPARENT<br />GetDlgItem $0 $0 1043<br />CreateFont $1 "Arial" 8 0<br />SendMessage $0 ${WM_SETFONT} $1 0<br />SetCtlColors $0 000000 TRANSPARENT<br />FunctionEnd<br /></code>
+</pre><br />
+      <br />
+      Anyone can help me with this ?
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">29th October 2006 18:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Looks like MUI is doing funky things. The only way to make this work cleanly that I've found is to specify a non-transparent background color;<br />
+      <br /></p>
+      <pre>
+<code><br />        FindWindow $0 "#32770" "" $HWNDPARENT<br />        GetDlgItem $0 $0 1043<br />        CreateFont $1 "Arial" 12 400<br />        SendMessage $0 ${WM_SETFONT} $1 0<br />        SetCtlColors $0 0x000000 0xd4d0c8<br /></code>
+</pre><br />
+      <br />
+      The problem is in the '0xd4d0c8'. That color is defined somewhere on the system as being the background color for dialogs. But I'll be darned if I can find where. There's...<br />
+      HKCU\Control Panel\Colors<br />
+      ...where matching values on my machine are for:<br />
+      - ButtonFace<br />
+      - InactiveTitleText<br />
+      - Menu<br />
+      - Scrollbar<br />
+      <br />
+      But none of those particularly strike me as being -the- color used by dialogs. 'll have to look further, or let somebody else butt in about how to get the dialog's color :)<br />
+      <br />
+      Edit:<br />
+      "ButtonFace" is the one of interest.<br />
+      <br />
+      Now the next problem is this.. the registry stores the values as "intR intG intB". How on Eerth to get a hex -value- out of that. I can easily turn it into a hex string (splice the string into its three bits, convert each three bits from decimal to hexadecimal).<br />
+      <br />
+      However...<br />
+      <br />
+      <pre>
+<code><br />StrCpy $2 "0xff0000"<br />SetCtlColors &lt;handle&gt; $2<br /></code>
+</pre><br />
+      <br />
+      does not result in the same effect as:<br />
+      <br />
+      <pre>
+<code><br />SetCtlColors &lt;handle&gt; "0xff0000"<br /></code>
+</pre><br />
+      <br />
+      I'm rather stuck on that part. Anybody? %)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">30th October 2006 00:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">and I guess as much is noted in the manual:<br /></p>
+
+      <blockquote>
+        text_color and bg_color don't accept variables.
+      </blockquote>Also tried trickery with /BRANDING , but the original problem occurs.<br />
+      <br />
+      So I'm afraid that as far as my tests go, you'll either..<br />
+      - have to live with the font 'as is'<br />
+      - use a resource hacker to force a bigger font (see MUI docs)<br />
+      - do use setctlcolors, but with a non-transparent background, which means<br />
+      -- force a particular background color, which may not be the user's system color for the backgrounds<br />
+      -- force your entire installer to be in a particular color, so that the above is rendered moot %)
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">30th October 2006 00:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Okay, here we go... just bypass MUI altogether.<br />
+      <br />
+      Note that you -cannot- use:<br />
+      !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN<br />
+      !insertmacro MUI_DESCRIPTION_TEXT &lt;section&gt; &lt;string&gt;<br />
+      !insertmacro MUI_FUNCTION_DESCRIPTION_END<br />
+      <br />
+      As using those will throw a duplicate function error...<br />
+      <br />
+      PHP Code:</p>
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #007700">!include</span><span style="color: #DD0000">"MUI.nsh"<br /></span> <span style="color: #007700">!include</span><span style="color: #DD0000">"LogicLib.nsh"<br />
+      <br /></span> <span style="color: #0000BB">Name</span><span style="color: #DD0000">"ModernUITest"<br /></span> <span style="color: #0000BB">OutFile</span><span style="color: #DD0000">"Basic.exe"<br />
+      <br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">defineMUI_PAGE_CUSTOMFUNCTION_SHOWChangeFont<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_COMPONENTS<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_INSTFILES<br />
+      <br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_LANGUAGE</span><span style="color: #DD0000">"English"<br />
+      <br /></span> <span style="color: #007700">Function</span><span style="color: #0000BB">ChangeFont<br />
+      FindWindow</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"#32770"""</span><span style="color: #0000BB">$HWNDPARENT<br />
+      GetDlgItem</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #007700">$</span><span style="color: #0000BB">01043<br />
+      CreateFont</span><span style="color: #007700">$</span><span style="color: #0000BB">1</span><span style="color: #DD0000">"TimesNewRoman"</span><span style="color: #0000BB">12400<br />
+      SendMessage</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETFONT</span><span style="color: #007700">}$</span><span style="color: #0000BB">10<br />
+      FunctionEnd<br />
+      <br />
+      Section</span><span style="color: #DD0000">"DummySection1"</span><span style="color: #0000BB">SecDummy<br />
+      <br />
+      SectionEnd<br />
+      <br />
+      Section</span><span style="color: #DD0000">"DummySection2"</span><span style="color: #0000BB">SecDummy2<br />
+      <br />
+      SectionEnd<br />
+      <br /></span> <span style="color: #007700">Function.</span><span style="color: #0000BB">onMouseOverSection<br />
+      FindWindow$R0</span><span style="color: #DD0000">"#32770"""</span><span style="color: #0000BB">$HWNDPARENT<br />
+      GetDlgItem$R0$R01043</span><span style="color: #007700">;</span><span style="color: #0000BB">descriptionitem<br /></span> <span style="color: #007700">${If}$</span><span style="color: #0000BB">0</span><span style="color: #007700">==-</span><span style="color: #0000BB">1<br />
+      EnableWindow$R00<br />
+      SendMessage$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETTEXT</span><span style="color: #007700">}</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"STR:Positionyourmouseoveracomponenttoseeitsdescription"<br /></span> <span style="color: #007700">${Else}<br /></span> <span style="color: #0000BB">EnableWindow$R01<br /></span> <span style="color: #007700">${If}$</span><span style="color: #0000BB">0</span><span style="color: #007700">==</span><span style="color: #0000BB">0<br />
+      SendMessage$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETTEXT</span><span style="color: #007700">}</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"STR:firstsectiondescription"<br /></span> <span style="color: #007700">${ElseIf}$</span><span style="color: #0000BB">0</span><span style="color: #007700">==</span><span style="color: #0000BB">1<br />
+      SendMessage$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETTEXT</span><span style="color: #007700">}</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"STR:secondsectiondescription"<br /></span> <span style="color: #007700">${EndIf}<br />
+      ${EndIf}<br /></span> <span style="color: #0000BB">FunctionEnd<br /></span></span> <!-- php buffer end -->
+      <hr />
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">nsisuser</span><br />
+      <span class="post-time small text-muted">30th October 2006 11:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks for this code. At least, I know how to access the default text "Position your mouse..." --<br />
+      <br />
+      But there is one more question : How can I get rid of the "engraved" look of the default text ?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <span class="post-time small text-muted">30th October 2006 12:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">EnableWindow $R0 0 gives it the engraved look, so just change it to 1 or try removing all EnableWindow instructions.<br />
+      <br />
+      -Stu</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">30th October 2006 12:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">MUI starts with the default text engraved (disabled), so you have to enable it first (in the area where you change the font). After that you can do away with the rest of the EnableWindow statements.<br />
+      <br />
+      PHP Code:</p>
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #007700">!include</span><span style="color: #DD0000">"MUI.nsh"<br /></span> <span style="color: #007700">!include</span><span style="color: #DD0000">"LogicLib.nsh"<br />
+      <br /></span> <span style="color: #0000BB">Name</span><span style="color: #DD0000">"ModernUITest"<br /></span> <span style="color: #0000BB">OutFile</span><span style="color: #DD0000">"Basic.exe"<br />
+      <br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">defineMUI_PAGE_CUSTOMFUNCTION_SHOWChangeFont<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_COMPONENTS<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_INSTFILES<br />
+      <br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_LANGUAGE</span><span style="color: #DD0000">"English"<br />
+      <br /></span> <span style="color: #007700">Function</span><span style="color: #0000BB">ChangeFont<br />
+      FindWindow</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"#32770"""</span><span style="color: #0000BB">$HWNDPARENT<br />
+      GetDlgItem</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #007700">$</span><span style="color: #0000BB">01043<br />
+      CreateFont</span><span style="color: #007700">$</span><span style="color: #0000BB">1</span><span style="color: #DD0000">"TimesNewRoman"</span><span style="color: #0000BB">12400<br />
+      SendMessage</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETFONT</span><span style="color: #007700">}$</span><span style="color: #0000BB">10<br />
+      EnableWindow</span><span style="color: #007700">$</span><span style="color: #0000BB">01<br />
+      FunctionEnd<br />
+      <br />
+      Section</span><span style="color: #DD0000">"DummySection1"</span><span style="color: #0000BB">SecDummy<br />
+      <br />
+      SectionEnd<br />
+      <br />
+      Section</span><span style="color: #DD0000">"DummySection2"</span><span style="color: #0000BB">SecDummy2<br />
+      <br />
+      SectionEnd<br />
+      <br /></span> <span style="color: #007700">Function.</span><span style="color: #0000BB">onMouseOverSection<br />
+      FindWindow$R0</span><span style="color: #DD0000">"#32770"""</span><span style="color: #0000BB">$HWNDPARENT<br />
+      GetDlgItem$R0$R01043</span><span style="color: #007700">;</span><span style="color: #0000BB">descriptionitem<br /></span> <span style="color: #007700">${</span><span style="color: #0000BB">Select</span><span style="color: #007700">}$</span><span style="color: #0000BB">0<br /></span> <span style="color: #007700">${Case}-</span><span style="color: #0000BB">1<br />
+      SendMessage$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETTEXT</span><span style="color: #007700">}</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"STR:Positionyourmouseoveracomponenttoseeitsdescription"<br /></span> <span style="color: #007700">${Case}</span><span style="color: #0000BB">0<br />
+      SendMessage$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETTEXT</span><span style="color: #007700">}</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"STR:firstsectiondescription"<br /></span> <span style="color: #007700">${Case}</span><span style="color: #0000BB">1<br />
+      SendMessage$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETTEXT</span><span style="color: #007700">}</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"STR:secondsectiondescription"<br /></span> <span style="color: #007700">${</span><span style="color: #0000BB">EndSelect</span><span style="color: #007700">}<br /></span> <span style="color: #0000BB">FunctionEnd<br /></span></span> <!-- php buffer end -->
+      <hr />
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">nsisuser</span><br />
+      <span class="post-time small text-muted">30th October 2006 12:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Works like a charm. Thanks.<br />
+      <br />
+      Why is it that the "disabled" look is so awful in UMUI and looks OK in all other templates. Is there a way to change how the "disabled font" is rendered ?</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
+      <span class="post-time small text-muted">30th October 2006 12:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">I'm not sure what it looks like in UltraModern UI - it doesn't look too great in MUI in the location it is, though. It's just not a very good place to have a piece of disabled text :)<br />
+      <br />
+      I don't think there is a way to change what a disabled control looks like from within NSIS. It should just render with the default disabled control 'look' (e.g. like a browser 'Back' label when you're on a fresh new page). But you can always give it any color you'd like using the earlier code.</p>
+    </div>
+    <hr />
+
+    <div class="post">
+      <p class="post-meta"><span class="post-author text-primary">nsisuser</span><br />
+      <span class="post-time small text-muted">30th October 2006 15:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
+
+      <p class="post-content">Thanks a lot for all the insights, Animaether. I was finally able to get nsis to do exactly what I wanted.<br />
+      <br />
+      For others who might be interested, here's the code I came up with in order to make the default description show in one color (light blue) and the section descriptions in another color (white)<br />
+      <br />
+      PHP Code:</p>
+      <hr />
+      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #007700">!include</span><span style="color: #DD0000">"UMUI.nsh"<br /></span> <span style="color: #007700">!include</span><span style="color: #DD0000">"LogicLib.nsh"<br />
+      <br /></span> <span style="color: #0000BB">Name</span><span style="color: #DD0000">"ModernUITest"<br /></span> <span style="color: #0000BB">OutFile</span><span style="color: #DD0000">"Fonttext.exe"<br />
+      <br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">defineMUI_PAGE_CUSTOMFUNCTION_SHOWChangeFont<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_COMPONENTS<br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_PAGE_INSTFILES<br />
+      <br /></span> <span style="color: #007700">!</span><span style="color: #0000BB">insertmacroMUI_LANGUAGE</span><span style="color: #DD0000">"English"<br />
+      <br /></span> <span style="color: #007700">Function</span><span style="color: #0000BB">ChangeFont<br />
+      FindWindow</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"#32770"""</span><span style="color: #0000BB">$HWNDPARENT<br />
+      GetDlgItem</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #007700">$</span><span style="color: #0000BB">01043<br />
+      CreateFont</span><span style="color: #007700">$</span><span style="color: #0000BB">1</span><span style="color: #DD0000">"Arial"</span><span style="color: #0000BB">8400<br />
+      SendMessage</span><span style="color: #007700">$</span><span style="color: #0000BB">0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETFONT</span><span style="color: #007700">}$</span><span style="color: #0000BB">10<br />
+      EnableWindow$R01<br />
+      FunctionEnd<br />
+      <br />
+      <br />
+      Section</span><span style="color: #DD0000">"DummySection1"</span><span style="color: #0000BB">SecDummy<br />
+      <br />
+      SectionEnd<br />
+      <br />
+      Section</span><span style="color: #DD0000">"DummySection2"</span><span style="color: #0000BB">SecDummy2<br />
+      <br />
+      SectionEnd<br />
+      <br /></span> <span style="color: #007700">Function.</span><span style="color: #0000BB">onMouseOverSection<br />
+      FindWindow$R0</span><span style="color: #DD0000">"#32770"""</span><span style="color: #0000BB">$HWNDPARENT<br />
+      GetDlgItem$R0$R01043</span><span style="color: #007700">;</span><span style="color: #0000BB">descriptionitem<br /></span> <span style="color: #007700">${If}$</span><span style="color: #0000BB">0</span><span style="color: #007700">==-</span><span style="color: #0000BB">1<br />
+      CreateFont</span><span style="color: #007700">$</span><span style="color: #0000BB">1</span><span style="color: #DD0000">"Arial"</span><span style="color: #0000BB">9700</span><span style="color: #007700">;</span><span style="color: #0000BB">createthefont</span><span style="color: #007700">for</span><span style="color: #0000BB">the</span><span style="color: #007700">default</span><span style="color: #0000BB">description<br />
+      SetCtlColors$R00xBDBED50x3d66ab</span><span style="color: #007700">;</span><span style="color: #0000BB">setcolorsto</span><span style="color: #007700">:</span><span style="color: #0000BB">fontlightblue</span><span style="color: #007700">(</span><span style="color: #0000BB">0xBDBED5</span><span style="color: #007700">)-</span><span style="color: #0000BB">bgblue</span><span style="color: #007700">(</span><span style="color: #0000BB">0x3d66ab</span><span style="color: #007700">)<br /></span> <span style="color: #0000BB">SendMessage$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETFONT</span><span style="color: #007700">}$</span><span style="color: #0000BB">10<br />
+      SendMessage$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETTEXT</span><span style="color: #007700">}</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"STR:Positionyourmouseoveracomponenttoseeitsdescription"<br /></span> <span style="color: #007700">${Else}<br /></span> <span style="color: #0000BB">CreateFont</span><span style="color: #007700">$</span><span style="color: #0000BB">1</span><span style="color: #DD0000">"Arial"</span><span style="color: #0000BB">9400</span><span style="color: #007700">;</span><span style="color: #0000BB">createthefont</span><span style="color: #007700">for</span><span style="color: #0000BB">mouseoverdescriptions<br />
+      SetCtlColors$R00xFFFFFF0x3d66ab</span><span style="color: #007700">;</span><span style="color: #0000BB">setcolorsto</span><span style="color: #007700">:</span><span style="color: #0000BB">fontwhite</span><span style="color: #007700">(</span><span style="color: #0000BB">0xffffff</span><span style="color: #007700">)-</span><span style="color: #0000BB">bgblue</span><span style="color: #007700">(</span><span style="color: #0000BB">0x3d66ab</span><span style="color: #007700">)<br /></span> <span style="color: #0000BB">SendMessage$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETFONT</span><span style="color: #007700">}$</span><span style="color: #0000BB">10<br /></span> <span style="color: #007700">;</span><span style="color: #0000BB">showdescription</span><span style="color: #007700">for</span><span style="color: #0000BB">eachsection<br /></span> <span style="color: #007700">${If}$</span><span style="color: #0000BB">0</span><span style="color: #007700">==</span><span style="color: #0000BB">0<br />
+      SendMessage$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETTEXT</span><span style="color: #007700">}</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"STR:firstsectiondescription"<br /></span> <span style="color: #007700">${ElseIf}$</span><span style="color: #0000BB">0</span><span style="color: #007700">==</span><span style="color: #0000BB">1<br />
+      SendMessage$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">WM_SETTEXT</span><span style="color: #007700">}</span><span style="color: #0000BB">0</span><span style="color: #DD0000">"STR:secondsectiondescription"<br /></span> <span style="color: #007700">${EndIf}<br />
+      ${EndIf}<br /></span> <span style="color: #0000BB">FunctionEnd<br /></span></span> <!-- php buffer end -->
+      <hr />
+      Have a nice day !<br />
+      <br />
+      Chris
+    </div>
+    <hr />
+
+    <div class="footer">
+      <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
+    </div>
+  </div><script src="../js/highlight.pack.js" type="text/javascript">
+</script><script type="text/javascript">
+//<![CDATA[
+  hljs.initHighlightingOnLoad();
+  //]]>
+  </script>
+</body>
+</html>
