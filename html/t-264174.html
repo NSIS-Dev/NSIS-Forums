@@ -6,8 +6,7 @@
   <meta name="description" content="admin limitations on Vista?" />
 
   <title>admin limitations on Vista? - NSIS Forums</title><!-- Bootstrap core CSS -->
-  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.2/readable/bootstrap.min.css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
   <!--[if lt IE 9]>
                 <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
                 <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
@@ -33,7 +32,7 @@
       <span class="post-time small text-muted">22nd January 2007 16:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content"><strong>admin limitations on Vista?</strong><br />
-      I have small <a href="http://ineum.narod*****mgr_en.htm" target="_blank">application</a> (sorry, download is fast inside Russia only, but package is 120 kB, thanks NSIS :) ). The problem is following: on Vista when application starts first time from installer' finish page with admins privilegies from installer as child process (installer running with RequestExecutionLevel or not - both cases Vista displays UAC and elevates level to admin, installers auto-recognition feature), it not gets drag-n-drop messages and some other communication messages as well. The same happen if I start it with 'run as administrator' option later. But if I simply launch it from desktop or start menu icon (execution level 'user', admin not required) all works correct. This behavior not depends on current (start) folder. Brief google search not gave me any good links..</p>
+      &nbsp; I have small <a href="http://ineum.narod*****mgr_en.htm" target="_blank">application</a> (sorry, download is fast inside Russia only, but package is 120 kB, thanks NSIS :) ). The problem is following: on Vista when application starts first time from installer' finish page with admins privilegies from installer as child process (installer running with RequestExecutionLevel or not - both cases Vista displays UAC and elevates level to admin, installers auto-recognition feature), it not gets drag-n-drop messages and some other communication messages as well. The same happen if I start it with 'run as administrator' option later. But if I simply launch it from desktop or start menu icon (execution level 'user', admin not required) all works correct. This behavior not depends on current (start) folder. Brief google search not gave me any good links..</p>
     </div>
     <hr />
 
@@ -82,8 +81,7 @@
       Use MUI_FINISHPAGE_RUN_FUNCTION and call the safer plugin with SAFER_LEVELID_NORMALUSER level.<br />
       <br /></p>
       <pre>
-<code>SAFER</code><span style="color: #007700">::</span><span style="color: #0000BB">ExecNORMAL</span><span style="color: #DD0000">"$instdir\\myapp.exe"
-</span>
+<code>SAFER</code>::Exec NORMAL "$instdir\\myapp.exe" 
 </pre>If your installer supports pre XP versions you should call SAFER::SupportsSAFER and just use normal Exec if the SAFER api is not supported
     </div>
     <hr />
@@ -94,11 +92,10 @@
 
       <p class="post-content">Thanks, Anders! I not tested it yet, but looks interesting. And I have feature request for 0.2 version :) Now I should write 3 or more lines of code:</p>
       <pre>
-<span style="color: #007700">if(</span><span style="color: #0000BB">supportsSafer</span><span style="color: #007700">)
-<br /></span><span style="color: #0000BB">SAFER</span><span style="color: #007700">::</span><span style="color: #0000BB">ExecNORMAL</span><span style="color: #DD0000">"$instdir\myapp.exe"
-<br /></span><span style="color: #007700">else
-<br /></span><span style="color: #0000BB">Exec</span><span style="color: #DD0000">"$instdir\myapp.exe"
-</span>
+if(supportsSafer)
+<br /> SAFER::Exec NORMAL "$instdir\myapp.exe"
+<br />&gt;else
+<br /> Exec "$instdir\myapp.exe" 
 </pre>Is it possible to do it all in a single call (CreateProcess() if no entry points in dll) and keep my brains for other fun ;) ?
     </div>
     <hr />
@@ -109,15 +106,14 @@
 
       <p class="post-content">thats what macros are for, something like:<br /></p>
       <pre>
-<span style="color: #007700">!</span><span style="color: #0000BB">macroExecSAFER_level_cmdline
-<br />SAFER</span><span style="color: #007700">::</span><span style="color: #0000BB">SupportsSAFER
-<br />StrCmp</span><span style="color: #007700">$</span><span style="color: #0000BB">00</span><span style="color: #007700">+</span><span style="color: #0000BB">3
-<br />SAFER</span><span style="color: #007700">::</span><span style="color: #0000BB">Exec</span><span style="color: #007700">${</span><span style="color: #0000BB">_level</span><span style="color: #007700">}</span><span style="color: #DD0000">'${_cmdline}'
-<br /></span><span style="color: #0000BB">Goto</span><span style="color: #007700">+</span><span style="color: #0000BB">2
-<br />Exec</span><span style="color: #DD0000">'${_cmdline}'
-<br /></span><span style="color: #007700">!</span><span style="color: #0000BB">macroend
-<br /><br /><br /></span><span style="color: #007700">!</span><span style="color: #0000BB">insertmacroExecSAFERNORMAL</span><span style="color: #DD0000">'calc.exe'
-</span>
+!macro ExecSAFER _level _cmdline
+<br />SAFER::SupportsSAFER
+<br />StrCmp$0 0 +3
+<br />SAFER::Exec ${_level} '${_cmdline}'
+<br />&gt;Goto +2
+<br />Exec '${_cmdline}'
+<br />&gt;!macroend
+<br /><br /><br />&gt;!insertmacro ExecSAFER NORMAL 'calc.exe' 
 </pre>
     </div>
     <hr />

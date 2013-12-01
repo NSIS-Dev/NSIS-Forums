@@ -6,8 +6,7 @@
   <meta name="description" content="UAC_AsUser_ExecShell and %INSTDIR" />
 
   <title>UAC_AsUser_ExecShell and %INSTDIR - NSIS Forums</title><!-- Bootstrap core CSS -->
-  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.2/readable/bootstrap.min.css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
   <!--[if lt IE 9]>
                 <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
                 <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
@@ -33,7 +32,7 @@
       <span class="post-time small text-muted">1st December 2010 22:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content"><strong>UAC_AsUser_ExecShell and %INSTDIR</strong><br />
-      Hello.<br />
+      &nbsp; Hello.<br />
       <br />
       I'm using the UAC plugin v0.2.2c in my installer and so far everything seems to work fine. However there is a problem with the <b>UAC_AsUser_ExecShell</b> macro, which I'd like to use to launch the app after install. Unfortunately it doesn't work as expected, because obviously the "outer" installer still has the <i>default</i> install path in its $INSTDIR rather than the install path chosen by the user (I found out that the execution fails because a wrong path is used via ProcessMonitor, by the way).<br />
       <br />
@@ -78,8 +77,7 @@
       <p class="post-content">If you look in UAC.nsh, you'll see that the UAC_AsUser_ExecShell macro calls <i>UAC_AsUser_Call</i> using UAC_SYNCREGISTERS and UAC_SYNCOUTDIR, but not UAC_SYNCINSTDIR. You could try adding it yourself, or you can use a macro such as this:<br />
       <br /></p>
       <pre>
-<span style="color: #007700">!</span><span style="color: #0000BB">macro_SyncVariable_variable<br /></span><span style="color: #007700">!</span><span style="color: #0000BB">defineLprefixL</span><span style="color: #007700">${</span><span style="color: #0000BB">__LINE__</span><span style="color: #007700">}<br /></span><span style="color: #0000BB">push$R0<br />goto_SyncVariableInner</span><span style="color: #007700">${</span><span style="color: #0000BB">Lprefix</span><span style="color: #007700">}<br /></span><span style="color: #0000BB">_SyncVariableOuter</span><span style="color: #007700">${</span><span style="color: #0000BB">Lprefix</span><span style="color: #007700">}:<br /></span><span style="color: #0000BB">StrCpy$R0</span><span style="color: #007700">${</span><span style="color: #0000BB">_variable</span><span style="color: #007700">}<br />return<br /></span><span style="color: #0000BB">_SyncVariableInner</span><span style="color: #007700">${</span><span style="color: #0000BB">Lprefix</span><span style="color: #007700">}:<br />!</span><span style="color: #0000BB">insertmacroUAC_AsUser_CallLabel_SyncVariableOuter</span><span style="color: #007700">${</span><span style="color: #0000BB">Lprefix</span><span style="color: #007700">}${</span><span style="color: #0000BB">UAC_SYNCREGISTERS</span><span style="color: #007700">}<br /></span><span style="color: #0000BB">StrCpy</span><span style="color: #007700">${</span><span style="color: #0000BB">_variable</span><span style="color: #007700">}</span><span style="color: #0000BB">$R0<br /></span><span style="color: #007700">!</span><span style="color: #0000BB">undefLprefix<br />pop$R0<br /></span><span style="color: #007700">!</span><span style="color: #0000BB">macroend<br /></span><span style="color: #007700">!</span><span style="color: #0000BB">defineSyncVariable</span><span style="color: #007700">`</span><span style="color: #0000BB">!insertmacro_SyncVariable</span><span style="color: #007700">`
-</span>
+!macro _SyncVariable _variable<br />  !define Lprefix L${__LINE__}<br />  push $R0<br />  goto _SyncVariableInner${Lprefix}<br />  _SyncVariableOuter${Lprefix}:<br />    StrCpy $R0 ${_variable}<br />    return<br />  _SyncVariableInner${Lprefix}:<br />  !insertmacro UAC_AsUser_Call Label _SyncVariableOuter${Lprefix} ${UAC_SYNCREGISTERS}<br />  StrCpy ${_variable} $R0<br />  !undef Lprefix<br />  pop $R0<br />!macroend<br />!define SyncVariable `!insertmacro _SyncVariable` 
 </pre>And then:<br />
       ${SyncVariable} $INSTDIR<br />
       <br />

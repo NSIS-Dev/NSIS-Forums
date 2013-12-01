@@ -6,8 +6,7 @@
   <meta name="description" content="UAC v0.0.11d plug-in - several questions" />
 
   <title>UAC v0.0.11d plug-in - several questions - NSIS Forums</title><!-- Bootstrap core CSS -->
-  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.2/readable/bootstrap.min.css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
   <!--[if lt IE 9]>
                 <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
                 <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
@@ -33,7 +32,7 @@
       <span class="post-time small text-muted">27th August 2010 12:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content"><strong>UAC v0.0.11d plug-in - several questions</strong><br />
-      Hi,<br />
+      &nbsp; Hi,<br />
       <br />
       I am using the UAC v0.0.11d plugin (Unicode dll). After reading and trying out the Readme, Wiki pages and forum posts, I still have some questions.<br />
       <br />
@@ -124,7 +123,7 @@
       <span class="post-time small text-muted">28th August 2010 11:21 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content"><strong>switched to version UAC v0.2.2b - 20100103</strong><br />
-      Hi MSG!<br />
+      &nbsp; Hi MSG!<br />
       <br /></p>
 
       <blockquote>
@@ -173,14 +172,13 @@
       <br />
       I now use the following code in .onInit function:<br /></p>
       <pre>
-<code>StrCpy$USERS_APPDATA$APPDATA
-<br /><br />uac_tryagain</code><span style="color: #007700">:
-<br />!</span><span style="color: #0000BB">insertmacroUAC_RunElevated
-<br /></span><span style="color: #007700">...
-<br /><br />${If}${</span><span style="color: #0000BB">UAC_IsInnerInstance</span><span style="color: #007700">}
-<br />!</span><span style="color: #0000BB">insertmacroUAC_AsUser_GetGlobalVar$USERS_APPDATA
-<br /></span><span style="color: #007700">${EndIf}
-</span>
+<code>StrCpy $USERS_APPDATA $APPDATA
+<br /><br />uac_tryagain:
+<br />!insertmacro UAC_RunElevated
+<br />&gt;...
+<br /><br />${If} ${</code>UAC_IsInnerInstance}
+<br />    !insertmacro UAC_AsUser_GetGlobalVar $USERS_APPDATA            
+<br />&gt;${EndIf} 
 </pre>By doing so I get the (initial) users $APPDATA value in the variable $USERS_APPDATA. If there is no inner process (initial user is already Admin) then $USERS_APPDATA == $APPDATA. That's what I need.<br />
       <br />
       But once again back to the question<br />
@@ -223,19 +221,18 @@
       </blockquote><a href="http://nsis.pastebin.com/eM9MDUYL" target="_blank">http://nsis.pastebin.com/eM9MDUYL</a><br />
       The SyncVariable macro will make sure that variables that were set before elevation occured, are copied out of the outer (user level) instance into the inner instance. You can use it in your .onInit function, like this:
       <pre>
-<span style="color: #007700">${If}${</span><span style="color: #0000BB">UAC_IsInnerInstance</span><span style="color: #007700">}
-<br />${</span><span style="color: #0000BB">SyncVariable</span><span style="color: #007700">}</span><span style="color: #0000BB">$Variable1
-<br /></span><span style="color: #007700">${</span><span style="color: #0000BB">SyncVariable</span><span style="color: #007700">}</span><span style="color: #0000BB">$Variable2
-<br /></span><span style="color: #007700">${EndIf}
-</span>
+<code> ${If} ${UAC_IsInnerInstance}
+<br />    ${</code>SyncVariable} $Variable1
+<br />   ${SyncVariable} $Variable2
+<br />  ${EndIf} 
 </pre>The SyncSection macro does the same thing for section flags. (I don't think I ever tested if this was already automatically done by the UAC plugin, perhaps the macro isn't necessary at all.)<br />
       <br />
       To get variable values INTO the outer (user level) instance, you can make a similar macro, or just use registers, because the UAC plugin can synchronize registers automatically:
       <pre>
-<code>StrCpy</code><span style="color: #007700">$</span><span style="color: #0000BB">8$STARTMENUSHORTCUTS
-<br />StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">9$DESKTOPSHORTCUT
-<br /></span><span style="color: #007700">!</span><span style="color: #0000BB">insertmacroUAC_AsUser_Call</span><span style="color: #007700">function</span><span style="color: #0000BB">InstallShortcuts</span><span style="color: #007700">${</span><span style="color: #0000BB">UAC_SYNCREGISTERS</span><span style="color: #007700">}
-</span>
+<code>  StrCpy$8 $STARTMENUSHORTCUTS
+<br />  StrCpy$9 $DESKTOPSHORTCUT
+<br /> !insertmacro UAC_AsUser_Call function InstallShortcuts ${UAC_SYNCREGISTERS} 
+</code>
 </pre>(...and then in the InstallShortcuts function I use $8 and $9 instead of the actual variables, of course.)<br />
       <br />
 
@@ -244,45 +241,32 @@
         The installer also should be able to be started by a Standard user. And in this case I need to switch to the outer process for being able to get the values for the initial user.
       </blockquote>The SyncVariable macro won't work here because you don't want to overwrite the inner instance's $APPDATA variable. Just use the registers trick:
       <pre>
-<span style="color: #007700">Function</span><span style="color: #0000BB">GetAppData
-<br />setshellvarcontextcurrent
-<br />StrCpy</span><span style="color: #007700">$</span><span style="color: #0000BB">9$APPDATA
+Function GetAppData
+<br />  setshellvarcontext current
+<br />  StrCpy$9 $APPDATA
 <br />FunctionEnd
-<br /><br /></span><span style="color: #007700">!</span><span style="color: #0000BB">insertmacroUAC_AsUser_Call</span><span style="color: #007700">function</span><span style="color: #0000BB">GetAppData</span><span style="color: #007700">${</span><span style="color: #0000BB">UAC_SYNCREGISTERS</span><span style="color: #007700">}
-<br /></span><span style="color: #0000BB">SetOutPath</span><span style="color: #007700">$</span><span style="color: #0000BB">9
-<br /></span>
+<br /><br /> !insertmacro UAC_AsUser_Call function GetAppData ${UAC_SYNCREGISTERS}
+<br /> SetOutPath $9 
+<br />&gt;
 
-<!-- php buffer end -->
-                
-                
-                
-</pre>
-      <hr />
-      <pre>
-        
-<br />        
-</pre>
+</pre><br />
 
       <blockquote>
         <small>Originally posted by Netsurfer24</small><br />
         As I run the extraction from the outer (userlevel) instance, wouldn't I run then into trouble (with any privileges)? Because the files are installed in $PROGRAMFILES as an installation for ALL users.<br />
         So I guess I have to use the AccessControl plug-in anyway, haven't I?
-      </blockquote>
-      <pre>
-
-Well... That depends on how you look at it. From a technical standpoint, if you want a normal user to have write access to $INSTDIR, then yes, you need to give all users write access using the AccessControl plugin. But from a software design standpoint, doing this is VERY, VERY bad practice:<br />If a regular user has write access to a subfolder of Program Files, that user might do something stupid that causes malware to install itself in that folder. Then an admin might think "Program Files is a protected directory, so I don't have to worry about users putting malware in this directory," and he would run any executable in Program Files without thinking twice about it. And voila, you have your malware executed at admin level and the system is compromised.<br /><br />It's up to you to decide whether you want to take that risk or not, but keep in mind that your end-users are usually NOT very smart, so following proper procedure is very important if you're creating something for the grand public.<br /><br /><br />        
-</pre>
+      </blockquote>Well... That depends on how you look at it. From a technical standpoint, if you want a normal user to have write access to $INSTDIR, then yes, you need to give all users write access using the AccessControl plugin. But from a software design standpoint, doing this is VERY, VERY bad practice:<br />
+      If a regular user has write access to a subfolder of Program Files, that user might do something stupid that causes malware to install itself in that folder. Then an admin might think "Program Files is a protected directory, so I don't have to worry about users putting malware in this directory," and he would run any executable in Program Files without thinking twice about it. And voila, you have your malware executed at admin level and the system is compromised.<br />
+      <br />
+      It's up to you to decide whether you want to take that risk or not, but keep in mind that your end-users are usually NOT very smart, so following proper procedure is very important if you're creating something for the grand public.<br />
+      <br />
+      <br />
 
       <blockquote>
         <small>Originally posted by Netsurfer24</small><br />
         And there is still the question if it is possible to disable the Current User radio button in the RunAs dialog?<br />
         I guess I need the handle of the dialog and the ID of the radio button?
-      </blockquote>
-      <pre>
-
-I'm not sure. Maybe. Anders would know. But I don't see why you'd want to go through all that trouble. You need to check if elevation was performed properly, anyway (UserInfo plugin in ${If} ${UAC_IsInnerInstance}). Just throw a MessageBox error if the user 'elevated' to a normal user.
-                
-</pre>
+      </blockquote>I'm not sure. Maybe. Anders would know. But I don't see why you'd want to go through all that trouble. You need to check if elevation was performed properly, anyway (UserInfo plugin in ${If} ${UAC_IsInnerInstance}). Just throw a MessageBox error if the user 'elevated' to a normal user.
     </div>
     <hr />
 
@@ -290,19 +274,25 @@ I'm not sure. Maybe. Anders would know. But I don't see why you'd want to go thr
       <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
       <span class="post-time small text-muted">28th August 2010 21:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">PHP Code:</p>
-      <hr />
-      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #007700">***91;</span><span style="color: #0000BB">MyRunAsCfg</span><span style="color: #007700">***93;<br /></span> <span style="color: #0000BB">DisableCurrUserOpt</span><span style="color: #007700">=</span><span style="color: #0000BB">1<br /></span></span> <!-- php buffer end -->
-      <hr />
-      PHP Code:
-      <hr />
-      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #007700">Function.</span><span style="color: #0000BB">onInit<br />
-      Initpluginsdir<br />
-      File</span><span style="color: #DD0000">"/oname=$pluginsdir\uac.lng"</span><span style="color: #0000BB">uac</span><span style="color: #007700">.</span><span style="color: #0000BB">lng</span><span style="color: #FF8000">#orjustWriteIniStr<br /></span> <span style="color: #007700">...</span> But, this will not always work since there are 3 different Run As dialogs! (Windows 2000, XP+2003 and the custom UAC plugin dialog used on NT6 when UAC is off) The uac.lng file only works for the custom dialog (It's only purpose is to deal with broken runas on Vista when UAC is off)<br />
+      <p class="post-content"></p>
+      <pre>
+<code>
+***93;
+<br />&gt;DisableCurrUserOpt=1 
+<br />&gt;
+</code>
+</pre>
+      <pre>
+<code>
+onInit
+<br />Initpluginsdir
+<br />File"/oname=$pluginsdir\uac.lng" uac.lng #or just WriteIniStr
+<br />&gt;... 
+</code>
+</pre>But, this will not always work since there are 3 different Run As dialogs! (Windows 2000, XP+2003 and the custom UAC plugin dialog used on NT6 when UAC is off) The uac.lng file only works for the custom dialog (It's only purpose is to deal with broken runas on Vista when UAC is off)<br />
       Even if I hooked the native dialog on NT5 and disabled the current user radio button, the user could enter the name/password of a standard user in the text fields.<br />
       <br />
-      The bottom line is, you have to deal with the fact that a non admin user can be selected in the run as dialog. (You don't HAVE to use the userinfo plugin, after UAC_RunElevated returns, $3 is != 0 if the user is admin IIRC)<br />
-      <br /></span>
+      The bottom line is, you have to deal with the fact that a non admin user can be selected in the run as dialog. (You don't HAVE to use the userinfo plugin, after UAC_RunElevated returns, $3 is != 0 if the user is admin IIRC)
     </div>
     <hr />
 
@@ -315,33 +305,18 @@ I'm not sure. Maybe. Anders would know. But I don't see why you'd want to go thr
       <blockquote>
         <small>Originally posted by Anders</small><br />
         <pre>
-<span style="color: #007700">***91;</span><span style="color: #0000BB">MyRunAsCfg</span><span style="color: #007700">***93;
-<br /></span><span style="color: #0000BB">DisableCurrUserOpt</span><span style="color: #007700">=</span><span style="color: #0000BB">1
-<br /></span>
+***91;MyRunAsCfg***93;
+<br />&gt;DisableCurrUserOpt=1 
+<br />&gt;
 
-<!-- php buffer end -->
-                
-                
-                
 </pre>
-        <hr />
         <pre>
-        
-
-        PHP Code:
-        
-                
-</pre>
-        <hr />
-        <pre>
-                <code style="white-space:nowrap">
-                
-                        <!-- php buffer start --></code><span style="color: #000000">
-<span style="color: #007700">Function.</span><span style="color: #0000BB">onInit
+<code>
+onInit
 <br />Initpluginsdir
-<br />File</span><span style="color: #DD0000">"/oname=$pluginsdir\uac.lng"</span><span style="color: #0000BB">uac</span><span style="color: #007700">.</span><span style="color: #0000BB">lng</span><span style="color: #FF8000">#orjustWriteIniStr
-<br /></span><span style="color: #007700">...
-</span></span>
+<br />File"/oname=$pluginsdir\uac.lng" uac.lng #or just WriteIniStr
+<br />&gt;... 
+</code>
 </pre>
       </blockquote>I always get the following error:<br />
 
@@ -475,32 +450,26 @@ I'm not sure. Maybe. Anders would know. But I don't see why you'd want to go thr
       </blockquote>Just to get it right:<br />
       I first create a file by using<br />
       <pre>
-<code>ClearErrors<br />FileOpen</code><span style="color: #007700">$</span><span style="color: #0000BB">0$PLUGINSDIRuac</span><span style="color: #007700">.</span><span style="color: #0000BB">lngw<br />IfErrorsdone<br />FileClose</span><span style="color: #007700">$</span><span style="color: #0000BB">0<br />done</span><span style="color: #007700">:
-</span>
+<code>ClearErrors<br />FileOpen$0 $PLUGINSDIRuac.lng w<br />IfErrors done<br />FileClose $0<br />done: 
+</code>
 </pre>and then use<br />
       <pre>
-<code>WriteINIStr$PLUGINSDIRuac</code><span style="color: #007700">.</span><span style="color: #0000BB">lngMyRunAsCfgDisableCurrUserOpt</span><span style="color: #007700">=</span><span style="color: #0000BB">1
-<br /></span>
+<code>WriteINIStr $PLUGINSDIRuac</code>.lng MyRunAsCfg DisableCurrUserOpt=1 
+<br />&gt;
 
-<!-- php buffer end -->
-                
-                
-                
-</pre>
-      <hr />
-      <pre>
-        
-to add the desired config option?<br />BTW: The backslashes are removed by the forums software.<br /><br />        
-</pre>
+</pre>to add the desired config option?<br />
+      BTW: The backslashes are removed by the forums software.<br />
+      <br />
 
       <blockquote>
         Yes, it is possible to disable it in all versions, but removing features from a standard windows dialog is not really something I want to do, so you are stuck with it only working on the dialog that I create, not the dialogs that are owned by windows.
-      </blockquote>
-      <pre>
-
-OK, no problem (as written before) - it is only a question of usability. ;)<br />Just my 2 cents ...<br />Poping up a dialog just in case that the actually logged-on user hasn't the needed permissions to go on and then offering the option to use the same user is far from being "logical". It is the same as if you would pop-up a messagebox with Yes + No button where the message says "... click Yes to continue" and everytime the user clicks on No the messagebox pop-up again. In such a case a messagebox with OK + Cancel button would be more logical.<br /><br />Thanks<br /><br />Gunther
-                
-</pre>
+      </blockquote>OK, no problem (as written before) - it is only a question of usability. ;)<br />
+      Just my 2 cents ...<br />
+      Poping up a dialog just in case that the actually logged-on user hasn't the needed permissions to go on and then offering the option to use the same user is far from being "logical". It is the same as if you would pop-up a messagebox with Yes + No button where the message says "... click Yes to continue" and everytime the user clicks on No the messagebox pop-up again. In such a case a messagebox with OK + Cancel button would be more logical.<br />
+      <br />
+      Thanks<br />
+      <br />
+      Gunther
     </div>
     <hr />
 
@@ -685,7 +654,7 @@ OK, no problem (as written before) - it is only a question of usability. ;)<br /
       <span class="post-time small text-muted">20th September 2010 12:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content"><strong>New question/ problem with Uninstaller</strong><br />
-      Hi, it's me again ....<br />
+      &nbsp; Hi, it's me again ....<br />
       <br />
       Now that I have managed to set up all my needed functionality for the Installer I am now at the Uninstaller part. And immediately the problems start again ...!<br />
       <br />
@@ -700,16 +669,20 @@ OK, no problem (as written before) - it is only a question of usability. ;)<br /
         Error: could not resolve label "_UAC_AUGOGR_OP$USERS_NAMEStrCpy$USERS_NAME_F" in function "un.onInit"<br />
         Error - aborting creation process
       </blockquote>This comes from the lines:<br />
-      PHP Code:
-      <hr />
-      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #007700">${If}${</span><span style="color: #0000BB">UAC_IsInnerInstance</span><span style="color: #007700">}<br />
-      !</span><span style="color: #0000BB">insertmacroUAC_AsUser_GetGlobalVar$USERS_NAME<br /></span> <span style="color: #007700">${EndIf}</span> The variable is set earlier in the function:<br />
-      PHP Code:</span>
-      <hr />
-      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #0000BB">Callun</span><span style="color: #007700">.</span><span style="color: #0000BB">GetUserInfo<br />
-      StrCpy$USERS_NAME$USERNAME<br /></span></span> <!-- php buffer end -->
-      <hr />
-      I do not understand at the moment why the code is not working (as the rest seems to work properly)?<br />
+      <pre>
+<code>
+}
+<br />    !insertmacro UAC_AsUser_GetGlobalVar $USERS_NAME
+<br />&gt;${EndIf} 
+</code>
+</pre>The variable is set earlier in the function:<br />
+      <pre>
+<code>
+Call un.GetUserInfo
+<br />StrCpy $USERS_NAME $USERNAME 
+<br />&gt;
+</code>
+</pre>I do not understand at the moment why the code is not working (as the rest seems to work properly)?<br />
       Is it maybe a bug in the UAC_AsUser_GetGlobalVar macro so that it doesn't work for Uninstaller?<br />
       <br />
       (Note that I am not asking for any other solution - I found already one by using MSG tip calling an extra function by UAC_AsUser_Call and the ${UAC_SYNCREGISTERS} option.)<br />
@@ -935,31 +908,33 @@ OK, no problem (as written before) - it is only a question of usability. ;)<br /
       Gunther<br />
       <br />
       PS: Here's the script<br />
-      PHP Code:
-      <hr />
-      <code style="white-space:nowrap"><!-- php buffer start --></code><span style="color: #000000"><span style="color: #0000BB">RequestExecutionLeveladmin<br />
-      <br /></span> <span style="color: #007700">Var</span><span style="color: #0000BB">sid<br /></span> <span style="color: #007700">Var</span><span style="color: #0000BB">USERPROFILE<br />
-      <br /></span> <span style="color: #007700">!include</span><span style="color: #0000BB">WordFunc</span><span style="color: #007700">.</span><span style="color: #0000BB">nsh<br /></span> <span style="color: #007700">!include</span><span style="color: #0000BB">EnumUsersReg</span><span style="color: #007700">.</span><span style="color: #0000BB">nsh<br />
-      <br />
-      NameEnumUsersReg<br />
-      OutFileEnumUsersReg</span><span style="color: #007700">.</span><span style="color: #0000BB">exe<br />
-      <br />
-      ShowInstDetailsshow<br />
-      <br />
-      Section<br /></span> <span style="color: #007700">;use${</span><span style="color: #0000BB">un</span><span style="color: #007700">.</span><span style="color: #0000BB">EnumUsersReg</span><span style="color: #007700">}</span><span style="color: #0000BB">inuninstallersections<br /></span> <span style="color: #007700">${</span><span style="color: #0000BB">EnumUsersReg</span><span style="color: #007700">}</span><span style="color: #0000BB">GPtmpkey<br />
-      SectionEnd<br />
-      <br />
-      <br /></span> <span style="color: #007700">Function</span><span style="color: #0000BB">GP<br />
-      Pop$sid<br />
-      <br />
-      ReadRegStr</span><span style="color: #007700">$</span><span style="color: #0000BB">1HKU</span><span style="color: #DD0000">"$sid\Software\Microsoft\Windows\CurrentVersion\Explorer\UserShellFolders"</span><span style="color: #0000BB">AppData<br /></span> <span style="color: #007700">${</span><span style="color: #0000BB">WordReplace</span><span style="color: #007700">}</span><span style="color: #DD0000">"$1""%USERPROFILE%""$USERPROFILE""+1"</span><span style="color: #007700">$</span><span style="color: #0000BB">2<br />
-      DetailPrint</span><span style="color: #007700">$</span><span style="color: #0000BB">2<br />
-      <br />
-      ReadRegStr</span><span style="color: #007700">$</span><span style="color: #0000BB">1HKU</span><span style="color: #DD0000">"$sid\Software\Microsoft\Windows\CurrentVersion\Explorer\UserShellFolders""StartMenu"<br /></span> <span style="color: #007700">${</span><span style="color: #0000BB">WordReplace</span><span style="color: #007700">}</span><span style="color: #DD0000">"$1""%USERPROFILE%""$USERPROFILE""+1"</span><span style="color: #007700">$</span><span style="color: #0000BB">2<br />
-      DetailPrint</span><span style="color: #007700">$</span><span style="color: #0000BB">2<br />
-      FunctionEnd<br /></span></span> <!-- php buffer end -->
-      <hr />
-      But I made some slight changes to EnumUsersReg.nsh, too:
+      <pre>
+<code>
+RequestExecutionLevel admin 
+<br /><br />&gt;Var sid
+<br />&gt;Var USERPROFILE
+<br /><br />&gt;!include WordFunc.nsh
+<br />&gt;!include EnumUsersReg.nsh
+<br /><br />Name EnumUsersReg
+<br />OutFile EnumUsersReg</code>.exe
+<br /><br />ShowInstDetails show
+<br /> 
+<br />Section
+<br />   ; use ${un.EnumUsersReg} in uninstaller sections
+<br />   ${EnumUsersReg} GP tmpkey
+<br />SectionEnd
+<br /><br /><br />&gt;Function GP
+<br />    Pop $sid
+<br /><br />    ReadRegStr$1 HKU "$sid\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" AppData
+<br />   ${WordReplace} "$1" "%USERPROFILE%" "$USERPROFILE" "+1" $2
+<br />    DetailPrint$2
+<br /><br />    ReadRegStr$1 HKU "$sid\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" "Start Menu"
+<br />   ${WordReplace} "$1" "%USERPROFILE%" "$USERPROFILE" "+1" $2
+<br />    DetailPrint$2
+<br />FunctionEnd 
+<br />&gt;
+
+</pre>But I made some slight changes to EnumUsersReg.nsh, too:
     </div>
     <hr />
 

@@ -6,8 +6,7 @@
   <meta name="description" content="Installing .NET with dotnetfx.exe" />
 
   <title>Installing .NET with dotnetfx.exe - NSIS Forums</title><!-- Bootstrap core CSS -->
-  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.1/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+  <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootswatch/3.0.2/readable/bootstrap.min.css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
   <!--[if lt IE 9]>
                 <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
                 <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
@@ -33,22 +32,22 @@
       <span class="post-time small text-muted">12th May 2004 15:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content"><strong>Installing .NET with dotnetfx.exe</strong><br />
-      Hello all,<br />
+      &nbsp; Hello all,<br />
       <br />
       I just got NSIS, so I am very much a newbie. I used HM NIS Editor and its Wizard to make a simple install for an application I am working on. The application is written in VB.NET, and my boss would like me to distribute the framework, and install it if needed, with the installer for the application. I have a few questions regarding this issue.<br />
       <br />
       I found the nifty little function to detect .NET framework in the Documentation (and in the archives), and I got it to work with my script. I also read in the forums that you should place this in the on.Init function, or something like that. I didnt fully understand that. Right now this is what I do:<br />
       <br /></p>
       <pre>
-<code>Section</code><span style="color: #DD0000">"GLS"</span><span style="color: #0000BB">SEC01
-<br />CallIsDotNETInstalled
-<br />Pop$R3
-<br />StrCmp$R30</span><span style="color: #007700">+</span><span style="color: #0000BB">3
-<br />Goto</span><span style="color: #007700">+</span><span style="color: #0000BB">2
-<br /></span><span style="color: #007700">;else
-<br /></span><span style="color: #0000BB">MessageBoxMB_OK</span><span style="color: #DD0000">"Can'tfind.NET!"
-<br /></span><span style="color: #007700">...
-</span>
+<code>Section"GLS" SEC01
+<br />  Call IsDotNETInstalled
+<br />     Pop $R3
+<br />  StrCmp $R3 0+3
+<br />    Goto+2
+<br />    ; else
+<br />   MessageBox MB_OK "Can't find .NET!"
+<br />    ... 
+</code>
 </pre>And as you can see this code is at the start of my main "section". My first question is if putting that in onInit is more correct how do I do that? Do I go Function SEC01.onInit or something like that, and place the code there. And then where/how do I call the function?<br />
       <br />
       My second question is how do I get the installer to install the .NET Framework. So, how do I package dotnetfx.exe into my installer, and then how do I get it to run that file (instead of the MessageBox part). I couldn't find an example of this anywhere.<br />
@@ -130,26 +129,28 @@
       <br />
       This is my .onInit function:<br /></p>
       <pre>
-<span style="color: #007700">Function.</span><span style="color: #0000BB">onInit
-<br /></span><span style="color: #007700">;</span><span style="color: #0000BB">check</span><span style="color: #007700">for.</span><span style="color: #0000BB">NET
-<br />CallIsDotNETInstalled
-<br />Pop$R3
-<br />StrCmp$R30not_foundfound
-<br />found</span><span style="color: #007700">:
-<br /></span><span style="color: #0000BB">gotoend
-<br />not_found</span><span style="color: #007700">:
-<br /></span><span style="color: #0000BB">MessageBoxMB_OKCANCEL</span><span style="color: #DD0000">"GLShasdetectedthatyoudonothaveMicrosoft.NETFrameworkInstalled.\r\nPressOKtoinstall.NETFramework."
-<br /></span><span style="color: #0000BB">pop$R0
-<br />StrCmp$R0IDOKinstallNET
-<br />Abort
-<br />installNET</span><span style="color: #007700">:
-<br /></span><span style="color: #0000BB">SetOutPath</span><span style="color: #DD0000">"$INSTDIR"
-<br /></span><span style="color: #0000BB">SetOverwriteifnewer
-<br />File</span><span style="color: #DD0000">"dotnetfx.exe"
-<br /></span><span style="color: #0000BB">ExecWait</span><span style="color: #DD0000">'"$INSTDIR\dotnetfx.exe"'
-<br /></span><span style="color: #0000BB">end</span><span style="color: #007700">:
-<br /></span><span style="color: #0000BB">FunctionEnd
-<br /></span>
+<code>
+onInit
+<br /> ; check for .NET
+<br />  Call IsDotNETInstalled
+<br />    Pop $R3
+<br />    StrCmp $R3 0 not_found found
+<br />    found:
+<br />        goto end
+<br />    not_found:
+<br />       MessageBox MB_OKCANCEL "GLS has detected that you do not have Microsoft .NET Framework Installed.\r\n Press OK to install .NET Framework."
+<br />        pop $R0
+<br />        StrCmp $R0 IDOK installNET
+<br />        Abort
+<br />        installNET:
+<br />           SetOutPath "$INSTDIR"
+<br />            SetOverwrite ifnewer
+<br />            File "dotnetfx.exe"
+<br />           ExecWait '"$INSTDIR\dotnetfx.exe"'
+<br />   end:
+<br />&gt;FunctionEnd 
+<br />&gt;
+</code>
 </pre>When I run my installer on a computer w/o .NET, it detects that it's not there properly. Then the msg box comes up, but when I press "OK" nothing seems to happen. It did not start the .NET install. What am I doing wrong?<br />
       <br />
       thanks,<br />
@@ -165,24 +166,26 @@
       <p class="post-content">Try the following:<br />
       <br /></p>
       <pre>
-<span style="color: #007700">Function.</span><span style="color: #0000BB">onInit
-<br /></span><span style="color: #007700">;</span><span style="color: #0000BB">check</span><span style="color: #007700">for.</span><span style="color: #0000BB">NET
-<br />CallIsDotNETInstalled
-<br />Pop$R3
-<br />StrCmp$R30not_foundfound
-<br />found</span><span style="color: #007700">:
-<br /></span><span style="color: #0000BB">gotoend
-<br />not_found</span><span style="color: #007700">:
-<br /></span><span style="color: #0000BB">MessageBoxMB_OKCANCEL</span><span style="color: #DD0000">"GLShasdetectedthatyoudonothaveMicrosoft.NETFrameworkInstalled.\r\nPressOKtoinstall.NETFramework."</span><span style="color: #0000BB">IDOKinstallNETIDCANCEL0
-<br />Abort
-<br />installNET</span><span style="color: #007700">:
-<br /></span><span style="color: #0000BB">SetOutPath</span><span style="color: #DD0000">"$INSTDIR"
-<br /></span><span style="color: #0000BB">SetOverwriteifnewer
-<br />File</span><span style="color: #DD0000">"dotnetfx.exe"
-<br /></span><span style="color: #0000BB">ExecWait</span><span style="color: #DD0000">'"$INSTDIRdotnetfx.exe"'
-<br /></span><span style="color: #0000BB">end</span><span style="color: #007700">:
-<br /></span><span style="color: #0000BB">FunctionEnd
-<br /></span>
+<code>
+onInit 
+<br /> ; check for .NET 
+<br />  Call IsDotNETInstalled 
+<br />    Pop $R3 
+<br />    StrCmp $R3 0 not_found found 
+<br />    found: 
+<br />        goto end 
+<br />    not_found: 
+<br />       MessageBox MB_OKCANCEL "GLS has detected that you do not have Microsoft .NET Framework Installed.\r\n Press OK to install .NET Framework." IDOK installNET IDCANCEL 0
+<br />        Abort 
+<br />        installNET: 
+<br />           SetOutPath "$INSTDIR" 
+<br />            SetOverwrite ifnewer 
+<br />            File "dotnetfx.exe" 
+<br />           ExecWait '"$INSTDIRdotnetfx.exe"' 
+<br />   end: 
+<br />&gt;FunctionEnd 
+<br />&gt;
+</code>
 </pre>
     </div>
     <hr />
@@ -272,7 +275,7 @@
       <span class="post-time small text-muted">15th November 2005 15:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content"><strong>How to obtain right language</strong><br />
-      I think I'm not getting this right...<br />
+      &nbsp; I think I'm not getting this right...<br />
       The dotnetfx.exe you install has to be the same language as the os you are installing it on right?<br />
       But like I interpret your code, you let the user select a language... What if that isn't the right one?<br />
       Isn't there a way to determine the OS language and not let the user select it?<br />
