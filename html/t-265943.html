@@ -1,139 +1,93 @@
-<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Converting a mapped drive to a UNC path" />
-
-  <title>Converting a mapped drive to a UNC path - NSIS Forums</title>
-  <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script>
-  <!-- Bootstrap core CSS -->
-
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!--[if lt IE 9]>
-                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-</head>
-
-<body>
-  <div class="container">
-    <!-- Put navigation bar here -->
-
-    <ol class="breadcrumb">
-      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
-
-      <li><a href="f-65.html">NSIS Discussion</a></li>
-
-      <li class="active">Converting a mapped drive to a UNC path</li>
-    </ol>
-
-    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=265943">Converting a mapped drive to a UNC path</a></p><br />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">HotButteredSoul</span><br />
-      <span class="post-time small text-muted">16th February 2007 18:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>Converting a mapped drive to a UNC path</strong><br />
-      Hello!<br />
-      <br />
-      I've been running into clients with network setups who have been trying to install onto mapped network drives. This can cause issues, mainly because mapped drives are associated with User logons and can be different depending upon who is logged into a machine. Moreover, services do not obtain mapped drive information, even when given rights to "Log on as:" a particular user.<br />
-      <br />
-      UNC paths, however, do not exhibit this problem. Thus, I wrote a little function to take any windows full path and, if the path uses a mapped drive, convert it to a UNC path.<br />
-      <br />
-      Enjoy!!<br />
-      <br /></p>
-      <pre>
-<code><br />#<br /># GetUniversalName.nsh - by HotButteredSoul<br />#<br /># Function for getting the Universal name of a filepath.<br />#<br /><br />!ifndef _GetUniversalName_nsh<br />!define _GetUniversalName_nsh<br /><br />#<br /># get_universal_name - gets universal name of a filepath<br />#<br /># Example:<br />#<br /># Push "H:\path\file"<br /># Call get_universal_name<br /># Pop $0 ; = "\\servername\sharename\path\file"<br />#<br /># Uses mpr.lib WNetGetUniversalNameA<br />#<br /># DWORD WNetGetUniversalName(<br />#   LPCTSTR lpLocalPath,  // pointer to drive-based path for a network<br />#                         // resource<br />#   DWORD dwInfoLevel,    // specifies form of universal name to be<br />#                         // obtained<br />#   LPVOID lpBuffer,      // pointer to buffer that receives universal<br />#                         // name data structure<br />#   LPDWORD lpBufferSize  // pointer to variable that specifies size<br />#                         // of buffer<br /># );<br />#<br /># Parameters<br /># lpLocalPath<br /># Points to a null-terminated string that is a drive-based path for a network resource.<br /># For example, if drive H has been mapped to a network drive share, and the network<br /># resource of interest is a file named SAMPLE.DOC in the directory \WIN32\EXAMPLES on<br /># that share, the drive-based path is H:\WIN32\EXAMPLES\SAMPLE.DOC.<br />#<br /># dwInfoLevel<br /># Specifies the type of data structure that the function will store in the buffer pointed<br />#  to by lpBuffer. This parameter can be one of the following values: Value Meaning<br />#  UNIVERSAL_NAME_INFO_LEVEL The function will store a UNIVERSAL_NAME_INFO data<br />#       structure in the buffer. (defined in WINNETWK.H as 1)<br />#  REMOTE_NAME_INFO_LEVEL The function will store a REMOTE_NAME_INFO data structure in<br />#       the buffer. (defined in WINNETWK.H as 2)<br />#<br /># The UNIVERSAL_NAME_INFO data structure points to a Universal Naming Convention (UNC)<br /># name string.<br />#<br /># lpBuffer<br /># Points to a buffer that receives the type of data structure specified by the<br /># dwInfoLevel parameter.<br />#<br /># lpBufferSize<br /># Points to a variable that specifies the size in bytes of the buffer pointed to by lpBuffer.<br /># If the function succeeds, it sets the variable pointed to by lpBufferSize to the size<br /># in bytes of the data structure stored in the buffer. If the function fails because the<br /># buffer is too small, indicated by the ERROR_MORE_DATA error code, it sets the variable<br /># pointed to by lpBufferSize to the required buffer size.<br />#<br /># Return Values<br /># If the function succeeds, the return value is NO_ERROR (0).<br />#<br /># If the function fails, the return value is an error code. To get extended error<br /># information, callGetLastError. GetLastError may return one of the following error codes:<br />#<br /># Value Meaning<br /># ERROR_BAD_DEVICE The string pointed to by lpLocalPath is invalid (1200).<br /># ERROR_CONNECTION_UNAVAIL There is no current connection to the remote device, but there<br />#   is a remembered (persistent) connection to it (1201).<br /># ERROR_EXTENDED_ERROR A network-specific error occurred. Use the WNetGetLastError<br />#   function to obtain a description of the error (1208).<br /># ERROR_MORE_DATA The buffer pointed to by lpBuffer is too small. The function sets the<br />#   variable pointed to by lpBufferSize to the required buffer size. More entries are<br />#   available with subsequent calls (234).<br /># ERROR_NOT_SUPPORTED The dwInfoLevel parameter was set to UNIVERSAL_NAME_INFO_LEVEL, but<br />#   the network provider does not support UNC names. This function is not supported by<br />#   any of the network providers (282).<br /># ERROR_NO_NET_OR_BAD_PATH None of the providers recognized this local name as having a<br />#   connection. However, the network is not available for at least one provider to whom<br />#   the connection may belong (1203).<br /># ERROR_NO_NETWORK There is no network present (1222).<br /># ERROR_NOT_CONNECTED The device specified by lpLocalPath is not redirected (2250).<br />#<br />Function get_universal_name<br />    Exch $0 ; local path (IN)<br />    Push $1 ; Universal Path (OUT)<br />    Push $2 ; lpBuffer<br />    Push $3 ; lpBufferSize<br />    Push $4 ; GetUniversalName return value<br /><br />    ;allocate buffer for following structure:<br />    ;    typedef struct _UNIVERSAL_NAME_INFO { /* uni */<br />    ;        LPTSTR  lpUniversalName;<br />    ;    } UNIVERSAL_NAME_INFO;<br />    System::Call "*(&amp;t${NSIS_MAX_STRLEN} '') i .r2"<br /><br />    ; make call<br />    System::Call 'mpr::WNetGetUniversalNameA(t r0, i 1,i $2, *i ${NSIS_MAX_STRLEN} r3)i .r4'<br />    IntCmp 0 $4 success<br />    StrCpy $1 $0 ; failed, so just use local path<br />    GoTo clean_up<br /><br />    success:<br />    System::Call "*$2(t .r1)" ; Extract universal string<br /><br />    clean_up:<br />    System::Free $2<br />    Pop $4<br />    Pop $3<br />    Pop $2<br />    Exch<br />    Pop $0<br />    Exch $1<br /><br />FunctionEnd<br />!endif ; _GetUniversalName_nsh<br /></code>
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Converting a mapped drive to a UNC path"><title>Converting a mapped drive to a UNC path - NSIS Forums</title><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css"><link rel="stylesheet" href="../css/style.css" type="text/css"><!--[if lt IE 9]><script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script><script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script><![endif]--></head><body><div class="container"><ol class="breadcrumb"><li><a href="../index.html" class="glyphicon glyphicon-home"></a></li><li><a href="f-65.html">NSIS Discussion</a></li><li class="active">Converting a mapped drive to a UNC path</li></ol><p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=265943">Converting a mapped drive to a UNC path</a></p><br><div class="post"><p class="post-meta"><span class="post-author text-primary">HotButteredSoul</span><br><span class="post-time small text-muted">16th February 2007 18:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>Converting a mapped drive to a UNC path</strong><br>Hello!<br><br>I've been running into clients with network setups who have been trying to install onto mapped network drives. This can cause issues, mainly because mapped drives are associated with User logons and can be different depending upon who is logged into a machine. Moreover, services do not obtain mapped drive information, even when given rights to "Log on as:" a particular user.<br><br>UNC paths, however, do not exhibit this problem. Thus, I wrote a little function to take any windows full path and, if the path uses a mapped drive, convert it to a UNC path.<br><br>Enjoy!!<br><br></p><pre>
+<code><br>#<br># GetUniversalName.nsh - by HotButteredSoul<br>#<br># Function for getting the Universal name of a filepath.<br>#<br><br>!ifndef _GetUniversalName_nsh<br>!define _GetUniversalName_nsh<br><br>#<br># get_universal_name - gets universal name of a filepath<br>#<br># Example:<br>#<br># Push "H:\path\file"<br># Call get_universal_name<br># Pop $0 ; = "\\servername\sharename\path\file"<br>#<br># Uses mpr.lib WNetGetUniversalNameA<br>#<br># DWORD WNetGetUniversalName(<br>#   LPCTSTR lpLocalPath,  // pointer to drive-based path for a network<br>#                         // resource<br>#   DWORD dwInfoLevel,    // specifies form of universal name to be<br>#                         // obtained<br>#   LPVOID lpBuffer,      // pointer to buffer that receives universal<br>#                         // name data structure<br>#   LPDWORD lpBufferSize  // pointer to variable that specifies size<br>#                         // of buffer<br># );<br>#<br># Parameters<br># lpLocalPath<br># Points to a null-terminated string that is a drive-based path for a network resource.<br># For example, if drive H has been mapped to a network drive share, and the network<br># resource of interest is a file named SAMPLE.DOC in the directory \WIN32\EXAMPLES on<br># that share, the drive-based path is H:\WIN32\EXAMPLES\SAMPLE.DOC.<br>#<br># dwInfoLevel<br># Specifies the type of data structure that the function will store in the buffer pointed<br>#  to by lpBuffer. This parameter can be one of the following values: Value Meaning<br>#  UNIVERSAL_NAME_INFO_LEVEL The function will store a UNIVERSAL_NAME_INFO data<br>#       structure in the buffer. (defined in WINNETWK.H as 1)<br>#  REMOTE_NAME_INFO_LEVEL The function will store a REMOTE_NAME_INFO data structure in<br>#       the buffer. (defined in WINNETWK.H as 2)<br>#<br># The UNIVERSAL_NAME_INFO data structure points to a Universal Naming Convention (UNC)<br># name string.<br>#<br># lpBuffer<br># Points to a buffer that receives the type of data structure specified by the<br># dwInfoLevel parameter.<br>#<br># lpBufferSize<br># Points to a variable that specifies the size in bytes of the buffer pointed to by lpBuffer.<br># If the function succeeds, it sets the variable pointed to by lpBufferSize to the size<br># in bytes of the data structure stored in the buffer. If the function fails because the<br># buffer is too small, indicated by the ERROR_MORE_DATA error code, it sets the variable<br># pointed to by lpBufferSize to the required buffer size.<br>#<br># Return Values<br># If the function succeeds, the return value is NO_ERROR (0).<br>#<br># If the function fails, the return value is an error code. To get extended error<br># information, callGetLastError. GetLastError may return one of the following error codes:<br>#<br># Value Meaning<br># ERROR_BAD_DEVICE The string pointed to by lpLocalPath is invalid (1200).<br># ERROR_CONNECTION_UNAVAIL There is no current connection to the remote device, but there<br>#   is a remembered (persistent) connection to it (1201).<br># ERROR_EXTENDED_ERROR A network-specific error occurred. Use the WNetGetLastError<br>#   function to obtain a description of the error (1208).<br># ERROR_MORE_DATA The buffer pointed to by lpBuffer is too small. The function sets the<br>#   variable pointed to by lpBufferSize to the required buffer size. More entries are<br>#   available with subsequent calls (234).<br># ERROR_NOT_SUPPORTED The dwInfoLevel parameter was set to UNIVERSAL_NAME_INFO_LEVEL, but<br>#   the network provider does not support UNC names. This function is not supported by<br>#   any of the network providers (282).<br># ERROR_NO_NET_OR_BAD_PATH None of the providers recognized this local name as having a<br>#   connection. However, the network is not available for at least one provider to whom<br>#   the connection may belong (1203).<br># ERROR_NO_NETWORK There is no network present (1222).<br># ERROR_NOT_CONNECTED The device specified by lpLocalPath is not redirected (2250).<br>#<br>Function get_universal_name<br>    Exch $0 ; local path (IN)<br>    Push $1 ; Universal Path (OUT)<br>    Push $2 ; lpBuffer<br>    Push $3 ; lpBufferSize<br>    Push $4 ; GetUniversalName return value<br><br>    ;allocate buffer for following structure:<br>    ;    typedef struct _UNIVERSAL_NAME_INFO { /* uni */<br>    ;        LPTSTR  lpUniversalName;<br>    ;    } UNIVERSAL_NAME_INFO;<br>    System::Call "*(&amp;t${NSIS_MAX_STRLEN} '') i .r2"<br><br>    ; make call<br>    System::Call 'mpr::WNetGetUniversalNameA(t r0, i 1,i $2, *i ${NSIS_MAX_STRLEN} r3)i .r4'<br>    IntCmp 0 $4 success<br>    StrCpy $1 $0 ; failed, so just use local path<br>    GoTo clean_up<br><br>    success:<br>    System::Call "*$2(t .r1)" ; Extract universal string<br><br>    clean_up:<br>    System::Free $2<br>    Pop $4<br>    Pop $3<br>    Pop $2<br>    Exch<br>    Pop $0<br>    Exch $1<br><br>FunctionEnd<br>!endif ; _GetUniversalName_nsh<br></code>
 </pre>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br>
       <span class="post-time small text-muted">16th February 2007 18:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">The UNIVERSAL_NAME_INFO structure contains only a pointer to a string. There is no need to allocate 1024 bytes for it, only 4. Call "*(i)" should be good enough. You can use 't' without the ampersand to make it clear the allocation is for a string pointer.<br />
-      <br />
+      <p class="post-content">The UNIVERSAL_NAME_INFO structure contains only a pointer to a string. There is no need to allocate 1024 bytes for it, only 4. Call "*(i)" should be good enough. You can use 't' without the ampersand to make it clear the allocation is for a string pointer.<br>
+      <br>
       You should create a <a href="http://nsis.sourceforge.net/Help:Editing" target="_blank">Wiki page</a> for useful scripts so they won't get lost in the forums.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">HotButteredSoul</span><br />
+      <p class="post-meta"><span class="post-author text-primary">HotButteredSoul</span><br>
       <span class="post-time small text-muted">16th February 2007 20:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">You would think so!<br />
-      <br />
-      However, what Microsoft doesn't tell you (though they imply it in their <a href="http://msdn2.microsoft.com/en-us/library/aa385334.aspx" target="_blank">example</a>) is that <b>lpBuffer</b> not only contains the UNIVERSAL_NAME_INFO structure, it ALSO contains the string that the structure points to!!<br />
-      <br />
-      Thus, for a 14 byte path like "\\loki\loki_c" you need 18 bytes in your <b>lpBuffer</b>.<br />
-      <br />
-      Hence, my usage of NSIS_MAX_STRLEN. Note, my code is a little misleading... because of the 4 byte size of the structure the maximum length UNC path my function will return is NSIS_MAX_STRLEN-4 = 1020.<br />
-      <br />
-      A sidenote: if you don't give WNetGetUniversalNameA a big enough buffer, it returns the buffer size it does need in <b>lpBufferSize</b>. However, even this non-unicode version asks for a unicode size buffer!! Thus, for "\\loki\loki_c\pub" it would ask for 32 (14*2 + 4) bytes, even though it works with 18 (but set it to 17 and it asks for 32!! lol).<br />
-      <br />
+      <p class="post-content">You would think so!<br>
+      <br>
+      However, what Microsoft doesn't tell you (though they imply it in their <a href="http://msdn2.microsoft.com/en-us/library/aa385334.aspx" target="_blank">example</a>) is that <b>lpBuffer</b> not only contains the UNIVERSAL_NAME_INFO structure, it ALSO contains the string that the structure points to!!<br>
+      <br>
+      Thus, for a 14 byte path like "\\loki\loki_c" you need 18 bytes in your <b>lpBuffer</b>.<br>
+      <br>
+      Hence, my usage of NSIS_MAX_STRLEN. Note, my code is a little misleading... because of the 4 byte size of the structure the maximum length UNC path my function will return is NSIS_MAX_STRLEN-4 = 1020.<br>
+      <br>
+      A sidenote: if you don't give WNetGetUniversalNameA a big enough buffer, it returns the buffer size it does need in <b>lpBufferSize</b>. However, even this non-unicode version asks for a unicode size buffer!! Thus, for "\\loki\loki_c\pub" it would ask for 32 (14*2 + 4) bytes, even though it works with 18 (but set it to 17 and it asks for 32!! lol).<br>
+      <br>
       Don't you just love Micro$oft?? :rolleyes:</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br>
       <span class="post-time small text-muted">16th February 2007 20:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">So they expect everyone to always query for the required size and make no note of it in the documentation? That's one of the weirdest APIs I've ever seen. Why not LPSTR lpUniversalName[1] as always?</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">HotButteredSoul</span><br />
+      <p class="post-meta"><span class="post-author text-primary">HotButteredSoul</span><br>
       <span class="post-time small text-muted">16th February 2007 21:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">Yes, it's wacky. They actually expect you to guess a size and use it, then only do something if it fails... which, btw, I'm not doing in my script.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">HotButteredSoul</span><br />
+      <p class="post-meta"><span class="post-author text-primary">HotButteredSoul</span><br>
       <span class="post-time small text-muted">16th February 2007 21:39 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Wiki'd<br />
-      <br />
+      <p class="post-content">Wiki'd<br>
+      <br>
       <a href="Http://nsis.sourceforge.net/Get_Universal_Name" target="_blank">Http://nsis.sourceforge.net/Get_Universal_Name</a></p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br>
       <span class="post-time small text-muted">17th February 2007 02:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content"><a href="http://nsis.sourceforge.net/Get_Universal_Name" target="_blank">http://nsis.sourceforge.net/Get_Universal_Name</a></p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Calicebus</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Calicebus</span><br>
       <span class="post-time small text-muted">12th August 2013 09:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Hallo,<br />
+      <p class="post-content">Hallo,<br>
       how can i download the GetUniversalName_nsh?</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br>
       <span class="post-time small text-muted">12th August 2013 15:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content"></p>
 
       <blockquote>
-        <small>Originally posted by Calicebus</small><br />
-        Hallo,<br />
+        <small>Originally posted by Calicebus</small><br>
+        Hallo,<br>
         how can i download the GetUniversalName_nsh?
       </blockquote>The code is right there on the wiki page...
     </div>
-    <hr />
+    <hr>
 
     <div class="footer">
       <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
@@ -142,7 +96,4 @@
 </script><script type="text/javascript">
 //<![CDATA[
   hljs.initHighlightingOnLoad();
-  //]]>
-  </script>
-</body>
-</html>
+  //]]></script></body></html>

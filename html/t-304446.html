@@ -1,74 +1,8 @@
-<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Check a control" />
-
-  <title>Check a control - NSIS Forums</title>
-  <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script>
-  <!-- Bootstrap core CSS -->
-
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!--[if lt IE 9]>
-                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-</head>
-
-<body>
-  <div class="container">
-    <!-- Put navigation bar here -->
-
-    <ol class="breadcrumb">
-      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
-
-      <li><a href="f-65.html">NSIS Discussion</a></li>
-
-      <li class="active">Check a control</li>
-    </ol>
-
-    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=304446">Check a control</a></p><br />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Lupo73</span><br />
-      <span class="post-time small text-muted">21st March 2009 20:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>Check a control</strong><br />
-      I'm using nsDialogs.. I have created a custom page where the user can load a file (with SelectFileDialog) and now I need to make a check, when the user click Next, to verify if the file selected is valid or not. If is not valid (if the name of the file doesn't contain the string "Pack") I need to open a message that ask to the user to select a correct file. Thanks for help!</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
-      <span class="post-time small text-muted">21st March 2009 23:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">You will need a callback function.<br />
-      I guess you'll find all the info you need into nsDialogs documentation.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Lupo73</span><br />
-      <span class="post-time small text-muted">22nd March 2009 10:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">But how can I set to don't leave the custom page if a variable has particular values?</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Animaether</span><br />
-      <span class="post-time small text-muted">22nd March 2009 14:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">If you're using nsDialogs, then it won't leave the page anyway (that was a behavior of InstallOptions(2/Ex)). If you want to enable/disable the 'Next' button, you can do so in code as well.<br />
-      <br />
-      The following code simply checks folder name validity - should be simple enough to adjust to check whether the specified file has 'pack' in it;<br /></p>
-      <pre>
-<code><br />!include "winmessages.nsh"<br />!include "LogicLib.nsh"<br />!include "nsDialogs.nsh"<br /><br />Outfile "test.exe"<br /><br />var dialog<br />var hwnd<br />var null<br /><br />!macro RedrawControl control<br />        Push $0<br />        StrCpy $0 ${control}<br />        System::Call "user32::InvalidateRect(i,i,i)i (r0, 0, 1)"<br />        Pop $0<br />!macroend<br />!define RedrawControl `!insertmacro RedrawControl`<br /><br />var InstallDir ; Use a variable separate from $INSTDIR to by-pass automatic adjustments<br /><br />Function .onInit<br />        StrCpy $InstallDir "$PROGRAMFILES\SomeFolder"<br />FunctionEnd<br /><br /><br />Page custom page.settings<br />Page InstFiles<br /><br />var NSD_InstallDir<br />var NSD_InstallDirStatus<br />Function page.settings<br />        nsDialogs::Create 1018<br />        Pop $dialog<br /><br />        ${NSD_CreateText} 3% 3% 89% 8% "$InstallDir"<br />                Pop $NSD_InstallDir<br />                ${NSD_OnChange} $NSD_InstallDir page.settings.installdir.onchange<br /><br />        ${NSD_CreateButton} 92% 3% 5% 8% "..."<br />                Pop $hwnd<br />                ${NSD_OnClick} $hwnd page.settings.installdir.onclick<br />                <br />        ${NSD_CreateLabel} 3% 12% 100% 8% "status: "<br />            Pop $NSD_InstallDirStatus<br /><br />        ; Initialization<br />        Push $NSD_InstallDir<br />        Call page.settings.installdir.onchange<br /><br />        nsDialogs::Show<br />        Abort<br />FunctionEnd<br /><br />Function page.settings.installdir.onchange<br />        Pop $hwnd<br />        ${NSD_GetText} $hwnd $InstallDir<br /><br />        ; Kill trailing backslash<br />        StrCpy $0 $InstallDir 1 -1<br />        ${If} $0 == "\"<br />            StrLen $0 $InstallDir<br />            IntOp $0 $0 - 1<br />            StrCpy $InstallDir $InstallDir $0<br />        ${EndIf}<br /><br />        StrCpy $0 $InstallDir<br /><br />        ; Kill invalid characters<br />        Push $InstallDir<br />            Exch $EXEDIR<br />            Exch $EXEDIR<br />        Pop $InstallDir<br /><br />        GetDlgItem $1 $HWNDPARENT 1 ; Next button<br /><br />    ${If} $InstallDir == ""<br />                ${NSD_SetText} $NSD_InstallDirStatus "status: No destination folder specified"<br />                EnableWindow $1 0<br />    ${ElseIf} $InstallDir != $0<br />                ${NSD_SetText} $NSD_InstallDirStatus "status: Destination folder contains disallowed characters"<br />                EnableWindow $1 0<br />        ${ElseIf} ${FileExists} "$InstallDir\*.*"<br />                ${NSD_SetText} $NSD_InstallDirStatus "status: OK - Destination folder exists"<br />                EnableWindow $1 1<br />        ${Else}<br />                ${NSD_SetText} $NSD_InstallDirStatus "status: OK - Destination folder will be created"<br />                EnableWindow $1 1<br />        ${EndIf}<br />FunctionEnd<br /><br />Function page.settings.installdir.onclick<br />        nsDialogs::SelectFolderDialog "Please select the destination folder"<br />        Pop $0<br />        ${If} $0 != "error"<br />            ${NSD_SetText} $NSD_InstallDir $0 ; This will automatically trigger page.settings.installdir.onchange<br />        ${EndIf}<br />FunctionEnd<br /><br />Section ""<br />SectionEnd<br /></code>
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Check a control"><title>Check a control - NSIS Forums</title><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css"><link rel="stylesheet" href="../css/style.css" type="text/css"><!--[if lt IE 9]><script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script><script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script><![endif]--></head><body><div class="container"><ol class="breadcrumb"><li><a href="../index.html" class="glyphicon glyphicon-home"></a></li><li><a href="f-65.html">NSIS Discussion</a></li><li class="active">Check a control</li></ol><p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=304446">Check a control</a></p><br><div class="post"><p class="post-meta"><span class="post-author text-primary">Lupo73</span><br><span class="post-time small text-muted">21st March 2009 20:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>Check a control</strong><br>I'm using nsDialogs.. I have created a custom page where the user can load a file (with SelectFileDialog) and now I need to make a check, when the user click Next, to verify if the file selected is valid or not. If is not valid (if the name of the file doesn't contain the string "Pack") I need to open a message that ask to the user to select a correct file. Thanks for help!</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Red Wine</span><br><span class="post-time small text-muted">21st March 2009 23:16 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">You will need a callback function.<br>I guess you'll find all the info you need into nsDialogs documentation.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Lupo73</span><br><span class="post-time small text-muted">22nd March 2009 10:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">But how can I set to don't leave the custom page if a variable has particular values?</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Animaether</span><br><span class="post-time small text-muted">22nd March 2009 14:10 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">If you're using nsDialogs, then it won't leave the page anyway (that was a behavior of InstallOptions(2/Ex)). If you want to enable/disable the 'Next' button, you can do so in code as well.<br><br>The following code simply checks folder name validity - should be simple enough to adjust to check whether the specified file has 'pack' in it;<br></p><pre>
+<code><br>!include "winmessages.nsh"<br>!include "LogicLib.nsh"<br>!include "nsDialogs.nsh"<br><br>Outfile "test.exe"<br><br>var dialog<br>var hwnd<br>var null<br><br>!macro RedrawControl control<br>        Push $0<br>        StrCpy $0 ${control}<br>        System::Call "user32::InvalidateRect(i,i,i)i (r0, 0, 1)"<br>        Pop $0<br>!macroend<br>!define RedrawControl `!insertmacro RedrawControl`<br><br>var InstallDir ; Use a variable separate from $INSTDIR to by-pass automatic adjustments<br><br>Function .onInit<br>        StrCpy $InstallDir "$PROGRAMFILES\SomeFolder"<br>FunctionEnd<br><br><br>Page custom page.settings<br>Page InstFiles<br><br>var NSD_InstallDir<br>var NSD_InstallDirStatus<br>Function page.settings<br>        nsDialogs::Create 1018<br>        Pop $dialog<br><br>        ${NSD_CreateText} 3% 3% 89% 8% "$InstallDir"<br>                Pop $NSD_InstallDir<br>                ${NSD_OnChange} $NSD_InstallDir page.settings.installdir.onchange<br><br>        ${NSD_CreateButton} 92% 3% 5% 8% "..."<br>                Pop $hwnd<br>                ${NSD_OnClick} $hwnd page.settings.installdir.onclick<br>                <br>        ${NSD_CreateLabel} 3% 12% 100% 8% "status: "<br>            Pop $NSD_InstallDirStatus<br><br>        ; Initialization<br>        Push $NSD_InstallDir<br>        Call page.settings.installdir.onchange<br><br>        nsDialogs::Show<br>        Abort<br>FunctionEnd<br><br>Function page.settings.installdir.onchange<br>        Pop $hwnd<br>        ${NSD_GetText} $hwnd $InstallDir<br><br>        ; Kill trailing backslash<br>        StrCpy $0 $InstallDir 1 -1<br>        ${If} $0 == "\"<br>            StrLen $0 $InstallDir<br>            IntOp $0 $0 - 1<br>            StrCpy $InstallDir $InstallDir $0<br>        ${EndIf}<br><br>        StrCpy $0 $InstallDir<br><br>        ; Kill invalid characters<br>        Push $InstallDir<br>            Exch $EXEDIR<br>            Exch $EXEDIR<br>        Pop $InstallDir<br><br>        GetDlgItem $1 $HWNDPARENT 1 ; Next button<br><br>    ${If} $InstallDir == ""<br>                ${NSD_SetText} $NSD_InstallDirStatus "status: No destination folder specified"<br>                EnableWindow $1 0<br>    ${ElseIf} $InstallDir != $0<br>                ${NSD_SetText} $NSD_InstallDirStatus "status: Destination folder contains disallowed characters"<br>                EnableWindow $1 0<br>        ${ElseIf} ${FileExists} "$InstallDir\*.*"<br>                ${NSD_SetText} $NSD_InstallDirStatus "status: OK - Destination folder exists"<br>                EnableWindow $1 1<br>        ${Else}<br>                ${NSD_SetText} $NSD_InstallDirStatus "status: OK - Destination folder will be created"<br>                EnableWindow $1 1<br>        ${EndIf}<br>FunctionEnd<br><br>Function page.settings.installdir.onclick<br>        nsDialogs::SelectFolderDialog "Please select the destination folder"<br>        Pop $0<br>        ${If} $0 != "error"<br>            ${NSD_SetText} $NSD_InstallDir $0 ; This will automatically trigger page.settings.installdir.onchange<br>        ${EndIf}<br>FunctionEnd<br><br>Section ""<br>SectionEnd<br></code>
 </pre>
     </div>
-    <hr />
+    <hr>
 
     <div class="footer">
       <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
@@ -77,7 +11,4 @@
 </script><script type="text/javascript">
 //<![CDATA[
   hljs.initHighlightingOnLoad();
-  //]]>
-  </script>
-</body>
-</html>
+  //]]></script></body></html>

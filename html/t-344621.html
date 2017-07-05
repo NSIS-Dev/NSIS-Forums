@@ -1,300 +1,71 @@
-<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Does &quot;ExecWait&quot; inherit admin ExecutionLevel on Win7? (DX redist installer failing)" />
-
-  <title>Does "ExecWait" inherit admin ExecutionLevel on Win7? (DX redist installer failing) - NSIS Forums</title>
-  <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script>
-  <!-- Bootstrap core CSS -->
-
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!--[if lt IE 9]>
-                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-</head>
-
-<body>
-  <div class="container">
-    <!-- Put navigation bar here -->
-
-    <ol class="breadcrumb">
-      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
-
-      <li><a href="f-65.html">NSIS Discussion</a></li>
-
-      <li class="active">Does "ExecWait" inherit admin ExecutionLevel on Win7? (DX redist installer failing)</li>
-    </ol>
-
-    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=344621">Does "ExecWait" inherit admin ExecutionLevel on Win7? (DX redist installer failing)</a></p><br />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">chief-pinhead</span><br />
-      <span class="post-time small text-muted">3rd May 2012 22:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>Does "ExecWait" inherit admin ExecutionLevel on Win7? (DX redist installer failing)</strong><br />
-      Our product uses DirectX11, so as part of our NSIS installer, we want to install the DirectX runtime components on the target machine. Our NSIS installer uses "RequestExecutionLevel admin". We copy all of the DirectX redist files (.cab, .dll, .exe) into a temporary directory on the target machine, and then call<br />
-      ExecWait '"${DIRECTX_TEMP_PATH}\DXSetup.exe"'<br />
-      <br />
-      This approach has worked without problem for years, on Win7, Vista, and XP. But we recently upgraded to the June 2010 version of the DirectX redist files, and now the DX installer is failing with an internal error on some Win7 x64 boxes. The DX error log shows a few weird failures that could be explained by insufficient permission levels.<br />
-      Also, on one of the "broken" systems we had the user launch the same DX redist installer manually by double-clicking DXSetup.exe directly, and it succeeded.<br />
-      So there seems to be a difference between launching the DX installer directly vs. launching it from within an NSIS installer.<br />
-      <br />
-      So that's my question - when I launch a process using ExecWait, does that process inherit the administrator privileges of the NSIS process?<br />
-      If not, how can I give the DirectX installer process admin access?<br />
-      If yes, then can anyone suggest an explanation for why this 3rd-party installer might fail when launched out of NSIS, but succeed when launched manually? Is there anything that I might do differently to avoid these failures?<br />
-      <br />
-      Thanks in advance!</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
-      <span class="post-time small text-muted">4th May 2012 06:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Yes, child processes inherit the access level of the parent. Keep in mind though that requestexecutionlevel is not guaranteed to get admin access. You must verify that you actually got it using the userinfo plugin. Proper way to do it: <a href="http://pastebin.com/EvMkyLLt" target="_blank">http://pastebin.com/EvMkyLLt</a><br />
-      <br />
-      But assuming that the installer actually has admin access, I doubt it would be permissions related. What is shown in the logs?</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">chief-pinhead</span><br />
-      <span class="post-time small text-muted">4th May 2012 21:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Thanks for your reply MSG.<br />
-      I added the code you suggested and confirmed that the NSIS installer does have admin privs on the "broken" machine.<br />
-      <br />
-      I have two datapoints that exhibited this type of failure. On the first machine, after the NSIS-based DX install failed, we ran the same DX installer manually by double-clicking it directly. That succeeded. Unfortunately once it succeeds it will never fail again, as the DX redist cannot be uninstalled... So that test case is now gone.<br />
-      Now I have one machine left that still fails. I am afraid to try installing DX manually, because if that succeeds, then that test case will be gone as well.<br />
-      <br />
-      The DXError.log file on the second system contains just these two entries:<br />
-      <br />
-      --------------------<br />
-      [04/24/12 11:33:22] module: dsetup32(Apr 4 2007), file: dsinline.h, line: 302, function: DXRemoveFile<br />
-      <br />
-      Unable to remove C:\Users\I7\AppData\Local\Temp\DXAA35.tmp.<br />
-      <br />
-      --------------------<br />
-      [04/24/12 11:33:22] module: dsetup32(Apr 4 2007), file: inline.h, line: 220, function: CleanUpDirectory<br />
-      <br />
-      Unable to remove: C:\Users\I7\AppData\Local\Temp\DXAA35.tmp\infinst.exe which is locked, reason = 32.<br />
-      <br />
-      <br />
-      "unable to remove" smells like a permissions issue. but note that hte installer failed severl more times without producing any other error messages, so these errors might be a red herring.<br />
-      <br />
-      We've run the NSIS installer four or five times on the broken machine, and each time it invoked the DX installer, and each time the DX installer failed.<br />
-      The first three times we got the "An internal error has occurred. please see the log files" dialog. Each time the DX installer did some work before failing, because more and more of the dll's that it is supposed to install were appearing on the user's system. But the DX logs were not updated properly at all. I can see a dozen or so dll's that were clearly added, but which do not show up in the system's DirectX.log.<br />
-      When we repeated the test yesterday, the DX installer simply hung. No progress for 15 minutes before we killed it.<br />
-      <br />
-      I'm at my wits end. Any suggestions or ideas that anyone has, please send 'em along, I'm open to trying them.<br />
-      <br />
-      One other idea: Is it possible that the CWD could have been messed up when we call ExeWait? When I launch an exe by calling ExeWait form an NSIS script, what CWD does that exe receive?</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
-      <span class="post-time small text-muted">4th May 2012 22:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Is "C:\Users\I7\AppData\Local\Temp" the correct %temp% for that user?<br />
-      <br />
-      Make sure you delete *.tmp in %temp% before testing again...</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
-      <span class="post-time small text-muted">4th May 2012 22:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">The CWD is set with SetOutPath (typically before the FILE commands). ExecWait will not change it.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">chief-pinhead</span><br />
-      <span class="post-time small text-muted">5th May 2012 01:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Anders: yes, the user's login is "I7", so "C:\Users\I7\AppData\Local\Temp" is the correct temp folder. In fact, that account is the system administrator account.<br />
-      But I just found some additional error messages from a more recent failed installation attempt. It turns out the most recent DirectX redistributable stores its log files under C:\Windows\logs, which is a new location. We did not see those files at first. So the most recent DXError.log file contains two sets of error messages like these:<br />
-      <br />
-      --------------------<br />
-      [04/25/12 10:47:48] module: dxupdate(Mar 30 2011), file: dxupdate.cpp, line: 5738, function: DirectXUpdateInstallPlugIn<br />
-      <br />
-      Failed API: SetupIterateCabinet()<br />
-      Error: (1224) - The requested operation cannot be performed on a file with a user-mapped section open.<br />
-      <br />
-      Unable to iterate through C:\Users\I7\AppData\Local\Temp\DIRECT~1\Nov2007_d3dx10_36_x64.cab. The file may be damaged.<br />
-      <br />
-      --------------------<br />
-      [04/25/12 10:47:48] module: dsetup32(Mar 30 2011), file: dxupdate.cpp, line: 280, function: CSetup::InstallPlugIn<br />
-      <br />
-      DirectXUpdateInstallPlugIn() failed.<br />
-      <br />
-      --------------------<br />
-      [04/25/12 10:47:48] module: dsetup32(Mar 30 2011), file: setup.cpp, line: 1727, function: CSetup::SetupForDirectX<br />
-      <br />
-      InstallPlugIn() failed.<br />
-      <br />
-      <br />
-      I looked up that error 1224, and it seems to be saying that another process had a file handle open on the cab file that the installer was trying to extract. (I know for sure that the cab file itself was not corrupt - I did a binary comparison of the cab files in the temp folder with our installer source directory, and all files were copied cleanly.) I wonder who could be holding the open file handle(s).<br />
-      My NSIS script executes these commands:<br />
-      <br />
-      SetOutPath "${DIRECTX_INSTALL_PATH}"<br />
-      File '${LocalResDir}\DirectX\*'<br />
-      ExecWait '"${DIRECTX_INSTALL_PATH}\DXSetup.exe"' $3<br />
-      <br />
-      Is there any chance that the "File" command is still hanging on to any file handles after the ExecWait begins execution? Could/should I do something to confirm that the files are actually ready for consumption?<br />
-      <br />
-      I still think it must be somehow related to NSIS, because the other system that exhibited this failure had the same DX error messages, but on that system re-running the DX installer manually outside of NSIS succeeded. So in NSIS it failed, outside of NSIS it worked.<br />
-      <br />
-      If anyone sees anything wrong with our approach, or has any suggestions for better practices, I am all ears.<br />
-      Right now I have an installer that failed on 1/3 of all machines tested. And our only recourse is to detect the DX failure, tuck our tails, and ask the user to please double-click the DX installer manually. I don't like that option one bit.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
-      <span class="post-time small text-muted">5th May 2012 06:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Could it be an antivirus program keeping it open while it is scanned? You might try a sleep before the ExecWait, or if you can detect the failure, immediately retry the ExecWait.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">redxii</span><br />
-      <span class="post-time small text-muted">5th May 2012 08:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Which files does your program actually need from the DirectX runtime? You can simply use the File command to put the ones you need along where your program's main executable is. It'll install faster and reduce your install source size.<br />
-      <br />
-      Only the .dll is needed with your program, not the .inf or .cat files.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
-      <span class="post-time small text-muted">5th May 2012 09:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">But that probably wouldn't be legal.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
-      <span class="post-time small text-muted">5th May 2012 13:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"></p>
-
-      <blockquote>
-        <small>Originally posted by chief-pinhead</small><br />
-        Is there any chance that the "File" command is still hanging on to any file handles after the ExecWait begins execution?
-      </blockquote>Are you extracting this .cab? I assumed you only extracted the .exe. What is ${DIRECTX_INSTALL_PATH}?<br />
-      <br />
-      Could you run Process Monitor to find out why some operation fails? (Maybe disk full or out of memory)
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">MSG</span><br />
-      <span class="post-time small text-muted">5th May 2012 13:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"></p>
-
-      <blockquote>
-        <small>Originally posted by Anders</small><br />
-        Are you extracting this .cab? I assumed you only extracted the .exe.
-      </blockquote>The whole redist directory is extracted, I think:<br />
-
-      <blockquote>
-        File '${LocalResDir}\DirectX\*'
-      </blockquote>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">chief-pinhead</span><br />
-      <span class="post-time small text-muted">7th May 2012 15:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Hi folks. Thanks for the ideas.<br />
-      <br />
-      Anders: I am extracting every file that comes in the June 2010 DirectX redist package - one exe, two dlls, and 155 .cab files. Please look back at my NSIS script snippet for details. After all files are copied onto the target machine, I invoke the just-copied "DXSetup.exe" using ExecWait. That exe does a bunch of logic to decide what cab files need extracting, and then tries to extract them. Somewhere along the way it fails, apparently because some other process is holding an exclusive handle to the cab files, or to some other file-read-related shared resource.<br />
-      <br />
-      As for the folder to which the DX files are extracted - I used to just "hard-code" the path:<br /></p>
-      <pre>
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Does &quot;ExecWait&quot; inherit admin ExecutionLevel on Win7? (DX redist installer failing)"><title>Does "ExecWait" inherit admin ExecutionLevel on Win7? (DX redist installer failing) - NSIS Forums</title><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css"><link rel="stylesheet" href="../css/style.css" type="text/css"><!--[if lt IE 9]><script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script><script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script><![endif]--></head><body><div class="container"><ol class="breadcrumb"><li><a href="../index.html" class="glyphicon glyphicon-home"></a></li><li><a href="f-65.html">NSIS Discussion</a></li><li class="active">Does "ExecWait" inherit admin ExecutionLevel on Win7? (DX redist installer failing)</li></ol><p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=344621">Does "ExecWait" inherit admin ExecutionLevel on Win7? (DX redist installer failing)</a></p><br><div class="post"><p class="post-meta"><span class="post-author text-primary">chief-pinhead</span><br><span class="post-time small text-muted">3rd May 2012 22:41 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>Does "ExecWait" inherit admin ExecutionLevel on Win7? (DX redist installer failing)</strong><br>Our product uses DirectX11, so as part of our NSIS installer, we want to install the DirectX runtime components on the target machine. Our NSIS installer uses "RequestExecutionLevel admin". We copy all of the DirectX redist files (.cab, .dll, .exe) into a temporary directory on the target machine, and then call<br>ExecWait '"${DIRECTX_TEMP_PATH}\DXSetup.exe"'<br><br>This approach has worked without problem for years, on Win7, Vista, and XP. But we recently upgraded to the June 2010 version of the DirectX redist files, and now the DX installer is failing with an internal error on some Win7 x64 boxes. The DX error log shows a few weird failures that could be explained by insufficient permission levels.<br>Also, on one of the "broken" systems we had the user launch the same DX redist installer manually by double-clicking DXSetup.exe directly, and it succeeded.<br>So there seems to be a difference between launching the DX installer directly vs. launching it from within an NSIS installer.<br><br>So that's my question - when I launch a process using ExecWait, does that process inherit the administrator privileges of the NSIS process?<br>If not, how can I give the DirectX installer process admin access?<br>If yes, then can anyone suggest an explanation for why this 3rd-party installer might fail when launched out of NSIS, but succeed when launched manually? Is there anything that I might do differently to avoid these failures?<br><br>Thanks in advance!</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">MSG</span><br><span class="post-time small text-muted">4th May 2012 06:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Yes, child processes inherit the access level of the parent. Keep in mind though that requestexecutionlevel is not guaranteed to get admin access. You must verify that you actually got it using the userinfo plugin. Proper way to do it: <a href="http://pastebin.com/EvMkyLLt" target="_blank">http://pastebin.com/EvMkyLLt</a><br><br>But assuming that the installer actually has admin access, I doubt it would be permissions related. What is shown in the logs?</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">chief-pinhead</span><br><span class="post-time small text-muted">4th May 2012 21:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Thanks for your reply MSG.<br>I added the code you suggested and confirmed that the NSIS installer does have admin privs on the "broken" machine.<br><br>I have two datapoints that exhibited this type of failure. On the first machine, after the NSIS-based DX install failed, we ran the same DX installer manually by double-clicking it directly. That succeeded. Unfortunately once it succeeds it will never fail again, as the DX redist cannot be uninstalled... So that test case is now gone.<br>Now I have one machine left that still fails. I am afraid to try installing DX manually, because if that succeeds, then that test case will be gone as well.<br><br>The DXError.log file on the second system contains just these two entries:<br><br>--------------------<br>[04/24/12 11:33:22] module: dsetup32(Apr 4 2007), file: dsinline.h, line: 302, function: DXRemoveFile<br><br>Unable to remove C:\Users\I7\AppData\Local\Temp\DXAA35.tmp.<br><br>--------------------<br>[04/24/12 11:33:22] module: dsetup32(Apr 4 2007), file: inline.h, line: 220, function: CleanUpDirectory<br><br>Unable to remove: C:\Users\I7\AppData\Local\Temp\DXAA35.tmp\infinst.exe which is locked, reason = 32.<br><br><br>"unable to remove" smells like a permissions issue. but note that hte installer failed severl more times without producing any other error messages, so these errors might be a red herring.<br><br>We've run the NSIS installer four or five times on the broken machine, and each time it invoked the DX installer, and each time the DX installer failed.<br>The first three times we got the "An internal error has occurred. please see the log files" dialog. Each time the DX installer did some work before failing, because more and more of the dll's that it is supposed to install were appearing on the user's system. But the DX logs were not updated properly at all. I can see a dozen or so dll's that were clearly added, but which do not show up in the system's DirectX.log.<br>When we repeated the test yesterday, the DX installer simply hung. No progress for 15 minutes before we killed it.<br><br>I'm at my wits end. Any suggestions or ideas that anyone has, please send 'em along, I'm open to trying them.<br><br>One other idea: Is it possible that the CWD could have been messed up when we call ExeWait? When I launch an exe by calling ExeWait form an NSIS script, what CWD does that exe receive?</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Anders</span><br><span class="post-time small text-muted">4th May 2012 22:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Is "C:\Users\I7\AppData\Local\Temp" the correct %temp% for that user?<br><br>Make sure you delete *.tmp in %temp% before testing again...</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">demiller9</span><br><span class="post-time small text-muted">4th May 2012 22:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">The CWD is set with SetOutPath (typically before the FILE commands). ExecWait will not change it.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">chief-pinhead</span><br><span class="post-time small text-muted">5th May 2012 01:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Anders: yes, the user's login is "I7", so "C:\Users\I7\AppData\Local\Temp" is the correct temp folder. In fact, that account is the system administrator account.<br>But I just found some additional error messages from a more recent failed installation attempt. It turns out the most recent DirectX redistributable stores its log files under C:\Windows\logs, which is a new location. We did not see those files at first. So the most recent DXError.log file contains two sets of error messages like these:<br><br>--------------------<br>[04/25/12 10:47:48] module: dxupdate(Mar 30 2011), file: dxupdate.cpp, line: 5738, function: DirectXUpdateInstallPlugIn<br><br>Failed API: SetupIterateCabinet()<br>Error: (1224) - The requested operation cannot be performed on a file with a user-mapped section open.<br><br>Unable to iterate through C:\Users\I7\AppData\Local\Temp\DIRECT~1\Nov2007_d3dx10_36_x64.cab. The file may be damaged.<br><br>--------------------<br>[04/25/12 10:47:48] module: dsetup32(Mar 30 2011), file: dxupdate.cpp, line: 280, function: CSetup::InstallPlugIn<br><br>DirectXUpdateInstallPlugIn() failed.<br><br>--------------------<br>[04/25/12 10:47:48] module: dsetup32(Mar 30 2011), file: setup.cpp, line: 1727, function: CSetup::SetupForDirectX<br><br>InstallPlugIn() failed.<br><br><br>I looked up that error 1224, and it seems to be saying that another process had a file handle open on the cab file that the installer was trying to extract. (I know for sure that the cab file itself was not corrupt - I did a binary comparison of the cab files in the temp folder with our installer source directory, and all files were copied cleanly.) I wonder who could be holding the open file handle(s).<br>My NSIS script executes these commands:<br><br>SetOutPath "${DIRECTX_INSTALL_PATH}"<br>File '${LocalResDir}\DirectX\*'<br>ExecWait '"${DIRECTX_INSTALL_PATH}\DXSetup.exe"' $3<br><br>Is there any chance that the "File" command is still hanging on to any file handles after the ExecWait begins execution? Could/should I do something to confirm that the files are actually ready for consumption?<br><br>I still think it must be somehow related to NSIS, because the other system that exhibited this failure had the same DX error messages, but on that system re-running the DX installer manually outside of NSIS succeeded. So in NSIS it failed, outside of NSIS it worked.<br><br>If anyone sees anything wrong with our approach, or has any suggestions for better practices, I am all ears.<br>Right now I have an installer that failed on 1/3 of all machines tested. And our only recourse is to detect the DX failure, tuck our tails, and ask the user to please double-click the DX installer manually. I don't like that option one bit.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">demiller9</span><br><span class="post-time small text-muted">5th May 2012 06:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Could it be an antivirus program keeping it open while it is scanned? You might try a sleep before the ExecWait, or if you can detect the failure, immediately retry the ExecWait.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">redxii</span><br><span class="post-time small text-muted">5th May 2012 08:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Which files does your program actually need from the DirectX runtime? You can simply use the File command to put the ones you need along where your program's main executable is. It'll install faster and reduce your install source size.<br><br>Only the .dll is needed with your program, not the .inf or .cat files.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">MSG</span><br><span class="post-time small text-muted">5th May 2012 09:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">But that probably wouldn't be legal.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Anders</span><br><span class="post-time small text-muted">5th May 2012 13:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"></p><blockquote><small>Originally posted by chief-pinhead</small><br>Is there any chance that the "File" command is still hanging on to any file handles after the ExecWait begins execution?</blockquote>Are you extracting this .cab? I assumed you only extracted the .exe. What is ${DIRECTX_INSTALL_PATH}?<br><br>Could you run Process Monitor to find out why some operation fails? (Maybe disk full or out of memory)</div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">MSG</span><br><span class="post-time small text-muted">5th May 2012 13:42 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"></p><blockquote><small>Originally posted by Anders</small><br>Are you extracting this .cab? I assumed you only extracted the .exe.</blockquote>The whole redist directory is extracted, I think:<br><blockquote>File '${LocalResDir}\DirectX\*'</blockquote></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">chief-pinhead</span><br><span class="post-time small text-muted">7th May 2012 15:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Hi folks. Thanks for the ideas.<br><br>Anders: I am extracting every file that comes in the June 2010 DirectX redist package - one exe, two dlls, and 155 .cab files. Please look back at my NSIS script snippet for details. After all files are copied onto the target machine, I invoke the just-copied "DXSetup.exe" using ExecWait. That exe does a bunch of logic to decide what cab files need extracting, and then tries to extract them. Somewhere along the way it fails, apparently because some other process is holding an exclusive handle to the cab files, or to some other file-read-related shared resource.<br><br>As for the folder to which the DX files are extracted - I used to just "hard-code" the path:<br></p><pre>
 <code>  SetOutPath "$TEMP\DirectXSDK_install"</code>
-</pre><br />
-      <br />
-      But once these problems started happening, I was worried that the files being extracted were perhaps corrupt somehow, so I started using a non-temporary path whose contents I could later inspect. So I now define<br />
-      <br />
-      <pre>
-<code>   !define DIRECTX_INSTALL_PATH "$INSTDIR\Install Media\DirectX Redist"<br /></code>
-</pre><br />
-      <br />
-      And I have verified that all 158 files are extracted correctly.<br />
-      <br />
-      redxii - Microsoft is pretty clear in their documentation that you should run the redist installer hands-off, rather than trying to handle any of the logic or dll's manually. I don't believe manually adding the directX dlls is an option, even if it would allow our exe's to run.<br />
-      <br />
-      It feels to me like AV is the most likely culprit.<br />
-      I will run a test with a long sleep before the execWait.<br />
-      And if we do get the failure, we'll use sysInternals to see who's holding the file handle. But I suspect that would come up empty - I bet the file handles are only held temporarily. Otherwise it would fail on the first cab file every time...<br />
-      <br />
-      demiller9's idea is sort of pragmatic - just re-run if the ExecWait call returns failure. Unfortunately, the DX installer pops up a very nasty looking failure dialog of its own before returning, so I really can't wait that long. We need to prevent this problem, not react to it.<br />
-      <br />
+</pre><br><br>But once these problems started happening, I was worried that the files being extracted were perhaps corrupt somehow, so I started using a non-temporary path whose contents I could later inspect. So I now define<br><br><pre>
+<code>   !define DIRECTX_INSTALL_PATH "$INSTDIR\Install Media\DirectX Redist"<br></code>
+</pre><br>
+      <br>
+      And I have verified that all 158 files are extracted correctly.<br>
+      <br>
+      redxii - Microsoft is pretty clear in their documentation that you should run the redist installer hands-off, rather than trying to handle any of the logic or dll's manually. I don't believe manually adding the directX dlls is an option, even if it would allow our exe's to run.<br>
+      <br>
+      It feels to me like AV is the most likely culprit.<br>
+      I will run a test with a long sleep before the execWait.<br>
+      And if we do get the failure, we'll use sysInternals to see who's holding the file handle. But I suspect that would come up empty - I bet the file handles are only held temporarily. Otherwise it would fail on the first cab file every time...<br>
+      <br>
+      demiller9's idea is sort of pragmatic - just re-run if the ExecWait call returns failure. Unfortunately, the DX installer pops up a very nasty looking failure dialog of its own before returning, so I really can't wait that long. We need to prevent this problem, not react to it.<br>
+      <br>
       Thanks for everyone's ideas. Keep them coming!
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">chief-pinhead</span><br />
+      <p class="post-meta"><span class="post-author text-primary">chief-pinhead</span><br>
       <span class="post-time small text-muted">9th May 2012 20:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">I just encountered the error again, this time on my own system.<br />
-      DXSetup.exe showed me the same "an internal system error has occurred" dialog, and then finished with a "Installation failed" dialog. Once I dismissed that, I was surprised to find that the return code reported by NSIS was "0" (success).<br />
-      <br />
-      In other words, the NSIS command<br />
-      ExecWait '"${DIRECTX_INSTALL_PATH}\DXSetup.exe"' $3<br />
-      returned with $3 == 0, where I had expected it to return -9 (the return code for "internal error"). Also, the NSIS error flag is clear.<br />
-      <br />
-      I was hoping I could at least detect a failure by inspecting the return value, so that I might pop up a "Please try installing DirectX manually" dialog.<br />
-      <br />
+      <p class="post-content">I just encountered the error again, this time on my own system.<br>
+      DXSetup.exe showed me the same "an internal system error has occurred" dialog, and then finished with a "Installation failed" dialog. Once I dismissed that, I was surprised to find that the return code reported by NSIS was "0" (success).<br>
+      <br>
+      In other words, the NSIS command<br>
+      ExecWait '"${DIRECTX_INSTALL_PATH}\DXSetup.exe"' $3<br>
+      returned with $3 == 0, where I had expected it to return -9 (the return code for "internal error"). Also, the NSIS error flag is clear.<br>
+      <br>
+      I was hoping I could at least detect a failure by inspecting the return value, so that I might pop up a "Please try installing DirectX manually" dialog.<br>
+      <br>
       Am I doing something wrong here? Is there another way to get the return value from invoking an exe?</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br>
       <span class="post-time small text-muted">9th May 2012 20:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">ExecWait should always report the correct process exit code, maybe a bug in the DX installer (Process Monitor also displays process exit codes (Might have to doubleclick the process-end event))</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">chief-pinhead</span><br />
+      <p class="post-meta"><span class="post-author text-primary">chief-pinhead</span><br>
       <span class="post-time small text-muted">9th May 2012 23:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Thanks Anders. I used procmon and was able to "capture" a DX failure. Sure enough, DXSetup.exe returns exit status 0, right after showing me the "Installation failed" dialog. I guess I should not be surprised that Microsoft screwed that one up.<br />
-      <br />
-      Sadly, I can't find a smoking gun in the procmon events, so we still don't know what is making the DX installer fail.<br />
-      <br />
+      <p class="post-content">Thanks Anders. I used procmon and was able to "capture" a DX failure. Sure enough, DXSetup.exe returns exit status 0, right after showing me the "Installation failed" dialog. I guess I should not be surprised that Microsoft screwed that one up.<br>
+      <br>
+      Sadly, I can't find a smoking gun in the procmon events, so we still don't know what is making the DX installer fail.<br>
+      <br>
       FYI: we have opened a paid service ticket with Microsoft to track this issue down. If I hear anything useful from them, I will cross-post the results here. Thanks for all the suggestions.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">redxii</span><br />
+      <p class="post-meta"><span class="post-author text-primary">redxii</span><br>
       <span class="post-time small text-muted">10th May 2012 05:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">I just tried this and it worked.<br />
-      <br /></p>
+      <p class="post-content">I just tried this and it worked.<br>
+      <br></p>
       <pre>
-<code>Section -DirectX<br /><br />  SetOutPath "$PLUGINSDIR\dxruntime"<br />  File "directx\*"<br /><br />  ExecWait '"$PLUGINSDIR\dxruntime\DXSETUP.exe" /silent'<br /><br />SectionEnd</code>
+<code>Section -DirectX<br><br>  SetOutPath "$PLUGINSDIR\dxruntime"<br>  File "directx\*"<br><br>  ExecWait '"$PLUGINSDIR\dxruntime\DXSETUP.exe" /silent'<br><br>SectionEnd</code>
 </pre>
     </div>
-    <hr />
+    <hr>
 
     <div class="footer">
       <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
@@ -303,7 +74,4 @@
 </script><script type="text/javascript">
 //<![CDATA[
   hljs.initHighlightingOnLoad();
-  //]]>
-  </script>
-</body>
-</html>
+  //]]></script></body></html>

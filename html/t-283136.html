@@ -1,108 +1,20 @@
-<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="List of SQL Servers from a Text File to a ListBox" />
-
-  <title>List of SQL Servers from a Text File to a ListBox - NSIS Forums</title>
-  <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script>
-  <!-- Bootstrap core CSS -->
-
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!--[if lt IE 9]>
-                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-</head>
-
-<body>
-  <div class="container">
-    <!-- Put navigation bar here -->
-
-    <ol class="breadcrumb">
-      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
-
-      <li><a href="f-65.html">NSIS Discussion</a></li>
-
-      <li class="active">List of SQL Servers from a Text File to a ListBox</li>
-    </ol>
-
-    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=283136">List of SQL Servers from a Text File to a ListBox</a></p><br />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Swapan Das</span><br />
-      <span class="post-time small text-muted">13th December 2007 13:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>List of SQL Servers from a Text File to a ListBox</strong><br />
-      Dear Friends,<br />
-      <br />
-      I want the users to show a drop-down list filled with list of sql servers.<br />
-      I'm able to extract the list of servers and write it into a text file by executing the OSQL command from NSIS. Now how to proceed further to make them available in a drop-down list box.<br />
-      <br />
-      My text file "ServerList.txt" is like this:<br />
-      <br />
-      Servers:<br />
-      (local)<br />
-      JACK<br />
-      ALICE<br />
-      ALEX\SQLEXPRESS<br />
-      JULIE<br />
-      TOM\SQLEXPRESS<br />
-      MAINSERVER (local)<br />
-      JACK<br />
-      ALICE<br />
-      HARRY<br />
-      SERVER<br />
-      SERVER1<br />
-      SUPPORT1<br />
-      SUPPORT2<br />
-      SWAPAN<br />
-      SWAPAN\SKDSSE<br />
-      SWAPAN\SQLEXPRESS<br />
-      <br />
-      plz. note there is white space above the line "Servers:". Attached the text file.<br />
-      <br />
-      I want to know how to read from the actual data i.e.<br />
-      (local)<br />
-      and not start from the 1st line:<br />
-      Servers:<br />
-      And then how to trim a line and read it, then moving to next line and perform the same job, until the end of data.<br />
-      <br />
-      Then want to make them join to a single variable with a pipe (|)separtor between each server names something like:<br />
-      <br />
-      StrCpy $SQLList $SQLList|$R0<br />
-      <br />
-      <br />
-      If some For Next is to be done to pad the data to the variable SQLList, then please show me with the above scenario.<br />
-      <br />
-      Regards,</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
-      <span class="post-time small text-muted">13th December 2007 16:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"></p>
-      <pre>
-<code>!define CUST_INI "$PLUGINSDIR\custom.ini"<br /><br />!include "TextFunc.nsh"<br />!insertmacro TrimNewLines<br /><br />outfile 'test.exe'<br /><br />page custom CreateCustom<br />page instfiles<br /><br />section <br /><br />sectionend<br /><br />Function .onInit<br />InitPluginsDir<br />Call ReadServers<br />WriteINIStr "${CUST_INI}" "Settings" "NumFields" "1"<br />WriteINIStr "${CUST_INI}" "field 1" "type" "droplist"<br />WriteINIStr "${CUST_INI}" "field 1" "left" "10"<br />WriteINIStr "${CUST_INI}" "field 1" "right" "-10"<br />WriteINIStr "${CUST_INI}" "field 1" "top" "10"<br />WriteINIStr "${CUST_INI}" "field 1" "bottom" "-10"<br />WriteINIStr "${CUST_INI}" "field 1" "state" "$R2"<br />WriteINIStr "${CUST_INI}" "field 1" "Listitems" "$R2|$R3"<br />FunctionEnd<br /><br />Function ReadServers<br />StrCpy $R2 ""<br />StrCpy $R3 ""<br />FileOpen $R0 "listofservers.txt" r<br />start:<br />FileRead $R0 "$R1"<br />${TrimNewLines} "$R1" "$R1"<br />StrCmp "$R1" "" start<br />StrCpy "$R2" "$R1"<br />loop:<br />FileRead $R0 "$R1"<br />IfErrors done<br />${TrimNewLines} "$R1" "$R1"<br />StrCpy "$R3" "$R3|$R1"<br />goto loop<br />done:<br />FileClose $R0<br />FunctionEnd<br /><br />Function CreateCustom<br />push $0<br />InstallOptions::dialog "${CUST_INI}"<br />pop $0<br />pop $0<br />FunctionEnd<br /></code>
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="List of SQL Servers from a Text File to a ListBox"><title>List of SQL Servers from a Text File to a ListBox - NSIS Forums</title><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css"><link rel="stylesheet" href="../css/style.css" type="text/css"><!--[if lt IE 9]><script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script><script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script><![endif]--></head><body><div class="container"><ol class="breadcrumb"><li><a href="../index.html" class="glyphicon glyphicon-home"></a></li><li><a href="f-65.html">NSIS Discussion</a></li><li class="active">List of SQL Servers from a Text File to a ListBox</li></ol><p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=283136">List of SQL Servers from a Text File to a ListBox</a></p><br><div class="post"><p class="post-meta"><span class="post-author text-primary">Swapan Das</span><br><span class="post-time small text-muted">13th December 2007 13:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>List of SQL Servers from a Text File to a ListBox</strong><br>Dear Friends,<br><br>I want the users to show a drop-down list filled with list of sql servers.<br>I'm able to extract the list of servers and write it into a text file by executing the OSQL command from NSIS. Now how to proceed further to make them available in a drop-down list box.<br><br>My text file "ServerList.txt" is like this:<br><br>Servers:<br>(local)<br>JACK<br>ALICE<br>ALEX\SQLEXPRESS<br>JULIE<br>TOM\SQLEXPRESS<br>MAINSERVER (local)<br>JACK<br>ALICE<br>HARRY<br>SERVER<br>SERVER1<br>SUPPORT1<br>SUPPORT2<br>SWAPAN<br>SWAPAN\SKDSSE<br>SWAPAN\SQLEXPRESS<br><br>plz. note there is white space above the line "Servers:". Attached the text file.<br><br>I want to know how to read from the actual data i.e.<br>(local)<br>and not start from the 1st line:<br>Servers:<br>And then how to trim a line and read it, then moving to next line and perform the same job, until the end of data.<br><br>Then want to make them join to a single variable with a pipe (|)separtor between each server names something like:<br><br>StrCpy $SQLList $SQLList|$R0<br><br><br>If some For Next is to be done to pad the data to the variable SQLList, then please show me with the above scenario.<br><br>Regards,</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Red Wine</span><br><span class="post-time small text-muted">13th December 2007 16:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"></p><pre>
+<code>!define CUST_INI "$PLUGINSDIR\custom.ini"<br><br>!include "TextFunc.nsh"<br>!insertmacro TrimNewLines<br><br>outfile 'test.exe'<br><br>page custom CreateCustom<br>page instfiles<br><br>section <br><br>sectionend<br><br>Function .onInit<br>InitPluginsDir<br>Call ReadServers<br>WriteINIStr "${CUST_INI}" "Settings" "NumFields" "1"<br>WriteINIStr "${CUST_INI}" "field 1" "type" "droplist"<br>WriteINIStr "${CUST_INI}" "field 1" "left" "10"<br>WriteINIStr "${CUST_INI}" "field 1" "right" "-10"<br>WriteINIStr "${CUST_INI}" "field 1" "top" "10"<br>WriteINIStr "${CUST_INI}" "field 1" "bottom" "-10"<br>WriteINIStr "${CUST_INI}" "field 1" "state" "$R2"<br>WriteINIStr "${CUST_INI}" "field 1" "Listitems" "$R2|$R3"<br>FunctionEnd<br><br>Function ReadServers<br>StrCpy $R2 ""<br>StrCpy $R3 ""<br>FileOpen $R0 "listofservers.txt" r<br>start:<br>FileRead $R0 "$R1"<br>${TrimNewLines} "$R1" "$R1"<br>StrCmp "$R1" "" start<br>StrCpy "$R2" "$R1"<br>loop:<br>FileRead $R0 "$R1"<br>IfErrors done<br>${TrimNewLines} "$R1" "$R1"<br>StrCpy "$R3" "$R3|$R1"<br>goto loop<br>done:<br>FileClose $R0<br>FunctionEnd<br><br>Function CreateCustom<br>push $0<br>InstallOptions::dialog "${CUST_INI}"<br>pop $0<br>pop $0<br>FunctionEnd<br></code>
 </pre>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Swapan Das</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Swapan Das</span><br>
       <span class="post-time small text-muted">14th December 2007 04:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Great Red Wine! Thanks thats what I was looking for. You must be surprised I was thinking of you while posting this issue, but was not sure of your reply as the title relates to SQL.<br />
-      I will work on it and will come up with new issues for you!<br />
-      Thanks again!<br />
-      <br />
+      <p class="post-content">Great Red Wine! Thanks thats what I was looking for. You must be surprised I was thinking of you while posting this issue, but was not sure of your reply as the title relates to SQL.<br>
+      I will work on it and will come up with new issues for you!<br>
+      Thanks again!<br>
+      <br>
       Regards,</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="footer">
       <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
@@ -111,7 +23,4 @@
 </script><script type="text/javascript">
 //<![CDATA[
   hljs.initHighlightingOnLoad();
-  //]]>
-  </script>
-</body>
-</html>
+  //]]></script></body></html>

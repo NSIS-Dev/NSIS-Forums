@@ -1,107 +1,39 @@
-<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Functions for large CD/DVD installers" />
-
-  <title>Functions for large CD/DVD installers - NSIS Forums</title>
-  <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script>
-  <!-- Bootstrap core CSS -->
-
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!--[if lt IE 9]>
-                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-</head>
-
-<body>
-  <div class="container">
-    <!-- Put navigation bar here -->
-
-    <ol class="breadcrumb">
-      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
-
-      <li><a href="f-65.html">NSIS Discussion</a></li>
-
-      <li class="active">Functions for large CD/DVD installers</li>
-    </ol>
-
-    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=274089">Functions for large CD/DVD installers</a></p><br />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">General Barron</span><br />
-      <span class="post-time small text-muted">9th July 2007 07:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>Functions for large CD/DVD installers</strong><br />
-      Hello all, I've been leeching here for a while, so I figured I'd make my first post a contribution.<br />
-      <br />
-      I've made a couple functions which we use in our game's installer, and I think might be useful to many other people. I fully hope/expect that the more experienced NSIS users here will improve/clean up these rough functions.<br />
-      <br />
-      Here was our situation, or why I made the functions:<br />
-      <br />
-      ------<br />
-      <br />
-      -Our game was ~4 gigs in size, distributed on DVD and/or multiple CDs. So I needed to be able to span the installer across multiple discs.<br />
-      <br />
-      -We can't pack it all into the NSIS installer because the data is too large. We have no need to compress all files anyway, since it makes the install take longer and we have extra room on the discs.<br />
-      <br />
-      -We send out different versions of our game to various customers, which all contain different content. We also have frequent updates/additions to our content. So I wanted an easy way to adjust exactly what content files are being included in a specific installer, to reduce human error. I also don't want to recompile a huge installer just to add/change the content if we make a change to one small file.<br />
-      <br />
-      -I wanted the progress bar to give a good estimate of the installer's progress. This is difficult due to the above problems, and the fact that the realProgress plugin can't use floating point numbers.<br />
-      <br />
-      -We ran into lots of trouble with files not being correctly copied off of the disc onto the hard drive (especially with CD installers). Sometimes the game wouldn't run after the install, due to corrupted files, even though the files on the disc were fine.<br />
-      <br />
-      ------<br />
-      <br />
-      So I wrote these two functions. What they do is:<br />
-      <br />
-      -Copy or extract (7z archive) a file from the CD/DVD into the install directory.<br />
-      <br />
-      -Ensure the file was correctly copied / extracted, without errors. If it there were problems, it retries. If there are still problems after the retry, it aborts the install.<br />
-      <br />
-      -Increases the progress bar (requires RealProgress plugin) according to how much copy/extracting remains. (Example: you are copy/extracting a total of 100mb throughout your entire installer; you copy over 2.3 mb. Progressbar increases by 2%. You then extract a file that is 12.7mb uncompressed. Progress bar now increases by 13%.)<br />
-      <br />
-      Below are the functions, as well as (poorly written) instructions for use. They were written very quickly so they are very rough and ugly to use, please forgive me for that. I am going to try to improve/clean them up, unless someone else does so:<br />
-      <br /></p>
-      <pre>
-<code><br />;=========================<br />;FILE EXTRACT / COPY FUNCTIONS<br />;By Andrew Barron<br />;=========================<br /><br />;Macros to perform file copying and extraction from install media.<br />;Before use, the following must be set up ahead of time:<br />;<br />; 7za.exe (7-zip command line utility) must be in the temp directory (only for extract macro)<br />; Realprogress plugin progress bar must be started (can be anywhere)<br />;<br />; strcopy $total_data (total size of data [bytes] after all copy/extract macros [uncompressed size])<br />; strcopy $total_progress (total amount to increase progress bar by while total_data is copied/extracted [integer 1-100])<br />; strcopy $0 0 ;this needs to be initialized at 0 before your first use of the functions<br />;<br />; strcopy $copyFrom (source location to copy/extract from)<br />; SetOutPath (destination location to copy/extract to)<br /><br />;To use the macros:<br /><br />;!insertmacro copy file2.xyz (filesize in bytes)<br />;!insertmacro extract file1.7z (uncompressed filesize in bytes)<br />;----------------------------------------------------------------------------------<br /><br />Var total_data<br />Var total_progress<br />Var copyFrom<br /><br />;macro to copy a non-compressed file from folder A to folder B<br />;filename = name of file to copy (no path)<br />;filesize = size of file in bytes<br />!macro copy filename filesize<br />  StrCpy $1 ${filename}<br />  StrCpy $2 ${filesize}<br />  call file_copy<br />!macroend<br /><br />;macro to extract one file from folder A to folder B<br />;filename = name of file to copy (no path)<br />;filesize = size of UNCOMPRESSED file in bytes<br />!macro extract filename filesize<br />  StrCpy $1 ${filename}<br />  StrCpy $2 ${filesize}<br />  call file_extract<br />!macroend<br /><br />;----------------------------------------------------------------------------------<br /><br /><br />;function to copy a non-compressed file from folder A to folder B<br />;$1 = file to copy, $2 = file size (bytes)<br />Function file_copy<br />  DetailPrint "Copy: $1"<br />  nsExec::Exec 'xcopy /Y "$copyFrom\$1" "$OUTDIR"'<br /><br />  ;check error level from copy<br />  Pop $0<br />  intcmp $0 0 +2  ;if copy was successful<br />  call copy_error ;if copy was unsuccessful<br /><br />  call increase_progress<br />FunctionEnd<br /><br />;function to extract a non-compressed file from folder A to folder B<br />;$1 = file to copy, $2 = extracted file size (bytes)<br />Function file_extract<br />  DetailPrint "Extract: $1"<br />  Push 0 ;push a flag on the stack<br />  <br />  attempt_extract:<br />  nsExec::Exec 'xcopy /Y "$copyFrom\$1" "$TEMP"' ;copy to temp folder on hdd first; extracting directly off disc is error-prone<br /><br />  ;check error level from copy<br />  Pop $0<br />  intcmp $0 0 +2  ;if copy was successful<br />  call copy_error ;if copy was unsuccessful<br /><br />  ;extract the file to proper directory<br />  nsExec::Exec '"$TEMP\7za.exe" e "$TEMP\$1" -o"$OUTDIR" -y'<br />  delete /REBOOTOK "$TEMP\$1"<br />  <br />  ;check error level from extraction<br />  Pop $0<br />  intcmp $0 0 extract_complete ;if extract was successful<br />  <br />  ;if there are errors and this is the FIRST attempt, re-attempt the copy / extract once<br />  ;if this is the second attempt and there are still errors, abort the install<br />  Pop $0<br />  intcmp $0 1 extract_failed ;if this was second attempt<br />  DetailPrint "Re-extract: $1"<br />  goto attempt_extract<br />  <br />  extract_failed:<br />  call extract_error<br /><br />  extract_complete:<br />  call increase_progress<br />FunctionEnd<br /><br />Function copy_error<br />  MessageBox MB_OK "Install error: could not copy file $copyFrom\$1. Harddrive may be out of space, or install media may be damaged."<br />  Abort "Install error!"<br />FunctionEnd<br /><br />Function extract_error<br />  MessageBox MB_OK "Install error: could not extract file $copyFrom\$1. Install media may be damaged."<br />  Abort "Install error!"<br />FunctionEnd<br /><br /><br />;Helper function used in extract/copy functions. Used to smoothly increase the progress bar.<br />;$2 = how much data was just copied/extracted<br />;$9 = leftover progressbar increase that wasn't applied from last operation(s); must be initialized (set to 0) before the first copy / extract<br />Function increase_progress<br />  ;figure out how much of total copy/extract operation we completed.<br />  strcpy $0 $total_data<br />  math::script /NOUNLOAD "r0 += 0.1; r0 = r2 / r0"<br />  strcpy $1 $total_progress<br /><br />  math::script /NOUNLOAD "r0 = r0 * r1 * 100"   ;find percentage amount to increase progress bar by<br />  math::script /NOUNLOAD "r0 += r9"       ;add in the leftover increase that wasn't applied from the last operation(s)<br />  math::script /NOUNLOAD "r9 = r0; r0 = flr(r0)" ;trim decimal off of the amount we will increase bar by; it is now an integer<br />  math::script /NOUNLOAD "r9 -= r0"    ;find the remainder after decimal; this will be left for the next time.<br /><br />  ;check if we are above 1% to add to the progressbar<br />  math::script /NOUNLOAD "r1 = r0 &gt; 0"<br />  IntCmp $1 0 done                       ;can't intcmp on $0 because it is formatted as a non-integer (has decimal)<br /><br />  ;increase progress bar by the integer amount stored in $0. Do this by incrementing by 1 until we are out of percentage to add.<br />    increment:<br />  RealProgress::AddProgress /NOUNLOAD 1   ;add 1% to progress bar<br />  math::script /NOUNLOAD "r0 -= 1; r1 = r0 &gt; 0" ;decrement $0 and check if it is still &gt; 0<br />  IntCmp $1 0 done<br />  Goto increment                          ;if not, go back and do it again<br /><br />    done:<br />FunctionEnd<br /><br />;----------------------------------------------------------------------------------<br /></code>
-</pre><br />
-      <br />
-      Comments and improvements are very much welcome. I really would like to make it nicer to use.<br />
-      <br />
-      I'd especially like to add automatic file size detection, so you don't have to write that in when using the macros, and maybe so it automatically uses 'addsize' for that file.<br />
-      <br />
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Functions for large CD/DVD installers"><title>Functions for large CD/DVD installers - NSIS Forums</title><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css"><link rel="stylesheet" href="../css/style.css" type="text/css"><!--[if lt IE 9]><script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script><script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script><![endif]--></head><body><div class="container"><ol class="breadcrumb"><li><a href="../index.html" class="glyphicon glyphicon-home"></a></li><li><a href="f-65.html">NSIS Discussion</a></li><li class="active">Functions for large CD/DVD installers</li></ol><p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=274089">Functions for large CD/DVD installers</a></p><br><div class="post"><p class="post-meta"><span class="post-author text-primary">General Barron</span><br><span class="post-time small text-muted">9th July 2007 07:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>Functions for large CD/DVD installers</strong><br>Hello all, I've been leeching here for a while, so I figured I'd make my first post a contribution.<br><br>I've made a couple functions which we use in our game's installer, and I think might be useful to many other people. I fully hope/expect that the more experienced NSIS users here will improve/clean up these rough functions.<br><br>Here was our situation, or why I made the functions:<br><br>------<br><br>-Our game was ~4 gigs in size, distributed on DVD and/or multiple CDs. So I needed to be able to span the installer across multiple discs.<br><br>-We can't pack it all into the NSIS installer because the data is too large. We have no need to compress all files anyway, since it makes the install take longer and we have extra room on the discs.<br><br>-We send out different versions of our game to various customers, which all contain different content. We also have frequent updates/additions to our content. So I wanted an easy way to adjust exactly what content files are being included in a specific installer, to reduce human error. I also don't want to recompile a huge installer just to add/change the content if we make a change to one small file.<br><br>-I wanted the progress bar to give a good estimate of the installer's progress. This is difficult due to the above problems, and the fact that the realProgress plugin can't use floating point numbers.<br><br>-We ran into lots of trouble with files not being correctly copied off of the disc onto the hard drive (especially with CD installers). Sometimes the game wouldn't run after the install, due to corrupted files, even though the files on the disc were fine.<br><br>------<br><br>So I wrote these two functions. What they do is:<br><br>-Copy or extract (7z archive) a file from the CD/DVD into the install directory.<br><br>-Ensure the file was correctly copied / extracted, without errors. If it there were problems, it retries. If there are still problems after the retry, it aborts the install.<br><br>-Increases the progress bar (requires RealProgress plugin) according to how much copy/extracting remains. (Example: you are copy/extracting a total of 100mb throughout your entire installer; you copy over 2.3 mb. Progressbar increases by 2%. You then extract a file that is 12.7mb uncompressed. Progress bar now increases by 13%.)<br><br>Below are the functions, as well as (poorly written) instructions for use. They were written very quickly so they are very rough and ugly to use, please forgive me for that. I am going to try to improve/clean them up, unless someone else does so:<br><br></p><pre>
+<code><br>;=========================<br>;FILE EXTRACT / COPY FUNCTIONS<br>;By Andrew Barron<br>;=========================<br><br>;Macros to perform file copying and extraction from install media.<br>;Before use, the following must be set up ahead of time:<br>;<br>; 7za.exe (7-zip command line utility) must be in the temp directory (only for extract macro)<br>; Realprogress plugin progress bar must be started (can be anywhere)<br>;<br>; strcopy $total_data (total size of data [bytes] after all copy/extract macros [uncompressed size])<br>; strcopy $total_progress (total amount to increase progress bar by while total_data is copied/extracted [integer 1-100])<br>; strcopy $0 0 ;this needs to be initialized at 0 before your first use of the functions<br>;<br>; strcopy $copyFrom (source location to copy/extract from)<br>; SetOutPath (destination location to copy/extract to)<br><br>;To use the macros:<br><br>;!insertmacro copy file2.xyz (filesize in bytes)<br>;!insertmacro extract file1.7z (uncompressed filesize in bytes)<br>;----------------------------------------------------------------------------------<br><br>Var total_data<br>Var total_progress<br>Var copyFrom<br><br>;macro to copy a non-compressed file from folder A to folder B<br>;filename = name of file to copy (no path)<br>;filesize = size of file in bytes<br>!macro copy filename filesize<br>  StrCpy $1 ${filename}<br>  StrCpy $2 ${filesize}<br>  call file_copy<br>!macroend<br><br>;macro to extract one file from folder A to folder B<br>;filename = name of file to copy (no path)<br>;filesize = size of UNCOMPRESSED file in bytes<br>!macro extract filename filesize<br>  StrCpy $1 ${filename}<br>  StrCpy $2 ${filesize}<br>  call file_extract<br>!macroend<br><br>;----------------------------------------------------------------------------------<br><br><br>;function to copy a non-compressed file from folder A to folder B<br>;$1 = file to copy, $2 = file size (bytes)<br>Function file_copy<br>  DetailPrint "Copy: $1"<br>  nsExec::Exec 'xcopy /Y "$copyFrom\$1" "$OUTDIR"'<br><br>  ;check error level from copy<br>  Pop $0<br>  intcmp $0 0 +2  ;if copy was successful<br>  call copy_error ;if copy was unsuccessful<br><br>  call increase_progress<br>FunctionEnd<br><br>;function to extract a non-compressed file from folder A to folder B<br>;$1 = file to copy, $2 = extracted file size (bytes)<br>Function file_extract<br>  DetailPrint "Extract: $1"<br>  Push 0 ;push a flag on the stack<br>  <br>  attempt_extract:<br>  nsExec::Exec 'xcopy /Y "$copyFrom\$1" "$TEMP"' ;copy to temp folder on hdd first; extracting directly off disc is error-prone<br><br>  ;check error level from copy<br>  Pop $0<br>  intcmp $0 0 +2  ;if copy was successful<br>  call copy_error ;if copy was unsuccessful<br><br>  ;extract the file to proper directory<br>  nsExec::Exec '"$TEMP\7za.exe" e "$TEMP\$1" -o"$OUTDIR" -y'<br>  delete /REBOOTOK "$TEMP\$1"<br>  <br>  ;check error level from extraction<br>  Pop $0<br>  intcmp $0 0 extract_complete ;if extract was successful<br>  <br>  ;if there are errors and this is the FIRST attempt, re-attempt the copy / extract once<br>  ;if this is the second attempt and there are still errors, abort the install<br>  Pop $0<br>  intcmp $0 1 extract_failed ;if this was second attempt<br>  DetailPrint "Re-extract: $1"<br>  goto attempt_extract<br>  <br>  extract_failed:<br>  call extract_error<br><br>  extract_complete:<br>  call increase_progress<br>FunctionEnd<br><br>Function copy_error<br>  MessageBox MB_OK "Install error: could not copy file $copyFrom\$1. Harddrive may be out of space, or install media may be damaged."<br>  Abort "Install error!"<br>FunctionEnd<br><br>Function extract_error<br>  MessageBox MB_OK "Install error: could not extract file $copyFrom\$1. Install media may be damaged."<br>  Abort "Install error!"<br>FunctionEnd<br><br><br>;Helper function used in extract/copy functions. Used to smoothly increase the progress bar.<br>;$2 = how much data was just copied/extracted<br>;$9 = leftover progressbar increase that wasn't applied from last operation(s); must be initialized (set to 0) before the first copy / extract<br>Function increase_progress<br>  ;figure out how much of total copy/extract operation we completed.<br>  strcpy $0 $total_data<br>  math::script /NOUNLOAD "r0 += 0.1; r0 = r2 / r0"<br>  strcpy $1 $total_progress<br><br>  math::script /NOUNLOAD "r0 = r0 * r1 * 100"   ;find percentage amount to increase progress bar by<br>  math::script /NOUNLOAD "r0 += r9"       ;add in the leftover increase that wasn't applied from the last operation(s)<br>  math::script /NOUNLOAD "r9 = r0; r0 = flr(r0)" ;trim decimal off of the amount we will increase bar by; it is now an integer<br>  math::script /NOUNLOAD "r9 -= r0"    ;find the remainder after decimal; this will be left for the next time.<br><br>  ;check if we are above 1% to add to the progressbar<br>  math::script /NOUNLOAD "r1 = r0 &gt; 0"<br>  IntCmp $1 0 done                       ;can't intcmp on $0 because it is formatted as a non-integer (has decimal)<br><br>  ;increase progress bar by the integer amount stored in $0. Do this by incrementing by 1 until we are out of percentage to add.<br>    increment:<br>  RealProgress::AddProgress /NOUNLOAD 1   ;add 1% to progress bar<br>  math::script /NOUNLOAD "r0 -= 1; r1 = r0 &gt; 0" ;decrement $0 and check if it is still &gt; 0<br>  IntCmp $1 0 done<br>  Goto increment                          ;if not, go back and do it again<br><br>    done:<br>FunctionEnd<br><br>;----------------------------------------------------------------------------------<br></code>
+</pre><br>
+      <br>
+      Comments and improvements are very much welcome. I really would like to make it nicer to use.<br>
+      <br>
+      I'd especially like to add automatic file size detection, so you don't have to write that in when using the macros, and maybe so it automatically uses 'addsize' for that file.<br>
+      <br>
       It also would be useful, at least for me, to have it just point at a directory on the disc, and then it automatically copies/extracts all the files in there. This way I wouldn't have to bother messing with file lists.
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br>
       <span class="post-time small text-muted">9th July 2007 08:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Interesting :)<br />
-      This kind of installer has been asked several times from several users.<br />
+      <p class="post-content">Interesting :)<br>
+      This kind of installer has been asked several times from several users.<br>
       However would be nice if you post those functions at wiki where it's easy for everyone to find them.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">General Barron</span><br />
+      <p class="post-meta"><span class="post-author text-primary">General Barron</span><br>
       <span class="post-time small text-muted">9th July 2007 08:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content"></p>
 
       <blockquote>
-        <i>Originally posted by Red Wine</i><br />
-        <b>Interesting :)<br />
-        This kind of installer has been asked several times from several users.<br />
+        <i>Originally posted by Red Wine</i><br>
+        <b>Interesting :)<br>
+        This kind of installer has been asked several times from several users.<br>
         However would be nice if you post those functions at wiki where it's easy for everyone to find them.</b>
       </blockquote>Yes, well I was hoping for a bit of feedback/improvements first. But posting to the wiki is a good idea :)
     </div>
-    <hr />
+    <hr>
 
     <div class="footer">
       <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
@@ -110,7 +42,4 @@
 </script><script type="text/javascript">
 //<![CDATA[
   hljs.initHighlightingOnLoad();
-  //]]>
-  </script>
-</body>
-</html>
+  //]]></script></body></html>

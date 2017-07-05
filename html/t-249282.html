@@ -1,255 +1,152 @@
-<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="InstallOptions verses: Modern UI (Round 1, Fight!)" />
-
-  <title>InstallOptions verses: Modern UI (Round 1, Fight!) - NSIS Forums</title>
-  <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script>
-  <!-- Bootstrap core CSS -->
-
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!--[if lt IE 9]>
-                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-</head>
-
-<body>
-  <div class="container">
-    <!-- Put navigation bar here -->
-
-    <ol class="breadcrumb">
-      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
-
-      <li><a href="f-65.html">NSIS Discussion</a></li>
-
-      <li class="active">InstallOptions verses: Modern UI (Round 1, Fight!)</li>
-    </ol>
-
-    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=249282">InstallOptions verses: Modern UI (Round 1, Fight!)</a></p><br />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Shorin</span><br />
-      <span class="post-time small text-muted">21st June 2006 18:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>InstallOptions verses: Modern UI (Round 1, Fight!)</strong><br />
-      I have had major issues with NSIS over the past few weeks, and many of them arise when I try to use either Modern UI and/or InstallOptions. Many of them are solved by simply moving functions to another place in the file, or moving this include before that include... and other not-so-obvious things.<br />
-      <br />
-      Anyways, my presentation today is one of ambiguous functions that do not function identically.<br />
-      <br />
-      Version one simply has a custom page that has a text box field on it (among other things), and displays the user-entered text in a messagebox upon leaving that page.<br />
-      Version 1: (FUNCTIONS PROPERLY)<br />
-      ...(includes, INCLUDES MODERN UI stuff)<br />
-      ...(attributes, modern ui stuff)<br />
-      ...(.onInit)<br />
-      ...(Pages, modern ui pages):<br />
-      Page custom Pre Post<br />
-      ...<br />
-      ... (Sections)<br />
-      ... (Functions):<br />
-      Function Pre<br />
-      Push $0<br />
-      InstallOptions::dialog ".\master_slaveconfig.ini"<br />
-      Pop $0<br />
-      FunctionEnd<br />
-      <br />
-      Function Post<br />
-      Push $R0<br />
-      ReadINIStr $R0 ".\master_slaveconfig.ini" "Field 6" "State" ; Field 6 is a text box<br />
-      MessageBox MB_OK $R0<br />
-      Pop $R0<br />
-      FunctionEnd<br />
-      <br />
-      Problems in Version 1: No problems.<br />
-      <br />
-      <br />
-      <br />
-      Version 2 uses Modern UI calls to show the custom dialog. Modern UI asks you to INITDIALOG and also DISPLAY it, not just call InstallOptions::dialog. DISPLAY alone doesn't work.<br />
-      Version 2:<br />
-      ... (other parts of file are the same as #1)<br />
-      ... (Functions):<br />
-      Function Pre<br />
-      Push $0<br />
-      !insertmacro MUI_INSTALLOPTIONS_INITDIALOG "/NOUNLOAD .\master_slaveconfig.ini"<br />
-      Pop $0<br />
-      Push $0<br />
-      !insertmacro MUI_INSTALLOPTIONS_DISPLAY ".\master_slaveconfig.ini"<br />
-      Pop $0<br />
-      FunctionEnd<br />
-      <br />
-      Function Post<br />
-      ... exactly the same as #1<br />
-      FunctionEnd<br />
-      <br />
-      Problems in Version 2: Even if data is entered in to Field 6's text box, MessageBox shows $R0 as completely blank. If you edit the INI file and set "State" to something, MessageBox shows this instead of what the user wrote.<br />
-      <br />
-      <br />
-      <br />
-      Now then, can anybody tell me why this happens? Is this a bug?</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
-      <span class="post-time small text-muted">21st June 2006 19:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Why are you using INITDIALOG and DISPLAY?<br />
-      You only use INITDIALOG if you need to modify controls on the dialog before it is shown, and even after that you use MUI_INSTALLOPTIONS_SHOW and not DISPLAY. I'm suprised it's even working at all!<br />
-      <br />
-      You also have your Pop's wrong. InstallOptions pushes a value onto the stack, so you need two Pop's rather than just one.<br />
-      <br /></p>
-      <pre>
-<code>Function Pre<br />Push $0<br />!insertmacro MUI_INSTALLOPTIONS_DISPLAY "master_slaveconfig.ini"<br />Pop $0<br />Pop $0<br />FunctionEnd</code>
-</pre><br />
-      <br />
-      Finally, with Modern UI you use MUI_INSTALLOPTIONS_READ to read values from the INI file. This is because with the MUI INSTALLOPPIONS macros, the INI file is always stored in $PLUGINSDIR.<br />
-      <br />
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="InstallOptions verses: Modern UI (Round 1, Fight!)"><title>InstallOptions verses: Modern UI (Round 1, Fight!) - NSIS Forums</title><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css"><link rel="stylesheet" href="../css/style.css" type="text/css"><!--[if lt IE 9]><script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script><script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script><![endif]--></head><body><div class="container"><ol class="breadcrumb"><li><a href="../index.html" class="glyphicon glyphicon-home"></a></li><li><a href="f-65.html">NSIS Discussion</a></li><li class="active">InstallOptions verses: Modern UI (Round 1, Fight!)</li></ol><p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=249282">InstallOptions verses: Modern UI (Round 1, Fight!)</a></p><br><div class="post"><p class="post-meta"><span class="post-author text-primary">Shorin</span><br><span class="post-time small text-muted">21st June 2006 18:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>InstallOptions verses: Modern UI (Round 1, Fight!)</strong><br>I have had major issues with NSIS over the past few weeks, and many of them arise when I try to use either Modern UI and/or InstallOptions. Many of them are solved by simply moving functions to another place in the file, or moving this include before that include... and other not-so-obvious things.<br><br>Anyways, my presentation today is one of ambiguous functions that do not function identically.<br><br>Version one simply has a custom page that has a text box field on it (among other things), and displays the user-entered text in a messagebox upon leaving that page.<br>Version 1: (FUNCTIONS PROPERLY)<br>...(includes, INCLUDES MODERN UI stuff)<br>...(attributes, modern ui stuff)<br>...(.onInit)<br>...(Pages, modern ui pages):<br>Page custom Pre Post<br>...<br>... (Sections)<br>... (Functions):<br>Function Pre<br>Push $0<br>InstallOptions::dialog ".\master_slaveconfig.ini"<br>Pop $0<br>FunctionEnd<br><br>Function Post<br>Push $R0<br>ReadINIStr $R0 ".\master_slaveconfig.ini" "Field 6" "State" ; Field 6 is a text box<br>MessageBox MB_OK $R0<br>Pop $R0<br>FunctionEnd<br><br>Problems in Version 1: No problems.<br><br><br><br>Version 2 uses Modern UI calls to show the custom dialog. Modern UI asks you to INITDIALOG and also DISPLAY it, not just call InstallOptions::dialog. DISPLAY alone doesn't work.<br>Version 2:<br>... (other parts of file are the same as #1)<br>... (Functions):<br>Function Pre<br>Push $0<br>!insertmacro MUI_INSTALLOPTIONS_INITDIALOG "/NOUNLOAD .\master_slaveconfig.ini"<br>Pop $0<br>Push $0<br>!insertmacro MUI_INSTALLOPTIONS_DISPLAY ".\master_slaveconfig.ini"<br>Pop $0<br>FunctionEnd<br><br>Function Post<br>... exactly the same as #1<br>FunctionEnd<br><br>Problems in Version 2: Even if data is entered in to Field 6's text box, MessageBox shows $R0 as completely blank. If you edit the INI file and set "State" to something, MessageBox shows this instead of what the user wrote.<br><br><br><br>Now then, can anybody tell me why this happens? Is this a bug?</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br><span class="post-time small text-muted">21st June 2006 19:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Why are you using INITDIALOG and DISPLAY?<br>You only use INITDIALOG if you need to modify controls on the dialog before it is shown, and even after that you use MUI_INSTALLOPTIONS_SHOW and not DISPLAY. I'm suprised it's even working at all!<br><br>You also have your Pop's wrong. InstallOptions pushes a value onto the stack, so you need two Pop's rather than just one.<br><br></p><pre>
+<code>Function Pre<br>Push $0<br>!insertmacro MUI_INSTALLOPTIONS_DISPLAY "master_slaveconfig.ini"<br>Pop $0<br>Pop $0<br>FunctionEnd</code>
+</pre><br>
+      <br>
+      Finally, with Modern UI you use MUI_INSTALLOPTIONS_READ to read values from the INI file. This is because with the MUI INSTALLOPPIONS macros, the INI file is always stored in $PLUGINSDIR.<br>
+      <br>
       -Stu
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Shorin</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Shorin</span><br>
       <span class="post-time small text-muted">21st June 2006 19:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content"><strong>I knew it!</strong><br />
-      Ah! I knew it! The MUI documentation is out of date!<br />
-      <br />
+      <p class="post-content"><strong>I knew it!</strong><br>
+      Ah! I knew it! The MUI documentation is out of date!<br>
+      <br>
       ... well, I am not surprised, I hate spending all that time documenting stuff too.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Shorin</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Shorin</span><br>
       <span class="post-time small text-muted">21st June 2006 19:31 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content"><strong>so... now wat?</strong><br />
-      What do I use if I want to simulate<br />
-      InstallOptions::dialog "..."<br />
+      <p class="post-content"><strong>so... now wat?</strong><br>
+      What do I use if I want to simulate<br>
+      InstallOptions::dialog "..."<br>
       in MUI? (is it SHOW, DISPLAY...?)</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Shorin</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Shorin</span><br>
       <span class="post-time small text-muted">21st June 2006 19:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content"><strong>o...</strong><br />
-      Oh, I see. MUI_INSTALLOPTIONS_DISPLAY does that.<br />
-      <br />
-      Now what about MUI_INSTALLOPTIONS_READ?<br />
-      <br />
-      This is all it does:<br />
-      !macro MUI_INSTALLOPTIONS_READ VAR FILE SECTION KEY<br />
-      <br />
-      !verbose push<br />
-      !verbose ${MUI_VERBOSE}<br />
-      <br />
-      ReadIniStr ${VAR} "$PLUGINSDIR\${FILE}" "${SECTION}" "${KEY}"<br />
-      <br />
-      !verbose pop<br />
-      <br />
-      !macroend<br />
-      <br />
-      Which would be the same as calling<br />
-      ReadINIStr $R0 "myfile.ini" "Field 1" "State"<br />
-      <br />
-      Right?<br />
-      <br />
-      Except that ....<br />
-      <br />
-      !macro MUI_INSTALLOPTIONS_EXTRACT FILE<br />
-      <br />
-      !verbose push<br />
-      !verbose ${MUI_VERBOSE}<br />
-      <br />
-      InitPluginsDir<br />
-      <br />
-      File "/oname=$PLUGINSDIR\${FILE}" "${FILE}"<br />
-      <br />
-      !insertmacro MUI_INSTALLOPTIONS_WRITE "${FILE}" "Settings" "RTL" "$(^RTL)"<br />
-      <br />
-      !verbose pop<br />
-      <br />
-      !macroend<br />
-      <br />
+      <p class="post-content"><strong>o...</strong><br>
+      Oh, I see. MUI_INSTALLOPTIONS_DISPLAY does that.<br>
+      <br>
+      Now what about MUI_INSTALLOPTIONS_READ?<br>
+      <br>
+      This is all it does:<br>
+      !macro MUI_INSTALLOPTIONS_READ VAR FILE SECTION KEY<br>
+      <br>
+      !verbose push<br>
+      !verbose ${MUI_VERBOSE}<br>
+      <br>
+      ReadIniStr ${VAR} "$PLUGINSDIR\${FILE}" "${SECTION}" "${KEY}"<br>
+      <br>
+      !verbose pop<br>
+      <br>
+      !macroend<br>
+      <br>
+      Which would be the same as calling<br>
+      ReadINIStr $R0 "myfile.ini" "Field 1" "State"<br>
+      <br>
+      Right?<br>
+      <br>
+      Except that ....<br>
+      <br>
+      !macro MUI_INSTALLOPTIONS_EXTRACT FILE<br>
+      <br>
+      !verbose push<br>
+      !verbose ${MUI_VERBOSE}<br>
+      <br>
+      InitPluginsDir<br>
+      <br>
+      File "/oname=$PLUGINSDIR\${FILE}" "${FILE}"<br>
+      <br>
+      !insertmacro MUI_INSTALLOPTIONS_WRITE "${FILE}" "Settings" "RTL" "$(^RTL)"<br>
+      <br>
+      !verbose pop<br>
+      <br>
+      !macroend<br>
+      <br>
       And I'm afriad I did use that...</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br>
       <span class="post-time small text-muted">21st June 2006 21:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">!insertmacro MUI_INSTALLOPTIONS_READ "master_slaveconfig.ini" "Field 6" "State"<br />
-      <br />
-      You only need to specify the INI file name. No full path.<br />
-      <br />
+      <p class="post-content">!insertmacro MUI_INSTALLOPTIONS_READ "master_slaveconfig.ini" "Field 6" "State"<br>
+      <br>
+      You only need to specify the INI file name. No full path.<br>
+      <br>
       -Stu</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">onad</span><br />
+      <p class="post-meta"><span class="post-author text-primary">onad</span><br>
       <span class="post-time small text-muted">22nd June 2006 10:33 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">Afrow UK rules! ... you give al lot of support to NSIS programmers, great!</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Shorin</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Shorin</span><br>
       <span class="post-time small text-muted">22nd June 2006 14:20 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Can anybody tell me when they'll fix the parsing problem in NSIS? I notice that alot of things don't work if you don't follow the unwritten code of the "mystical parsing order" (I mean that functions and sections have to be in specific places in the file for anything to work).<br />
+      <p class="post-content">Can anybody tell me when they'll fix the parsing problem in NSIS? I notice that alot of things don't work if you don't follow the unwritten code of the "mystical parsing order" (I mean that functions and sections have to be in specific places in the file for anything to work).<br>
       I'd do this myself, but I'm on company time right now, and honestly, I'm not getting paid to rewrite NSIS, I'm getting paid to use it.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br>
       <span class="post-time small text-muted">22nd June 2006 20:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">It isn't a parsing problem at all. It is by design.<br />
-      And it would be silly not to check the warnings that the compiler throws at you (literally).<br />
-      <br />
-      The problems that you have had are most likely trying to use constants before they are created with the !define instruction (or perhaps Section index constants that are created with the Section or SectionGroup instructions).<br />
-      Naturally, you can't use a constant value before you create it. Much like you can't use a variable before you create it!<br />
-      <br />
+      <p class="post-content">It isn't a parsing problem at all. It is by design.<br>
+      And it would be silly not to check the warnings that the compiler throws at you (literally).<br>
+      <br>
+      The problems that you have had are most likely trying to use constants before they are created with the !define instruction (or perhaps Section index constants that are created with the Section or SectionGroup instructions).<br>
+      Naturally, you can't use a constant value before you create it. Much like you can't use a variable before you create it!<br>
+      <br>
       -Stu</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Shorin</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Shorin</span><br>
       <span class="post-time small text-muted">22nd June 2006 21:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Well that may be right, but I was hoping you could actually find these things quickly (not having to spend 2-10 minutes reading the compile log).<br />
-      <br />
+      <p class="post-content">Well that may be right, but I was hoping you could actually find these things quickly (not having to spend 2-10 minutes reading the compile log).<br>
+      <br>
       I was wonding if you could suggest a good syntax-checking NSIS Dev environment...</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Shorin</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Shorin</span><br>
       <span class="post-time small text-muted">22nd June 2006 21:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">And what about the documentation.. .is that really up to date or is there a version I don't have yet...</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br>
       <span class="post-time small text-muted">22nd June 2006 22:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">You can try Eclipse NSIS, which uses Sun's Eclipse Java development platform. There's a page on the Wiki. The manual distributed with the latest version of NSIS is the latest version.<br />
-      <br />
+      <p class="post-content">You can try Eclipse NSIS, which uses Sun's Eclipse Java development platform. There's a page on the Wiki. The manual distributed with the latest version of NSIS is the latest version.<br>
+      <br>
       -Stu</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="footer">
       <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
@@ -258,7 +155,4 @@
 </script><script type="text/javascript">
 //<![CDATA[
   hljs.initHighlightingOnLoad();
-  //]]>
-  </script>
-</body>
-</html>
+  //]]></script></body></html>

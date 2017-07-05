@@ -1,1162 +1,805 @@
-<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Will NSIS do what i'm looking to do?" />
-
-  <title>Will NSIS do what i'm looking to do? - NSIS Forums</title>
-  <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script>
-  <!-- Bootstrap core CSS -->
-
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!--[if lt IE 9]>
-                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-</head>
-
-<body>
-  <div class="container">
-    <!-- Put navigation bar here -->
-
-    <ol class="breadcrumb">
-      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
-
-      <li><a href="f-65.html">NSIS Discussion</a></li>
-
-      <li class="active">Will NSIS do what i'm looking to do?</li>
-    </ol>
-
-    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=261704">Will NSIS do what i'm looking to do?</a></p><br />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
-      <span class="post-time small text-muted">13th December 2006 15:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>Will NSIS do what i'm looking to do?</strong><br />
-      &nbsp; Hi Guys,<br />
-      <br />
-      I've recently discovered NSIS and before learning the NSIS language I need to know if it'll do what i want..<br />
-      <br />
-      I have an application that's about 10mb, i want the installer to prompt the user for a licence code and username, when the user presses next i want the installer to send a POST (or GET) to:<br />
-      <br />
-      http://www.mydomain.com/myapp/reg.php?u=%USER_NAME%&amp;c=%LICENCE_CODE%<br />
-      <br />
-      My script will either provide a 64 char string or the word INVALID, if it returns a string that string needs to be written to a file during the installation, if it returns invalid then the installer needs to prevent the install from proceeding.<br />
-      <br />
-      Thanks!<br />
-      D.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Comm@nder21</span><br />
-      <span class="post-time small text-muted">13th December 2006 17:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">no, nsis cant do this itself, you'll need to use one of the few internet plugins available.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">FineWolf</span><br />
-      <span class="post-time small text-muted">13th December 2006 22:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Yes you can do what you want via NSISdl (included with the NSIS distribution). I have used something similar in the past do make sure that the installer used was the latest version.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
-      <span class="post-time small text-muted">14th December 2006 14:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Thanks for the answers guys!<br />
-      <br />
-      After several hours i've come up with the following:<br />
-      <br />
-      ## General<br />
-      InstallDir "$PROGRAMFILES\Test"<br />
-      Name "Test Installer"<br />
-      OutFile "Install.exe"<br />
-      <br />
-      ## Include headers<br />
-      !include MUI.nsh<br />
-      !include LogicLib.nsh<br />
-      <br />
-      ## Interface Settings<br />
-      !define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\orange-install.ico"<br />
-      !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\orange-uninstall.ico"<br />
-      XPStyle on<br />
-      <br />
-      ## Reserve Files, files that are required before the actual installation should be stored first, this will make your installer start faster.<br />
-      ReserveFile "validateSerial.ini"<br />
-      !insertmacro MUI_RESERVEFILE_INSTALLOPTIONS<br />
-      <br />
-      ## Pages<br />
-      Page custom SerialPageShow SerialPageLeave<br />
-      Page custom validateSerial<br />
-      !insertmacro MUI_PAGE_DIRECTORY<br />
-      !insertmacro MUI_PAGE_INSTFILES<br />
-      <br />
-      ## Languages<br />
-      !insertmacro MUI_LANGUAGE English<br />
-      <br />
-      Function .onInit<br />
-      !insertmacro MUI_INSTALLOPTIONS_EXTRACT "validateSerial.ini"<br />
-      FunctionEnd<br />
-      <br />
-      Function SerialPageShow<br />
-      !insertmacro MUI_HEADER_TEXT "Enter Serial Code" "Enter the software serial code to continue."<br />
-      <br />
-      PassDialog::Dialog Serial \<br />
-      /HEADINGTEXT 'Please enter the serial code located on the software CD case...' \<br />
-      /CENTER \<br />
-      /BOXDASH 12 70 5 '' \<br />
-      /BOXDASH 92 70 5 '' \<br />
-      /BOXDASH 172 70 5 '' \<br />
-      /BOXDASH 252 70 5 '' \<br />
-      /BOX 332 70 5 ''<br />
-      <br />
-      Pop $R0 # success, back, cancel or error<br />
-      FunctionEnd<br />
-      <br />
-      Function SerialPageLeave<br />
-      <br />
-      ## Pop values from stack<br />
-      Pop $R1<br />
-      Pop $R2<br />
-      Pop $R3<br />
-      Pop $R4<br />
-      Pop $R5<br />
-      <br />
-      ;!insertmacro MUI_HEADER_TEXT "Validating..." "Please Wait"<br />
-      ;!insertmacro MUI_INSTALLOPTIONS_DISPLAY "validateSerial.ini"<br />
-      <br />
-      ;MessageBox MB_OK "Break1"<br />
-      <br />
-      FunctionEnd<br />
-      <br />
-      Function validateSerial<br />
-      <br />
-      ;MessageBox MB_OK "Break2"<br />
-      <br />
-      ;## Disable the Back button<br />
-      ;GetDlgItem $R6 $HWNDPARENT 3<br />
-      ;EnableWindow $R6 0<br />
-      ;## Disable the Next button<br />
-      ;GetDlgItem $R6 $HWNDPARENT 1<br />
-      ;EnableWindow $R6 0<br />
-      <br />
-      GetTempFileName $0<br />
-      InetLoad::load /post "licence=$R1-$R2-$R3-$R4-$R5" "http://www.deanbayley.co.uk/test/verify.php" "$0" /slient ""<br />
-      Pop $1 # $1 now holds the exit code for above<br />
-      <br />
-      FileOpen $2 $0 "r"<br />
-      FileRead $2 $3<br />
-      FileClose $2<br />
-      <br />
-      ${If} $3 == 'INVALID'<br />
-      MessageBox MB_OK|MB_ICONEXCLAMATION "Invalid Serial"<br />
-      Call SerialPageShow<br />
-      ${Else}<br />
-      Goto serialOK<br />
-      ${EndIf}<br />
-      <br />
-      Abort<br />
-      <br />
-      serialOK:<br />
-      FunctionEnd<br />
-      <br />
-      Section ""<br />
-      SectionEnd<br />
-      <br />
-      The required files and plugins are attached, (plugins need copied to the plugins dir)<br />
-      <br />
-      aaaaa-aaaaa-aaaaa-aaaaa-aaaaa is a valid serial and will verify, anything else will return INVALID and should cause the script to not continue...<br />
-      <br />
-      If you read through the script you can see what i was trying to do, i want it to work like so:<br />
-      <br />
-      Enter serial -&gt; Press Next -&gt; Displays Custom Page "please wait..." -&gt; if it was valid continue to install dir selection || if NOT go back to the begining...<br />
-      <br />
-      At the moment it goes back to the begining after an error but then doesn't care if the serial validates or not...<br />
-      <br />
-      Any help wold be really appreciated...<br />
-      D.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
-      <span class="post-time small text-muted">14th December 2006 17:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">I've sorted it...<br />
-      <br />
-      After spending about 2 hours reading the manual i found a much more efficient way of doing this.<br />
-      <br />
-      For anyone interested i've attached the result to this post.<br />
-      <br />
-      Thanks Guys.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
-      <span class="post-time small text-muted">14th December 2006 18:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Great! I guess it works as expected!<br />
-      I think you should remove the temp file once the verification has done.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
-      <span class="post-time small text-muted">14th December 2006 18:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">I'll leave the server side script there (its not the live one anyway) so that people can play with it and hopefully learn from it...<br />
-      <br />
-      The only valid serial is aaaaa-aaaaa-aaaaa-aaaaa-aaaaa anything else will return invalid.<br />
-      <br />
-      Now to start adding files to the installer :)<br />
-      <br />
-      Dean.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">kisin</span><br />
-      <span class="post-time small text-muted">22nd March 2007 11:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">can you please post the source for the install.zip file?<br />
-      it can realy help me out<br />
-      <br />
-      thanks</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
-      <span class="post-time small text-muted">22nd March 2007 18:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">I would love to help on any specific questions but unfortunately i don't have the specific source code you requested and for security reasons i can't release the final versions source code...<br />
-      <br />
-      Dean.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">pankajch82</span><br />
-      <span class="post-time small text-muted">23rd June 2008 22:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">i am trying same , using above code &amp; using below url<br />
-      <a href="http://pnilyaoverseas.com/pankaj/test.php?test=12345" target="_blank">http://pnilyaoverseas.com/pankaj/test.php?test=12345</a><br />
-      <br />
-      for easy testing i had disabled post from 5 boxes , now it just post from 1st box .....so if u type 12345 it should return Valid , if u type 00000 it should return INVALID.<br />
-      <br />
-      But its not happening , its taking valid for everything</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
-      <span class="post-time small text-muted">23rd June 2008 23:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Hi pankajch82,<br />
-      <br />
-      I wondered who was testing it today, i setup a notification when people visit the test url...<br />
-      <br />
-      Anyway it is impossible for anyone to know why its not working without you posting your PHP source code, its like showing the doctor your foot and asking whats wrong with your ear...<br />
-      <br />
-      If you post your PHP source i'll have a look...<br />
-      <br />
-      D.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">pankajch82</span><br />
-      <span class="post-time small text-muted">24th June 2008 09:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">hi , yep your code is famous :)<br />
-      <br />
-      I am very new to both NSIS &amp; PHP<br />
-      <br />
-      attached is PHP + NSIS stuff ....<br />
-      <br />
-      URL to test :<a href="http://pnilyaoverseas.com/pankaj/test.php?test=12345" target="_blank">http://pnilyaoverseas.com/pankaj/test.php?test=12345</a><br />
-      <br />
-      only 12345 &amp; 00000 are valid , rest are all invalid.<br />
-      <br />
-      In temp file i get the below error<br />
-      &lt;br /&gt;<br />
-      &lt;b&gt;Warning&lt;/b&gt;: mysql_num_rows(): supplied argument is not a valid MySQL result resource in &lt;b&gt;/home/home2/indiamm/public_html/pankaj/test.php&lt;/b&gt; on line &lt;b&gt;19&lt;/b&gt;&lt;br /&gt;<br />
-      INVALID<br />
-      <br />
-      It will be great if you can provide me detail son how you are handling .<br />
-      <br />
-      Thanks</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
-      <span class="post-time small text-muted">24th June 2008 10:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">That will occur if $_GET['test'] is empty.<br />
-      <a href="http://pnilyaoverseas.com/pankaj/test.php?test=" target="_blank">http://pnilyaoverseas.com/pankaj/test.php?test=</a><br />
-      <br />
-      You need extra single quotes:<br />
-      <br />
-      $result = mysql_query("SELECT status FROM key WHERE id='" . $_GET['test'] . "'");<br />
-      <br />
-      Stu</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">pankajch82</span><br />
-      <span class="post-time small text-muted">24th June 2008 10:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Thanks for that .......got it resolved .<br />
-      <br />
-      Just now need to have a waiting screen that says "validating" in here ...<br />
-      <br />
-      :)</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">deanbayley</span><br />
-      <span class="post-time small text-muted">24th June 2008 10:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">You beat me to it..<br />
-      <br />
-      Heres my version of it..</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
-      <span class="post-time small text-muted">24th June 2008 11:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">@ Dean,<br />
-      <br />
-      Hi, could you please consider to make a reference page at wiki?<br />
-      That would be indeed helpful for others.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
-      <span class="post-time small text-muted">28th June 2008 15:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Hi not working<br />
-      <br />
-      I have For Checked User Site.<br />
-      <br />
-      <br /></p>
-      <pre>
-<code><br /><br />## Reserve Files,<br />ReserveFile "validateUser.ini"<br />!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS<br /><br />## Pages<br />Page custom UserPageShow UserPageLeave<br />Page custom validateUser<br />!insertmacro MUI_PAGE_DIRECTORY<br />!insertmacro MUI_PAGE_INSTFILES<br /><br />## Languages<br />!insertmacro MUI_LANGUAGE English<br /><br />Function .onInit<br />!insertmacro MUI_INSTALLOPTIONS_EXTRACT "validateUser.ini"<br />FunctionEnd<br /><br />Function UserPageShow<br />        !insertmacro MUI_INSTALLOPTIONS_EXTRACT "validateUser.ini"<br /><br />                    PassDialog::InitDialog /NOUNLOAD UserPass<br />                    Pop $R0 # Page HWND<br /><br />                    GetDlgItem $R1 $R0 ${IDC_USERNAME}<br />                    SetCtlColors $R1 0xFF0000 0xFFFFFF<br />                    GetDlgItem $R1 $R0 ${IDC_PASSWORD}<br />                    SetCtlColors $R1 0x0000FF 0xFFFFFF<br /><br /> PassDialog::Show<br />Pop $R0 # success, back, cancel or error<br />FunctionEnd<br /><br />Function UserPageLeave<br /><br /><br />## Pop password &amp; username from stack<br />Pop $R0<br />Pop $R1<br /><br />## A bit of validation<br />StrCmp $R0 '${Username1}' 0 +2<br />StrCmp $R1 '${Password1}' Good Bad<br />StrCmp $R0 '${Username2}' 0 +2<br />StrCmp $R1 '${Password2}' Good Bad<br /><br />        !insertmacro MUI_HEADER_TEXT "Validating..." "Please Wait"<br /><br /><br />FunctionEnd<br /><br />Function validateUser<br /><br />        ;## Disable the Back button<br />        GetDlgItem $R6 $HWNDPARENT 3<br />        EnableWindow $R6 0<br />        ## Disable the Next button<br />        GetDlgItem $R6 $HWNDPARENT 1<br />        EnableWindow $R6 0<br /><br />        Banner::show /NOUNLOAD /set 76 "Please Wait Checking" "Validating ......"<br />        Banner::getWindow /NOUNLOAD<br /><br />        GetTempFileName $0<br />        InetLoad::load /post "licence=$R0-$R1" "http://www.site.com/site/user.php" "$0" /slient ""<br />        Pop $1 # $1 now holds the exit code for above<br /><br />        FileOpen $2 $0 "r"<br />        FileRead $2 $3<br />        FileClose $2<br /><br />        ${If} $3 == 'INVALID'<br />        Banner::destroy<br />        MessageBox MB_OK|MB_ICONEXCLAMATION "Invalid User. Setup will exit now."<br /><br />        Quit<br /><br />        ${Else}<br />        Banner::destroy<br />        Goto USEROK<br />        ${EndIf}<br /><br />        USEROK:<br />FunctionEnd<br /><br />Section ""<br />SectionEnd<br /></code>
-</pre><br />
-      <br />
-      It does not work.<br />
-      <br />
-      If Someone know please help me!<br />
-      <br />
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Will NSIS do what i'm looking to do?"><title>Will NSIS do what i'm looking to do? - NSIS Forums</title><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css"><link rel="stylesheet" href="../css/style.css" type="text/css"><!--[if lt IE 9]><script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script><script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script><![endif]--></head><body><div class="container"><ol class="breadcrumb"><li><a href="../index.html" class="glyphicon glyphicon-home"></a></li><li><a href="f-65.html">NSIS Discussion</a></li><li class="active">Will NSIS do what i'm looking to do?</li></ol><p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=261704">Will NSIS do what i'm looking to do?</a></p><br><div class="post"><p class="post-meta"><span class="post-author text-primary">deanbayley</span><br><span class="post-time small text-muted">13th December 2006 15:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>Will NSIS do what i'm looking to do?</strong><br>&nbsp; Hi Guys,<br><br>I've recently discovered NSIS and before learning the NSIS language I need to know if it'll do what i want..<br><br>I have an application that's about 10mb, i want the installer to prompt the user for a licence code and username, when the user presses next i want the installer to send a POST (or GET) to:<br><br>http://www.mydomain.com/myapp/reg.php?u=%USER_NAME%&amp;c=%LICENCE_CODE%<br><br>My script will either provide a 64 char string or the word INVALID, if it returns a string that string needs to be written to a file during the installation, if it returns invalid then the installer needs to prevent the install from proceeding.<br><br>Thanks!<br>D.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Comm@nder21</span><br><span class="post-time small text-muted">13th December 2006 17:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">no, nsis cant do this itself, you'll need to use one of the few internet plugins available.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">FineWolf</span><br><span class="post-time small text-muted">13th December 2006 22:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Yes you can do what you want via NSISdl (included with the NSIS distribution). I have used something similar in the past do make sure that the installer used was the latest version.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">deanbayley</span><br><span class="post-time small text-muted">14th December 2006 14:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Thanks for the answers guys!<br><br>After several hours i've come up with the following:<br><br>## General<br>InstallDir "$PROGRAMFILES\Test"<br>Name "Test Installer"<br>OutFile "Install.exe"<br><br>## Include headers<br>!include MUI.nsh<br>!include LogicLib.nsh<br><br>## Interface Settings<br>!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\orange-install.ico"<br>!define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\orange-uninstall.ico"<br>XPStyle on<br><br>## Reserve Files, files that are required before the actual installation should be stored first, this will make your installer start faster.<br>ReserveFile "validateSerial.ini"<br>!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS<br><br>## Pages<br>Page custom SerialPageShow SerialPageLeave<br>Page custom validateSerial<br>!insertmacro MUI_PAGE_DIRECTORY<br>!insertmacro MUI_PAGE_INSTFILES<br><br>## Languages<br>!insertmacro MUI_LANGUAGE English<br><br>Function .onInit<br>!insertmacro MUI_INSTALLOPTIONS_EXTRACT "validateSerial.ini"<br>FunctionEnd<br><br>Function SerialPageShow<br>!insertmacro MUI_HEADER_TEXT "Enter Serial Code" "Enter the software serial code to continue."<br><br>PassDialog::Dialog Serial \<br>/HEADINGTEXT 'Please enter the serial code located on the software CD case...' \<br>/CENTER \<br>/BOXDASH 12 70 5 '' \<br>/BOXDASH 92 70 5 '' \<br>/BOXDASH 172 70 5 '' \<br>/BOXDASH 252 70 5 '' \<br>/BOX 332 70 5 ''<br><br>Pop $R0 # success, back, cancel or error<br>FunctionEnd<br><br>Function SerialPageLeave<br><br>## Pop values from stack<br>Pop $R1<br>Pop $R2<br>Pop $R3<br>Pop $R4<br>Pop $R5<br><br>;!insertmacro MUI_HEADER_TEXT "Validating..." "Please Wait"<br>;!insertmacro MUI_INSTALLOPTIONS_DISPLAY "validateSerial.ini"<br><br>;MessageBox MB_OK "Break1"<br><br>FunctionEnd<br><br>Function validateSerial<br><br>;MessageBox MB_OK "Break2"<br><br>;## Disable the Back button<br>;GetDlgItem $R6 $HWNDPARENT 3<br>;EnableWindow $R6 0<br>;## Disable the Next button<br>;GetDlgItem $R6 $HWNDPARENT 1<br>;EnableWindow $R6 0<br><br>GetTempFileName $0<br>InetLoad::load /post "licence=$R1-$R2-$R3-$R4-$R5" "http://www.deanbayley.co.uk/test/verify.php" "$0" /slient ""<br>Pop $1 # $1 now holds the exit code for above<br><br>FileOpen $2 $0 "r"<br>FileRead $2 $3<br>FileClose $2<br><br>${If} $3 == 'INVALID'<br>MessageBox MB_OK|MB_ICONEXCLAMATION "Invalid Serial"<br>Call SerialPageShow<br>${Else}<br>Goto serialOK<br>${EndIf}<br><br>Abort<br><br>serialOK:<br>FunctionEnd<br><br>Section ""<br>SectionEnd<br><br>The required files and plugins are attached, (plugins need copied to the plugins dir)<br><br>aaaaa-aaaaa-aaaaa-aaaaa-aaaaa is a valid serial and will verify, anything else will return INVALID and should cause the script to not continue...<br><br>If you read through the script you can see what i was trying to do, i want it to work like so:<br><br>Enter serial -&gt; Press Next -&gt; Displays Custom Page "please wait..." -&gt; if it was valid continue to install dir selection || if NOT go back to the begining...<br><br>At the moment it goes back to the begining after an error but then doesn't care if the serial validates or not...<br><br>Any help wold be really appreciated...<br>D.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">deanbayley</span><br><span class="post-time small text-muted">14th December 2006 17:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">I've sorted it...<br><br>After spending about 2 hours reading the manual i found a much more efficient way of doing this.<br><br>For anyone interested i've attached the result to this post.<br><br>Thanks Guys.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Red Wine</span><br><span class="post-time small text-muted">14th December 2006 18:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Great! I guess it works as expected!<br>I think you should remove the temp file once the verification has done.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">deanbayley</span><br><span class="post-time small text-muted">14th December 2006 18:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">I'll leave the server side script there (its not the live one anyway) so that people can play with it and hopefully learn from it...<br><br>The only valid serial is aaaaa-aaaaa-aaaaa-aaaaa-aaaaa anything else will return invalid.<br><br>Now to start adding files to the installer :)<br><br>Dean.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">kisin</span><br><span class="post-time small text-muted">22nd March 2007 11:24 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">can you please post the source for the install.zip file?<br>it can realy help me out<br><br>thanks</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">deanbayley</span><br><span class="post-time small text-muted">22nd March 2007 18:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">I would love to help on any specific questions but unfortunately i don't have the specific source code you requested and for security reasons i can't release the final versions source code...<br><br>Dean.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">pankajch82</span><br><span class="post-time small text-muted">23rd June 2008 22:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">i am trying same , using above code &amp; using below url<br><a href="http://pnilyaoverseas.com/pankaj/test.php?test=12345" target="_blank">http://pnilyaoverseas.com/pankaj/test.php?test=12345</a><br><br>for easy testing i had disabled post from 5 boxes , now it just post from 1st box .....so if u type 12345 it should return Valid , if u type 00000 it should return INVALID.<br><br>But its not happening , its taking valid for everything</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">deanbayley</span><br><span class="post-time small text-muted">23rd June 2008 23:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Hi pankajch82,<br><br>I wondered who was testing it today, i setup a notification when people visit the test url...<br><br>Anyway it is impossible for anyone to know why its not working without you posting your PHP source code, its like showing the doctor your foot and asking whats wrong with your ear...<br><br>If you post your PHP source i'll have a look...<br><br>D.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">pankajch82</span><br><span class="post-time small text-muted">24th June 2008 09:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">hi , yep your code is famous :)<br><br>I am very new to both NSIS &amp; PHP<br><br>attached is PHP + NSIS stuff ....<br><br>URL to test :<a href="http://pnilyaoverseas.com/pankaj/test.php?test=12345" target="_blank">http://pnilyaoverseas.com/pankaj/test.php?test=12345</a><br><br>only 12345 &amp; 00000 are valid , rest are all invalid.<br><br>In temp file i get the below error<br>&lt;br /&gt;<br>&lt;b&gt;Warning&lt;/b&gt;: mysql_num_rows(): supplied argument is not a valid MySQL result resource in &lt;b&gt;/home/home2/indiamm/public_html/pankaj/test.php&lt;/b&gt; on line &lt;b&gt;19&lt;/b&gt;&lt;br /&gt;<br>INVALID<br><br>It will be great if you can provide me detail son how you are handling .<br><br>Thanks</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br><span class="post-time small text-muted">24th June 2008 10:14 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">That will occur if $_GET['test'] is empty.<br><a href="http://pnilyaoverseas.com/pankaj/test.php?test=" target="_blank">http://pnilyaoverseas.com/pankaj/test.php?test=</a><br><br>You need extra single quotes:<br><br>$result = mysql_query("SELECT status FROM key WHERE id='" . $_GET['test'] . "'");<br><br>Stu</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">pankajch82</span><br><span class="post-time small text-muted">24th June 2008 10:27 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Thanks for that .......got it resolved .<br><br>Just now need to have a waiting screen that says "validating" in here ...<br><br>:)</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">deanbayley</span><br><span class="post-time small text-muted">24th June 2008 10:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">You beat me to it..<br><br>Heres my version of it..</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Red Wine</span><br><span class="post-time small text-muted">24th June 2008 11:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">@ Dean,<br><br>Hi, could you please consider to make a reference page at wiki?<br>That would be indeed helpful for others.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">didava</span><br><span class="post-time small text-muted">28th June 2008 15:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Hi not working<br><br>I have For Checked User Site.<br><br><br></p><pre>
+<code><br><br>## Reserve Files,<br>ReserveFile "validateUser.ini"<br>!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS<br><br>## Pages<br>Page custom UserPageShow UserPageLeave<br>Page custom validateUser<br>!insertmacro MUI_PAGE_DIRECTORY<br>!insertmacro MUI_PAGE_INSTFILES<br><br>## Languages<br>!insertmacro MUI_LANGUAGE English<br><br>Function .onInit<br>!insertmacro MUI_INSTALLOPTIONS_EXTRACT "validateUser.ini"<br>FunctionEnd<br><br>Function UserPageShow<br>        !insertmacro MUI_INSTALLOPTIONS_EXTRACT "validateUser.ini"<br><br>                    PassDialog::InitDialog /NOUNLOAD UserPass<br>                    Pop $R0 # Page HWND<br><br>                    GetDlgItem $R1 $R0 ${IDC_USERNAME}<br>                    SetCtlColors $R1 0xFF0000 0xFFFFFF<br>                    GetDlgItem $R1 $R0 ${IDC_PASSWORD}<br>                    SetCtlColors $R1 0x0000FF 0xFFFFFF<br><br> PassDialog::Show<br>Pop $R0 # success, back, cancel or error<br>FunctionEnd<br><br>Function UserPageLeave<br><br><br>## Pop password &amp; username from stack<br>Pop $R0<br>Pop $R1<br><br>## A bit of validation<br>StrCmp $R0 '${Username1}' 0 +2<br>StrCmp $R1 '${Password1}' Good Bad<br>StrCmp $R0 '${Username2}' 0 +2<br>StrCmp $R1 '${Password2}' Good Bad<br><br>        !insertmacro MUI_HEADER_TEXT "Validating..." "Please Wait"<br><br><br>FunctionEnd<br><br>Function validateUser<br><br>        ;## Disable the Back button<br>        GetDlgItem $R6 $HWNDPARENT 3<br>        EnableWindow $R6 0<br>        ## Disable the Next button<br>        GetDlgItem $R6 $HWNDPARENT 1<br>        EnableWindow $R6 0<br><br>        Banner::show /NOUNLOAD /set 76 "Please Wait Checking" "Validating ......"<br>        Banner::getWindow /NOUNLOAD<br><br>        GetTempFileName $0<br>        InetLoad::load /post "licence=$R0-$R1" "http://www.site.com/site/user.php" "$0" /slient ""<br>        Pop $1 # $1 now holds the exit code for above<br><br>        FileOpen $2 $0 "r"<br>        FileRead $2 $3<br>        FileClose $2<br><br>        ${If} $3 == 'INVALID'<br>        Banner::destroy<br>        MessageBox MB_OK|MB_ICONEXCLAMATION "Invalid User. Setup will exit now."<br><br>        Quit<br><br>        ${Else}<br>        Banner::destroy<br>        Goto USEROK<br>        ${EndIf}<br><br>        USEROK:<br>FunctionEnd<br><br>Section ""<br>SectionEnd<br></code>
+</pre><br>
+      <br>
+      It does not work.<br>
+      <br>
+      If Someone know please help me!<br>
+      <br>
       Thank alot.
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">dandaman32</span><br />
+      <p class="post-meta"><span class="post-author text-primary">dandaman32</span><br>
       <span class="post-time small text-muted">30th June 2008 05:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Afrow:<br /></p>
+      <p class="post-content">Afrow:<br></p>
       <pre>
 <code>$result= mysql_query("SELECT status FROM key WHERE id='" . $_GET***91;'test'***93; . "'"); 
 </code>
-</pre>Bad. SQL injection at it's finest my friend ;)<br />
+</pre>Bad. SQL injection at it's finest my friend ;)<br>
       <pre>
 <code>$result= mysql_query("SELECT status FROM key WHERE id='" . mysql_real_escape_string($_GET***91;'test'***93;) . "'"); 
 </code>
-</pre>Looks good otherwise :)<br />
-      <br />
-      <b>Edit: Holy crap it's numba two hundred! :D</b><br />
-      <br />
+</pre>Looks good otherwise :)<br>
+      <br>
+      <b>Edit: Holy crap it's numba two hundred! :D</b><br>
+      <br>
       --Dan
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br>
       <span class="post-time small text-muted">30th June 2008 12:15 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">Thanks can you example for me thank you</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br>
       <span class="post-time small text-muted">30th June 2008 12:56 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Error - aborting creation process<br />
-      <br /></p>
+      <p class="post-content">Error - aborting creation process<br>
+      <br></p>
       <pre>
 <code>
 
-<br />&gt;## General
-<br />&gt;InstallDir "$PROGRAMFILES\Test"
-<br />&gt;Name "Test Installer"
-<br />&gt;OutFile "Install.exe"
-<br /><br />&gt;## Include headers
-<br />&gt;!include MUI.nsh
-<br />&gt;!include LogicLib.nsh
-<br /><br />&gt;## Interface Settings
-<br />&gt;!define MUI_ICON "$Icons\orange-install.ico"
-<br />&gt;!define MUI_UNICON "Icons\orange-uninstall.ico"
-<br />&gt;XPStyle on
-<br />AutoCloseWindow true
-<br /><br /><br />&gt;## Reserve Files
-<br />&gt;ReserveFile "validateUser.ini"
-<br />&gt;!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS
-<br /><br />&gt;## Pages
-<br />&gt;Page custom UserPageShow UserPageLeave
-<br />Page custom validateUser
-<br />&gt;!insertmacro MUI_PAGE_DIRECTORY
-<br />&gt;!insertmacro MUI_PAGE_INSTFILES
-<br /><br />&gt;## Languages
-<br />&gt;!insertmacro MUI_LANGUAGE English
-<br /><br />&gt;Function .onInit
-<br />&gt;!insertmacro MUI_INSTALLOPTIONS_EXTRACT "validateUser.ini"
-<br />&gt;FunctionEnd
-<br /><br />&gt;Function UserPageShow
-<br />       !insertmacro MUI_INSTALLOPTIONS_EXTRACT "validateUser.ini"
-<br /><br />                   PassDialog::InitDialog /NOUNLOAD UserPass
-<br />                    Pop $R0 # Page HWND
-<br /><br />                   GetDlgItem $R1 $R0 ${IDC_USERNAME}
-<br />                    SetCtlColors $R1 0xFF0000 0xFFFFFF
-<br />                    GetDlgItem $R1 $R0${IDC_PASSWORD}
-<br />                    SetCtlColors $R1 0x0000FF 0xFFFFFF
-<br /><br /> PassDialog</code>::Show
-<br />Pop $R0 # success, back, cancel or error
-<br />&gt;FunctionEnd
-<br /><br />&gt;Function UserPageLeave
-<br /><br /><br />&gt;## Pop password &amp; username from stack
-<br />&gt;Pop $R0
-<br />Pop $R1
-<br /><br />&gt;## A bit of validation
-<br />&gt;StrCmp $R0 '${Username1}' 0 +2
-<br />StrCmp $R1'${Password1}' Good Bad
-<br />StrCmp $R0'${Username2}' 0 +2
-<br />StrCmp $R1'${Password2}' Good Bad
-<br /><br />   !insertmacro MUI_HEADER_TEXT "Validating..." "Please Wait"
-<br /><br /><br />&gt;FunctionEnd
-<br /><br />&gt;Function validateUser
-<br /><br /><br />   ;## Disable the Back button
-<br />    GetDlgItem $R6 $HWNDPARENT 3
-<br />    EnableWindow $R6 0
-<br />    ## Disable the Next button
-<br />    GetDlgItem $R6 $HWNDPARENT 1
-<br />    EnableWindow $R6 0
-<br /><br />        Banner::show /NOUNLOAD /set 76 "Please Wait Checking" "Validating ......"
-<br />   Banner::getWindow /NOUNLOAD
-<br /><br />    GetTempFileName$0
-<br />    InetLoad::load /post "licence=$R0-$R1" "http://www.site.com/site/user.php" "$0" /slient ""
-<br />   Pop $1 # $1 now holds the exit code for above
-<br /><br />   FileOpen $2 $0 "r"
-<br />   FileRead $2 $3
-<br />    FileClose$2
-<br /><br />   ${If} $3 == 'INVALID'
-<br />   Banner::destroy
-<br />    MessageBox MB_OK|MB_ICONEXCLAMATION "Invalid User. Setup will exit now."
-<br /><br />        Quit
-<br /><br />    ${Else}
-<br />   Banner::destroy
-<br />    Goto USEROK
-<br />    ${EndIf}
-<br /><br />   USEROK:
-<br />&gt;FunctionEnd
-<br /><br />Section ""
-<br />&gt;SectionEnd 
-<br />&gt;
+<br>&gt;## General
+<br>&gt;InstallDir "$PROGRAMFILES\Test"
+<br>&gt;Name "Test Installer"
+<br>&gt;OutFile "Install.exe"
+<br><br>&gt;## Include headers
+<br>&gt;!include MUI.nsh
+<br>&gt;!include LogicLib.nsh
+<br><br>&gt;## Interface Settings
+<br>&gt;!define MUI_ICON "$Icons\orange-install.ico"
+<br>&gt;!define MUI_UNICON "Icons\orange-uninstall.ico"
+<br>&gt;XPStyle on
+<br>AutoCloseWindow true
+<br><br><br>&gt;## Reserve Files
+<br>&gt;ReserveFile "validateUser.ini"
+<br>&gt;!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS
+<br><br>&gt;## Pages
+<br>&gt;Page custom UserPageShow UserPageLeave
+<br>Page custom validateUser
+<br>&gt;!insertmacro MUI_PAGE_DIRECTORY
+<br>&gt;!insertmacro MUI_PAGE_INSTFILES
+<br><br>&gt;## Languages
+<br>&gt;!insertmacro MUI_LANGUAGE English
+<br><br>&gt;Function .onInit
+<br>&gt;!insertmacro MUI_INSTALLOPTIONS_EXTRACT "validateUser.ini"
+<br>&gt;FunctionEnd
+<br><br>&gt;Function UserPageShow
+<br>       !insertmacro MUI_INSTALLOPTIONS_EXTRACT "validateUser.ini"
+<br><br>                   PassDialog::InitDialog /NOUNLOAD UserPass
+<br>                    Pop $R0 # Page HWND
+<br><br>                   GetDlgItem $R1 $R0 ${IDC_USERNAME}
+<br>                    SetCtlColors $R1 0xFF0000 0xFFFFFF
+<br>                    GetDlgItem $R1 $R0${IDC_PASSWORD}
+<br>                    SetCtlColors $R1 0x0000FF 0xFFFFFF
+<br><br> PassDialog</code>::Show
+<br>Pop $R0 # success, back, cancel or error
+<br>&gt;FunctionEnd
+<br><br>&gt;Function UserPageLeave
+<br><br><br>&gt;## Pop password &amp; username from stack
+<br>&gt;Pop $R0
+<br>Pop $R1
+<br><br>&gt;## A bit of validation
+<br>&gt;StrCmp $R0 '${Username1}' 0 +2
+<br>StrCmp $R1'${Password1}' Good Bad
+<br>StrCmp $R0'${Username2}' 0 +2
+<br>StrCmp $R1'${Password2}' Good Bad
+<br><br>   !insertmacro MUI_HEADER_TEXT "Validating..." "Please Wait"
+<br><br><br>&gt;FunctionEnd
+<br><br>&gt;Function validateUser
+<br><br><br>   ;## Disable the Back button
+<br>    GetDlgItem $R6 $HWNDPARENT 3
+<br>    EnableWindow $R6 0
+<br>    ## Disable the Next button
+<br>    GetDlgItem $R6 $HWNDPARENT 1
+<br>    EnableWindow $R6 0
+<br><br>        Banner::show /NOUNLOAD /set 76 "Please Wait Checking" "Validating ......"
+<br>   Banner::getWindow /NOUNLOAD
+<br><br>    GetTempFileName$0
+<br>    InetLoad::load /post "licence=$R0-$R1" "http://www.site.com/site/user.php" "$0" /slient ""
+<br>   Pop $1 # $1 now holds the exit code for above
+<br><br>   FileOpen $2 $0 "r"
+<br>   FileRead $2 $3
+<br>    FileClose$2
+<br><br>   ${If} $3 == 'INVALID'
+<br>   Banner::destroy
+<br>    MessageBox MB_OK|MB_ICONEXCLAMATION "Invalid User. Setup will exit now."
+<br><br>        Quit
+<br><br>    ${Else}
+<br>   Banner::destroy
+<br>    Goto USEROK
+<br>    ${EndIf}
+<br><br>   USEROK:
+<br>&gt;FunctionEnd
+<br><br>Section ""
+<br>&gt;SectionEnd 
+<br>&gt;
 
-</pre><br />
+</pre><br>
       <pre>
 <code>
 MakeNSIS v2.37 - Copyright 1995-2008 Contributors
-<br />See the file COPYINGfor license details.
-<br />&gt;Credits can be found in the Users Manual.
-<br /><br />&gt;Processing config: 
-<br />&gt;Processing plugin dlls: "C:\Program Files\NSIS\Plugins\*.dll"
-<br />&gt;- AccessControl::DenyOnFile
-<br />&gt;- AccessControl::DenyOnRegKey
-<br />&gt;- AccessControl::GrantOnFile
-<br />&gt;- AccessControl::GrantOnRegKey
-<br />&gt;- AccessControl::RevokeOnFile
-<br />&gt;- AccessControl::RevokeOnRegKey
-<br />&gt;- AccessControl::SetFileGroup
-<br />&gt;- AccessControl::SetFileOwner
-<br />&gt;- AccessControl::SetOnFile
-<br />&gt;- AccessControl::SetOnRegKey
-<br />&gt;- AccessControl::SetRegKeyGroup
-<br />&gt;- AccessControl::SetRegKeyOwner
-<br />&gt;- AdvSplash::show
-<br />&gt;- Banner::destroy
-<br />&gt;- Banner::getWindow
-<br />&gt;- Banner::show
-<br />&gt;- BgImage::AddImage
-<br />&gt;- BgImage::AddText
-<br />&gt;- BgImage::Clear
-<br />&gt;- BgImage::Destroy
-<br />&gt;- BgImage::Redraw
-<br />&gt;- BgImage::SetBg
-<br />&gt;- BgImage::SetReturn
-<br />&gt;- BgImage::Sound
-<br />&gt;- BrandingURL::Set
-<br />&gt;- BrandingURL::Unload
-<br />&gt;- ButtonEvent::AddEventHandler
-<br />&gt;- ButtonEvent::Unload
-<br />&gt;- ButtonEvent::WhichButtonID
-<br />&gt;- Delay::DelayButton
-<br />&gt;- Delay::Free
-<br />&gt;- Dialer::AttemptConnect
-<br />&gt;- Dialer::AutodialHangup
-<br />&gt;- Dialer::AutodialOnline
-<br />&gt;- Dialer::AutodialUnattended
-<br />&gt;- Dialer::GetConnectedState
-<br />&gt;- Dialogs::Author
-<br />&gt;- Dialogs::Folder
-<br />&gt;- Dialogs::Open
-<br />&gt;- Dialogs::Ver
-<br />&gt;- EmbeddedLists::Dialog
-<br />&gt;- EmbeddedLists::InitDialog
-<br />&gt;- EmbeddedLists::Show
-<br />&gt;- EnumCDs::next
-<br />&gt;- ExecCmd::exec
-<br />&gt;- ExecCmd::wait
-<br />&gt;- ExecDos::exec
-<br />&gt;- ExecDos::wait
-<br />&gt;- FontName::name
-<br />&gt;- FontName::version
-<br />&gt;- GetVersion::IEVersion
-<br />&gt;- GetVersion::WindowsName
-<br />&gt;- GetVersion::WindowsPlatformArchitecture
-<br />&gt;- GetVersion::WindowsPlatformId
-<br />&gt;- GetVersion::WindowsServerName
-<br />&gt;- GetVersion::WindowsServicePack
-<br />&gt;- GetVersion::WindowsServicePackBuild
-<br />&gt;- GetVersion::WindowsType
-<br />&gt;- GetVersion::WindowsVersion
-<br />&gt;- InetLoad::load
-<br />&gt;- InstOpts::dialog
-<br />&gt;- InstallOptions::dialog
-<br />&gt;- InstallOptions::initDialog
-<br />&gt;- InstallOptions::show
-<br />&gt;- InstallOptionsEx::dialog
-<br />&gt;- InstallOptionsEx::initDialog
-<br />&gt;- InstallOptionsEx::setFocus
-<br />&gt;- InstallOptionsEx::show
-<br />&gt;- LangDLL::LangDialog
-<br />&gt;- Locate::_Close
-<br />&gt;- Locate::_Find
-<br />&gt;- Locate::_GetSize
-<br />&gt;- Locate::_Open
-<br />&gt;- Locate::_RMDirEmpty
-<br />&gt;- Locate::_Unload
-<br />&gt;- LockedList::AddFile
-<br />&gt;- LockedList::AddModule
-<br />&gt;- LockedList::Dialog
-<br />&gt;- LockedList::InitDialog
-<br />&gt;- LockedList::Show
-<br />&gt;- LockedList::SilentPercentComplete
-<br />&gt;- LockedList::SilentSearch
-<br />&gt;- LockedList::SilentWait
-<br />&gt;- LockedList::Unload
-<br />&gt;- Math::Script
-<br />&gt;- NSISArray::ArrayCount
-<br />&gt;- NSISArray::ArrayExists
-<br />&gt;- NSISArray::Clear
-<br />&gt;- NSISArray::Concat
-<br />&gt;- NSISArray::Copy
-<br />&gt;- NSISArray::Cut
-<br />&gt;- NSISArray::Debug
-<br />&gt;- NSISArray::Delete
-<br />&gt;- NSISArray::ErrorStyle
-<br />&gt;- NSISArray::Exists
-<br />&gt;- NSISArray::ExistsI
-<br />&gt;- NSISArray::FreeUnusedMem
-<br />&gt;- NSISArray::Join
-<br />&gt;- NSISArray::New
-<br /> -NSISArray::Pop
-<br />&gt;- NSISArray::Push
-<br />&gt;- NSISArray::Put
-<br />&gt;- NSISArray::ReDim
-<br />&gt;- NSISArray::Read
-<br />&gt;- NSISArray::ReadToStack
-<br />&gt;- NSISArray::Reverse
-<br />&gt;- NSISArray::Search
-<br />&gt;- NSISArray::SearchI
-<br />&gt;- NSISArray::SetSize
-<br />&gt;- NSISArray::Shift
-<br />&gt;- NSISArray::SizeOf
-<br />&gt;- NSISArray::Sort
-<br />&gt;- NSISArray::Splice
-<br />&gt;- NSISArray::Swap
-<br />&gt;- NSISArray::Unload
-<br />&gt;- NSISArray::Unshift
-<br />&gt;- NSISArray::Write
-<br />&gt;- NSISArray::WriteList
-<br />&gt;- NSISArray::WriteListC
-<br />&gt;- NSISdl::download
-<br />&gt;- NSISdl::download_quiet
-<br />&gt;- NotifyIcon::Icon
-<br />&gt;- PPC-Registry::_CERAPIINIT
-<br />&gt;- PPC-Registry::_CERAPIINITEX
-<br />&gt;- PPC-Registry::_CERAPIUNINIT
-<br />&gt;- PPC-Registry::_Close
-<br />&gt;- PPC-Registry::_CopyKey
-<br />&gt;- PPC-Registry::_CopyValue
-<br />&gt;- PPC-Registry::_CreateKey
-<br />&gt;- PPC-Registry::_DeleteKey
-<br />&gt;- PPC-Registry::_DeleteKeyEmpty
-<br />&gt;- PPC-Registry::_DeleteValue
-<br />&gt;- PPC-Registry::_Find
-<br />&gt;- PPC-Registry::_HexToStr
-<br />&gt;- PPC-Registry::_KeyExists
-<br />&gt;- PPC-Registry::_MoveKey
-<br />&gt;- PPC-Registry::_MoveValue
-<br />&gt;- PPC-Registry::_Open
-<br />&gt;- PPC-Registry::_Read
-<br />&gt;- PPC-Registry::_ReadExtra
-<br />&gt;- PPC-Registry::_SaveKey
-<br />&gt;- PPC-Registry::_StrToHex
-<br />&gt;- PPC-Registry::_Unload
-<br />&gt;- PPC-Registry::_Write
-<br />&gt;- PPC-Registry::_WriteExtra
-<br />&gt;- PassDialog::Dialog
-<br />&gt;- PassDialog::InitDialog
-<br />&gt;- PassDialog::Show
-<br />&gt;- PopupListBox::MultiSelect
-<br />&gt;- PopupListBox::SingleSelect
-<br />&gt;- RealProgress::AddProgress
-<br />&gt;- RealProgress::DetailProgress
-<br />&gt;- RealProgress::FileProgress
-<br />&gt;- RealProgress::GetProgress
-<br />&gt;- RealProgress::GradualProgress
-<br />&gt;- RealProgress::SetProgress
-<br />&gt;- RealProgress::Unload
-<br />&gt;- ScrollLicense::Set
-<br />&gt;- ScrollLicense::Unload
-<br />&gt;- SelfDel::del
-<br />&gt;- SetCursor::File
-<br />&gt;- SetCursor::Position
-<br />&gt;- SetCursor::System
-<br />&gt;- SetCursor::Visibility
-<br />&gt;- ShutDown::LogOff
-<br />&gt;- ShutDown::PowerOff
-<br />&gt;- ShutDown::Reboot
-<br />&gt;- ShutDown::ShutDown
-<br />&gt;- Splash::show
-<br />&gt;- StartMenu::Init
-<br />&gt;- StartMenu::Select
-<br />&gt;- StartMenu::Show
-<br />&gt;- System::Alloc
-<br />&gt;- System::Call
-<br />&gt;- System::Copy
-<br />&gt;- System::Free
-<br />&gt;- System::Get
-<br />&gt;- System::Int64Op
-<br />&gt;- System::Store
-<br />&gt;- ToggleInstFiles::Set
-<br />&gt;- ToggleInstFiles::Unload
-<br />&gt;- ToolTips::Author
-<br />&gt;- ToolTips::Classic
-<br />&gt;- ToolTips::Modern
-<br />&gt;- TypeLib::GetLibVersion
-<br />&gt;- TypeLib::Register
-<br />&gt;- TypeLib::UnRegister
-<br />&gt;- UserInfo::GetAccountType
-<br />&gt;- UserInfo::GetName
-<br />&gt;- UserMgr::AddPrivilege
-<br />&gt;- UserMgr::AddToGroup
-<br />&gt;- UserMgr::BuiltAccountEnv
-<br />&gt;- UserMgr::ChangeUserPassword
-<br />&gt;- UserMgr::CreateAccount
-<br />&gt;- UserMgr::CreateAccountEx
-<br />&gt;- UserMgr::CreateGroup
-<br />&gt;- UserMgr::DeleteAccount
-<br />&gt;- UserMgr::DeleteGroup
-<br />&gt;- UserMgr::GetCurrentUserName
-<br />&gt;- UserMgr::GetLocalizedStdAccountName
-<br />&gt;- UserMgr::GetUserInfo
-<br />&gt;- UserMgr::HasPrivilege
-<br />&gt;- UserMgr::IsMemberOfGroup
-<br />&gt;- UserMgr::RegLoadUserHive
-<br />&gt;- UserMgr::RegUnLoadUserHive
-<br />&gt;- UserMgr::RemoveFromGroup
-<br />&gt;- UserMgr::RemovePrivilege
-<br />&gt;- UserMgr::SetRegKeyAccess
-<br />&gt;- UserMgr::SetUserInfo
-<br />&gt;- VPatch::vpatchfile
-<br />&gt;- WAnsis::config
-<br />&gt;- WAnsis::setskin
-<br />&gt;- WAnsis::skinit
-<br />&gt;- WAnsis::unskinit
-<br />&gt;- ZipDLL::extractall
-<br />&gt;- ZipDLL::extractfile
-<br />&gt;- cdrom::CLOSE
-<br />&gt;- cdrom::FINDCLOSE
-<br />&gt;- cdrom::FINDNEXT
-<br />&gt;- cdrom::OPEN
-<br />&gt;- cdrom::STATUS
-<br />&gt;- cdrom::VOLUMENAME
-<br />&gt;- cdrom::VOLUMESERIALNUMBER
-<br />&gt;- inetc::get
-<br />&gt;- inetc::head
-<br />&gt;- inetc::post
-<br />&gt;- inetc::put
-<br />&gt;- md5dll::GetMD5File
-<br />&gt;- md5dll::GetMD5Random
-<br />&gt;- md5dll::GetMD5String
-<br />&gt;- nsDialogs::Create
-<br />&gt;- nsDialogs::CreateControl
-<br />&gt;- nsDialogs::CreateItem
-<br />&gt;- nsDialogs::GetUserData
-<br />&gt;- nsDialogs::OnBack
-<br />&gt;- nsDialogs::OnChange
-<br />&gt;- nsDialogs::OnClick
-<br />&gt;- nsDialogs::OnNotify
-<br />&gt;- nsDialogs::SelectFileDialog
-<br />&gt;- nsDialogs::SelectFolderDialog
-<br />&gt;- nsDialogs::SetRTL
-<br />&gt;- nsDialogs::SetUserData
-<br />&gt;- nsDialogs::Show
-<br />&gt;- nsExec::Exec
-<br />&gt;- nsExec::ExecToLog
-<br />&gt;- nsExec::ExecToStack
-<br />&gt;- nsProcess::_FindProcess
-<br />&gt;- nsProcess::_KillProcess
-<br />&gt;- nsProcess::_Unload
-<br />&gt;- nsisUser::IsLoginValid
-<br />&gt;- nsislog::Log
-<br />&gt;- registry::_Close
-<br />&gt;- registry::_CopyKey
-<br />&gt;- registry::_CopyValue
-<br />&gt;- registry::_CreateKey
-<br />&gt;- registry::_DeleteKey
-<br />&gt;- registry::_DeleteKeyEmpty
-<br />&gt;- registry::_DeleteValue
-<br />&gt;- registry::_Find
-<br />&gt;- registry::_HexToStr
-<br />&gt;- registry::_KeyExists
-<br />&gt;- registry::_MoveKey
-<br />&gt;- registry::_MoveValue
-<br />&gt;- registry::_Open
-<br />&gt;- registry::_Read
-<br />&gt;- registry::_ReadExtra
-<br />&gt;- registry::_RestoreKey
-<br />&gt;- registry::_SaveKey
-<br />&gt;- registry::_StrToHex
-<br />&gt;- registry::_Unload
-<br />&gt;- registry::_Write
-<br />&gt;- registry::_WriteExtra
-<br />&gt;- version::GetWindowsVersion
-<br />&gt;- version::IsWindows2000
-<br />&gt;- version::IsWindows2003
-<br />&gt;- version::IsWindows31
-<br />&gt;- version::IsWindows95
-<br />&gt;- version::IsWindows98
-<br />&gt;- version::IsWindows98orLater
-<br />&gt;- version::IsWindowsME
-<br />&gt;- version::IsWindowsNT351
-<br />&gt;- version::IsWindowsNT40
-<br />&gt;- version::IsWindowsPlatform9x
-<br />&gt;- version::IsWindowsPlatformNT
-<br />&gt;- version::IsWindowsXP
-<br />&gt;- xml::_CloneNode
-<br />&gt;- xml::_Coordinate
-<br />&gt;- xml::_CreateNode
-<br />&gt;- xml::_CreateText
-<br />&gt;- xml::_DeclarationEncoding
-<br />&gt;- xml::_DeclarationStandalone
-<br />&gt;- xml::_DeclarationVersion
-<br />&gt;- xml::_ElementPath
-<br />&gt;- xml::_FindCloseElement
-<br />&gt;- xml::_FindNextElement
-<br />&gt;- xml::_FirstAttribute
-<br />&gt;- xml::_FirstChild
-<br />&gt;- xml::_FirstChildElement
-<br />&gt;- xml::_FreeNode
-<br />&gt;- xml::_GetAttribute
-<br />&gt;- xml::_GetNodeValue
-<br />&gt;- xml::_GetText
-<br />&gt;- xml::_GotoHandle
-<br />&gt;- xml::_GotoPath
-<br />&gt;- xml::_InsertAfterNode
-<br />&gt;- xml::_InsertBeforeNode
-<br />&gt;- xml::_InsertEndChild
-<br />&gt;- xml::_IsCDATA
-<br />&gt;- xml::_LastAttribute
-<br />&gt;- xml::_LastChild
-<br />&gt;- xml::_LoadFile
-<br />&gt;- xml::_NextAttribute
-<br />&gt;- xml::_NextSibling
-<br />&gt;- xml::_NextSiblingElement
-<br />&gt;- xml::_NoChildren
-<br />&gt;- xml::_NodeHandle
-<br />&gt;- xml::_NodeType
-<br />&gt;- xml::_Parent
-<br />&gt;- xml::_PreviousAttribute
-<br />&gt;- xml::_PreviousSibling
-<br />&gt;- xml::_RemoveAttribute
-<br />&gt;- xml::_RemoveNode
-<br />&gt;- xml::_ReplaceNode
-<br />&gt;- xml::_RootElement
-<br />&gt;- xml::_SaveFile
-<br />&gt;- xml::_SetAttribute
-<br />&gt;- xml::_SetAttributeName
-<br />&gt;- xml::_SetAttributeValue
-<br />&gt;- xml::_SetCDATA
-<br />&gt;- xml::_SetCondenseWhiteSpace
-<br />&gt;- xml::_SetEncoding
-<br />&gt;- xml::_SetNodeValue
-<br />&gt;- xml::_SetText
-<br />&gt;- xml::_Unload
-<br /><br />&gt;!define: "MUI_INSERT_NSISCONF"=""
-<br /><br />&gt;Changing directory to: "D:\Download\NSIS\code\2\verify"
-<br /><br />&gt;Processing script file: "D:\Download\NSIS\code\2\verify\user.nsi"
-<br />&gt;InstallDir: "$PROGRAMFILES\Test"
-<br />&gt;Name: "Test Installer"
-<br />&gt;OutFile: "Install.exe"
-<br />&gt;!include: "C:\Program Files\NSIS\Include\MUI.nsh"
-<br />&gt;!include: "C:\Program Files\NSIS\Contrib\Modern UI\System.nsh"
-<br />&gt;NSIS Modern User Interface version 1.75 - Â© 2002-2007 Joost Verburg (C:Program FilesNSISContribModern UISystem.nsh:11)
-<br />!</code>define: "MUI_VERBOSE"="3"
-<br />&gt;!include: closed: "C:\Program Files\NSIS\Contrib\Modern UI\System.nsh"
-<br />&gt;!include: closed: "C:\Program Files\NSIS\Include\MUI.nsh"
-<br />&gt;!include: "C:\Program Files\NSIS\Include\LogicLib.nsh"
-<br />&gt;!include: closed: "C:\Program Files\NSIS\Include\LogicLib.nsh"
-<br />&gt;!define: "MUI_ICON"="C:\Program Files\NSIS\Contrib\Graphics\Icons\orange-install.ico"
-<br />&gt;!define: "MUI_UNICON"="C:\Program Files\NSIS\Contrib\Graphics\Icons\orange-uninstall.ico"
-<br />&gt;XPStyle: on
-<br />AutoCloseWindow: true
-<br />ReserveFile: "validateuser.ini" ***91;compress***93; 124/139 bytes
-<br />&gt;!insertmacro: MUI_RESERVEFILE_INSTALLOPTIONS
-<br />&gt;!insertmacro: end of MUI_RESERVEFILE_INSTALLOPTIONS
-<br />Page: custom (creator:UserPageShow) (leave:UserPageLeave)
-<br />&gt;Page: custom (creator:validateUser)
-<br />!insertmacro: MUI_PAGE_DIRECTORY
-<br />&gt;!insertmacro: end of MUI_PAGE_DIRECTORY
-<br />&gt;!insertmacro: MUI_PAGE_INSTFILES
-<br />&gt;!insertmacro: end of MUI_PAGE_INSTFILES
-<br />&gt;!insertmacro: MUI_LANGUAGE
-<br />&gt;!insertmacro: end of MUI_LANGUAGE
-<br />&gt;Function: ".onInit"
-<br />&gt;!insertmacro: MUI_INSTALLOPTIONS_EXTRACT
-<br />&gt;!insertmacro: end of MUI_INSTALLOPTIONS_EXTRACT
-<br />FunctionEnd
-<br />&gt;Function: "UserPageShow"
-<br />&gt;!insertmacro: MUI_INSTALLOPTIONS_EXTRACT
-<br />&gt;!insertmacro: end of MUI_INSTALLOPTIONS_EXTRACT
-<br />File: "PassDialog.dll"-&gt;"$PLUGINSDIR\PassDialog.dll" ***91;compress***93; 3933/8704 bytes
-<br />Plugin Command: InitDialog UserPass
-<br />Pop: $R0
-<br />warning: unknown variable/constant "{IDC_USERNAME}" detected, ignoring (D:DownloadNSIScode2verifyuser.nsi:40)
-<br />&gt;GetDlgItem: output=$R1 dialog=$R0 item=${IDC_USERNAME}
-<br />&gt;SetCtlColors: hwnd=$R1 text=0xFF0000 background=0xFFFFFF
-<br />warning: unknown variable/constant "{IDC_PASSWORD}" detected, ignoring (D:DownloadNSIScode2verifyuser.nsi:42)
-<br />&gt;GetDlgItem: output=$R1 dialog=$R0 item=${IDC_PASSWORD}
-<br />&gt;SetCtlColors: hwnd=$R1 text=0x0000FF background=0xFFFFFF
-<br />File: "PassDialog.dll"-&gt;"$PLUGINSDIR\PassDialog.dll" ***91;compress***93; 0/8704 bytes
-<br />Plugin Command: Show
-<br />Pop: $R0
-<br />FunctionEnd
-<br />&gt;Function: "UserPageLeave"
-<br />&gt;Pop: $R0
-<br />Pop: $R1
-<br />warning: unknown variable/constant "{Username1}" detected, ignoring (D:DownloadNSIScode2verifyuser.nsi:57)
-<br />&gt;StrCmp "$R0" "${Username1}" equal=0, nonequal=+2
-<br />warning: unknown variable/constant "{Password1}" detected, ignoring (D:DownloadNSIScode2verifyuser.nsi:58)
-<br />&gt;StrCmp "$R1" "${Password1}" equal=Good, nonequal=Bad
-<br />warning: unknown variable/constant "{Username2}" detected, ignoring (D:DownloadNSIScode2verifyuser.nsi:59)
-<br />&gt;StrCmp "$R0" "${Username2}" equal=0, nonequal=+2
-<br />warning: unknown variable/constant "{Password2}" detected, ignoring (D:DownloadNSIScode2verifyuser.nsi:60)
-<br />&gt;StrCmp "$R1" "${Password2}" equal=Good, nonequal=Bad
-<br />&gt;!insertmacro: MUI_HEADER_TEXT
-<br />&gt;!insertmacro: end of MUI_HEADER_TEXT
-<br />FunctionEnd
-<br />&gt;Function: "validateUser"
-<br />&gt;GetDlgItem: output=$R6 dialog=$HWNDPARENT item=3
-<br />EnableWindow: handle=$R6 enable=0
-<br />GetDlgItem: output=$R6 dialog=$HWNDPARENT item=1
-<br />EnableWindow: handle=$R6 enable=0
-<br />File: "Banner.dll"-&gt;"$PLUGINSDIR\Banner.dll" ***91;compress***93; 1423/4096 bytes
-<br />Plugin Command: show /set 76 Please Wait Checking Validating ......
-<br />&gt;File: "Banner.dll"-&gt;"$PLUGINSDIR\Banner.dll" ***91;compress***93; 0/4096 bytes
-<br />Plugin Command: getWindow
-<br />GetTempFileName-&gt; $0
-<br />File: "InetLoad.dll"-&gt;"$PLUGINSDIR\InetLoad.dll" ***91;compress***93; 8136/16384 bytes
-<br />Plugin Command: load /post licence=$R0-$R1 ***91;url***93;http://www.site.com/site/user.php***91;/url***93; $0 /slient 
-<br />&gt;Pop: $1
-<br />FileOpen: $0 as r -&gt; $2
-<br />FileRead: $2-&gt;$3 (max:)
-<br />&gt;FileClose: $2
-<br />&gt;!insertmacro: _If
-<br />&gt;!insertmacro: end of _If
-<br />File: "Banner.dll"-&gt;"$PLUGINSDIR\Banner.dll" ***91;compress***93; 0/4096 bytes
-<br />Plugin Command: destroy
-<br />MessageBox: 48: "Invalid User. Setup will exit now."
-<br />&gt;Quit
-<br />&gt;!insertmacro: _Else
-<br />&gt;!insertmacro: end of _Else
-<br />Plugin Command: destroy
-<br />Goto: USEROK
-<br />&gt;!insertmacro: _EndIf
-<br />&gt;!insertmacro: end of _EndIf
-<br />FunctionEnd
-<br />Section: ""
-<br />&gt;SectionEnd
-<br /><br />Processed 1 file, writing output:
-<br />&gt;Adding plug-ins initializing function... Done!
-<br />&gt;Error: could not resolve label "Good" in function "UserPageLeave"
-<br />&gt;Error - aborting creation process 
-<br />&gt;
+<br>See the file COPYINGfor license details.
+<br>&gt;Credits can be found in the Users Manual.
+<br><br>&gt;Processing config: 
+<br>&gt;Processing plugin dlls: "C:\Program Files\NSIS\Plugins\*.dll"
+<br>&gt;- AccessControl::DenyOnFile
+<br>&gt;- AccessControl::DenyOnRegKey
+<br>&gt;- AccessControl::GrantOnFile
+<br>&gt;- AccessControl::GrantOnRegKey
+<br>&gt;- AccessControl::RevokeOnFile
+<br>&gt;- AccessControl::RevokeOnRegKey
+<br>&gt;- AccessControl::SetFileGroup
+<br>&gt;- AccessControl::SetFileOwner
+<br>&gt;- AccessControl::SetOnFile
+<br>&gt;- AccessControl::SetOnRegKey
+<br>&gt;- AccessControl::SetRegKeyGroup
+<br>&gt;- AccessControl::SetRegKeyOwner
+<br>&gt;- AdvSplash::show
+<br>&gt;- Banner::destroy
+<br>&gt;- Banner::getWindow
+<br>&gt;- Banner::show
+<br>&gt;- BgImage::AddImage
+<br>&gt;- BgImage::AddText
+<br>&gt;- BgImage::Clear
+<br>&gt;- BgImage::Destroy
+<br>&gt;- BgImage::Redraw
+<br>&gt;- BgImage::SetBg
+<br>&gt;- BgImage::SetReturn
+<br>&gt;- BgImage::Sound
+<br>&gt;- BrandingURL::Set
+<br>&gt;- BrandingURL::Unload
+<br>&gt;- ButtonEvent::AddEventHandler
+<br>&gt;- ButtonEvent::Unload
+<br>&gt;- ButtonEvent::WhichButtonID
+<br>&gt;- Delay::DelayButton
+<br>&gt;- Delay::Free
+<br>&gt;- Dialer::AttemptConnect
+<br>&gt;- Dialer::AutodialHangup
+<br>&gt;- Dialer::AutodialOnline
+<br>&gt;- Dialer::AutodialUnattended
+<br>&gt;- Dialer::GetConnectedState
+<br>&gt;- Dialogs::Author
+<br>&gt;- Dialogs::Folder
+<br>&gt;- Dialogs::Open
+<br>&gt;- Dialogs::Ver
+<br>&gt;- EmbeddedLists::Dialog
+<br>&gt;- EmbeddedLists::InitDialog
+<br>&gt;- EmbeddedLists::Show
+<br>&gt;- EnumCDs::next
+<br>&gt;- ExecCmd::exec
+<br>&gt;- ExecCmd::wait
+<br>&gt;- ExecDos::exec
+<br>&gt;- ExecDos::wait
+<br>&gt;- FontName::name
+<br>&gt;- FontName::version
+<br>&gt;- GetVersion::IEVersion
+<br>&gt;- GetVersion::WindowsName
+<br>&gt;- GetVersion::WindowsPlatformArchitecture
+<br>&gt;- GetVersion::WindowsPlatformId
+<br>&gt;- GetVersion::WindowsServerName
+<br>&gt;- GetVersion::WindowsServicePack
+<br>&gt;- GetVersion::WindowsServicePackBuild
+<br>&gt;- GetVersion::WindowsType
+<br>&gt;- GetVersion::WindowsVersion
+<br>&gt;- InetLoad::load
+<br>&gt;- InstOpts::dialog
+<br>&gt;- InstallOptions::dialog
+<br>&gt;- InstallOptions::initDialog
+<br>&gt;- InstallOptions::show
+<br>&gt;- InstallOptionsEx::dialog
+<br>&gt;- InstallOptionsEx::initDialog
+<br>&gt;- InstallOptionsEx::setFocus
+<br>&gt;- InstallOptionsEx::show
+<br>&gt;- LangDLL::LangDialog
+<br>&gt;- Locate::_Close
+<br>&gt;- Locate::_Find
+<br>&gt;- Locate::_GetSize
+<br>&gt;- Locate::_Open
+<br>&gt;- Locate::_RMDirEmpty
+<br>&gt;- Locate::_Unload
+<br>&gt;- LockedList::AddFile
+<br>&gt;- LockedList::AddModule
+<br>&gt;- LockedList::Dialog
+<br>&gt;- LockedList::InitDialog
+<br>&gt;- LockedList::Show
+<br>&gt;- LockedList::SilentPercentComplete
+<br>&gt;- LockedList::SilentSearch
+<br>&gt;- LockedList::SilentWait
+<br>&gt;- LockedList::Unload
+<br>&gt;- Math::Script
+<br>&gt;- NSISArray::ArrayCount
+<br>&gt;- NSISArray::ArrayExists
+<br>&gt;- NSISArray::Clear
+<br>&gt;- NSISArray::Concat
+<br>&gt;- NSISArray::Copy
+<br>&gt;- NSISArray::Cut
+<br>&gt;- NSISArray::Debug
+<br>&gt;- NSISArray::Delete
+<br>&gt;- NSISArray::ErrorStyle
+<br>&gt;- NSISArray::Exists
+<br>&gt;- NSISArray::ExistsI
+<br>&gt;- NSISArray::FreeUnusedMem
+<br>&gt;- NSISArray::Join
+<br>&gt;- NSISArray::New
+<br> -NSISArray::Pop
+<br>&gt;- NSISArray::Push
+<br>&gt;- NSISArray::Put
+<br>&gt;- NSISArray::ReDim
+<br>&gt;- NSISArray::Read
+<br>&gt;- NSISArray::ReadToStack
+<br>&gt;- NSISArray::Reverse
+<br>&gt;- NSISArray::Search
+<br>&gt;- NSISArray::SearchI
+<br>&gt;- NSISArray::SetSize
+<br>&gt;- NSISArray::Shift
+<br>&gt;- NSISArray::SizeOf
+<br>&gt;- NSISArray::Sort
+<br>&gt;- NSISArray::Splice
+<br>&gt;- NSISArray::Swap
+<br>&gt;- NSISArray::Unload
+<br>&gt;- NSISArray::Unshift
+<br>&gt;- NSISArray::Write
+<br>&gt;- NSISArray::WriteList
+<br>&gt;- NSISArray::WriteListC
+<br>&gt;- NSISdl::download
+<br>&gt;- NSISdl::download_quiet
+<br>&gt;- NotifyIcon::Icon
+<br>&gt;- PPC-Registry::_CERAPIINIT
+<br>&gt;- PPC-Registry::_CERAPIINITEX
+<br>&gt;- PPC-Registry::_CERAPIUNINIT
+<br>&gt;- PPC-Registry::_Close
+<br>&gt;- PPC-Registry::_CopyKey
+<br>&gt;- PPC-Registry::_CopyValue
+<br>&gt;- PPC-Registry::_CreateKey
+<br>&gt;- PPC-Registry::_DeleteKey
+<br>&gt;- PPC-Registry::_DeleteKeyEmpty
+<br>&gt;- PPC-Registry::_DeleteValue
+<br>&gt;- PPC-Registry::_Find
+<br>&gt;- PPC-Registry::_HexToStr
+<br>&gt;- PPC-Registry::_KeyExists
+<br>&gt;- PPC-Registry::_MoveKey
+<br>&gt;- PPC-Registry::_MoveValue
+<br>&gt;- PPC-Registry::_Open
+<br>&gt;- PPC-Registry::_Read
+<br>&gt;- PPC-Registry::_ReadExtra
+<br>&gt;- PPC-Registry::_SaveKey
+<br>&gt;- PPC-Registry::_StrToHex
+<br>&gt;- PPC-Registry::_Unload
+<br>&gt;- PPC-Registry::_Write
+<br>&gt;- PPC-Registry::_WriteExtra
+<br>&gt;- PassDialog::Dialog
+<br>&gt;- PassDialog::InitDialog
+<br>&gt;- PassDialog::Show
+<br>&gt;- PopupListBox::MultiSelect
+<br>&gt;- PopupListBox::SingleSelect
+<br>&gt;- RealProgress::AddProgress
+<br>&gt;- RealProgress::DetailProgress
+<br>&gt;- RealProgress::FileProgress
+<br>&gt;- RealProgress::GetProgress
+<br>&gt;- RealProgress::GradualProgress
+<br>&gt;- RealProgress::SetProgress
+<br>&gt;- RealProgress::Unload
+<br>&gt;- ScrollLicense::Set
+<br>&gt;- ScrollLicense::Unload
+<br>&gt;- SelfDel::del
+<br>&gt;- SetCursor::File
+<br>&gt;- SetCursor::Position
+<br>&gt;- SetCursor::System
+<br>&gt;- SetCursor::Visibility
+<br>&gt;- ShutDown::LogOff
+<br>&gt;- ShutDown::PowerOff
+<br>&gt;- ShutDown::Reboot
+<br>&gt;- ShutDown::ShutDown
+<br>&gt;- Splash::show
+<br>&gt;- StartMenu::Init
+<br>&gt;- StartMenu::Select
+<br>&gt;- StartMenu::Show
+<br>&gt;- System::Alloc
+<br>&gt;- System::Call
+<br>&gt;- System::Copy
+<br>&gt;- System::Free
+<br>&gt;- System::Get
+<br>&gt;- System::Int64Op
+<br>&gt;- System::Store
+<br>&gt;- ToggleInstFiles::Set
+<br>&gt;- ToggleInstFiles::Unload
+<br>&gt;- ToolTips::Author
+<br>&gt;- ToolTips::Classic
+<br>&gt;- ToolTips::Modern
+<br>&gt;- TypeLib::GetLibVersion
+<br>&gt;- TypeLib::Register
+<br>&gt;- TypeLib::UnRegister
+<br>&gt;- UserInfo::GetAccountType
+<br>&gt;- UserInfo::GetName
+<br>&gt;- UserMgr::AddPrivilege
+<br>&gt;- UserMgr::AddToGroup
+<br>&gt;- UserMgr::BuiltAccountEnv
+<br>&gt;- UserMgr::ChangeUserPassword
+<br>&gt;- UserMgr::CreateAccount
+<br>&gt;- UserMgr::CreateAccountEx
+<br>&gt;- UserMgr::CreateGroup
+<br>&gt;- UserMgr::DeleteAccount
+<br>&gt;- UserMgr::DeleteGroup
+<br>&gt;- UserMgr::GetCurrentUserName
+<br>&gt;- UserMgr::GetLocalizedStdAccountName
+<br>&gt;- UserMgr::GetUserInfo
+<br>&gt;- UserMgr::HasPrivilege
+<br>&gt;- UserMgr::IsMemberOfGroup
+<br>&gt;- UserMgr::RegLoadUserHive
+<br>&gt;- UserMgr::RegUnLoadUserHive
+<br>&gt;- UserMgr::RemoveFromGroup
+<br>&gt;- UserMgr::RemovePrivilege
+<br>&gt;- UserMgr::SetRegKeyAccess
+<br>&gt;- UserMgr::SetUserInfo
+<br>&gt;- VPatch::vpatchfile
+<br>&gt;- WAnsis::config
+<br>&gt;- WAnsis::setskin
+<br>&gt;- WAnsis::skinit
+<br>&gt;- WAnsis::unskinit
+<br>&gt;- ZipDLL::extractall
+<br>&gt;- ZipDLL::extractfile
+<br>&gt;- cdrom::CLOSE
+<br>&gt;- cdrom::FINDCLOSE
+<br>&gt;- cdrom::FINDNEXT
+<br>&gt;- cdrom::OPEN
+<br>&gt;- cdrom::STATUS
+<br>&gt;- cdrom::VOLUMENAME
+<br>&gt;- cdrom::VOLUMESERIALNUMBER
+<br>&gt;- inetc::get
+<br>&gt;- inetc::head
+<br>&gt;- inetc::post
+<br>&gt;- inetc::put
+<br>&gt;- md5dll::GetMD5File
+<br>&gt;- md5dll::GetMD5Random
+<br>&gt;- md5dll::GetMD5String
+<br>&gt;- nsDialogs::Create
+<br>&gt;- nsDialogs::CreateControl
+<br>&gt;- nsDialogs::CreateItem
+<br>&gt;- nsDialogs::GetUserData
+<br>&gt;- nsDialogs::OnBack
+<br>&gt;- nsDialogs::OnChange
+<br>&gt;- nsDialogs::OnClick
+<br>&gt;- nsDialogs::OnNotify
+<br>&gt;- nsDialogs::SelectFileDialog
+<br>&gt;- nsDialogs::SelectFolderDialog
+<br>&gt;- nsDialogs::SetRTL
+<br>&gt;- nsDialogs::SetUserData
+<br>&gt;- nsDialogs::Show
+<br>&gt;- nsExec::Exec
+<br>&gt;- nsExec::ExecToLog
+<br>&gt;- nsExec::ExecToStack
+<br>&gt;- nsProcess::_FindProcess
+<br>&gt;- nsProcess::_KillProcess
+<br>&gt;- nsProcess::_Unload
+<br>&gt;- nsisUser::IsLoginValid
+<br>&gt;- nsislog::Log
+<br>&gt;- registry::_Close
+<br>&gt;- registry::_CopyKey
+<br>&gt;- registry::_CopyValue
+<br>&gt;- registry::_CreateKey
+<br>&gt;- registry::_DeleteKey
+<br>&gt;- registry::_DeleteKeyEmpty
+<br>&gt;- registry::_DeleteValue
+<br>&gt;- registry::_Find
+<br>&gt;- registry::_HexToStr
+<br>&gt;- registry::_KeyExists
+<br>&gt;- registry::_MoveKey
+<br>&gt;- registry::_MoveValue
+<br>&gt;- registry::_Open
+<br>&gt;- registry::_Read
+<br>&gt;- registry::_ReadExtra
+<br>&gt;- registry::_RestoreKey
+<br>&gt;- registry::_SaveKey
+<br>&gt;- registry::_StrToHex
+<br>&gt;- registry::_Unload
+<br>&gt;- registry::_Write
+<br>&gt;- registry::_WriteExtra
+<br>&gt;- version::GetWindowsVersion
+<br>&gt;- version::IsWindows2000
+<br>&gt;- version::IsWindows2003
+<br>&gt;- version::IsWindows31
+<br>&gt;- version::IsWindows95
+<br>&gt;- version::IsWindows98
+<br>&gt;- version::IsWindows98orLater
+<br>&gt;- version::IsWindowsME
+<br>&gt;- version::IsWindowsNT351
+<br>&gt;- version::IsWindowsNT40
+<br>&gt;- version::IsWindowsPlatform9x
+<br>&gt;- version::IsWindowsPlatformNT
+<br>&gt;- version::IsWindowsXP
+<br>&gt;- xml::_CloneNode
+<br>&gt;- xml::_Coordinate
+<br>&gt;- xml::_CreateNode
+<br>&gt;- xml::_CreateText
+<br>&gt;- xml::_DeclarationEncoding
+<br>&gt;- xml::_DeclarationStandalone
+<br>&gt;- xml::_DeclarationVersion
+<br>&gt;- xml::_ElementPath
+<br>&gt;- xml::_FindCloseElement
+<br>&gt;- xml::_FindNextElement
+<br>&gt;- xml::_FirstAttribute
+<br>&gt;- xml::_FirstChild
+<br>&gt;- xml::_FirstChildElement
+<br>&gt;- xml::_FreeNode
+<br>&gt;- xml::_GetAttribute
+<br>&gt;- xml::_GetNodeValue
+<br>&gt;- xml::_GetText
+<br>&gt;- xml::_GotoHandle
+<br>&gt;- xml::_GotoPath
+<br>&gt;- xml::_InsertAfterNode
+<br>&gt;- xml::_InsertBeforeNode
+<br>&gt;- xml::_InsertEndChild
+<br>&gt;- xml::_IsCDATA
+<br>&gt;- xml::_LastAttribute
+<br>&gt;- xml::_LastChild
+<br>&gt;- xml::_LoadFile
+<br>&gt;- xml::_NextAttribute
+<br>&gt;- xml::_NextSibling
+<br>&gt;- xml::_NextSiblingElement
+<br>&gt;- xml::_NoChildren
+<br>&gt;- xml::_NodeHandle
+<br>&gt;- xml::_NodeType
+<br>&gt;- xml::_Parent
+<br>&gt;- xml::_PreviousAttribute
+<br>&gt;- xml::_PreviousSibling
+<br>&gt;- xml::_RemoveAttribute
+<br>&gt;- xml::_RemoveNode
+<br>&gt;- xml::_ReplaceNode
+<br>&gt;- xml::_RootElement
+<br>&gt;- xml::_SaveFile
+<br>&gt;- xml::_SetAttribute
+<br>&gt;- xml::_SetAttributeName
+<br>&gt;- xml::_SetAttributeValue
+<br>&gt;- xml::_SetCDATA
+<br>&gt;- xml::_SetCondenseWhiteSpace
+<br>&gt;- xml::_SetEncoding
+<br>&gt;- xml::_SetNodeValue
+<br>&gt;- xml::_SetText
+<br>&gt;- xml::_Unload
+<br><br>&gt;!define: "MUI_INSERT_NSISCONF"=""
+<br><br>&gt;Changing directory to: "D:\Download\NSIS\code\2\verify"
+<br><br>&gt;Processing script file: "D:\Download\NSIS\code\2\verify\user.nsi"
+<br>&gt;InstallDir: "$PROGRAMFILES\Test"
+<br>&gt;Name: "Test Installer"
+<br>&gt;OutFile: "Install.exe"
+<br>&gt;!include: "C:\Program Files\NSIS\Include\MUI.nsh"
+<br>&gt;!include: "C:\Program Files\NSIS\Contrib\Modern UI\System.nsh"
+<br>&gt;NSIS Modern User Interface version 1.75 - Â© 2002-2007 Joost Verburg (C:Program FilesNSISContribModern UISystem.nsh:11)
+<br>!</code>define: "MUI_VERBOSE"="3"
+<br>&gt;!include: closed: "C:\Program Files\NSIS\Contrib\Modern UI\System.nsh"
+<br>&gt;!include: closed: "C:\Program Files\NSIS\Include\MUI.nsh"
+<br>&gt;!include: "C:\Program Files\NSIS\Include\LogicLib.nsh"
+<br>&gt;!include: closed: "C:\Program Files\NSIS\Include\LogicLib.nsh"
+<br>&gt;!define: "MUI_ICON"="C:\Program Files\NSIS\Contrib\Graphics\Icons\orange-install.ico"
+<br>&gt;!define: "MUI_UNICON"="C:\Program Files\NSIS\Contrib\Graphics\Icons\orange-uninstall.ico"
+<br>&gt;XPStyle: on
+<br>AutoCloseWindow: true
+<br>ReserveFile: "validateuser.ini" ***91;compress***93; 124/139 bytes
+<br>&gt;!insertmacro: MUI_RESERVEFILE_INSTALLOPTIONS
+<br>&gt;!insertmacro: end of MUI_RESERVEFILE_INSTALLOPTIONS
+<br>Page: custom (creator:UserPageShow) (leave:UserPageLeave)
+<br>&gt;Page: custom (creator:validateUser)
+<br>!insertmacro: MUI_PAGE_DIRECTORY
+<br>&gt;!insertmacro: end of MUI_PAGE_DIRECTORY
+<br>&gt;!insertmacro: MUI_PAGE_INSTFILES
+<br>&gt;!insertmacro: end of MUI_PAGE_INSTFILES
+<br>&gt;!insertmacro: MUI_LANGUAGE
+<br>&gt;!insertmacro: end of MUI_LANGUAGE
+<br>&gt;Function: ".onInit"
+<br>&gt;!insertmacro: MUI_INSTALLOPTIONS_EXTRACT
+<br>&gt;!insertmacro: end of MUI_INSTALLOPTIONS_EXTRACT
+<br>FunctionEnd
+<br>&gt;Function: "UserPageShow"
+<br>&gt;!insertmacro: MUI_INSTALLOPTIONS_EXTRACT
+<br>&gt;!insertmacro: end of MUI_INSTALLOPTIONS_EXTRACT
+<br>File: "PassDialog.dll"-&gt;"$PLUGINSDIR\PassDialog.dll" ***91;compress***93; 3933/8704 bytes
+<br>Plugin Command: InitDialog UserPass
+<br>Pop: $R0
+<br>warning: unknown variable/constant "{IDC_USERNAME}" detected, ignoring (D:DownloadNSIScode2verifyuser.nsi:40)
+<br>&gt;GetDlgItem: output=$R1 dialog=$R0 item=${IDC_USERNAME}
+<br>&gt;SetCtlColors: hwnd=$R1 text=0xFF0000 background=0xFFFFFF
+<br>warning: unknown variable/constant "{IDC_PASSWORD}" detected, ignoring (D:DownloadNSIScode2verifyuser.nsi:42)
+<br>&gt;GetDlgItem: output=$R1 dialog=$R0 item=${IDC_PASSWORD}
+<br>&gt;SetCtlColors: hwnd=$R1 text=0x0000FF background=0xFFFFFF
+<br>File: "PassDialog.dll"-&gt;"$PLUGINSDIR\PassDialog.dll" ***91;compress***93; 0/8704 bytes
+<br>Plugin Command: Show
+<br>Pop: $R0
+<br>FunctionEnd
+<br>&gt;Function: "UserPageLeave"
+<br>&gt;Pop: $R0
+<br>Pop: $R1
+<br>warning: unknown variable/constant "{Username1}" detected, ignoring (D:DownloadNSIScode2verifyuser.nsi:57)
+<br>&gt;StrCmp "$R0" "${Username1}" equal=0, nonequal=+2
+<br>warning: unknown variable/constant "{Password1}" detected, ignoring (D:DownloadNSIScode2verifyuser.nsi:58)
+<br>&gt;StrCmp "$R1" "${Password1}" equal=Good, nonequal=Bad
+<br>warning: unknown variable/constant "{Username2}" detected, ignoring (D:DownloadNSIScode2verifyuser.nsi:59)
+<br>&gt;StrCmp "$R0" "${Username2}" equal=0, nonequal=+2
+<br>warning: unknown variable/constant "{Password2}" detected, ignoring (D:DownloadNSIScode2verifyuser.nsi:60)
+<br>&gt;StrCmp "$R1" "${Password2}" equal=Good, nonequal=Bad
+<br>&gt;!insertmacro: MUI_HEADER_TEXT
+<br>&gt;!insertmacro: end of MUI_HEADER_TEXT
+<br>FunctionEnd
+<br>&gt;Function: "validateUser"
+<br>&gt;GetDlgItem: output=$R6 dialog=$HWNDPARENT item=3
+<br>EnableWindow: handle=$R6 enable=0
+<br>GetDlgItem: output=$R6 dialog=$HWNDPARENT item=1
+<br>EnableWindow: handle=$R6 enable=0
+<br>File: "Banner.dll"-&gt;"$PLUGINSDIR\Banner.dll" ***91;compress***93; 1423/4096 bytes
+<br>Plugin Command: show /set 76 Please Wait Checking Validating ......
+<br>&gt;File: "Banner.dll"-&gt;"$PLUGINSDIR\Banner.dll" ***91;compress***93; 0/4096 bytes
+<br>Plugin Command: getWindow
+<br>GetTempFileName-&gt; $0
+<br>File: "InetLoad.dll"-&gt;"$PLUGINSDIR\InetLoad.dll" ***91;compress***93; 8136/16384 bytes
+<br>Plugin Command: load /post licence=$R0-$R1 ***91;url***93;http://www.site.com/site/user.php***91;/url***93; $0 /slient 
+<br>&gt;Pop: $1
+<br>FileOpen: $0 as r -&gt; $2
+<br>FileRead: $2-&gt;$3 (max:)
+<br>&gt;FileClose: $2
+<br>&gt;!insertmacro: _If
+<br>&gt;!insertmacro: end of _If
+<br>File: "Banner.dll"-&gt;"$PLUGINSDIR\Banner.dll" ***91;compress***93; 0/4096 bytes
+<br>Plugin Command: destroy
+<br>MessageBox: 48: "Invalid User. Setup will exit now."
+<br>&gt;Quit
+<br>&gt;!insertmacro: _Else
+<br>&gt;!insertmacro: end of _Else
+<br>Plugin Command: destroy
+<br>Goto: USEROK
+<br>&gt;!insertmacro: _EndIf
+<br>&gt;!insertmacro: end of _EndIf
+<br>FunctionEnd
+<br>Section: ""
+<br>&gt;SectionEnd
+<br><br>Processed 1 file, writing output:
+<br>&gt;Adding plug-ins initializing function... Done!
+<br>&gt;Error: could not resolve label "Good" in function "UserPageLeave"
+<br>&gt;Error - aborting creation process 
+<br>&gt;
 
-</pre>Error: could not resolve label "Good" in function "UserPageLeave"<br />
+</pre>Error: could not resolve label "Good" in function "UserPageLeave"<br>
       Error - aborting creation process
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br>
       <span class="post-time small text-muted">30th June 2008 13:59 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">you might want to attach the code or use pastebin next time instead of filling the thread with a long ass script</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br>
       <span class="post-time small text-muted">30th June 2008 16:30 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content"></p>
 
       <blockquote>
-        <i>Originally posted by Anders</i><br />
+        <i>Originally posted by Anders</i><br>
         <b>you might want to attach the code or use pastebin next time instead of filling the thread with a long ass script</b>
-      </blockquote>Right! Moreover, is difficult to keep my eyes on the text while the girl from the avatar is looking at me. ;)<br />
+      </blockquote>Right! Moreover, is difficult to keep my eyes on the text while the girl from the avatar is looking at me. ;)<br>
       btw didava, the compiler explains its self when it throws errors. Complains about some missing labels but you should take care about the warnings too.
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br>
       <span class="post-time small text-muted">30th June 2008 16:36 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">ok sorry sorry sorry can you help me!! plz example for me thank you very</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br>
       <span class="post-time small text-muted">30th June 2008 17:25 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">didava, I'd say you're trying to achieve things which are beyond of your nsis knowledge so far, for instance take a look at the log you've posted above, there are several warnings and errors. If you don't know how to deal with these issues what example are you seeking? You should already know how to declare user variables and how to add/use labels.<br />
-      <br />
-      My advice is go start with the very basics. Review the manual, examine the included simple examples, use the forum and step by step you'll become able to proceed in more complicated scripting.<br />
-      <br />
+      <p class="post-content">didava, I'd say you're trying to achieve things which are beyond of your nsis knowledge so far, for instance take a look at the log you've posted above, there are several warnings and errors. If you don't know how to deal with these issues what example are you seeking? You should already know how to declare user variables and how to add/use labels.<br>
+      <br>
+      My advice is go start with the very basics. Review the manual, examine the included simple examples, use the forum and step by step you'll become able to proceed in more complicated scripting.<br>
+      <br>
       And finally, where the girl has gone?</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br>
       <span class="post-time small text-muted">30th June 2008 18:05 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">first of all, I have to say that the grammatical errors you noticed above are not mine! I have a friend who has very little inkling of English. anyway, I want you to excuse me for such an inconvenience. secondly, I had followed your manual and had reviewed it several times. But, I have to admit that we have just kicked off NSIS. We have some knowledge about PHP; however, the problem is how we can relate/combine NSIS with PHP? we noticed in your example that you have used NSIS for serial number. now we want to use your example for username and password. But how?<br />
+      <p class="post-content">first of all, I have to say that the grammatical errors you noticed above are not mine! I have a friend who has very little inkling of English. anyway, I want you to excuse me for such an inconvenience. secondly, I had followed your manual and had reviewed it several times. But, I have to admit that we have just kicked off NSIS. We have some knowledge about PHP; however, the problem is how we can relate/combine NSIS with PHP? we noticed in your example that you have used NSIS for serial number. now we want to use your example for username and password. But how?<br>
       We want you to kindly give us an example+code for username and password. thanks in advance!</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br>
       <span class="post-time small text-muted">30th June 2008 18:43 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Well, I haven't noticed grammatical errors and I would never talk about such things. I was talking about compiler's errors and warnings that you should be able to deal with, at least according to the long log that you've posted above.<br />
-      <br />
-      I haven't published any manual, it is the nsis manual.<br />
-      <br />
-      Unfortunately it is not my example either, in fact I have never implemented it in a real world installer of mine. However, I'm watching this thread and I know that at least 2 users have done it successfully.<br />
-      <br />
+      <p class="post-content">Well, I haven't noticed grammatical errors and I would never talk about such things. I was talking about compiler's errors and warnings that you should be able to deal with, at least according to the long log that you've posted above.<br>
+      <br>
+      I haven't published any manual, it is the nsis manual.<br>
+      <br>
+      Unfortunately it is not my example either, in fact I have never implemented it in a real world installer of mine. However, I'm watching this thread and I know that at least 2 users have done it successfully.<br>
+      <br>
       Provided that your script does not throw errors and warnings related to labels and user variables, I guess that would be a step forward to use it for user name/password instead of serial number.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br>
       <span class="post-time small text-muted">30th June 2008 19:01 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">we have attached our code for you to see if there is any problem in it. and also take a look at the error it causes:<br />
-      <br /></p>
+      <p class="post-content">we have attached our code for you to see if there is any problem in it. and also take a look at the error it causes:<br>
+      <br></p>
       <pre>
 <code>
 Error: could not resolve label "Good" in function "UserPageLeave"
-<br />&gt;Error - aborting creation process 
-<br />&gt;
+<br>&gt;Error - aborting creation process 
+<br>&gt;
 </code>
 </pre>guide us where exactly our problem lies. we appreciate if you just give us an example+script. thank you very much for your cooperation dear.
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Red Wine</span><br>
       <span class="post-time small text-muted">30th June 2008 19:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Please, I've already mentioned several times that you're missing the very basics of nsis scripting. In fact, I'd say that you're keep posting on the wrong place. This thread is dedicated to a specific implementation. You're coming back again and again asking for a ready to use script while you don't even know what a label is. The compiler speaks to you and tells you exactly what is the error. If you don't know what a label is, please read the nsis manual. And if you still can't deal with it, search the forum or open a new thread to ask for help but leave the current thread for those that would be useful for them.<br />
-      <br />
-      <a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.2.1" target="_blank">http://nsis.sourceforge.net/Docs/Chapter4.html#4.2.1</a><br />
-      <br />
+      <p class="post-content">Please, I've already mentioned several times that you're missing the very basics of nsis scripting. In fact, I'd say that you're keep posting on the wrong place. This thread is dedicated to a specific implementation. You're coming back again and again asking for a ready to use script while you don't even know what a label is. The compiler speaks to you and tells you exactly what is the error. If you don't know what a label is, please read the nsis manual. And if you still can't deal with it, search the forum or open a new thread to ask for help but leave the current thread for those that would be useful for them.<br>
+      <br>
+      <a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.2.1" target="_blank">http://nsis.sourceforge.net/Docs/Chapter4.html#4.2.1</a><br>
+      <br>
       <a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.3" target="_blank">http://nsis.sourceforge.net/Docs/Chapter4.html#4.3</a></p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">arctic_ged</span><br />
+      <p class="post-meta"><span class="post-author text-primary">arctic_ged</span><br>
       <span class="post-time small text-muted">15th July 2008 10:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content"><strong>Popup Window</strong><br />
+      <p class="post-content"><strong>Popup Window</strong><br>
       &nbsp; Does anyone know how to create a popup that says "Please wait... Verifying your serial number", as seen on deanbayley's completed installer??</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">pospec</span><br />
+      <p class="post-meta"><span class="post-author text-primary">pospec</span><br>
       <span class="post-time small text-muted">15th July 2008 10:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">I don't know what is deanbayley's completed installer, however you can try to look into NSIS's Examples\Banner subdirectory ;)</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">arctic_ged</span><br />
+      <p class="post-meta"><span class="post-author text-primary">arctic_ged</span><br>
       <span class="post-time small text-muted">15th July 2008 10:47 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">Excellent that is what Iâ€™ve been looking for. Cheers!</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">pospec</span><br />
+      <p class="post-meta"><span class="post-author text-primary">pospec</span><br>
       <span class="post-time small text-muted">15th July 2008 10:49 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">I always find something that I am looking for in Examples directory<br />
+      <p class="post-content">I always find something that I am looking for in Examples directory<br>
       :up:</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br>
       <span class="post-time small text-muted">13th October 2008 19:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">hello, how is it goin?<br />
-      i could very easily develop the program by means of your nice method! and, by the way, the username and password work properly!<br />
-      but please tell me, if i want the username and password work only on one computer,what should i do?<br />
-      i appreciate if you could guide me through this: when the subscriber wants to install the program, i want to do sth that the serial number on his hard disk or motherboard be sent to me in order that i can realize that he is the real subscriber or not!!!<br />
-      if there is any plug-in, i appreciate if you send it to me with an example.<br />
+      <p class="post-content">hello, how is it goin?<br>
+      i could very easily develop the program by means of your nice method! and, by the way, the username and password work properly!<br>
+      but please tell me, if i want the username and password work only on one computer,what should i do?<br>
+      i appreciate if you could guide me through this: when the subscriber wants to install the program, i want to do sth that the serial number on his hard disk or motherboard be sent to me in order that i can realize that he is the real subscriber or not!!!<br>
+      if there is any plug-in, i appreciate if you send it to me with an example.<br>
       thanks in advance!!! i'm eagerly looking forward to hearing from you soon...</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br>
       <span class="post-time small text-muted">14th October 2008 12:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">hello...</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Comperio</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Comperio</span><br>
       <span class="post-time small text-muted">14th October 2008 20:35 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Here's an example of how to get the drive serial number:<br />
-      <a href="http://nsis.sourceforge.net/Get_Disk_Volume_Serial_Number" target="_blank">http://nsis.sourceforge.net/Get_Disk..._Serial_Number</a><br />
-      <br />
-      But just keep in mind you'd be restricting installation that DRIVE not to the computer.<br />
-      <br />
-      Getting the serial numbers from other hardware might be more involved. This is the best info I could find from NSIS:<br />
-      <a href="http://forums.winamp.com/showthread.php?s=&amp;threadid=257639" target="_blank">http://forums.winamp.com/showthread....hreadid=257639</a><br />
-      <br />
+      <p class="post-content">Here's an example of how to get the drive serial number:<br>
+      <a href="http://nsis.sourceforge.net/Get_Disk_Volume_Serial_Number" target="_blank">http://nsis.sourceforge.net/Get_Disk..._Serial_Number</a><br>
+      <br>
+      But just keep in mind you'd be restricting installation that DRIVE not to the computer.<br>
+      <br>
+      Getting the serial numbers from other hardware might be more involved. This is the best info I could find from NSIS:<br>
+      <a href="http://forums.winamp.com/showthread.php?s=&amp;threadid=257639" target="_blank">http://forums.winamp.com/showthread....hreadid=257639</a><br>
+      <br>
       Other than that, you'll probably have to do some research on your own (maybe at MSDN, etc.)</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">didava</span><br />
+      <p class="post-meta"><span class="post-author text-primary">didava</span><br>
       <span class="post-time small text-muted">15th October 2008 23:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">thanks Comperio.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">D13G0</span><br />
+      <p class="post-meta"><span class="post-author text-primary">D13G0</span><br>
       <span class="post-time small text-muted">21st October 2008 17:38 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content"></p>
 
       <blockquote>
-        <i>Originally posted by pankajch82</i><br />
-        <b>i am trying same , using above code &amp; using below url<br />
-        <a href="http://pnilyaoverseas.com/pankaj/test.php?test=12345" target="_blank">http://pnilyaoverseas.com/pankaj/test.php?test=12345</a><br />
-        <br />
-        for easy testing i had disabled post from 5 boxes , now it just post from 1st box .....so if u type 12345 it should return Valid , if u type 00000 it should return INVALID.<br />
-        <br />
+        <i>Originally posted by pankajch82</i><br>
+        <b>i am trying same , using above code &amp; using below url<br>
+        <a href="http://pnilyaoverseas.com/pankaj/test.php?test=12345" target="_blank">http://pnilyaoverseas.com/pankaj/test.php?test=12345</a><br>
+        <br>
+        for easy testing i had disabled post from 5 boxes , now it just post from 1st box .....so if u type 12345 it should return Valid , if u type 00000 it should return INVALID.<br>
+        <br>
         But its not happening , its taking valid for everything</b>
-      </blockquote>Hi, the same happens to me, I created a database and a table with 2 fields, one for the key and another for the status, insert a key into the database to perform the test but does not work.<br />
-      <br />
-      I think that everything is fine, because if i apply the test directly to the site the result is the expected, but not with the installer.<br />
-      <br />
+      </blockquote>Hi, the same happens to me, I created a database and a table with 2 fields, one for the key and another for the status, insert a key into the database to perform the test but does not work.<br>
+      <br>
+      I think that everything is fine, because if i apply the test directly to the site the result is the expected, but not with the installer.<br>
+      <br>
       Any help is welcome.
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Sinister Edd</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Sinister Edd</span><br>
       <span class="post-time small text-muted">7th January 2010 09:48 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Hello all,<br />
-      I was wondering what the solution was on that problem when you enter a false key and where send back to the insert product key page, then when you entered the same key the key was valid.<br />
-      <br />
+      <p class="post-content">Hello all,<br>
+      I was wondering what the solution was on that problem when you enter a false key and where send back to the insert product key page, then when you entered the same key the key was valid.<br>
+      <br>
       Thanks in advance</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">anandharaja</span><br />
+      <p class="post-meta"><span class="post-author text-primary">anandharaja</span><br>
       <span class="post-time small text-muted">22nd January 2010 14:06 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">hello<br />
-      <br />
+      <p class="post-content">hello<br>
+      <br>
       iam searching a serialUI like that, i spending lot of time to find the code. now i got the result. see my attachement</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">technobuddha</span><br />
+      <p class="post-meta"><span class="post-author text-primary">technobuddha</span><br>
       <span class="post-time small text-muted">15th February 2010 17:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content"><strong>putting output into variable, is it possible</strong><br />
-      &nbsp; Hello there,<br />
-      Does anyone have an example on how I can put the return html status into a variable?<br />
-      <br />
-      I'm still new to NSIS, and I fully admit i'm not a programmer (systems admin guy here). I'm creating a username and password functionality, and the return from the PHP file would normally go into a file, but I'd like to have this return into a variable.<br />
-      <br />
-      Do I need to do fileOpen ?<br />
-      <br />
+      <p class="post-content"><strong>putting output into variable, is it possible</strong><br>
+      &nbsp; Hello there,<br>
+      Does anyone have an example on how I can put the return html status into a variable?<br>
+      <br>
+      I'm still new to NSIS, and I fully admit i'm not a programmer (systems admin guy here). I'm creating a username and password functionality, and the return from the PHP file would normally go into a file, but I'd like to have this return into a variable.<br>
+      <br>
+      Do I need to do fileOpen ?<br>
+      <br>
       or?</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="footer">
       <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
@@ -1165,7 +808,4 @@ Error: could not resolve label "Good" in function "UserPageLeave"
 </script><script type="text/javascript">
 //<![CDATA[
   hljs.initHighlightingOnLoad();
-  //]]>
-  </script>
-</body>
-</html>
+  //]]></script></body></html>

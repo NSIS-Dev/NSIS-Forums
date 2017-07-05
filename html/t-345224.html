@@ -1,90 +1,48 @@
-<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="FileFunc:GetTime - strange behavior" />
-
-  <title>FileFunc:GetTime - strange behavior - NSIS Forums</title>
-  <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script>
-  <!-- Bootstrap core CSS -->
-
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!--[if lt IE 9]>
-                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-</head>
-
-<body>
-  <div class="container">
-    <!-- Put navigation bar here -->
-
-    <ol class="breadcrumb">
-      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
-
-      <li><a href="f-65.html">NSIS Discussion</a></li>
-
-      <li class="active">FileFunc:GetTime - strange behavior</li>
-    </ol>
-
-    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=345224">FileFunc:GetTime - strange behavior</a></p><br />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">BreezeUADN</span><br />
-      <span class="post-time small text-muted">29th May 2012 15:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>FileFunc:GetTime - strange behavior</strong><br />
-      Hello, I wrote a few simple "do not delete if file was modified" macroes today and testing em now (those are quite simple and more like template atm, but they do work),<br />
-      but there is a problem with seconds return value, in FileFunc::GetTime.<br />
-      Can someone please test the following code or explain the strange behavior of GetTime in FileFunc.nsh?<br />
-      <br /></p>
-      <pre>
-<code><br />!include LogicLib.nsh<br />!include FileFunc.nsh<br />!insertmacro GetTime<br />!insertmacro un.GetTime<br /><br />!macro AddUninstInfo fullPath fileName<br />    ;считать UTC время в переменные<br />    ${GetTime} ${fullPath} "MS" $0 $1 $2 $3 $4 $5 $6<br />    ;записать в INI<br />    WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "day" $0<br />    WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "month" $1<br />    WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "year" $2<br />    ;WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "weekday" $3<br />    WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "hour" $4<br />    WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "minute" $5<br />    WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "second" $6<br />!macroend<br /><br />var iniDay<br />var iniMonth<br />var iniYear<br />var iniHour<br />var iniMinute<br />var iniSecond ;here - seconds returned are (almost) always differ by one second, so<br />var iniSecondMin ;here is a workaround<br />var iniSecondMax ; <br />!macro UnmodifiedDelete fullPath fileName<br />    ;считать UTC время в переменные<br />    ${un.GetTime} ${fullPath} "MS" $0 $1 $2 $3 $4 $5 $6<br />    ;считать данные из INI по файлу<br />    ReadINIStr $iniDay "$INSTDIR\uninstInfo.ini" ${fileName} "day"<br />    ReadINIStr $iniMonth "$INSTDIR\uninstInfo.ini" ${fileName} "month"<br />    ReadINIStr $iniYear "$INSTDIR\uninstInfo.ini" ${fileName} "year"<br />    ReadINIStr $iniHour "$INSTDIR\uninstInfo.ini" ${fileName} "hour"<br />    ReadINIStr $iniMinute "$INSTDIR\uninstInfo.ini" ${fileName} "minute"<br />    ReadINIStr $iniSecond "$INSTDIR\uninstInfo.ini" ${fileName} "second"<br />    IntOp $iniSecondMin $6 - 3<br />    IntOp $iniSecondMax $6 + 3<br />    MessageBox MB_OK "$0=$iniDay $1=$iniMonth $2=$iniYear $3 $4=$iniHour $5=$iniMinute $6=$iniSecond, $iniSecondMin, $iniSecondMax"<br />    ;сравнить данные<br />    ${If} $0 == $iniDay<br />    ${AndIf} $1 == $iniMonth<br />    ${AndIf} $2 == $iniYear<br />    ${AndIf} $4 == $iniHour<br />    ${AndIf} $5 == $iniMinute<br />    ${AndIf} $6 &gt; $iniSecondMin<br />    ${AndIf} $6 &lt; $iniSecondMax<br />      ;Delete ${fullPath}<br />      MessageBox MB_OK "${fullPath} unmodified - should be deleted"<br />    ${EndIf}<br />!macroend<br /></code>
-</pre><br />
-      <br />
-      What it does - writes datetime info into an ini file (that is formed in $INSTDIR) about every installed file (filenames as a tag atm.).<br />
-      Then, when time X comes, uninstaller can read that info for a file in question, and delete it only if there was no modifications done to it.<br />
-      Usage:<br />
-      <br />
-      install section:<br />
-      File "$%SOME_ROOT%\release\bin\file1.dll"<br />
-      ;add after File<br />
-      !insertmacro AddUninstInfo "$%SOME_ROOT%\release\bin\file1.dll" "file1.dll"<br />
-      <br />
-      uninstall section:<br />
-      ;instead of Delete<br />
-      !insertmacro UnmodifiedDelete "$INSTDIR\bin\file1.dll" "file1.dll"<br />
-      <br />
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="FileFunc:GetTime - strange behavior"><title>FileFunc:GetTime - strange behavior - NSIS Forums</title><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css"><link rel="stylesheet" href="../css/style.css" type="text/css"><!--[if lt IE 9]><script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script><script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script><![endif]--></head><body><div class="container"><ol class="breadcrumb"><li><a href="../index.html" class="glyphicon glyphicon-home"></a></li><li><a href="f-65.html">NSIS Discussion</a></li><li class="active">FileFunc:GetTime - strange behavior</li></ol><p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=345224">FileFunc:GetTime - strange behavior</a></p><br><div class="post"><p class="post-meta"><span class="post-author text-primary">BreezeUADN</span><br><span class="post-time small text-muted">29th May 2012 15:57 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>FileFunc:GetTime - strange behavior</strong><br>Hello, I wrote a few simple "do not delete if file was modified" macroes today and testing em now (those are quite simple and more like template atm, but they do work),<br>but there is a problem with seconds return value, in FileFunc::GetTime.<br>Can someone please test the following code or explain the strange behavior of GetTime in FileFunc.nsh?<br><br></p><pre>
+<code><br>!include LogicLib.nsh<br>!include FileFunc.nsh<br>!insertmacro GetTime<br>!insertmacro un.GetTime<br><br>!macro AddUninstInfo fullPath fileName<br>    ;считать UTC время в переменные<br>    ${GetTime} ${fullPath} "MS" $0 $1 $2 $3 $4 $5 $6<br>    ;записать в INI<br>    WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "day" $0<br>    WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "month" $1<br>    WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "year" $2<br>    ;WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "weekday" $3<br>    WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "hour" $4<br>    WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "minute" $5<br>    WriteINIStr "$INSTDIR\uninstInfo.ini" ${fileName} "second" $6<br>!macroend<br><br>var iniDay<br>var iniMonth<br>var iniYear<br>var iniHour<br>var iniMinute<br>var iniSecond ;here - seconds returned are (almost) always differ by one second, so<br>var iniSecondMin ;here is a workaround<br>var iniSecondMax ; <br>!macro UnmodifiedDelete fullPath fileName<br>    ;считать UTC время в переменные<br>    ${un.GetTime} ${fullPath} "MS" $0 $1 $2 $3 $4 $5 $6<br>    ;считать данные из INI по файлу<br>    ReadINIStr $iniDay "$INSTDIR\uninstInfo.ini" ${fileName} "day"<br>    ReadINIStr $iniMonth "$INSTDIR\uninstInfo.ini" ${fileName} "month"<br>    ReadINIStr $iniYear "$INSTDIR\uninstInfo.ini" ${fileName} "year"<br>    ReadINIStr $iniHour "$INSTDIR\uninstInfo.ini" ${fileName} "hour"<br>    ReadINIStr $iniMinute "$INSTDIR\uninstInfo.ini" ${fileName} "minute"<br>    ReadINIStr $iniSecond "$INSTDIR\uninstInfo.ini" ${fileName} "second"<br>    IntOp $iniSecondMin $6 - 3<br>    IntOp $iniSecondMax $6 + 3<br>    MessageBox MB_OK "$0=$iniDay $1=$iniMonth $2=$iniYear $3 $4=$iniHour $5=$iniMinute $6=$iniSecond, $iniSecondMin, $iniSecondMax"<br>    ;сравнить данные<br>    ${If} $0 == $iniDay<br>    ${AndIf} $1 == $iniMonth<br>    ${AndIf} $2 == $iniYear<br>    ${AndIf} $4 == $iniHour<br>    ${AndIf} $5 == $iniMinute<br>    ${AndIf} $6 &gt; $iniSecondMin<br>    ${AndIf} $6 &lt; $iniSecondMax<br>      ;Delete ${fullPath}<br>      MessageBox MB_OK "${fullPath} unmodified - should be deleted"<br>    ${EndIf}<br>!macroend<br></code>
+</pre><br>
+      <br>
+      What it does - writes datetime info into an ini file (that is formed in $INSTDIR) about every installed file (filenames as a tag atm.).<br>
+      Then, when time X comes, uninstaller can read that info for a file in question, and delete it only if there was no modifications done to it.<br>
+      Usage:<br>
+      <br>
+      install section:<br>
+      File "$%SOME_ROOT%\release\bin\file1.dll"<br>
+      ;add after File<br>
+      !insertmacro AddUninstInfo "$%SOME_ROOT%\release\bin\file1.dll" "file1.dll"<br>
+      <br>
+      uninstall section:<br>
+      ;instead of Delete<br>
+      !insertmacro UnmodifiedDelete "$INSTDIR\bin\file1.dll" "file1.dll"<br>
+      <br>
       On my PC and notebook $6 almost always is wrong. For example if file properties say mod. time is 10:15:42, the seconds part returned by GetTime equals 43... Is it my PC or?..
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br />
+      <p class="post-meta"><span class="post-author text-primary">demiller9</span><br>
       <span class="post-time small text-muted">29th May 2012 16:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">I'm slightly confused by the file location in "fullpath", but I think I can explain the problem. The FAT file system uses a 2 second resolution when the time is stored, and zip and NSIS files do the same. NTFS maintains file times with much greater resolution (100 nsec).<br />
-      <br />
-      If you are comparing the original time of a file on your build system (NTFS) against a file extracted from NSIS program (FAT style) and stored on a target machine, you must allow for the seconds to be truncated (rounded) to the 2 second precision.<br />
-      <br />
+      <p class="post-content">I'm slightly confused by the file location in "fullpath", but I think I can explain the problem. The FAT file system uses a 2 second resolution when the time is stored, and zip and NSIS files do the same. NTFS maintains file times with much greater resolution (100 nsec).<br>
+      <br>
+      If you are comparing the original time of a file on your build system (NTFS) against a file extracted from NSIS program (FAT style) and stored on a target machine, you must allow for the seconds to be truncated (rounded) to the 2 second precision.<br>
+      <br>
       Perhaps you can eliminate the time comparison and use md5 hash values? Uninstall files that have unchanged hash values, keep files with new hash values.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">BreezeUADN</span><br />
+      <p class="post-meta"><span class="post-author text-primary">BreezeUADN</span><br>
       <span class="post-time small text-muted">30th May 2012 07:52 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Thank you demiller9, you were completely right about NTFS&lt;-&gt;FAT32, so hash is a better idea.<br />
-      (and ye sorry about fullpath - not the right name for that parameter. Also copy-paste is evil and there have to be<br />
-      !insertmacro AddUninstInfo "$INSTDIR\bin\file1.dll" "file1.dll"<br />
-      instead of<br />
-      !insertmacro AddUninstInfo "$%SOME_ROOT%\release\bin\file1.dll" "file1.dll"<br />
+      <p class="post-content">Thank you demiller9, you were completely right about NTFS&lt;-&gt;FAT32, so hash is a better idea.<br>
+      (and ye sorry about fullpath - not the right name for that parameter. Also copy-paste is evil and there have to be<br>
+      !insertmacro AddUninstInfo "$INSTDIR\bin\file1.dll" "file1.dll"<br>
+      instead of<br>
+      !insertmacro AddUninstInfo "$%SOME_ROOT%\release\bin\file1.dll" "file1.dll"<br>
       )</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="footer">
       <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
@@ -93,7 +51,4 @@
 </script><script type="text/javascript">
 //<![CDATA[
   hljs.initHighlightingOnLoad();
-  //]]>
-  </script>
-</body>
-</html>
+  //]]></script></body></html>

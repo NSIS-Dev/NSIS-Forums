@@ -1,183 +1,38 @@
-<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Two questions on MUI_PAGE_DIRECTORY" />
-
-  <title>Two questions on MUI_PAGE_DIRECTORY - NSIS Forums</title>
-  <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script>
-  <!-- Bootstrap core CSS -->
-
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!--[if lt IE 9]>
-                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-</head>
-
-<body>
-  <div class="container">
-    <!-- Put navigation bar here -->
-
-    <ol class="breadcrumb">
-      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
-
-      <li><a href="f-65.html">NSIS Discussion</a></li>
-
-      <li class="active">Two questions on MUI_PAGE_DIRECTORY</li>
-    </ol>
-
-    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=214898">Two questions on MUI_PAGE_DIRECTORY</a></p><br />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">hooklee</span><br />
-      <span class="post-time small text-muted">4th May 2005 15:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>Two questions on MUI_PAGE_DIRECTORY</strong><br />
-      Could anybody help me to solve the following two problems?<br />
-      <br />
-      1. I want two directory pages, how can I use different prompt texts for the two pages?<br />
-      Now I can redefine ^DirText, ^DirSubText, ^DirBrowseText and change the language files of MUI to change the texts for one page. However, I don't know how to define two versions of all those texts.<br />
-      <br />
-      2. I want two different installation languages, how can I solve the first problem for the two languages?<br />
-      I noticed that MUI_LANGUAGE macro has to be loaded after all MUI_PAGE macros have been invoked. So, it seems impossible to define the texts before any MUI_PAGE_DIRECTORY command.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">hooklee</span><br />
-      <span class="post-time small text-muted">4th May 2005 16:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>find an incomplete solution :-)</strong><br />
-      Following a previous discussion on how to disable controls in MUI_PAGE_DIRECTORY, now I can change most texts easily with the following codes:<br />
-      <br />
-      !define MUI_PAGE_CUSTOMFUNCTION_SHOW ShowDirectoryPage<br />
-      !insertmacro MUI_PAGE_DIRECTORY<br />
-      Function ShowDirectoryPage<br />
-      FindWindow $0 "#32770" "" $HWNDPARENT<br />
-      GetDlgItem $1 $0 1020 ; IDC_SELDIRTEXT<br />
-      StrCpy $2 "$(SelDirText)"<br />
-      SendMessage $1 ${WM_SETTEXT} 0 "STR:$2"<br />
-      GetDlgItem $1 $0 1006<br />
-      StrCpy $2 "$(IntroText)"<br />
-      SendMessage $1 ${WM_SETTEXT} 0 "STR:$2"<br />
-      GetDlgItem $1 $HWNDPARENT 1037<br />
-      StrCpy $2 "$(DirText)"<br />
-      SendMessage $1 ${WM_SETTEXT} 0 "STR:$2"<br />
-      GetDlgItem $1 $HWNDPARENT 1038<br />
-      StrCpy $2 "$(DirSubText)"<br />
-      SendMessage $1 ${WM_SETTEXT} 0 "STR:$2"<br />
-      FunctionEnd<br />
-      <br />
-      Now only two things are left:<br />
-      1. How can I change "$(^DirBrowseText)" displayed in the directory-selection dialog after clicking "Brower" button?<br />
-      2. The above code cannot change the texts of IDC_SPACEREQUIRED (1023) and IDC_SPACEAVAILABLE (1024). I don't know why.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">hooklee</span><br />
-      <span class="post-time small text-muted">4th May 2005 19:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>The second problem has been hacked</strong><br />
-      Since my goal is to hide the two controls on space size, finally I found a way without emptying the texts.<br />
-      <br />
-      GetDlgItem $1 $0 1023 ; IDC_SPACEREQUIRED<br />
-      System::Call 'user32.dll::ShowWindow(i, i) v($1, 0)'<br />
-      GetDlgItem $1 $0 1024 ; IDC_SPACEAVAILABLE<br />
-      System::Call 'user32.dll::ShowWindow(i, i) v($1, 0)'<br />
-      <br />
-      Now only one thing is left: How to change "$(^DirBrowseText)" displayed in the directory-selection dialog after clicking "Brower" button?<br />
-      <br />
-      I noticed that the dialog is a child window of $HWNDPARENT, but the following code doesnot work at all:<br />
-      FindWindow $0 "#32770" "ä¯ÀÀÎÄ¼þ¼Ð" $HWNDPARENT<br />
-      It is very strange....</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
-      <span class="post-time small text-muted">4th May 2005 20:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">NSIS has a ShowWindow command.<br />
-      SW_ defines are in !include WinMessages.nsh<br />
-      <br />
-      Use DirText to change text:<br />
-      <a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.8.1.14" target="_blank">http://nsis.sourceforge.net/Docs/Chapter4.html#4.8.1.14</a><br />
-      <br />
-      You might have to modify the MUI code if you're using MUI though.<br />
-      <br />
-      -Stu</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">hooklee</span><br />
-      <span class="post-time small text-muted">5th May 2005 03:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"></p>
-
-      <blockquote>
-        <i>Originally posted by Afrow UK</i><br />
-        <b>NSIS has a ShowWindow command.<br />
-        SW_ defines are in !include WinMessages.nsh<br />
-        <br />
-        Use DirText to change text:<br />
-        <a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.8.1.14" target="_blank">http://nsis.sourceforge.net/Docs/Chapter4.html#4.8.1.14</a><br />
-        <br />
-        You might have to modify the MUI code if you're using MUI though.<br />
-        <br />
-        -Stu</b>
-      </blockquote>Thanks. I just saw the ShowWindow command :-)<br />
-      <br />
-      DirText cannot be used in a function, so we have not a chance to change the texts for the second MUI_PAGE_DIRECTORY. It can only change the texts of all directory pages. In fact, MUI also uses DirText to modify the two texts.<br />
-      <br />
-      Do you have any idea on how to change ^DirBrowseText? MUI code does nothing on this. Do we have to rewrite the NSIS kernel code?
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
-      <span class="post-time small text-muted">5th May 2005 17:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">DirText can be used in PageEx. The MUI uses DirText in a PageEx block. That's why defining different text using the MUI defines above each separate page works. That's what you should use instead of SendMessage.</p>
-      <pre>
-<code>!define MUI_DIRECTORYPAGE_TEXT_TOP "1"<br />!insertmacro MUI_PAGE_DIRECTORY<br />!define MUI_DIRECTORYPAGE_TEXT_TOP "2"<br />!insertmacro MUI_PAGE_DIRECTORY</code>
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Two questions on MUI_PAGE_DIRECTORY"><title>Two questions on MUI_PAGE_DIRECTORY - NSIS Forums</title><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css"><link rel="stylesheet" href="../css/style.css" type="text/css"><!--[if lt IE 9]><script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script><script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script><![endif]--></head><body><div class="container"><ol class="breadcrumb"><li><a href="../index.html" class="glyphicon glyphicon-home"></a></li><li><a href="f-65.html">NSIS Discussion</a></li><li class="active">Two questions on MUI_PAGE_DIRECTORY</li></ol><p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=214898">Two questions on MUI_PAGE_DIRECTORY</a></p><br><div class="post"><p class="post-meta"><span class="post-author text-primary">hooklee</span><br><span class="post-time small text-muted">4th May 2005 15:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>Two questions on MUI_PAGE_DIRECTORY</strong><br>Could anybody help me to solve the following two problems?<br><br>1. I want two directory pages, how can I use different prompt texts for the two pages?<br>Now I can redefine ^DirText, ^DirSubText, ^DirBrowseText and change the language files of MUI to change the texts for one page. However, I don't know how to define two versions of all those texts.<br><br>2. I want two different installation languages, how can I solve the first problem for the two languages?<br>I noticed that MUI_LANGUAGE macro has to be loaded after all MUI_PAGE macros have been invoked. So, it seems impossible to define the texts before any MUI_PAGE_DIRECTORY command.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">hooklee</span><br><span class="post-time small text-muted">4th May 2005 16:28 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>find an incomplete solution :-)</strong><br>Following a previous discussion on how to disable controls in MUI_PAGE_DIRECTORY, now I can change most texts easily with the following codes:<br><br>!define MUI_PAGE_CUSTOMFUNCTION_SHOW ShowDirectoryPage<br>!insertmacro MUI_PAGE_DIRECTORY<br>Function ShowDirectoryPage<br>FindWindow $0 "#32770" "" $HWNDPARENT<br>GetDlgItem $1 $0 1020 ; IDC_SELDIRTEXT<br>StrCpy $2 "$(SelDirText)"<br>SendMessage $1 ${WM_SETTEXT} 0 "STR:$2"<br>GetDlgItem $1 $0 1006<br>StrCpy $2 "$(IntroText)"<br>SendMessage $1 ${WM_SETTEXT} 0 "STR:$2"<br>GetDlgItem $1 $HWNDPARENT 1037<br>StrCpy $2 "$(DirText)"<br>SendMessage $1 ${WM_SETTEXT} 0 "STR:$2"<br>GetDlgItem $1 $HWNDPARENT 1038<br>StrCpy $2 "$(DirSubText)"<br>SendMessage $1 ${WM_SETTEXT} 0 "STR:$2"<br>FunctionEnd<br><br>Now only two things are left:<br>1. How can I change "$(^DirBrowseText)" displayed in the directory-selection dialog after clicking "Brower" button?<br>2. The above code cannot change the texts of IDC_SPACEREQUIRED (1023) and IDC_SPACEAVAILABLE (1024). I don't know why.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">hooklee</span><br><span class="post-time small text-muted">4th May 2005 19:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>The second problem has been hacked</strong><br>Since my goal is to hide the two controls on space size, finally I found a way without emptying the texts.<br><br>GetDlgItem $1 $0 1023 ; IDC_SPACEREQUIRED<br>System::Call 'user32.dll::ShowWindow(i, i) v($1, 0)'<br>GetDlgItem $1 $0 1024 ; IDC_SPACEAVAILABLE<br>System::Call 'user32.dll::ShowWindow(i, i) v($1, 0)'<br><br>Now only one thing is left: How to change "$(^DirBrowseText)" displayed in the directory-selection dialog after clicking "Brower" button?<br><br>I noticed that the dialog is a child window of $HWNDPARENT, but the following code doesnot work at all:<br>FindWindow $0 "#32770" "ä¯ÀÀÎÄ¼þ¼Ð" $HWNDPARENT<br>It is very strange....</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br><span class="post-time small text-muted">4th May 2005 20:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">NSIS has a ShowWindow command.<br>SW_ defines are in !include WinMessages.nsh<br><br>Use DirText to change text:<br><a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.8.1.14" target="_blank">http://nsis.sourceforge.net/Docs/Chapter4.html#4.8.1.14</a><br><br>You might have to modify the MUI code if you're using MUI though.<br><br>-Stu</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">hooklee</span><br><span class="post-time small text-muted">5th May 2005 03:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"></p><blockquote><i>Originally posted by Afrow UK</i><br><b>NSIS has a ShowWindow command.<br>SW_ defines are in !include WinMessages.nsh<br><br>Use DirText to change text:<br><a href="http://nsis.sourceforge.net/Docs/Chapter4.html#4.8.1.14" target="_blank">http://nsis.sourceforge.net/Docs/Chapter4.html#4.8.1.14</a><br><br>You might have to modify the MUI code if you're using MUI though.<br><br>-Stu</b></blockquote>Thanks. I just saw the ShowWindow command :-)<br><br>DirText cannot be used in a function, so we have not a chance to change the texts for the second MUI_PAGE_DIRECTORY. It can only change the texts of all directory pages. In fact, MUI also uses DirText to modify the two texts.<br><br>Do you have any idea on how to change ^DirBrowseText? MUI code does nothing on this. Do we have to rewrite the NSIS kernel code?</div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">kichik</span><br><span class="post-time small text-muted">5th May 2005 17:58 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">DirText can be used in PageEx. The MUI uses DirText in a PageEx block. That's why defining different text using the MUI defines above each separate page works. That's what you should use instead of SendMessage.</p><pre>
+<code>!define MUI_DIRECTORYPAGE_TEXT_TOP "1"<br>!insertmacro MUI_PAGE_DIRECTORY<br>!define MUI_DIRECTORYPAGE_TEXT_TOP "2"<br>!insertmacro MUI_PAGE_DIRECTORY</code>
 </pre>If the MUI doesn't provide a method to change ^DirBrowseText, change it with DirText and use a variable in its value and change the variable in the pre function of the page.
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">hooklee</span><br />
+      <p class="post-meta"><span class="post-author text-primary">hooklee</span><br>
       <span class="post-time small text-muted">5th May 2005 18:44 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content"></p>
 
       <blockquote>
-        <i>Originally posted by kichik</i><br />
+        <i>Originally posted by kichik</i><br>
         <b>DirText can be used in PageEx. The MUI uses DirText in a PageEx block. That's why defining different text using the MUI defines above each separate page works. That's what you should use instead of SendMessage.</b>
         <pre>
-<b><code>!define MUI_DIRECTORYPAGE_TEXT_TOP "1"<br />!insertmacro MUI_PAGE_DIRECTORY<br />!define MUI_DIRECTORYPAGE_TEXT_TOP "2"<br />!insertmacro MUI_PAGE_DIRECTORY</code></b>
+<b><code>!define MUI_DIRECTORYPAGE_TEXT_TOP "1"<br>!insertmacro MUI_PAGE_DIRECTORY<br>!define MUI_DIRECTORYPAGE_TEXT_TOP "2"<br>!insertmacro MUI_PAGE_DIRECTORY</code></b>
 </pre><b>If the MUI doesn't provide a method to change ^DirBrowseText, change it with DirText and use a variable in its value and change the variable in the pre function of the page.</b>
-      </blockquote>Yeah, I just noticed that DirText can change ^DirBrowseText by setting the 4th parameter. It seems that I am too lazy to read the help documents carefully ;-)<br />
-      <br />
-      By adding a new definition in system.nsh, finally I easily set two different ^DirBrowseTexts. Now all my problems have been solved. As a suggestion to the author of SystemPlugIn, two more definitions should be added for changing browse_button_text and browse_dlg_text via DirText.<br />
-      <br />
+      </blockquote>Yeah, I just noticed that DirText can change ^DirBrowseText by setting the 4th parameter. It seems that I am too lazy to read the help documents carefully ;-)<br>
+      <br>
+      By adding a new definition in system.nsh, finally I easily set two different ^DirBrowseTexts. Now all my problems have been solved. As a suggestion to the author of SystemPlugIn, two more definitions should be added for changing browse_button_text and browse_dlg_text via DirText.<br>
+      <br>
       It is very happy to use NSIS to write installers under the help from you NSIS guys :-)
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">hooklee</span><br />
+      <p class="post-meta"><span class="post-author text-primary">hooklee</span><br>
       <span class="post-time small text-muted">5th May 2005 19:03 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">DirText cannot change the subtitle and DirIntroText of MUI_PAGE_DIRECTORY, so I have to continue to use SendMessage function to modify them.<br />
-      <br />
+      <p class="post-content">DirText cannot change the subtitle and DirIntroText of MUI_PAGE_DIRECTORY, so I have to continue to use SendMessage function to modify them.<br>
+      <br>
       Is there a normal way to do so without using SendMessage?</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="footer">
       <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
@@ -186,7 +41,4 @@
 </script><script type="text/javascript">
 //<![CDATA[
   hljs.initHighlightingOnLoad();
-  //]]>
-  </script>
-</body>
-</html>
+  //]]></script></body></html>

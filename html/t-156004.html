@@ -1,105 +1,64 @@
-<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Bug in BgImage" />
-
-  <title>Bug in BgImage - NSIS Forums</title>
-  <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script>
-  <!-- Bootstrap core CSS -->
-
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!--[if lt IE 9]>
-                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-</head>
-
-<body>
-  <div class="container">
-    <!-- Put navigation bar here -->
-
-    <ol class="breadcrumb">
-      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
-
-      <li><a href="f-65.html">NSIS Discussion</a></li>
-
-      <li class="active">Bug in BgImage</li>
-    </ol>
-
-    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=156004">Bug in BgImage</a></p><br />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Wasteland</span><br />
-      <span class="post-time small text-muted">12th November 2003 18:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>Bug in BgImage</strong><br />
-      I'm using BgImage, and was getting a crash, it seems the problem goes as follows:<br />
-      BgImage::SetBg() is getting called *before* _DllMainCRTStartup ever gets called, and therefore is using a CriticalSection that was never initialized (using the debug build it simply crashes outright, the release one just sometimes crashes). Setting up a lazy init in ECS seems to have fixed the problem:<br />
-      <br /></p>
-      <pre>
-<code><br />bool CriticalSectionInited=false;<br />CRITICAL_SECTION CriticalSection;<br /><br />void ECS() {<br />        if (!CriticalSectionInited) {<br />                InitializeCriticalSection(&amp;CriticalSection);<br />                CriticalSectionInited = true;<br />        }<br />        EnterCriticalSection(&amp;CriticalSection);<br />}<br /><br />.<br />.<br />.<br /><br />BOOL WINAPI _DllMainCRTStartup(HINSTANCE hInst, ULONG ul_reason_for_call, LPVOID lpReserved) {<br />  g_hInstance=hInst;<br />  switch (ul_reason_for_call) {<br />    case DLL_PROCESS_ATTACH:<br />          if (!CriticalSectionInited) {<br />                InitializeCriticalSection(&amp;CriticalSection);<br />                CriticalSectionInited = true;<br />          }<br />      break;<br /></code>
-</pre><br />
-      <br />
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Bug in BgImage"><title>Bug in BgImage - NSIS Forums</title><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css"><link rel="stylesheet" href="../css/style.css" type="text/css"><!--[if lt IE 9]><script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script><script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script><![endif]--></head><body><div class="container"><ol class="breadcrumb"><li><a href="../index.html" class="glyphicon glyphicon-home"></a></li><li><a href="f-65.html">NSIS Discussion</a></li><li class="active">Bug in BgImage</li></ol><p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=156004">Bug in BgImage</a></p><br><div class="post"><p class="post-meta"><span class="post-author text-primary">Wasteland</span><br><span class="post-time small text-muted">12th November 2003 18:54 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>Bug in BgImage</strong><br>I'm using BgImage, and was getting a crash, it seems the problem goes as follows:<br>BgImage::SetBg() is getting called *before* _DllMainCRTStartup ever gets called, and therefore is using a CriticalSection that was never initialized (using the debug build it simply crashes outright, the release one just sometimes crashes). Setting up a lazy init in ECS seems to have fixed the problem:<br><br></p><pre>
+<code><br>bool CriticalSectionInited=false;<br>CRITICAL_SECTION CriticalSection;<br><br>void ECS() {<br>        if (!CriticalSectionInited) {<br>                InitializeCriticalSection(&amp;CriticalSection);<br>                CriticalSectionInited = true;<br>        }<br>        EnterCriticalSection(&amp;CriticalSection);<br>}<br><br>.<br>.<br>.<br><br>BOOL WINAPI _DllMainCRTStartup(HINSTANCE hInst, ULONG ul_reason_for_call, LPVOID lpReserved) {<br>  g_hInstance=hInst;<br>  switch (ul_reason_for_call) {<br>    case DLL_PROCESS_ATTACH:<br>          if (!CriticalSectionInited) {<br>                InitializeCriticalSection(&amp;CriticalSection);<br>                CriticalSectionInited = true;<br>          }<br>      break;<br></code>
+</pre><br>
+      <br>
       I admit I know *nothing* about DLLs, so there might be something else going wrong here, it seems odd to me that you'd get a function called before getting an ATTACH message, but this seems to have fixed my problem. Thanks for the great plugin!
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br>
       <span class="post-time small text-muted">12th November 2003 19:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">That's impossible.<br />
-      <br />
-      Something else must be happening. Mind attaching the script and some more details about the tested OS?<br />
-      <br />
+      <p class="post-content">That's impossible.<br>
+      <br>
+      Something else must be happening. Mind attaching the script and some more details about the tested OS?<br>
+      <br>
       Also, have you recompiled BgImage (before adding the patch)?</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Wasteland</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Wasteland</span><br>
       <span class="post-time small text-muted">12th November 2003 19:19 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">I am getting this behaviour in the Example.nsi that comes with BgImage (in the nsis.zip of recent CVS code). I simply built the debug version of BgImage.dll, copied it to my plugins/ folder, compiled the example, and it crashes immediately upon startup.<br />
-      <br />
-      I'm running Windows XP (latest patches), and the crash that I seem to have fixed only exhibited itself on some laptops (the crash was happening in the Destroy code, I believe, so I built the debug version to find out where, but since the debug just died instantly I was unable to track it down. Now after this change, it's working fine).<br />
-      <br />
+      <p class="post-content">I am getting this behaviour in the Example.nsi that comes with BgImage (in the nsis.zip of recent CVS code). I simply built the debug version of BgImage.dll, copied it to my plugins/ folder, compiled the example, and it crashes immediately upon startup.<br>
+      <br>
+      I'm running Windows XP (latest patches), and the crash that I seem to have fixed only exhibited itself on some laptops (the crash was happening in the Destroy code, I believe, so I built the debug version to find out where, but since the debug just died instantly I was unable to track it down. Now after this change, it's working fine).<br>
+      <br>
       If you are not getting this behaviour with the debug build let me know and I will try it on different computers to help track it down.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br>
       <span class="post-time small text-muted">12th November 2003 19:26 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Ah... That's because the debug build is not configured right. It doesn't even call _DllMainCRTStartup in the debug version :)<br />
-      <br />
-      I'll update that, thanks.<br />
-      <br />
+      <p class="post-content">Ah... That's because the debug build is not configured right. It doesn't even call _DllMainCRTStartup in the debug version :)<br>
+      <br>
+      I'll update that, thanks.<br>
+      <br>
       For now, just #define _DllMainCRTStartup as DllMain if _DEBUG is defined and it should work.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Wasteland</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Wasteland</span><br>
       <span class="post-time small text-muted">12th November 2003 19:34 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">Ugh... well that means there's still a crashbug sitting in there somewhere... I'll let you know if I can get it to happen again...</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">kichik</span><br />
+      <p class="post-meta"><span class="post-author text-primary">kichik</span><br>
       <span class="post-time small text-muted">18th November 2003 14:22 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Problem "solved", it was because SetBg was called from a section. Documentation updated to state it shouldn't be done.<br />
-      <br />
+      <p class="post-content">Problem "solved", it was because SetBg was called from a section. Documentation updated to state it shouldn't be done.<br>
+      <br>
       Thanks Wasteland</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="footer">
       <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
@@ -108,7 +67,4 @@
 </script><script type="text/javascript">
 //<![CDATA[
   hljs.initHighlightingOnLoad();
-  //]]>
-  </script>
-</body>
-</html>
+  //]]></script></body></html>

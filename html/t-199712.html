@@ -1,277 +1,113 @@
-<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Need help w/ files copy (loop?)" />
-
-  <title>Need help w/ files copy (loop?) - NSIS Forums</title>
-  <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script>
-  <!-- Bootstrap core CSS -->
-
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!--[if lt IE 9]>
-                <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-                <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-        <![endif]-->
-</head>
-
-<body>
-  <div class="container">
-    <!-- Put navigation bar here -->
-
-    <ol class="breadcrumb">
-      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
-
-      <li><a href="f-65.html">NSIS Discussion</a></li>
-
-      <li class="active">Need help w/ files copy (loop?)</li>
-    </ol>
-
-    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=199712">Need help w/ files copy (loop?)</a></p><br />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Jnuw</span><br />
-      <span class="post-time small text-muted">20th November 2004 00:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>Need help w/ files copy (loop?)</strong><br />
-      &nbsp; Hello all. What I need to do is copy a bunch of *.mdb files out of an unknown number of folders of which I do not know the name of (I know what your saying, this sounds fun already!). I tried the following, and it did not work, but I think it will give you the idea of what I’m trying to do.<br />
-      <br />
-      CopyFiles "c:\source\*\*.mdb" "C:\destination\"<br />
-      <br />
-      The first * in the above line is my problem. I don't know the name of the folders in the "source" directory, and I don't know how many there are. I only know there is 1 .mdb file in each folder.<br />
-      <br />
-      I don't know much about push, pop, and the stack, but it seems to me a loop could first be set up to read in (push) in each of the folder names in the "source" directory into the stack. Then a second loop could run that would pop the stack 1 at a time to set the $0 variable. The CopyFiles command would run after each pop, until the stack was empty, like this.<br />
-      <br />
-      CopyFiles "c:\source\$0\*.mdb" "C:\destination\"<br />
-      <br />
-      Would this work? Any help, or code examples would be great. Thanks all.</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Erpo</span><br />
-      <span class="post-time small text-muted">20th November 2004 04:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"></p>
-
-      <blockquote>
-        CopyFiles "c:\source\*\*.mdb" "C:\destination\"
-      </blockquote>I think no matter how you eventually get it to work, the above is going to be the most intuitive syntax for accomplishing your task. Maybe, if you ask nicely, the developers will add support for multiple wildcards.<br />
-      <br />
-      <br />
-      For now, here's something that might work. I'm not sure if the "C:\source\*.*" part will match directories in C:\source\ as well as files, but if it's consistent with the rest of the scripting language it should (e.g. File /r "C:\source\*.*").<br />
-      <br />
-      Push $0<br />
-      Push $1<br />
-      FindFirst $0 $1 "C:\source\*.*"<br />
-      loop:<br />
-      StrCmp $1 "" done<br />
-      CopyFiles "$1\*.mdb" "C:\destination\"<br />
-      FindNext $0 $1<br />
-      Goto loop<br />
-      done:<br />
-      Pop $1<br />
-      Pop $0
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br />
-      <span class="post-time small text-muted">20th November 2004 07:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Some remarks :)<br />
-      First of all we are talking about files copy on user's comp (CopyFiles parameter is filespec_on_destsys).<br />
-      Pop and Push are optional - if you want to save vars content.<br />
-      Folder names may not inclide ".", so original syntax "*" looks better for me then "*.*"<br />
-      FindFirst/Next also finds "." and ".."<br />
-      If your source folder may include files, you need to check that name is directory, not file.<br />
-      This works but with pauses, may be I forgot something :) ?<br />
-      <br />
-      Section "Dummy Section" SecDummy<br />
-      <br />
-      CreateDirectory "$INSTDIR"<br />
-      FindFirst $0 $1 "$EXEDIR\*"<br />
-      loop:<br />
-      ;MessageBox MB_OK "All files $1"<br />
-      StrCmp $1 "" done<br />
-      IfFileExists "$1\*" 0 +4<br />
-      StrCmp $2 ".." +3<br />
-      StrCmp $2 "." +2<br />
-      CopyFiles /FILESONLY "$1\*.mdb" "$INSTDIR"<br />
-      FindNext $0 $1<br />
-      Goto loop<br />
-      done:<br />
-      <br />
-      sectionend</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
-      <span class="post-time small text-muted">20th November 2004 09:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">You missed FindClose $0 at the end. It's always a good idea to use Push and Pop's no matter how small the code may be. Otherwise new people tend to wonder why their variable datas have changed.<br />
-      <br />
-      -Stu</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br />
-      <span class="post-time small text-muted">20th November 2004 09:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">FindClose is a good idea :) , and $1 in StrCmp, not $2, but I still see 1-2 second pauses on Win98 SE between 2 MessageBoxes<br />
-      <br />
-      Section "Dummy Section" SecDummy<br />
-      <br />
-      CreateDirectory "$INSTDIR"<br />
-      FindFirst $0 $1 "$EXEDIR\*"<br />
-      loop:<br />
-      StrCmp $1 "" done<br />
-      IfFileExists "$1\*" 0 fndnxt<br />
-      StrCmp $1 ".." fndnxt<br />
-      StrCmp $1 "." fndnxt<br />
-      MessageBox MB_OK "Dir exists $1"<br />
-      CopyFiles /FILESONLY "$1\*.mdb" "$INSTDIR"<br />
-      MessageBox MB_OK "After CopyFiles"<br />
-      fndnxt:<br />
-      FindNext $0 $1<br />
-      Goto loop<br />
-      done:<br />
-      FindClose $0<br />
-      <br />
-      sectionend<br />
-      <br />
-      This not happens on WinXP Pro. Who knows whY? System bug?</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Jnuw</span><br />
-      <span class="post-time small text-muted">20th November 2004 19:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Thanks everyone, Takhir's code is working perfectly. You all rock!</p>
-    </div>
-    <hr />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Jnuw</span><br />
-      <span class="post-time small text-muted">23rd November 2004 16:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content">Hey guys, I was wondering if someone could check this for a bug. The code below is working perfectly, however on my Win2K Pro workstation, I get the 3-4 second pause during execution as Takhir was talking about. I get no pause at home on my XP Pro PC. I have isolated the pause to the "CopyFiles" line. I put a message box before and after that line, that’s where the pause is. It seems there is about a 1 second pause each time that line is hit, so for a loop of 70 folders, that’s a really long pause. Any help would be most appreciated.<br />
-      <br /></p>
-      <pre>
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Need help w/ files copy (loop?)"><title>Need help w/ files copy (loop?) - NSIS Forums</title><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css"><link rel="stylesheet" href="../css/style.css" type="text/css"><!--[if lt IE 9]><script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script><script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script><![endif]--></head><body><div class="container"><ol class="breadcrumb"><li><a href="../index.html" class="glyphicon glyphicon-home"></a></li><li><a href="f-65.html">NSIS Discussion</a></li><li class="active">Need help w/ files copy (loop?)</li></ol><p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=199712">Need help w/ files copy (loop?)</a></p><br><div class="post"><p class="post-meta"><span class="post-author text-primary">Jnuw</span><br><span class="post-time small text-muted">20th November 2004 00:50 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>Need help w/ files copy (loop?)</strong><br>&nbsp; Hello all. What I need to do is copy a bunch of *.mdb files out of an unknown number of folders of which I do not know the name of (I know what your saying, this sounds fun already!). I tried the following, and it did not work, but I think it will give you the idea of what I’m trying to do.<br><br>CopyFiles "c:\source\*\*.mdb" "C:\destination\"<br><br>The first * in the above line is my problem. I don't know the name of the folders in the "source" directory, and I don't know how many there are. I only know there is 1 .mdb file in each folder.<br><br>I don't know much about push, pop, and the stack, but it seems to me a loop could first be set up to read in (push) in each of the folder names in the "source" directory into the stack. Then a second loop could run that would pop the stack 1 at a time to set the $0 variable. The CopyFiles command would run after each pop, until the stack was empty, like this.<br><br>CopyFiles "c:\source\$0\*.mdb" "C:\destination\"<br><br>Would this work? Any help, or code examples would be great. Thanks all.</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Erpo</span><br><span class="post-time small text-muted">20th November 2004 04:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"></p><blockquote>CopyFiles "c:\source\*\*.mdb" "C:\destination\"</blockquote>I think no matter how you eventually get it to work, the above is going to be the most intuitive syntax for accomplishing your task. Maybe, if you ask nicely, the developers will add support for multiple wildcards.<br><br><br>For now, here's something that might work. I'm not sure if the "C:\source\*.*" part will match directories in C:\source\ as well as files, but if it's consistent with the rest of the scripting language it should (e.g. File /r "C:\source\*.*").<br><br>Push $0<br>Push $1<br>FindFirst $0 $1 "C:\source\*.*"<br>loop:<br>StrCmp $1 "" done<br>CopyFiles "$1\*.mdb" "C:\destination\"<br>FindNext $0 $1<br>Goto loop<br>done:<br>Pop $1<br>Pop $0</div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Takhir</span><br><span class="post-time small text-muted">20th November 2004 07:55 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Some remarks :)<br>First of all we are talking about files copy on user's comp (CopyFiles parameter is filespec_on_destsys).<br>Pop and Push are optional - if you want to save vars content.<br>Folder names may not inclide ".", so original syntax "*" looks better for me then "*.*"<br>FindFirst/Next also finds "." and ".."<br>If your source folder may include files, you need to check that name is directory, not file.<br>This works but with pauses, may be I forgot something :) ?<br><br>Section "Dummy Section" SecDummy<br><br>CreateDirectory "$INSTDIR"<br>FindFirst $0 $1 "$EXEDIR\*"<br>loop:<br>;MessageBox MB_OK "All files $1"<br>StrCmp $1 "" done<br>IfFileExists "$1\*" 0 +4<br>StrCmp $2 ".." +3<br>StrCmp $2 "." +2<br>CopyFiles /FILESONLY "$1\*.mdb" "$INSTDIR"<br>FindNext $0 $1<br>Goto loop<br>done:<br><br>sectionend</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br><span class="post-time small text-muted">20th November 2004 09:04 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">You missed FindClose $0 at the end. It's always a good idea to use Push and Pop's no matter how small the code may be. Otherwise new people tend to wonder why their variable datas have changed.<br><br>-Stu</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Takhir</span><br><span class="post-time small text-muted">20th November 2004 09:45 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">FindClose is a good idea :) , and $1 in StrCmp, not $2, but I still see 1-2 second pauses on Win98 SE between 2 MessageBoxes<br><br>Section "Dummy Section" SecDummy<br><br>CreateDirectory "$INSTDIR"<br>FindFirst $0 $1 "$EXEDIR\*"<br>loop:<br>StrCmp $1 "" done<br>IfFileExists "$1\*" 0 fndnxt<br>StrCmp $1 ".." fndnxt<br>StrCmp $1 "." fndnxt<br>MessageBox MB_OK "Dir exists $1"<br>CopyFiles /FILESONLY "$1\*.mdb" "$INSTDIR"<br>MessageBox MB_OK "After CopyFiles"<br>fndnxt:<br>FindNext $0 $1<br>Goto loop<br>done:<br>FindClose $0<br><br>sectionend<br><br>This not happens on WinXP Pro. Who knows whY? System bug?</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Jnuw</span><br><span class="post-time small text-muted">20th November 2004 19:02 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Thanks everyone, Takhir's code is working perfectly. You all rock!</p></div><hr><div class="post"><p class="post-meta"><span class="post-author text-primary">Jnuw</span><br><span class="post-time small text-muted">23rd November 2004 16:11 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content">Hey guys, I was wondering if someone could check this for a bug. The code below is working perfectly, however on my Win2K Pro workstation, I get the 3-4 second pause during execution as Takhir was talking about. I get no pause at home on my XP Pro PC. I have isolated the pause to the "CopyFiles" line. I put a message box before and after that line, that’s where the pause is. It seems there is about a 1 second pause each time that line is hit, so for a loop of 70 folders, that’s a really long pause. Any help would be most appreciated.<br><br></p><pre>
 <code>
 OutFile CollectMDBs.exe
-<br />AutoCloseWindow True
-<br /><br />&gt;Var SourceFolder
-<br />&gt;Var DestFolder
-<br /><br />Section ""
-<br /><br /> ReadINIStr $SourceFolder $EXEDIRCollect.ini Source SourceFolder
-<br />  ReadINIStr $DestFolder $EXEDIRCollect</code>.ini Destination DestFolder
-<br /><br />  FindFirst$0 $1 "$SourceFolder\*"
-<br /> loop:
-<br /> StrCmp $1 "" done
-<br />  IfFileExists"$SourceFolder\$1\*" 0 fndnxt
-<br />  StrCmp$1 ".." fndnxt
-<br />  StrCmp$1 "." fndnxt
-<br />  CopyFiles/FILESONLY "$SourceFolder\$1\*.mdb" "$DestFolder"
-<br /> fndnxt:
-<br /> FindNext $0 $1
-<br />  Goto loop
-<br />  done:
-<br /> FindClose $0
-<br /><br />sectionend 
-<br />&gt;
+<br>AutoCloseWindow True
+<br><br>&gt;Var SourceFolder
+<br>&gt;Var DestFolder
+<br><br>Section ""
+<br><br> ReadINIStr $SourceFolder $EXEDIRCollect.ini Source SourceFolder
+<br>  ReadINIStr $DestFolder $EXEDIRCollect</code>.ini Destination DestFolder
+<br><br>  FindFirst$0 $1 "$SourceFolder\*"
+<br> loop:
+<br> StrCmp $1 "" done
+<br>  IfFileExists"$SourceFolder\$1\*" 0 fndnxt
+<br>  StrCmp$1 ".." fndnxt
+<br>  StrCmp$1 "." fndnxt
+<br>  CopyFiles/FILESONLY "$SourceFolder\$1\*.mdb" "$DestFolder"
+<br> fndnxt:
+<br> FindNext $0 $1
+<br>  Goto loop
+<br>  done:
+<br> FindClose $0
+<br><br>sectionend 
+<br>&gt;
 
-</pre>p.s. Click <a href="http://webpages.charter.net/orum/Collect.zip" target="_blank">HERE</a> to download a Zip file with a sample directory structure to test this code, thanks.<br />
-      <br />
+</pre>p.s. Click <a href="http://webpages.charter.net/orum/Collect.zip" target="_blank">HERE</a> to download a Zip file with a sample directory structure to test this code, thanks.<br>
+      <br>
       p.p.s If someone can tell me how to put an attachment on this post, that would be great, i could not see how.
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">pengyou</span><br />
+      <p class="post-meta"><span class="post-author text-primary">pengyou</span><br>
       <span class="post-time small text-muted">23rd November 2004 17:00 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">If you click the "Post a reply" button you'll get a page which lets you enter your message and attach a file to it.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Jnuw</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Jnuw</span><br>
       <span class="post-time small text-muted">23rd November 2004 17:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">Thanks pengyou, I didn't see that because I was "editing" my post, but I see it now on a new reply.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br>
       <span class="post-time small text-muted">23rd November 2004 18:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Have you checked that the $DestFolder exists already?<br />
+      <p class="post-content">Have you checked that the $DestFolder exists already?<br>
       You should also use IfErrors to check when FindNext has finished:</p>
       <pre>
-<code>IfFileExists "$DestFolder\*" +2<br /> CreateDirectory $DestFolder<br /><br />  ClearErrors<br />   FindFirst $0 $1 "$SourceFolder\*"<br />   IfErrors done<br />  loop:<br />   IfFileExists "$SourceFolder\$1\*" 0 fndnxt<br />   StrCmp $1 ".." fndnxt<br />   StrCmp $1 "." fndnxt<br />    CopyFiles /FILESONLY "$SourceFolder\$1*.rmf" "$DestFolder"<br />  fndnxt:<br />  ClearErrors<br />   FindNext $0 $1<br />   IfErrors 0 loop<br />  done:<br />  FindClose $0</code>
+<code>IfFileExists "$DestFolder\*" +2<br> CreateDirectory $DestFolder<br><br>  ClearErrors<br>   FindFirst $0 $1 "$SourceFolder\*"<br>   IfErrors done<br>  loop:<br>   IfFileExists "$SourceFolder\$1\*" 0 fndnxt<br>   StrCmp $1 ".." fndnxt<br>   StrCmp $1 "." fndnxt<br>    CopyFiles /FILESONLY "$SourceFolder\$1*.rmf" "$DestFolder"<br>  fndnxt:<br>  ClearErrors<br>   FindNext $0 $1<br>   IfErrors 0 loop<br>  done:<br>  FindClose $0</code>
 </pre>-Stu
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Jnuw</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Jnuw</span><br>
       <span class="post-time small text-muted">23rd November 2004 18:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">Afrow UK, thanks for the suggestion. Yes, the $DestFolder does exist. And that’s good to know about the IfErrors, but does anyone know about the strange delay? Thanks.</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br>
       <span class="post-time small text-muted">23rd November 2004 18:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">This is system bug, C code below shows 1006 - 1020 ms delay on my comp under Win98 (with or without dir, files exist or not..) It's SHFileOperation().<br />
-      <br />
-      op.fFlags=FOF_FILESONLY|FOF_NOCONFIRMATION ;<br />
-      t1 = GetTickCount();<br />
-      res=SHFileOperation(&amp;op);<br />
-      sprintf(buf2, "time %d ms, res %d", GetTickCount() - t1, res);<br />
-      MessageBox(NULL, buf2, "Time", 0);<br />
-      <br />
+      <p class="post-content">This is system bug, C code below shows 1006 - 1020 ms delay on my comp under Win98 (with or without dir, files exist or not..) It's SHFileOperation().<br>
+      <br>
+      op.fFlags=FOF_FILESONLY|FOF_NOCONFIRMATION ;<br>
+      t1 = GetTickCount();<br>
+      res=SHFileOperation(&amp;op);<br>
+      sprintf(buf2, "time %d ms, res %d", GetTickCount() - t1, res);<br>
+      MessageBox(NULL, buf2, "Time", 0);<br>
+      <br>
       exec.c NSIS file, SHFileOperation - what instead?</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Afrow UK</span><br>
       <span class="post-time small text-muted">23rd November 2004 18:32 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">If that doesn't fix the problem then it must be either an internal problem with NSIS or with Windows itself.<br />
-      <br />
+      <p class="post-content">If that doesn't fix the problem then it must be either an internal problem with NSIS or with Windows itself.<br>
+      <br>
       -Stu</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Jnuw</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Jnuw</span><br>
       <span class="post-time small text-muted">23rd November 2004 22:18 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">Takhir, your last post was a bit over my head, I’m not sure I understand. So is there anything I can do about the delay or no? Thanks!</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Takhir</span><br>
       <span class="post-time small text-muted">24th November 2004 07:07 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Jnuw, looking from my corner situation is following: MS forgot Sleep(1 sec) in the SHFileOperation API call (Win98 and Win2K, not WinXP). I see 3 ways:<br />
-      1) try to create second findfile-filecopy loop for mdb files and do copy using NSIS CopyFiles (for single file - not tested) or using System plug-in and CopyFile() API call.<br />
-      2) Wait a little - may be NSIS developers can do something with this in exec.c file (current version or 2.03?).<br />
+      <p class="post-content">Jnuw, looking from my corner situation is following: MS forgot Sleep(1 sec) in the SHFileOperation API call (Win98 and Win2K, not WinXP). I see 3 ways:<br>
+      1) try to create second findfile-filecopy loop for mdb files and do copy using NSIS CopyFiles (for single file - not tested) or using System plug-in and CopyFile() API call.<br>
+      2) Wait a little - may be NSIS developers can do something with this in exec.c file (current version or 2.03?).<br>
       3) write a plug-in (C program).</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="footer">
       <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
@@ -280,7 +116,4 @@ OutFile CollectMDBs.exe
 </script><script type="text/javascript">
 //<![CDATA[
   hljs.initHighlightingOnLoad();
-  //]]>
-  </script>
-</body>
-</html>
+  //]]></script></body></html>

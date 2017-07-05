@@ -1,516 +1,476 @@
-<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Proof of concept: Detect 64-bit capable CPU - execute CPUID opcode from System plugin" />
-
-  <title>Proof of concept: Detect 64-bit capable CPU - execute CPUID opcode from System plugin - NSIS Forums</title>
-  <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script>
-  <!-- Bootstrap core CSS -->
-
-  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css" />
-  <link rel="stylesheet" href="../css/style.css" type="text/css" /><!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-  <!--[if lt IE 9]>
-               <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-               <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
-       <![endif]-->
-</head>
-
-<body>
-  <div class="container">
-    <!-- Put navigation bar here -->
-
-    <ol class="breadcrumb">
-      <li><a href="../index.html" class="glyphicon glyphicon-home"></a></li>
-
-      <li><a href="f-65.html">NSIS Discussion</a></li>
-
-      <li class="active">Proof of concept: Detect 64-bit capable CPU - execute CPUID opcode from System plugin</li>
-    </ol>
-
-    <p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=310359">Proof of concept: Detect 64-bit capable CPU - execute CPUID opcode from System plugin</a></p><br />
-
-    <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">f0rt</span><br />
-      <span class="post-time small text-muted">19th August 2009 20:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
-
-      <p class="post-content"><strong>Proof of concept: Detect 64-bit capable CPU - execute CPUID opcode from System plugin</strong><br />
-      &nbsp; WARNING: The following script should merely illustrate that it is possible to execute x86 machine code embedded in the script via the System plugin. It is likely to fail if the page containing the embedded machine code is flagged as non-executable. So the better approach would be to write a dedicated plugin.<br />
-      <br /></p>
-      <pre>
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Proof of concept: Detect 64-bit capable CPU - execute CPUID opcode from System plugin"><title>Proof of concept: Detect 64-bit capable CPU - execute CPUID opcode from System plugin - NSIS Forums</title><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');ga('create','UA-53539506-8','auto');ga('send','pageview');</script><link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/readable/bootstrap.min.css"><link rel="stylesheet" href="../css/style.css" type="text/css"><!--[if lt IE 9]><script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script><script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script><![endif]--></head><body><div class="container"><ol class="breadcrumb"><li><a href="../index.html" class="glyphicon glyphicon-home"></a></li><li><a href="f-65.html">NSIS Discussion</a></li><li class="active">Proof of concept: Detect 64-bit capable CPU - execute CPUID opcode from System plugin</li></ol><p class="lead text-muted">Archive: <a title="Try the Internet Archive" target="_blank" href="http://web.archive.org/web/*/forums.winamp.com/showthread.php?t=310359">Proof of concept: Detect 64-bit capable CPU - execute CPUID opcode from System plugin</a></p><br><div class="post"><p class="post-meta"><span class="post-author text-primary">f0rt</span><br><span class="post-time small text-muted">19th August 2009 20:12 <abbr title="Coordinated Universal Time">UTC</abbr></span></p><p class="post-content"><strong>Proof of concept: Detect 64-bit capable CPU - execute CPUID opcode from System plugin</strong><br>&nbsp; WARNING: The following script should merely illustrate that it is possible to execute x86 machine code embedded in the script via the System plugin. It is likely to fail if the page containing the embedded machine code is flagged as non-executable. So the better approach would be to write a dedicated plugin.<br><br></p><pre>
 <code>
 OutFile "cpuid.exe"
-<br /><br />&gt;!include "LogicLib.nsh"
-<br /><br />&gt;; cpuid 
-<br />&gt;; Executes CPUID instruction with the query code ***91;EAX value***93; in $1
-<br />&gt;; Params: query code ***91;EAX value***93; in $1
-<br />&gt;; Returns: 0 in $0 if function succeeded and the results of CPUID
-<br />&gt;;          in $1 ***91;EAX***93;, $2 ***91;EBX***93;, $3 ***91;ECX***93; and $4 ***91;EDX***93;
-<br />;         non-zero value in $0 if CPUID instruction is not available.
-<br />Function cpuid
-<br />  ; int cpuid(unsigned int query_code, unsigned int regs***91;4***93;)
-<br />   ;cpuid:                       
-<br />   ;  0:    55                       push   ebp
-<br />  ;   1:    89 e5                    mov    ebp,esp
-<br />  ;   3:    53                       push   ebx
-<br />   ;
-<br />   ;                            ;CPUID instruction available?
-<br />   ;                            ;yes if ID flag (= EFLAGS:21) can be modified
-<br />   ;
-<br />   ;  4:    9c                       pushfd  
-<br />  ;   5:    58                       pop    eax
-<br />  ;   6:    89 c1                    mov    ecx,eax
-<br />  ;   8:    35 00 00 20 00           xor    eax,$0x200000
-<br />  ;   d:    50                       push   eax
-<br />  ;   e:    9d                       popf   
-<br />  ;   f:    9c                       pushf  
-<br />  ;  10:    58                       pop    eax
-<br />  ;  11:    39 c8                    cmp    eax,ecx
-<br />  ;  13:    74 17                    je     2c &lt;cpuid_end&gt;
-<br />   ;
-<br />   ;                            ; Execute CPUID instruction with the passed query code
-<br />  ;                            ; and store the results in the integer array
-<br />   ;
-<br />   ; 15:    56                       push   esi
-<br />  ;  16:    8b 45 08                 mov    eax,***91;ebp+8***93;
-<br />   ; 19:    0f a2                    cpuid  
-<br />  ;  1b:    8b 75 0c                 mov    esi,dword ptr ***91;ebp+12***93;
-<br />   ; 1e:    89 06                    mov    dword ptr ***91;esi***93;,eax
-<br />  ;  20:    89 5e 04                 mov    dword ptr ***91;esi+4***93;,ebx
-<br />  ;  23:    89 4e 08                 mov    dword ptr ***91;esi+8***93;,ecx
-<br />  ;  26:    89 56 0c                 mov    dword ptr ***91;esi+12***93;,edx
-<br />  ;  29:    5e                       pop    esi
-<br />  ;  2a:    31 c0                    xor    eax,eax
-<br />   ;
-<br />   ;
-<br />   ;cpuid_end:
-<br />   ; 2c:    5b                       pop    ebx
-<br />  ;  2d:    5d                       pop    ebp
-<br />  ;  2e:    c3                       ret  
-<br />  ;  2f:       90                      nop
-<br />   ;
-<br />   ;Little endian =&gt; combine 4 bytes from last to first one to an integer
-<br />   ;
-<br /> 
-<br />  Push $5
-<br />   Push$6
-<br /><br />  ; cpuid function in x86 machine code 
-<br />  ; (System::Call supports a maximum of 100 parameters)
-<br />  System::Call "*( \\
-<br />      i 0x53e58955, \\
-<br />      i 0xc189589c, \\
-<br />      i 0x20000035, \\
-<br />      i 0x9c9d5000, \\
-<br />      i 0x74c83958, \\
-<br />      i 0x458b5617, \\
-<br />      i 0x8ba20f08, \\
-<br />      i 0x06890c75, \\
-<br />      i 0x89045e89, \\
-<br />      i 0x5689084e, \\
-<br />      i 0xc0315e0c, \\
-<br />      i 0x90c35d5b  \\
-<br />   ) i.r5"
-<br /><br />  ; Allocate integer array 
-<br />  System::Call "*(i 0, i 0, i 0, i 0) i.r6"
-<br />  ; Execute cpuid machine code
-<br />   System</code>::Call "::$5(i r1, i r6) i.r0"
-<br /><br />  ; Read data from integer array
-<br />  System::Call "*$6(i .r1, i .r2, i .r3, i .r4)"
-<br /><br />  ; Free previously allocated memory
-<br />   System::Free $6
-<br />   System::Free $5
-<br /><br />   Pop$6
-<br />   Pop$5
-<br />FunctionEnd
-<br /><br />&gt;; Get Vendor Id via CPUID instruction
-<br />&gt;; Returns Vendor Id in $0
-<br />&gt;Function VendorId
-<br />  Push$1
-<br />  Push$2
-<br />  Push$3
-<br />  Push$4
-<br />  Push$5
-<br /><br />  Push 0
-<br />  Pop$1
-<br />  Call cpuid
-<br /> ${If} $0 != 0
-<br />     StrCpy$0 "CPUID instruction not available!"
-<br />  ${Else}
-<br />     ;Concatenate vendor string: 12 character ASCII string stored in EBX, EDX and ECX
-<br />     System::Call "*(i r2, i r4, i r3, i 0) i.r5"
-<br />    System::Call "*$5(&amp;m13 .r0)"
-<br />    System::Free $5
-<br />  ${EndIf}
-<br /><br /> Pop $5
-<br />  Pop$4
-<br />  Pop$3
-<br />  Pop$2
-<br />  Pop$1
-<br />FunctionEnd
-<br /><br />&gt;; Determine if CPU supports 64-bit address space
-<br />&gt;; Returns "64-bit" or "32-bit" in $0
-<br />&gt;Function Is64bit
-<br />  Push$1
-<br />  Push$2
-<br />  Push$3
-<br />  Push$4
-<br /><br /> ; 32-bit by default
-<br /> Push "32-bit"
-<br /><br />  Push 0
-<br />  Pop$1
-<br />  Call cpuid
-<br /> ${If} $0 == 0
-<br /> ${AndIf} $1 != 0
-<br />    ; Get Highest Extended Function Supported
-<br />     Push 0x80000000
-<br />     Pop$1
-<br />     Call cpuid
-<br />    ${If} $0 == 0
-<br />    ${AndIf} $1 &gt; 0x80000000
-<br />       ; Extended Processor Info and Feature Bits
-<br />        Push 0x80000001
-<br />        Pop$1
-<br />        Call cpuid
-<br />       ${If} $0 == 0
-<br />           ; Check long mode bit (EDX:29)
-<br />           IntOp $4 $4 &amp; 0x20000000
-<br />           ${If} $4 != 0
-<br />                Pop$0
-<br />                Push "64-bit"
-<br />            ${EndIf}
-<br />        ${EndIf}
-<br />     ${EndIf}
-<br />  ${EndIf}
-<br /><br />  ; Return value
-<br />  Pop$0
-<br /><br />  Pop$4
-<br />  Pop$3
-<br />  Pop$2
-<br />  Pop$1
-<br />FunctionEnd
-<br /><br />&gt;Function .onInit
-<br />  InitPluginsDir
-<br />  Call VendorId
-<br />  StrCpy$1 $0
-<br />  Call Is64bit
-<br />  MessageBox MB_OK "Vendor=$1 ***91;$0 capable***93;"
-<br />  Quit
-<br />FunctionEnd
-<br /><br />Section 
-<br />SectionEnd 
-<br />&gt;
+<br><br>&gt;!include "LogicLib.nsh"
+<br><br>&gt;; cpuid 
+<br>&gt;; Executes CPUID instruction with the query code ***91;EAX value***93; in $1
+<br>&gt;; Params: query code ***91;EAX value***93; in $1
+<br>&gt;; Returns: 0 in $0 if function succeeded and the results of CPUID
+<br>&gt;;          in $1 ***91;EAX***93;, $2 ***91;EBX***93;, $3 ***91;ECX***93; and $4 ***91;EDX***93;
+<br>;         non-zero value in $0 if CPUID instruction is not available.
+<br>Function cpuid
+<br>  ; int cpuid(unsigned int query_code, unsigned int regs***91;4***93;)
+<br>   ;cpuid:                       
+<br>   ;  0:    55                       push   ebp
+<br>  ;   1:    89 e5                    mov    ebp,esp
+<br>  ;   3:    53                       push   ebx
+<br>   ;
+<br>   ;                            ;CPUID instruction available?
+<br>   ;                            ;yes if ID flag (= EFLAGS:21) can be modified
+<br>   ;
+<br>   ;  4:    9c                       pushfd  
+<br>  ;   5:    58                       pop    eax
+<br>  ;   6:    89 c1                    mov    ecx,eax
+<br>  ;   8:    35 00 00 20 00           xor    eax,$0x200000
+<br>  ;   d:    50                       push   eax
+<br>  ;   e:    9d                       popf   
+<br>  ;   f:    9c                       pushf  
+<br>  ;  10:    58                       pop    eax
+<br>  ;  11:    39 c8                    cmp    eax,ecx
+<br>  ;  13:    74 17                    je     2c &lt;cpuid_end&gt;
+<br>   ;
+<br>   ;                            ; Execute CPUID instruction with the passed query code
+<br>  ;                            ; and store the results in the integer array
+<br>   ;
+<br>   ; 15:    56                       push   esi
+<br>  ;  16:    8b 45 08                 mov    eax,***91;ebp+8***93;
+<br>   ; 19:    0f a2                    cpuid  
+<br>  ;  1b:    8b 75 0c                 mov    esi,dword ptr ***91;ebp+12***93;
+<br>   ; 1e:    89 06                    mov    dword ptr ***91;esi***93;,eax
+<br>  ;  20:    89 5e 04                 mov    dword ptr ***91;esi+4***93;,ebx
+<br>  ;  23:    89 4e 08                 mov    dword ptr ***91;esi+8***93;,ecx
+<br>  ;  26:    89 56 0c                 mov    dword ptr ***91;esi+12***93;,edx
+<br>  ;  29:    5e                       pop    esi
+<br>  ;  2a:    31 c0                    xor    eax,eax
+<br>   ;
+<br>   ;
+<br>   ;cpuid_end:
+<br>   ; 2c:    5b                       pop    ebx
+<br>  ;  2d:    5d                       pop    ebp
+<br>  ;  2e:    c3                       ret  
+<br>  ;  2f:       90                      nop
+<br>   ;
+<br>   ;Little endian =&gt; combine 4 bytes from last to first one to an integer
+<br>   ;
+<br> 
+<br>  Push $5
+<br>   Push$6
+<br><br>  ; cpuid function in x86 machine code 
+<br>  ; (System::Call supports a maximum of 100 parameters)
+<br>  System::Call "*( \\
+<br>      i 0x53e58955, \\
+<br>      i 0xc189589c, \\
+<br>      i 0x20000035, \\
+<br>      i 0x9c9d5000, \\
+<br>      i 0x74c83958, \\
+<br>      i 0x458b5617, \\
+<br>      i 0x8ba20f08, \\
+<br>      i 0x06890c75, \\
+<br>      i 0x89045e89, \\
+<br>      i 0x5689084e, \\
+<br>      i 0xc0315e0c, \\
+<br>      i 0x90c35d5b  \\
+<br>   ) i.r5"
+<br><br>  ; Allocate integer array 
+<br>  System::Call "*(i 0, i 0, i 0, i 0) i.r6"
+<br>  ; Execute cpuid machine code
+<br>   System</code>::Call "::$5(i r1, i r6) i.r0"
+<br><br>  ; Read data from integer array
+<br>  System::Call "*$6(i .r1, i .r2, i .r3, i .r4)"
+<br><br>  ; Free previously allocated memory
+<br>   System::Free $6
+<br>   System::Free $5
+<br><br>   Pop$6
+<br>   Pop$5
+<br>FunctionEnd
+<br><br>&gt;; Get Vendor Id via CPUID instruction
+<br>&gt;; Returns Vendor Id in $0
+<br>&gt;Function VendorId
+<br>  Push$1
+<br>  Push$2
+<br>  Push$3
+<br>  Push$4
+<br>  Push$5
+<br><br>  Push 0
+<br>  Pop$1
+<br>  Call cpuid
+<br> ${If} $0 != 0
+<br>     StrCpy$0 "CPUID instruction not available!"
+<br>  ${Else}
+<br>     ;Concatenate vendor string: 12 character ASCII string stored in EBX, EDX and ECX
+<br>     System::Call "*(i r2, i r4, i r3, i 0) i.r5"
+<br>    System::Call "*$5(&amp;m13 .r0)"
+<br>    System::Free $5
+<br>  ${EndIf}
+<br><br> Pop $5
+<br>  Pop$4
+<br>  Pop$3
+<br>  Pop$2
+<br>  Pop$1
+<br>FunctionEnd
+<br><br>&gt;; Determine if CPU supports 64-bit address space
+<br>&gt;; Returns "64-bit" or "32-bit" in $0
+<br>&gt;Function Is64bit
+<br>  Push$1
+<br>  Push$2
+<br>  Push$3
+<br>  Push$4
+<br><br> ; 32-bit by default
+<br> Push "32-bit"
+<br><br>  Push 0
+<br>  Pop$1
+<br>  Call cpuid
+<br> ${If} $0 == 0
+<br> ${AndIf} $1 != 0
+<br>    ; Get Highest Extended Function Supported
+<br>     Push 0x80000000
+<br>     Pop$1
+<br>     Call cpuid
+<br>    ${If} $0 == 0
+<br>    ${AndIf} $1 &gt; 0x80000000
+<br>       ; Extended Processor Info and Feature Bits
+<br>        Push 0x80000001
+<br>        Pop$1
+<br>        Call cpuid
+<br>       ${If} $0 == 0
+<br>           ; Check long mode bit (EDX:29)
+<br>           IntOp $4 $4 &amp; 0x20000000
+<br>           ${If} $4 != 0
+<br>                Pop$0
+<br>                Push "64-bit"
+<br>            ${EndIf}
+<br>        ${EndIf}
+<br>     ${EndIf}
+<br>  ${EndIf}
+<br><br>  ; Return value
+<br>  Pop$0
+<br><br>  Pop$4
+<br>  Pop$3
+<br>  Pop$2
+<br>  Pop$1
+<br>FunctionEnd
+<br><br>&gt;Function .onInit
+<br>  InitPluginsDir
+<br>  Call VendorId
+<br>  StrCpy$1 $0
+<br>  Call Is64bit
+<br>  MessageBox MB_OK "Vendor=$1 ***91;$0 capable***93;"
+<br>  Quit
+<br>FunctionEnd
+<br><br>Section 
+<br>SectionEnd 
+<br>&gt;
 
 </pre>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">Anders</span><br />
+      <p class="post-meta"><span class="post-author text-primary">Anders</span><br>
       <span class="post-time small text-muted">19th August 2009 22:13 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
       <p class="post-content">as you say, this will cause problems with DEP/NX, you could allocate memory with VirtualAlloc (PAGE_EXECUTE_READWRITE protection)</p>
     </div>
-    <hr />
+    <hr>
 
     <div class="post">
-      <p class="post-meta"><span class="post-author text-primary">f0rt</span><br />
+      <p class="post-meta"><span class="post-author text-primary">f0rt</span><br>
       <span class="post-time small text-muted">25th August 2009 17:29 <abbr title="Coordinated Universal Time">UTC</abbr></span></p>
 
-      <p class="post-content">Thanks a lot for your advice.<br />
-      <br />
-      I took your advice and improved the script:<br />
-      <br /></p>
+      <p class="post-content">Thanks a lot for your advice.<br>
+      <br>
+      I took your advice and improved the script:<br>
+      <br></p>
       <pre>
 <code>
 OutFile "cpuid.exe"
-<br />&gt;Name    "CPUID"
-<br /><br />&gt;!include "LogicLib.nsh"
-<br /><br />&gt;!define TRUE                   1
-<br /><br />&gt;!define MEM_COMMIT             0x1000
-<br />&gt;!define MEM_RELEASE            0x8000
-<br />&gt;!define PAGE_EXECUTE_READWRITE 0x40
-<br /><br />&gt;!define CRYPT_STRING_HEX       0x00000004
-<br /><br />&gt;; int cpuid(unsigned int query_code, unsigned int regs***91;4***93;)
-<br />;cpuid:                       
-<br />;  0:    55                       push   ebp
-<br />&gt;;   1:    89 e5                    mov    ebp,esp
-<br />&gt;;   3:    53                       push   ebx
-<br />&gt;;
-<br />;                            ; CPUID instruction available
-<br />&gt;;                            ; yes if ID flag (= EFLAGS:21) can be modified
-<br />&gt;;
-<br />;  4:    9c                       pushfd  
-<br />&gt;;   5:    58                       pop    eax
-<br />&gt;;   6:    89 c1                    mov    ecx,eax
-<br />&gt;;   8:    35 00 00 20 00           xor    eax,$0x200000
-<br />&gt;;   d:    50                       push   eax
-<br />&gt;;   e:    9d                       popf   
-<br />&gt;;   f:    9c                       pushf  
-<br />&gt;;  10:    58                       pop    eax
-<br />&gt;;  11:    39 c8                    cmp    eax,ecx
-<br />&gt;;  13:    74 17                    je     2c &lt;cpuid_end&gt;
-<br />;
-<br />;                            ; Run CPUID with the passed query code
-<br />&gt;;                            ; and store the results in the integer array
-<br />;
-<br />; 15:    56                       push   esi
-<br />&gt;;  16:    8b 45 08                 mov    eax,***91;ebp+8***93;
-<br />; 19:    0f a2                    cpuid  
-<br />&gt;;  1b:    8b 75 0c                 mov    esi,dword ptr ***91;ebp+12***93;
-<br />; 1e:    89 06                    mov    dword ptr ***91;esi***93;,eax
-<br />&gt;;  20:    89 5e 04                 mov    dword ptr ***91;esi+4***93;,ebx
-<br />&gt;;  23:    89 4e 08                 mov    dword ptr ***91;esi+8***93;,ecx
-<br />&gt;;  26:    89 56 0c                 mov    dword ptr ***91;esi+12***93;,edx
-<br />&gt;;  29:    5e                       pop    esi
-<br />&gt;;  2a:    31 c0                    xor    eax,eax
-<br />&gt;;
-<br />;
-<br />;cpuid_end:
-<br />; 2c:    5b                       pop    ebx
-<br />&gt;;  2d:    5d                       pop    ebp
-<br />&gt;;  2e:    c3                       ret
-<br /><br />&gt;!define HEXCODE "5589e5539c5889c13500002000509d9c5839c87417568b45080fa28b750c8906895e04894e0889560c5e31c05b5dc3"
-<br /><br />&gt;Var CODE
-<br /><br />&gt;; Convert hex string into binary
-<br />&gt;; Params: hexstring - string in hexadecimal format
-<br />&gt;;         hexlen    - length of hexstring
-<br />&gt;;         binbuffer - pointer to buffer that receives the binary output
-<br />&gt;;         binlen    - size of buffer that receives the binary output
-<br />&gt;; Returns: Number of bytes stored in buffer
-<br />&gt;Function hex2bin
-<br />  Exch$2 ; Length of resulting string
-<br />  Exch
-<br />  Exch$1 ; Resulting string
-<br />  Exch 2
-<br />  Exch$0 ; Length of hex string
-<br />  Exch 3 
-<br />  Exch$3 ; Hex string
-<br />  
-<br />  Push$4
-<br /><br /> ; CryptStringToBinary only available on Windows XP or its successors
-<br />  System</code>::Call "Crypt32::CryptStringToBinary(t r3, i r0, i ${CRYPT_STRING_HEX}, i r1, *i r2r2, i 0, i 0) i.r4"
-<br /> ${If} $4 != ${TRUE}
-<br />     ; Fallback to generic hex to binary implementation
-<br />     ;
-<br />     ; Ensure that at least one integer value could be written
-<br />    ${If} $2 &gt;= 4
-<br />        Push$5
-<br />        Push$6
-<br />        Push$7
-<br />        Push$8
-<br />        Push$9
-<br />       ; Length of hex string
-<br />        StrCpy$5 $0
-<br />       ; Size of buffer
-<br />        StrCpy$6 $2
-<br />       ; Integer string
-<br />        StrCpy$7 ""
-<br />       ${DoWhile} $6 &gt; 0
-<br />          ; Extract two characters working from end to beginning of hex string
-<br />           IntOp $5 $5 - 2
-<br />           StrCpy$8 $3 2 $5
-<br />          ; Combine the extracted characters to an integer string
-<br />           StrCpy$7 "$7$8"
-<br />          StrLen $9 $7
-<br />          ${If} $9 &gt;= 8
-<br />              ; Complete integer string
-<br />              ; Determine the address where the integer value is going to be written
-<br />               IntOp $6 $6 - 4
-<br />               IntOp $9 $1 + $6
-<br />              ; Write integer value
-<br />               System::Call "*$9(i 0x$7)"
-<br />              ; Clean integer string
-<br />               StrCpy$7 ""
-<br />              ${If} $6 &lt; 4
-<br />              ${AndIf} $6 &gt; 0
-<br />                  ; The first integer value is built from the very first 8 characters of the hexstring
-<br />                   StrCpy$5 8
-<br />                  ; Set offset to 4 so it becomes the start address of the binary buffer for writing
-<br />                  ; the first integer value
-<br />                   StrCpy$6 4
-<br />               ${EndIf}
-<br />           ${EndIf}
-<br />        ${Loop}
-<br />       StrCpy $0 $2
-<br />        Pop$9
-<br />        Pop$8
-<br />        Pop$7
-<br />        Pop$6
-<br />        Pop$5
-<br />     ${Else}
-<br />       StrCpy $0 0
-<br />     ${EndIf}
-<br />  ${Else}
-<br />    StrCpy $0 $2
-<br />  ${EndIf}
-<br /> Pop $4
-<br />  Pop$3
-<br />  Pop$2
-<br />  Pop$1
-<br />  Exch$0
-<br />FunctionEnd
-<br /><br />&gt;; Initialize enviornment for cpuid function
-<br />Function cpuid_init
-<br />   Push$0
-<br />   Push$1
-<br />   Push$2
-<br />   Push$3
-<br /><br />   StrCpy$0 ${HEXCODE}
-<br />   ; Length of hex string
-<br />   StrLen$1 $0
-<br />  ; Length of resulting string
-<br />   IntOp $2 $1 / 2
-<br /><br />  ; Allocate memory to store code for execution 
-<br />  ; VirtualAlloc is available on Windows 2000 Pro or its successors
-<br />   System::Call "kernel32::VirtualAlloc(i 0, i r2, \\
-<br />        i ${MEM_COMMIT}, i ${PAGE_EXECUTE_READWRITE}) i.r3"
-<br /><br />  ${If} $3 == "error"
-<br />     ; Fallback to System::Alloc
-<br />      System::Alloc $2
-<br />      Pop$3
-<br />   ${EndIf}
-<br /><br />   ${If} $3 != 0
-<br />      Push$0
-<br />      Push$1
-<br />      Push$3
-<br />      Push$2
-<br />      Call hex2bin
-<br />      Pop$2
-<br />      StrCpy $CODE$3 
-<br />   ${EndIf}
-<br /><br />  Pop $3
-<br />   Pop$2
-<br />   Pop$1
-<br />   Pop$0
-<br />FunctionEnd
-<br /><br />&gt;; Cleanup enviornment for cpuid function
-<br />Function cpuid_deinit
-<br />  ${If} $CODE != ""
-<br />     Push $0
-<br />     ; Free memory used to store code for execution
-<br />     ; VirtualFree is available on Windows 2000 Pro or its successors
-<br />      System::Call "kernel32::VirtualFree(i $CODE, i 0, i ${MEM_RELEASE}) i.r0"
-<br />     ${If} $0 == "error"
-<br />         ; Fallback to System::Free
-<br />          System::Free $CODE
-<br />      ${EndIf}
-<br />     StrCpy $CODE ""
-<br />     Pop $0
-<br />   ${EndIf}
-<br />&gt;FunctionEnd
-<br /><br />&gt;; cpuid 
-<br />&gt;; Executes CPUID instruction with the query code ***91;EAX value***93; in $1
-<br />&gt;; Params: query code ***91;EAX value***93; in $1
-<br />&gt;; Returns: 0 in $0 if function succeeded and the results of CPUID
-<br />&gt;;          in $1 ***91;EAX***93;, $2 ***91;EBX***93;, $3 ***91;ECX***93; and $4 ***91;EDX***93;
-<br />;         non-zero value in $0 if CPUID instruction is not available.
-<br />Function cpuid
-<br />   Push$5
-<br />   Push$6
-<br />   Push$7
-<br /><br />  ; Set return code to a non-zero value (= error) as an initial value
-<br />   Push-1
-<br />   Pop$0
-<br /><br />  ${If} $CODE != ""
-<br />     ; Allocate integer array 
-<br />     System::Call "*(i 0, i 0, i 0, i 0) i.r7"
-<br /><br />     ${If} $7 != 0
-<br />        ; Execute cpuid machine code
-<br />         System::Call "::$CODE(i r1, i r7) i.r0"
-<br /><br />        ; Read data from integer array
-<br />        System::Call "*$7(i .r1, i .r2, i .r3, i .r4)"
-<br /><br />        ; Free previously allocated memory for integer array
-<br />        System::Free $7
-<br />      ${EndIf}
-<br />   ${EndIf}
-<br /><br />  Pop $7
-<br />   Pop$6
-<br />   Pop$5
-<br />FunctionEnd
-<br /><br />&gt;; Get Vendor Id via CPUID instruction
-<br />&gt;; Returns Vendor Id in $0
-<br />&gt;Function VendorId
-<br />  Push$1
-<br />  Push$2
-<br />  Push$3
-<br />  Push$4
-<br />  Push$5
-<br /><br />  Push 0
-<br />  Pop$1
-<br />  Call cpuid
-<br /> ${If} $0 != 0
-<br />     StrCpy$0 "CPUID instruction not available!"
-<br />  ${Else}
-<br />     ;Concatenate vendor string: 12 character ASCII string stored in EBX, EDX and ECX
-<br />     System::Call "*(i r2, i r4, i r3, i 0) i.r5"
-<br />    System::Call "*$5(&amp;m13 .r0)"
-<br />    System::Free $5
-<br />  ${EndIf}
-<br /><br /> Pop $5
-<br />  Pop$4
-<br />  Pop$3
-<br />  Pop$2
-<br />  Pop$1
-<br />FunctionEnd
-<br /><br />&gt;; Determine if CPU supports 64-bit address space
-<br />&gt;; Returns "64-bit" or "32-bit" in $0
-<br />&gt;Function Is64bit
-<br />  Push$1
-<br />  Push$2
-<br />  Push$3
-<br />  Push$4
-<br /><br /> ; 32-bit by default
-<br /> Push "32-bit"
-<br /><br />  Push 0
-<br />  Pop$1
-<br />  Call cpuid
-<br /> ${If} $0 == 0
-<br /> ${AndIf} $1 != 0
-<br />    ; Get Highest Extended Function Supported
-<br />     Push 0x80000000
-<br />     Pop$1
-<br />     Call cpuid
-<br />    ${If} $0 == 0
-<br />    ${AndIf} $1 &gt; 0x80000000
-<br />       ; Extended Processor Info and Feature Bits
-<br />        Push 0x80000001
-<br />        Pop$1
-<br />        Call cpuid
-<br />       ${If} $0 == 0
-<br />           ; Check long mode bit (EDX:29)
-<br />           IntOp $4 $4 &amp; 0x20000000
-<br />           ${If} $4 != 0
-<br />                Pop$0
-<br />                Push "64-bit"
-<br />            ${EndIf}
-<br />        ${EndIf}
-<br />     ${EndIf}
-<br />  ${EndIf}
-<br /><br />  ; Return value
-<br />  Pop$0
-<br /><br />  Pop$4
-<br />  Pop$3
-<br />  Pop$2
-<br />  Pop$1
-<br />FunctionEnd
-<br /><br />&gt;Function .onInit
-<br />  InitPluginsDir
-<br />  Call cpuid_init 
-<br />  Call VendorId
-<br />  StrCpy$1 $0
-<br />  Call Is64bit
-<br />  Call cpuid_deinit 
-<br />  MessageBox MB_OK "Vendor=$1 ***91;$0 capable***93;"
-<br />  Quit
-<br />FunctionEnd
-<br /><br />Section 
-<br />SectionEnd 
-<br />&gt;
+<br>&gt;Name    "CPUID"
+<br><br>&gt;!include "LogicLib.nsh"
+<br><br>&gt;!define TRUE                   1
+<br><br>&gt;!define MEM_COMMIT             0x1000
+<br>&gt;!define MEM_RELEASE            0x8000
+<br>&gt;!define PAGE_EXECUTE_READWRITE 0x40
+<br><br>&gt;!define CRYPT_STRING_HEX       0x00000004
+<br><br>&gt;; int cpuid(unsigned int query_code, unsigned int regs***91;4***93;)
+<br>;cpuid:                       
+<br>;  0:    55                       push   ebp
+<br>&gt;;   1:    89 e5                    mov    ebp,esp
+<br>&gt;;   3:    53                       push   ebx
+<br>&gt;;
+<br>;                            ; CPUID instruction available
+<br>&gt;;                            ; yes if ID flag (= EFLAGS:21) can be modified
+<br>&gt;;
+<br>;  4:    9c                       pushfd  
+<br>&gt;;   5:    58                       pop    eax
+<br>&gt;;   6:    89 c1                    mov    ecx,eax
+<br>&gt;;   8:    35 00 00 20 00           xor    eax,$0x200000
+<br>&gt;;   d:    50                       push   eax
+<br>&gt;;   e:    9d                       popf   
+<br>&gt;;   f:    9c                       pushf  
+<br>&gt;;  10:    58                       pop    eax
+<br>&gt;;  11:    39 c8                    cmp    eax,ecx
+<br>&gt;;  13:    74 17                    je     2c &lt;cpuid_end&gt;
+<br>;
+<br>;                            ; Run CPUID with the passed query code
+<br>&gt;;                            ; and store the results in the integer array
+<br>;
+<br>; 15:    56                       push   esi
+<br>&gt;;  16:    8b 45 08                 mov    eax,***91;ebp+8***93;
+<br>; 19:    0f a2                    cpuid  
+<br>&gt;;  1b:    8b 75 0c                 mov    esi,dword ptr ***91;ebp+12***93;
+<br>; 1e:    89 06                    mov    dword ptr ***91;esi***93;,eax
+<br>&gt;;  20:    89 5e 04                 mov    dword ptr ***91;esi+4***93;,ebx
+<br>&gt;;  23:    89 4e 08                 mov    dword ptr ***91;esi+8***93;,ecx
+<br>&gt;;  26:    89 56 0c                 mov    dword ptr ***91;esi+12***93;,edx
+<br>&gt;;  29:    5e                       pop    esi
+<br>&gt;;  2a:    31 c0                    xor    eax,eax
+<br>&gt;;
+<br>;
+<br>;cpuid_end:
+<br>; 2c:    5b                       pop    ebx
+<br>&gt;;  2d:    5d                       pop    ebp
+<br>&gt;;  2e:    c3                       ret
+<br><br>&gt;!define HEXCODE "5589e5539c5889c13500002000509d9c5839c87417568b45080fa28b750c8906895e04894e0889560c5e31c05b5dc3"
+<br><br>&gt;Var CODE
+<br><br>&gt;; Convert hex string into binary
+<br>&gt;; Params: hexstring - string in hexadecimal format
+<br>&gt;;         hexlen    - length of hexstring
+<br>&gt;;         binbuffer - pointer to buffer that receives the binary output
+<br>&gt;;         binlen    - size of buffer that receives the binary output
+<br>&gt;; Returns: Number of bytes stored in buffer
+<br>&gt;Function hex2bin
+<br>  Exch$2 ; Length of resulting string
+<br>  Exch
+<br>  Exch$1 ; Resulting string
+<br>  Exch 2
+<br>  Exch$0 ; Length of hex string
+<br>  Exch 3 
+<br>  Exch$3 ; Hex string
+<br>  
+<br>  Push$4
+<br><br> ; CryptStringToBinary only available on Windows XP or its successors
+<br>  System</code>::Call "Crypt32::CryptStringToBinary(t r3, i r0, i ${CRYPT_STRING_HEX}, i r1, *i r2r2, i 0, i 0) i.r4"
+<br> ${If} $4 != ${TRUE}
+<br>     ; Fallback to generic hex to binary implementation
+<br>     ;
+<br>     ; Ensure that at least one integer value could be written
+<br>    ${If} $2 &gt;= 4
+<br>        Push$5
+<br>        Push$6
+<br>        Push$7
+<br>        Push$8
+<br>        Push$9
+<br>       ; Length of hex string
+<br>        StrCpy$5 $0
+<br>       ; Size of buffer
+<br>        StrCpy$6 $2
+<br>       ; Integer string
+<br>        StrCpy$7 ""
+<br>       ${DoWhile} $6 &gt; 0
+<br>          ; Extract two characters working from end to beginning of hex string
+<br>           IntOp $5 $5 - 2
+<br>           StrCpy$8 $3 2 $5
+<br>          ; Combine the extracted characters to an integer string
+<br>           StrCpy$7 "$7$8"
+<br>          StrLen $9 $7
+<br>          ${If} $9 &gt;= 8
+<br>              ; Complete integer string
+<br>              ; Determine the address where the integer value is going to be written
+<br>               IntOp $6 $6 - 4
+<br>               IntOp $9 $1 + $6
+<br>              ; Write integer value
+<br>               System::Call "*$9(i 0x$7)"
+<br>              ; Clean integer string
+<br>               StrCpy$7 ""
+<br>              ${If} $6 &lt; 4
+<br>              ${AndIf} $6 &gt; 0
+<br>                  ; The first integer value is built from the very first 8 characters of the hexstring
+<br>                   StrCpy$5 8
+<br>                  ; Set offset to 4 so it becomes the start address of the binary buffer for writing
+<br>                  ; the first integer value
+<br>                   StrCpy$6 4
+<br>               ${EndIf}
+<br>           ${EndIf}
+<br>        ${Loop}
+<br>       StrCpy $0 $2
+<br>        Pop$9
+<br>        Pop$8
+<br>        Pop$7
+<br>        Pop$6
+<br>        Pop$5
+<br>     ${Else}
+<br>       StrCpy $0 0
+<br>     ${EndIf}
+<br>  ${Else}
+<br>    StrCpy $0 $2
+<br>  ${EndIf}
+<br> Pop $4
+<br>  Pop$3
+<br>  Pop$2
+<br>  Pop$1
+<br>  Exch$0
+<br>FunctionEnd
+<br><br>&gt;; Initialize enviornment for cpuid function
+<br>Function cpuid_init
+<br>   Push$0
+<br>   Push$1
+<br>   Push$2
+<br>   Push$3
+<br><br>   StrCpy$0 ${HEXCODE}
+<br>   ; Length of hex string
+<br>   StrLen$1 $0
+<br>  ; Length of resulting string
+<br>   IntOp $2 $1 / 2
+<br><br>  ; Allocate memory to store code for execution 
+<br>  ; VirtualAlloc is available on Windows 2000 Pro or its successors
+<br>   System::Call "kernel32::VirtualAlloc(i 0, i r2, \\
+<br>        i ${MEM_COMMIT}, i ${PAGE_EXECUTE_READWRITE}) i.r3"
+<br><br>  ${If} $3 == "error"
+<br>     ; Fallback to System::Alloc
+<br>      System::Alloc $2
+<br>      Pop$3
+<br>   ${EndIf}
+<br><br>   ${If} $3 != 0
+<br>      Push$0
+<br>      Push$1
+<br>      Push$3
+<br>      Push$2
+<br>      Call hex2bin
+<br>      Pop$2
+<br>      StrCpy $CODE$3 
+<br>   ${EndIf}
+<br><br>  Pop $3
+<br>   Pop$2
+<br>   Pop$1
+<br>   Pop$0
+<br>FunctionEnd
+<br><br>&gt;; Cleanup enviornment for cpuid function
+<br>Function cpuid_deinit
+<br>  ${If} $CODE != ""
+<br>     Push $0
+<br>     ; Free memory used to store code for execution
+<br>     ; VirtualFree is available on Windows 2000 Pro or its successors
+<br>      System::Call "kernel32::VirtualFree(i $CODE, i 0, i ${MEM_RELEASE}) i.r0"
+<br>     ${If} $0 == "error"
+<br>         ; Fallback to System::Free
+<br>          System::Free $CODE
+<br>      ${EndIf}
+<br>     StrCpy $CODE ""
+<br>     Pop $0
+<br>   ${EndIf}
+<br>&gt;FunctionEnd
+<br><br>&gt;; cpuid 
+<br>&gt;; Executes CPUID instruction with the query code ***91;EAX value***93; in $1
+<br>&gt;; Params: query code ***91;EAX value***93; in $1
+<br>&gt;; Returns: 0 in $0 if function succeeded and the results of CPUID
+<br>&gt;;          in $1 ***91;EAX***93;, $2 ***91;EBX***93;, $3 ***91;ECX***93; and $4 ***91;EDX***93;
+<br>;         non-zero value in $0 if CPUID instruction is not available.
+<br>Function cpuid
+<br>   Push$5
+<br>   Push$6
+<br>   Push$7
+<br><br>  ; Set return code to a non-zero value (= error) as an initial value
+<br>   Push-1
+<br>   Pop$0
+<br><br>  ${If} $CODE != ""
+<br>     ; Allocate integer array 
+<br>     System::Call "*(i 0, i 0, i 0, i 0) i.r7"
+<br><br>     ${If} $7 != 0
+<br>        ; Execute cpuid machine code
+<br>         System::Call "::$CODE(i r1, i r7) i.r0"
+<br><br>        ; Read data from integer array
+<br>        System::Call "*$7(i .r1, i .r2, i .r3, i .r4)"
+<br><br>        ; Free previously allocated memory for integer array
+<br>        System::Free $7
+<br>      ${EndIf}
+<br>   ${EndIf}
+<br><br>  Pop $7
+<br>   Pop$6
+<br>   Pop$5
+<br>FunctionEnd
+<br><br>&gt;; Get Vendor Id via CPUID instruction
+<br>&gt;; Returns Vendor Id in $0
+<br>&gt;Function VendorId
+<br>  Push$1
+<br>  Push$2
+<br>  Push$3
+<br>  Push$4
+<br>  Push$5
+<br><br>  Push 0
+<br>  Pop$1
+<br>  Call cpuid
+<br> ${If} $0 != 0
+<br>     StrCpy$0 "CPUID instruction not available!"
+<br>  ${Else}
+<br>     ;Concatenate vendor string: 12 character ASCII string stored in EBX, EDX and ECX
+<br>     System::Call "*(i r2, i r4, i r3, i 0) i.r5"
+<br>    System::Call "*$5(&amp;m13 .r0)"
+<br>    System::Free $5
+<br>  ${EndIf}
+<br><br> Pop $5
+<br>  Pop$4
+<br>  Pop$3
+<br>  Pop$2
+<br>  Pop$1
+<br>FunctionEnd
+<br><br>&gt;; Determine if CPU supports 64-bit address space
+<br>&gt;; Returns "64-bit" or "32-bit" in $0
+<br>&gt;Function Is64bit
+<br>  Push$1
+<br>  Push$2
+<br>  Push$3
+<br>  Push$4
+<br><br> ; 32-bit by default
+<br> Push "32-bit"
+<br><br>  Push 0
+<br>  Pop$1
+<br>  Call cpuid
+<br> ${If} $0 == 0
+<br> ${AndIf} $1 != 0
+<br>    ; Get Highest Extended Function Supported
+<br>     Push 0x80000000
+<br>     Pop$1
+<br>     Call cpuid
+<br>    ${If} $0 == 0
+<br>    ${AndIf} $1 &gt; 0x80000000
+<br>       ; Extended Processor Info and Feature Bits
+<br>        Push 0x80000001
+<br>        Pop$1
+<br>        Call cpuid
+<br>       ${If} $0 == 0
+<br>           ; Check long mode bit (EDX:29)
+<br>           IntOp $4 $4 &amp; 0x20000000
+<br>           ${If} $4 != 0
+<br>                Pop$0
+<br>                Push "64-bit"
+<br>            ${EndIf}
+<br>        ${EndIf}
+<br>     ${EndIf}
+<br>  ${EndIf}
+<br><br>  ; Return value
+<br>  Pop$0
+<br><br>  Pop$4
+<br>  Pop$3
+<br>  Pop$2
+<br>  Pop$1
+<br>FunctionEnd
+<br><br>&gt;Function .onInit
+<br>  InitPluginsDir
+<br>  Call cpuid_init 
+<br>  Call VendorId
+<br>  StrCpy$1 $0
+<br>  Call Is64bit
+<br>  Call cpuid_deinit 
+<br>  MessageBox MB_OK "Vendor=$1 ***91;$0 capable***93;"
+<br>  Quit
+<br>FunctionEnd
+<br><br>Section 
+<br>SectionEnd 
+<br>&gt;
 
 </pre>
     </div>
-    <hr />
+    <hr>
 
     <div class="footer">
       <p class="text-muted small">Fork me on <a href="https://github.com/nsis-dev/NSIS-Forums/">GitHub</a></p>
@@ -519,7 +479,4 @@ OutFile "cpuid.exe"
 </script><script type="text/javascript">
 //<![CDATA[
   hljs.initHighlightingOnLoad();
-  //]]>
-  </script>
-</body>
-</html>
+  //]]></script></body></html>
